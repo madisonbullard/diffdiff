@@ -1,5 +1,7 @@
 import type { BranchInfo, ComparisonInfo } from "@diffdiff/core";
-import type { PreparedReviewFile, TextSegment } from "./types.ts";
+import type { DiffView, DiffViewPreference, PreparedReviewFile, TextSegment } from "./types.ts";
+
+export const MIN_SIDE_BY_SIDE_DIFF_WIDTH = 121;
 
 export function getVisibleRemoteBranches(
   branches: readonly BranchInfo[],
@@ -34,7 +36,20 @@ export function estimateFileRows(file: PreparedReviewFile, collapsed: boolean): 
     return headerRows;
   }
 
-  return headerRows + Math.max(file.unifiedLines.length, 1) + 1;
+  const diffRows = Math.max(file.unifiedLines.length, file.sideBySideRows.length, 1);
+  return headerRows + diffRows + 1;
+}
+
+export function resolveDiffView(preference: DiffViewPreference, terminalWidth: number): DiffView {
+  if (preference === "side-by-side" && terminalWidth >= MIN_SIDE_BY_SIDE_DIFF_WIDTH) {
+    return "split";
+  }
+
+  return "unified";
+}
+
+export function getDiffViewLabel(view: DiffView): string {
+  return view === "split" ? "side-by-side" : "unified";
 }
 
 export function truncateSegments(

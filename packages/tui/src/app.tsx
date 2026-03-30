@@ -1,12 +1,19 @@
 import type { BranchInfo, StartupOptions } from "@diffdiff/core";
 import { ScrollBoxRenderable } from "@opentui/core";
-import { useKeyboard } from "@opentui/react";
+import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BranchModal, FileCard, HelpModal, type BranchColumn } from "./components.tsx";
 import { getSyntaxStyle } from "./syntax-style.ts";
 import { getUiTheme } from "./theme.ts";
-import type { PreparedReviewSession } from "./types.ts";
-import { clampIndex, estimateFileRows, getVisibleRemoteBranches } from "./view-model.ts";
+import type { DiffViewPreference, PreparedReviewSession } from "./types.ts";
+import {
+  clampIndex,
+  estimateFileRows,
+  getDiffViewLabel,
+  getVisibleRemoteBranches,
+  MIN_SIDE_BY_SIDE_DIFF_WIDTH,
+  resolveDiffView,
+} from "./view-model.ts";
 
 interface DiffdiffAppProps {
   initialSession: PreparedReviewSession;
@@ -38,9 +45,16 @@ export function DiffdiffApp({
   const [localBranchIndex, setLocalBranchIndex] = useState(0);
   const [remoteBranchIndex, setRemoteBranchIndex] = useState(0);
   const [isReloading, setIsReloading] = useState(false);
+  const [diffViewPreference, setDiffViewPreference] = useState<DiffViewPreference>("unified");
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
+  const terminalDimensions = useTerminalDimensions();
   const uiTheme = getUiTheme(session.themeName);
   const syntaxStyle = useMemo(() => getSyntaxStyle(session.themeName), [session.themeName]);
+  const diffView = useMemo(
+    () => resolveDiffView(diffViewPreference, terminalDimensions.width),
+    [diffViewPreference, terminalDimensions.width],
+  );
+  const diffViewLabel = useMemo(() => getDiffViewLabel(diffView), [diffView]);
 
   const visibleRemoteBranches = useMemo(() => {
     return getVisibleRemoteBranches(
@@ -145,6 +159,11 @@ export function DiffdiffApp({
       return;
     }
 
+    if (key.name === "v") {
+      toggleDiffView();
+      return;
+    }
+
     if (key.name === "r") {
       toggleReviewed(selectedFileIndex);
       return;
@@ -182,6 +201,8 @@ export function DiffdiffApp({
           <text fg={uiTheme.textMuted} wrapMode="none">
             <span fg={uiTheme.text}>{session.files.length}</span>
             <span>{" files  •  "}</span>
+            <span fg={uiTheme.text}>{diffViewLabel}</span>
+            <span>{" diff  •  "}</span>
             <span fg={uiTheme.text}>{reviewedPaths.size}</span>
             <span>{" reviewed"}</span>
           </text>
@@ -241,10 +262,12 @@ export function DiffdiffApp({
               <FileCard
                 key={file.path}
                 file={file}
+                diffView={diffView}
                 isCollapsed={isCollapsed}
                 isReviewed={isReviewed}
                 isSelected={isSelected}
                 syntaxStyle={syntaxStyle}
+                terminalWidth={terminalDimensions.width}
                 theme={uiTheme}
               />
             );
@@ -289,6 +312,11 @@ export function DiffdiffApp({
             c{" "}
           </span>
           <span>{" collapse  "}</span>
+          <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
+            {" "}
+            v{" "}
+          </span>
+          <span>{" view  "}</span>
           <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
             {" "}
             m{" "}
@@ -371,6 +399,23 @@ export function DiffdiffApp({
         setStatusMessage(`Collapsed ${file.path}.`);
       }
       return nextPaths;
+    });
+  }
+
+  function toggleDiffView(): void {
+    setDiffViewPreference((currentView) => {
+      const nextPreference = currentView === "unified" ? "side-by-side" : "unified";
+      const nextView = resolveDiffView(nextPreference, terminalDimensions.width);
+
+      if (nextPreference === "side-by-side" && nextView !== "split") {
+        setStatusMessage(
+          `Need at least ${MIN_SIDE_BY_SIDE_DIFF_WIDTH} columns for side-by-side diffs; showing unified.`,
+        );
+      } else {
+        setStatusMessage(`Showing ${getDiffViewLabel(nextView)} diffs.`);
+      }
+
+      return nextPreference;
     });
   }
 

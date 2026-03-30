@@ -3,7 +3,15 @@ import type { SyntaxStyle } from "@opentui/core";
 import type { ReactNode } from "react";
 import { getDiffFiletype } from "./language.ts";
 import type { UiTheme } from "./theme.ts";
-import type { PreparedReviewFile, TextSegment, UnifiedDiffLine } from "./types.ts";
+import type {
+  DiffView,
+  PreparedReviewFile,
+  SideBySideDiffCell,
+  SideBySideDiffRow,
+  TextSegment,
+  UnifiedDiffLine,
+} from "./types.ts";
+import { getDiffViewLabel, truncateSegments } from "./view-model.ts";
 
 export type BranchColumn = "local" | "remote";
 
@@ -25,19 +33,23 @@ const MODAL_OVERLAY = "#00000096";
 
 export interface FileCardProps {
   file: PreparedReviewFile;
+  diffView: DiffView;
   isCollapsed: boolean;
   isReviewed: boolean;
   isSelected: boolean;
   syntaxStyle: SyntaxStyle;
+  terminalWidth: number;
   theme: UiTheme;
 }
 
 export function FileCard({
   file,
+  diffView,
   isCollapsed,
   isReviewed,
   isSelected,
   syntaxStyle,
+  terminalWidth,
   theme,
 }: FileCardProps) {
   const borderColor = isSelected ? theme.borderActive : isReviewed ? theme.success : theme.border;
@@ -52,7 +64,9 @@ export function FileCard({
         : file.status === "renamed"
           ? theme.warning
           : theme.accent;
-  const modeLabel = file.isBinary ? "binary change" : `${filetype ?? "text"} unified diff`;
+  const modeLabel = file.isBinary
+    ? "binary change"
+    : `${filetype ?? "text"} ${getDiffViewLabel(diffView)} diff`;
 
   return (
     <box
@@ -125,12 +139,14 @@ export function FileCard({
           ) : null}
           {!file.isBinary && file.renderError == null && file.patch.trim() !== "" ? (
             <box paddingLeft={1}>
-              {file.unifiedLines.length > 0 ? (
+              {diffView === "unified" && file.unifiedLines.length > 0 ? (
                 <UnifiedDiffPreview file={file} theme={theme} />
+              ) : diffView === "split" && file.sideBySideRows.length > 0 ? (
+                <SideBySideDiffPreview file={file} terminalWidth={terminalWidth} theme={theme} />
               ) : (
                 <diff
                   diff={file.patch}
-                  view="unified"
+                  view={diffView}
                   filetype={filetype}
                   showLineNumbers={true}
                   syntaxStyle={syntaxStyle}
@@ -167,6 +183,132 @@ function UnifiedDiffPreview({ file, theme }: { file: PreparedReviewFile; theme: 
           theme={theme}
         />
       ))}
+    </box>
+  );
+}
+
+function SideBySideDiffPreview({
+  file,
+  terminalWidth,
+  theme,
+}: {
+  file: PreparedReviewFile;
+  terminalWidth: number;
+  theme: UiTheme;
+}) {
+  const paneWidth = Math.max(Math.floor((Math.max(terminalWidth - 12, 40) - 1) / 2), 12);
+  const contentWidth = Math.max(paneWidth - (file.lineNumberWidth + 3), 1);
+
+  return (
+    <box width="100%" flexDirection="column">
+      {file.sideBySideRows.map((row, index) => (
+        <SideBySideDiffRowView
+          key={`${row.kind}-${index}`}
+          contentWidth={contentWidth}
+          lineNumberWidth={file.lineNumberWidth}
+          paneWidth={paneWidth}
+          row={row}
+          theme={theme}
+        />
+      ))}
+    </box>
+  );
+}
+
+function SideBySideDiffRowView({
+  contentWidth,
+  lineNumberWidth,
+  paneWidth,
+  row,
+  theme,
+}: {
+  contentWidth: number;
+  lineNumberWidth: number;
+  paneWidth: number;
+  row: SideBySideDiffRow;
+  theme: UiTheme;
+}) {
+  if (row.kind === "hunk" || row.kind === "gap") {
+    return (
+      <box width="100%" backgroundColor={row.kind === "hunk" ? theme.hunkBg : theme.contextBg}>
+        <text fg={row.kind === "hunk" ? theme.warning : theme.textMuted} wrapMode="none">
+          {renderSegments(truncateSegments(row.segments ?? [], paneWidth * 2 + 1), theme.text)}
+        </text>
+      </box>
+    );
+  }
+
+  return (
+    <box width="100%" flexDirection="row">
+      <SideBySideDiffCellView
+        cell={row.left ?? { kind: "empty", segments: [] }}
+        contentWidth={contentWidth}
+        lineNumberWidth={lineNumberWidth}
+        paneWidth={paneWidth}
+        theme={theme}
+      />
+      <box width={1} backgroundColor={theme.surface}>
+        <text fg={theme.border}> </text>
+      </box>
+      <SideBySideDiffCellView
+        cell={row.right ?? { kind: "empty", segments: [] }}
+        contentWidth={contentWidth}
+        lineNumberWidth={lineNumberWidth}
+        paneWidth={paneWidth}
+        theme={theme}
+      />
+    </box>
+  );
+}
+
+function SideBySideDiffCellView({
+  cell,
+  contentWidth,
+  lineNumberWidth,
+  paneWidth,
+  theme,
+}: {
+  cell: SideBySideDiffCell;
+  contentWidth: number;
+  lineNumberWidth: number;
+  paneWidth: number;
+  theme: UiTheme;
+}) {
+  const lineNumberBg =
+    cell.kind === "addition"
+      ? theme.additionLineNumberBg
+      : cell.kind === "deletion"
+        ? theme.deletionLineNumberBg
+        : theme.contextBg;
+  const contentBg =
+    cell.kind === "addition"
+      ? theme.additionBg
+      : cell.kind === "deletion"
+        ? theme.deletionBg
+        : theme.contextBg;
+  const sign = cell.kind === "addition" ? "+" : cell.kind === "deletion" ? "-" : " ";
+  const signColor =
+    cell.kind === "addition"
+      ? theme.success
+      : cell.kind === "deletion"
+        ? theme.danger
+        : theme.textMuted;
+
+  return (
+    <box width={paneWidth} flexDirection="row">
+      <box width={lineNumberWidth + 3} backgroundColor={lineNumberBg}>
+        <text fg={theme.textMuted} wrapMode="none">
+          {cell.lineNumber != null
+            ? String(cell.lineNumber).padStart(lineNumberWidth, " ")
+            : " ".repeat(lineNumberWidth)}
+          <span fg={signColor}>{` ${sign}`}</span>
+        </text>
+      </box>
+      <box width={contentWidth} backgroundColor={contentBg}>
+        <text fg={theme.text} wrapMode="none">
+          {renderSegments(truncateSegments(cell.segments, contentWidth), theme.text)}
+        </text>
+      </box>
     </box>
   );
 }
@@ -510,10 +652,12 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
           <span>{" toggle reviewed  "}</span>
           <KeyCap label="c / enter" theme={theme} />
           <span>{" collapse file  "}</span>
-          <KeyCap label="m" theme={theme} />
-          <span>{" review and advance"}</span>
+          <KeyCap label="v" theme={theme} />
+          <span>{" toggle diff view"}</span>
         </text>
         <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="m" theme={theme} />
+          <span>{" review and advance  "}</span>
           <KeyCap label="l" theme={theme} />
           <span>{" branch list  "}</span>
           <KeyCap label="tab" theme={theme} />

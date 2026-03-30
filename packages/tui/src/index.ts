@@ -5,13 +5,20 @@ export { getUiTheme } from "./theme.ts";
 export {
   clampIndex,
   estimateFileRows,
+  getDiffViewLabel,
   getVisibleRemoteBranches,
+  MIN_SIDE_BY_SIDE_DIFF_WIDTH,
+  resolveDiffView,
   truncateSegments,
 } from "./view-model.ts";
 export type {
+  DiffView,
+  DiffViewPreference,
   PierreThemeName,
   PreparedReviewFile,
   PreparedReviewSession,
+  SideBySideDiffCell,
+  SideBySideDiffRow,
   TextSegment,
   UnifiedDiffLine,
 } from "./types.ts";

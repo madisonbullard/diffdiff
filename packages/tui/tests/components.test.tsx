@@ -25,10 +25,12 @@ test("renders an expanded file card snapshot", () => {
   const tree = render(
     <FileCard
       file={createPreparedFile()}
+      diffView="unified"
       isCollapsed={false}
       isReviewed={false}
       isSelected={true}
       syntaxStyle={syntaxStyle}
+      terminalWidth={160}
       theme={theme}
     />,
   );
@@ -64,10 +66,12 @@ test("shows binary, reviewed, and collapsed states clearly", () => {
         patch: "diff --git a/logo.png b/logo.png\nBinary files a/logo.png and b/logo.png differ",
         unifiedLines: [],
       })}
+      diffView="unified"
       isCollapsed={false}
       isReviewed={true}
       isSelected={false}
       syntaxStyle={syntaxStyle}
+      terminalWidth={160}
       theme={theme}
     />,
   );
@@ -82,10 +86,12 @@ test("shows binary, reviewed, and collapsed states clearly", () => {
       (
         <FileCard
           file={createPreparedFile({ isBinary: true, unifiedLines: [] })}
+          diffView="unified"
           isCollapsed={true}
           isReviewed={true}
           isSelected={false}
           syntaxStyle={syntaxStyle}
+          terminalWidth={160}
           theme={theme}
         />
       ) as never,
@@ -120,10 +126,12 @@ test("uses the native diff renderer when Pierre segments are unavailable", () =>
   const tree = render(
     <FileCard
       file={createPreparedFile({ path: "src/app.tsx", unifiedLines: [] })}
+      diffView="unified"
       isCollapsed={false}
       isReviewed={false}
       isSelected={false}
       syntaxStyle={syntaxStyle}
+      terminalWidth={160}
       theme={theme}
     />,
   );
@@ -138,10 +146,12 @@ test("renders Pierre-highlighted segments when they are available", () => {
   const tree = render(
     <FileCard
       file={createPreparedFile({ path: "package.json" })}
+      diffView="unified"
       isCollapsed={false}
       isReviewed={false}
       isSelected={false}
       syntaxStyle={syntaxStyle}
+      terminalWidth={160}
       theme={theme}
     />,
   );
@@ -149,6 +159,25 @@ test("renders Pierre-highlighted segments when they are available", () => {
   expect(tree.root.findAll((node) => String(node.type) === "diff")).toHaveLength(0);
   expect(collectText(tree.toJSON())).toContain("const count = 1");
   expect(tree.root.findAll((node) => node.props?.fg === "#3fb950")).not.toHaveLength(0);
+});
+
+test("renders syntax-highlighted side-by-side rows", () => {
+  const tree = render(
+    <FileCard
+      file={createPreparedFile({ path: "src/app.tsx" })}
+      diffView="split"
+      isCollapsed={false}
+      isReviewed={false}
+      isSelected={false}
+      syntaxStyle={syntaxStyle}
+      terminalWidth={160}
+      theme={theme}
+    />,
+  );
+
+  expect(tree.root.findAll((node) => String(node.type) === "diff")).toHaveLength(0);
+  expect(tree.root.findAll((node) => node.props?.fg === "#3fb950")).not.toHaveLength(0);
+  expect(collectText(tree.toJSON())).toContain("side-by-side diff");
 });
 
 function createPreparedFile(overrides: Partial<PreparedReviewFile> = {}): PreparedReviewFile {
@@ -161,6 +190,38 @@ function createPreparedFile(overrides: Partial<PreparedReviewFile> = {}): Prepar
     patch: "diff --git a/src/app.ts b/src/app.ts",
     path: "src/app.ts",
     renderError: undefined,
+    sideBySideRows: [
+      {
+        kind: "hunk",
+        segments: [{ text: "@@ -1,2 +1,3 @@" }],
+      },
+      {
+        kind: "line",
+        left: {
+          kind: "deletion",
+          lineNumber: 1,
+          segments: [{ text: "const count = 0", fg: "#ff7b72" }],
+        },
+        right: {
+          kind: "addition",
+          lineNumber: 1,
+          segments: [{ text: "const count = 1", fg: "#3fb950" }],
+        },
+      },
+      {
+        kind: "line",
+        left: {
+          kind: "context",
+          lineNumber: 2,
+          segments: [{ text: "console.log(count)" }],
+        },
+        right: {
+          kind: "context",
+          lineNumber: 2,
+          segments: [{ text: "console.log(count)" }],
+        },
+      },
+    ],
     status: "modified",
     unifiedLines: [
       {

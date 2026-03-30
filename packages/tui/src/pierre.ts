@@ -11,6 +11,8 @@ import type {
   PierreThemeName,
   PreparedReviewFile,
   PreparedReviewSession,
+  SideBySideDiffCell,
+  SideBySideDiffRow,
   TextSegment,
   UnifiedDiffLine,
 } from "./types.ts";
@@ -89,9 +91,16 @@ export async function prepareReviewSession(
         rendered.code.additionLines as HastNode[],
         themeVariables,
       );
+      const sideBySideRows = buildSideBySideRows(
+        file.diff,
+        rendered.code.deletionLines as HastNode[],
+        rendered.code.additionLines as HastNode[],
+        themeVariables,
+      );
 
       return {
         ...file,
+        sideBySideRows,
         unifiedLines,
         lineNumberWidth: getLineNumberWidth(file.diff),
       };
@@ -114,6 +123,7 @@ function parseReviewFile(file: ChangedFile): PreparedReviewFile {
   if (file.isBinary) {
     return {
       ...file,
+      sideBySideRows: [],
       unifiedLines: [],
       lineNumberWidth: 3,
     };
@@ -125,6 +135,7 @@ function parseReviewFile(file: ChangedFile): PreparedReviewFile {
     return {
       ...file,
       diff,
+      sideBySideRows: [],
       unifiedLines: [],
       lineNumberWidth: diff == null ? 3 : getLineNumberWidth(diff),
       renderError: diff == null ? "Unable to parse the git patch for this file." : undefined,
@@ -132,6 +143,7 @@ function parseReviewFile(file: ChangedFile): PreparedReviewFile {
   } catch (error) {
     return {
       ...file,
+      sideBySideRows: [],
       unifiedLines: [],
       lineNumberWidth: 3,
       renderError: error instanceof Error ? error.message : "Unable to parse this diff.",
@@ -220,6 +232,102 @@ function buildUnifiedLines(
   }
 
   return lines;
+}
+
+function buildSideBySideRows(
+  diff: FileDiffMetadata,
+  deletionLines: readonly HastNode[],
+  additionLines: readonly HastNode[],
+  themeVariables: ReadonlyMap<string, string>,
+): SideBySideDiffRow[] {
+  const rows: SideBySideDiffRow[] = [];
+  let deletionIndex = 0;
+  let additionIndex = 0;
+
+  for (let hunkIndex = 0; hunkIndex < diff.hunks.length; hunkIndex += 1) {
+    const hunk = diff.hunks[hunkIndex];
+
+    if (hunk.collapsedBefore > 0 && hunkIndex > 0) {
+      rows.push({
+        kind: "gap",
+        segments: [{ text: `... ${hunk.collapsedBefore} unchanged lines ...` }],
+      });
+    }
+
+    const hunkHeader = [hunk.hunkSpecs, hunk.hunkContext].filter(Boolean).join(" ");
+    rows.push({
+      kind: "hunk",
+      segments: [{ text: hunkHeader || "@@" }],
+    });
+
+    let oldLineNumber = hunk.deletionStart;
+    let newLineNumber = hunk.additionStart;
+
+    for (const hunkContent of hunk.hunkContent) {
+      if (hunkContent.type === "context") {
+        for (let index = 0; index < hunkContent.lines; index += 1) {
+          const leftSegments = collectSegments(deletionLines[deletionIndex], themeVariables);
+          const rightSegments = collectSegments(additionLines[additionIndex], themeVariables);
+
+          rows.push({
+            kind: "line",
+            left: {
+              kind: "context",
+              lineNumber: oldLineNumber,
+              segments: leftSegments,
+            },
+            right: {
+              kind: "context",
+              lineNumber: newLineNumber,
+              segments: rightSegments,
+            },
+          });
+
+          oldLineNumber += 1;
+          newLineNumber += 1;
+          deletionIndex += 1;
+          additionIndex += 1;
+        }
+
+        continue;
+      }
+
+      const deletions: SideBySideDiffCell[] = [];
+      const additions: SideBySideDiffCell[] = [];
+
+      for (let index = 0; index < hunkContent.deletions; index += 1) {
+        deletions.push({
+          kind: "deletion",
+          lineNumber: oldLineNumber,
+          segments: collectSegments(deletionLines[deletionIndex], themeVariables),
+        });
+        oldLineNumber += 1;
+        deletionIndex += 1;
+      }
+
+      for (let index = 0; index < hunkContent.additions; index += 1) {
+        additions.push({
+          kind: "addition",
+          lineNumber: newLineNumber,
+          segments: collectSegments(additionLines[additionIndex], themeVariables),
+        });
+        newLineNumber += 1;
+        additionIndex += 1;
+      }
+
+      const pairCount = Math.max(deletions.length, additions.length);
+
+      for (let index = 0; index < pairCount; index += 1) {
+        rows.push({
+          kind: "line",
+          left: deletions[index] ?? { kind: "empty", segments: [] },
+          right: additions[index] ?? { kind: "empty", segments: [] },
+        });
+      }
+    }
+  }
+
+  return rows;
 }
 
 function collectSegments(

@@ -1,6 +1,13 @@
 import type { BranchInfo } from "@diffdiff/core";
 import { expect, test } from "vite-plus/test";
-import { clampIndex, getVisibleRemoteBranches, truncateSegments } from "../src/view-model.ts";
+import {
+  clampIndex,
+  getDiffViewLabel,
+  getVisibleRemoteBranches,
+  MIN_SIDE_BY_SIDE_DIFF_WIDTH,
+  resolveDiffView,
+  truncateSegments,
+} from "../src/view-model.ts";
 
 test("getVisibleRemoteBranches keeps open PRs and active refs when collapsed", () => {
   const branches: BranchInfo[] = [
@@ -65,4 +72,12 @@ test("truncateSegments preserves order while trimming", () => {
     { text: "hello", fg: "#fff" },
     { text: " w", fg: "#000" },
   ]);
+});
+
+test("resolveDiffView matches the split threshold used by side-by-side mode", () => {
+  expect(resolveDiffView("unified", 200)).toBe("unified");
+  expect(resolveDiffView("side-by-side", MIN_SIDE_BY_SIDE_DIFF_WIDTH - 1)).toBe("unified");
+  expect(resolveDiffView("side-by-side", MIN_SIDE_BY_SIDE_DIFF_WIDTH)).toBe("split");
+  expect(getDiffViewLabel("unified")).toBe("unified");
+  expect(getDiffViewLabel("split")).toBe("side-by-side");
 });
