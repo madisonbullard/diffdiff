@@ -3,18 +3,54 @@ import { getUiTheme } from "./theme.ts";
 import type { UiTheme } from "./theme.ts";
 import type { PierreThemeName } from "./types.ts";
 
-const DARK_SYNTAX_STYLE = createSyntaxStyle(getUiTheme("pierre-dark"));
-const LIGHT_SYNTAX_STYLE = createSyntaxStyle(getUiTheme("pierre-light"));
+interface SyntaxPalette {
+  comment: string;
+  function: string;
+  keyword: string;
+  number: string;
+  operator: string;
+  punctuation: string;
+  string: string;
+  type: string;
+  variable: string;
+}
+
+const DARK_SYNTAX_PALETTE: SyntaxPalette = {
+  comment: "#8ea4b5",
+  function: "#9cdcfe",
+  keyword: "#ff7b72",
+  number: "#79c0ff",
+  operator: "#8ea4b5",
+  punctuation: "#8ea4b5",
+  string: "#7ee787",
+  type: "#d4a72c",
+  variable: "#e6edf3",
+};
+
+const LIGHT_SYNTAX_PALETTE: SyntaxPalette = {
+  comment: "#5b7383",
+  function: "#0c6d97",
+  keyword: "#a93a32",
+  number: "#2676a3",
+  operator: "#5b7383",
+  punctuation: "#5b7383",
+  string: "#177245",
+  type: "#8a6200",
+  variable: "#10202d",
+};
+
+const DARK_SYNTAX_STYLE = createSyntaxStyle(getUiTheme("pierre-dark"), DARK_SYNTAX_PALETTE);
+const LIGHT_SYNTAX_STYLE = createSyntaxStyle(getUiTheme("pierre-light"), LIGHT_SYNTAX_PALETTE);
 
 export function getSyntaxStyle(themeName: PierreThemeName): SyntaxStyle {
   return themeName === "pierre-light" ? LIGHT_SYNTAX_STYLE : DARK_SYNTAX_STYLE;
 }
 
-function createSyntaxStyle(theme: UiTheme): SyntaxStyle {
-  return SyntaxStyle.fromTheme(getSyntaxRules(theme));
+function createSyntaxStyle(theme: UiTheme, palette: SyntaxPalette): SyntaxStyle {
+  return SyntaxStyle.fromTheme(getSyntaxRules(theme, palette));
 }
 
-function getSyntaxRules(theme: UiTheme) {
+function getSyntaxRules(theme: UiTheme, palette: SyntaxPalette) {
   return [
     {
       scope: ["default"],
@@ -25,20 +61,20 @@ function getSyntaxRules(theme: UiTheme) {
     {
       scope: ["comment", "comment.documentation"],
       style: {
-        foreground: theme.syntaxComment,
+        foreground: palette.comment,
         italic: true,
       },
     },
     {
       scope: ["string", "symbol", "character", "character.special"],
       style: {
-        foreground: theme.syntaxString,
+        foreground: palette.string,
       },
     },
     {
       scope: ["number", "boolean", "float", "constant"],
       style: {
-        foreground: theme.syntaxNumber,
+        foreground: palette.number,
       },
     },
     {
@@ -55,20 +91,20 @@ function getSyntaxRules(theme: UiTheme) {
         "keyword.type",
       ],
       style: {
-        foreground: theme.syntaxKeyword,
+        foreground: palette.keyword,
         italic: true,
       },
     },
     {
       scope: ["operator", "punctuation.delimiter", "punctuation.special"],
       style: {
-        foreground: theme.syntaxOperator,
+        foreground: palette.operator,
       },
     },
     {
       scope: ["punctuation", "punctuation.bracket"],
       style: {
-        foreground: theme.syntaxPunctuation,
+        foreground: palette.punctuation,
       },
     },
     {
@@ -80,7 +116,7 @@ function getSyntaxRules(theme: UiTheme) {
         "function.method.call",
       ],
       style: {
-        foreground: theme.syntaxFunction,
+        foreground: palette.function,
       },
     },
     {
@@ -93,7 +129,7 @@ function getSyntaxRules(theme: UiTheme) {
         "parameter",
       ],
       style: {
-        foreground: theme.syntaxVariable,
+        foreground: palette.variable,
       },
     },
     {
@@ -107,7 +143,7 @@ function getSyntaxRules(theme: UiTheme) {
         "namespace",
       ],
       style: {
-        foreground: theme.syntaxType,
+        foreground: palette.type,
       },
     },
     {
@@ -125,7 +161,7 @@ function getSyntaxRules(theme: UiTheme) {
     {
       scope: ["tag.delimiter"],
       style: {
-        foreground: theme.syntaxOperator,
+        foreground: palette.operator,
       },
     },
     {
