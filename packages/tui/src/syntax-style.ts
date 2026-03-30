@@ -1,18 +1,18 @@
-import { SyntaxStyle } from "@opentui/core";
+import { SyntaxStyle, type ColorInput, type TerminalColors } from "@opentui/core";
 import { getUiTheme } from "./theme.ts";
 import type { UiTheme } from "./theme.ts";
 import type { PierreThemeName } from "./types.ts";
 
 interface SyntaxPalette {
-  comment: string;
-  function: string;
-  keyword: string;
-  number: string;
-  operator: string;
-  punctuation: string;
-  string: string;
-  type: string;
-  variable: string;
+  comment: ColorInput;
+  function: ColorInput;
+  keyword: ColorInput;
+  number: ColorInput;
+  operator: ColorInput;
+  punctuation: ColorInput;
+  string: ColorInput;
+  type: ColorInput;
+  variable: ColorInput;
 }
 
 const DARK_SYNTAX_PALETTE: SyntaxPalette = {
@@ -44,6 +44,26 @@ const LIGHT_SYNTAX_STYLE = createSyntaxStyle(getUiTheme("pierre-light"), LIGHT_S
 
 export function getSyntaxStyle(themeName: PierreThemeName): SyntaxStyle {
   return themeName === "pierre-light" ? LIGHT_SYNTAX_STYLE : DARK_SYNTAX_STYLE;
+}
+
+export function createTerminalSyntaxStyle(theme: UiTheme, colors: TerminalColors): SyntaxStyle {
+  const colorAt = (index: number) => {
+    return (
+      colors.palette[index] ?? ANSI_COLORS[Math.max(0, Math.min(index, ANSI_COLORS.length - 1))]
+    );
+  };
+
+  return createSyntaxStyle(theme, {
+    comment: theme.textMuted,
+    function: colorAt(4),
+    keyword: colorAt(5),
+    number: colorAt(3),
+    operator: colorAt(6),
+    punctuation: theme.text,
+    string: colorAt(2),
+    type: colorAt(6),
+    variable: theme.text,
+  });
 }
 
 function createSyntaxStyle(theme: UiTheme, palette: SyntaxPalette): SyntaxStyle {
@@ -187,3 +207,22 @@ function getSyntaxRules(theme: UiTheme, palette: SyntaxPalette) {
     },
   ];
 }
+
+const ANSI_COLORS = [
+  "#000000",
+  "#800000",
+  "#008000",
+  "#808000",
+  "#000080",
+  "#800080",
+  "#008080",
+  "#c0c0c0",
+  "#808080",
+  "#ff0000",
+  "#00ff00",
+  "#ffff00",
+  "#0000ff",
+  "#ff00ff",
+  "#00ffff",
+  "#ffffff",
+] as const;

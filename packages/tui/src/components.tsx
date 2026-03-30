@@ -1,5 +1,5 @@
 import type { BranchInfo } from "@diffdiff/core";
-import type { SyntaxStyle } from "@opentui/core";
+import type { ColorInput, SyntaxStyle } from "@opentui/core";
 import type { ReactNode } from "react";
 import { getDiffFiletype } from "./language.ts";
 import type { UiTheme } from "./theme.ts";
@@ -94,7 +94,7 @@ export function FileCard({
       </box>
 
       <text fg={theme.textMuted} wrapMode="none">
-        <Tag label={statusLabel.toUpperCase()} fg={theme.chromeBackground} bg={statusColor} />
+        <Tag label={statusLabel.toUpperCase()} fg={theme.inverseText} bg={statusColor} />
         {isReviewed ? (
           <>
             <span> </span>
@@ -373,7 +373,7 @@ function UnifiedDiffRow({
   );
 }
 
-function renderSegments(segments: readonly TextSegment[], defaultFg: string) {
+function renderSegments(segments: readonly TextSegment[], defaultFg: ColorInput) {
   return segments.map((segment, index) => (
     <span key={index} fg={segment.fg ?? defaultFg} bg={segment.bg}>
       {segment.text}
@@ -516,7 +516,7 @@ export function BranchModal({
                 <text fg={theme.text} wrapMode="none">
                   <Tag
                     label={`OPEN PR #${selectedBranch.pullRequest.number}`}
-                    fg={theme.chromeBackground}
+                    fg={theme.inverseText}
                     bg={theme.success}
                   />
                   <span> </span>
@@ -734,7 +734,7 @@ function ModalFrame({
   );
 }
 
-function BranchName({ branch, fg, theme }: { branch: BranchInfo; fg: string; theme: UiTheme }) {
+function BranchName({ branch, fg, theme }: { branch: BranchInfo; fg: ColorInput; theme: UiTheme }) {
   if (branch.kind === "remote" && branch.remoteName != null) {
     return (
       <>
@@ -769,7 +769,7 @@ function BranchBadges({
             label={
               compact ? `PR #${branch.pullRequest.number}` : `OPEN PR #${branch.pullRequest.number}`
             }
-            fg={theme.chromeBackground}
+            fg={theme.inverseText}
             bg={theme.success}
           />
         </>
@@ -777,13 +777,13 @@ function BranchBadges({
       {branch.name === base ? (
         <>
           <span> </span>
-          <Tag label="BASE" fg={theme.chromeBackground} bg={theme.warning} />
+          <Tag label="BASE" fg={theme.inverseText} bg={theme.warning} />
         </>
       ) : null}
       {branch.name === head ? (
         <>
           <span> </span>
-          <Tag label="HEAD" fg={theme.chromeBackground} bg={theme.accent} />
+          <Tag label="HEAD" fg={theme.inverseText} bg={theme.accent} />
         </>
       ) : null}
       {branch.isCurrent ? (
@@ -810,7 +810,7 @@ function KeyCap({ label, theme }: { label: string; theme: UiTheme }) {
   );
 }
 
-function Tag({ label, fg, bg }: { label: string; fg: string; bg: string }) {
+function Tag({ label, fg, bg }: { label: string; fg: ColorInput; bg: ColorInput }) {
   return (
     <span fg={fg} bg={bg}>
       {` ${label} `}

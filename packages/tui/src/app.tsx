@@ -1,10 +1,10 @@
 import type { BranchInfo, StartupOptions } from "@diffdiff/core";
+import type { SyntaxStyle } from "@opentui/core";
 import { ScrollBoxRenderable } from "@opentui/core";
 import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BranchModal, FileCard, HelpModal, type BranchColumn } from "./components.tsx";
-import { getSyntaxStyle } from "./syntax-style.ts";
-import { getUiTheme } from "./theme.ts";
+import type { UiTheme } from "./theme.ts";
 import type { DiffViewPreference, PreparedReviewSession } from "./types.ts";
 import {
   clampIndex,
@@ -20,6 +20,8 @@ interface DiffdiffAppProps {
   initialOptions: StartupOptions;
   loadSession: (options: StartupOptions) => Promise<PreparedReviewSession>;
   onExit: () => void;
+  syntaxStyle: SyntaxStyle;
+  theme: UiTheme;
 }
 
 export function DiffdiffApp({
@@ -27,6 +29,8 @@ export function DiffdiffApp({
   initialOptions,
   loadSession,
   onExit,
+  syntaxStyle,
+  theme,
 }: DiffdiffAppProps) {
   const [session, setSession] = useState(initialSession);
   const [startupOptions, setStartupOptions] = useState<StartupOptions>({
@@ -48,8 +52,6 @@ export function DiffdiffApp({
   const [diffViewPreference, setDiffViewPreference] = useState<DiffViewPreference>("unified");
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
   const terminalDimensions = useTerminalDimensions();
-  const uiTheme = getUiTheme(session.themeName);
-  const syntaxStyle = useMemo(() => getSyntaxStyle(session.themeName), [session.themeName]);
   const diffView = useMemo(
     () => resolveDiffView(diffViewPreference, terminalDimensions.width),
     [diffViewPreference, terminalDimensions.width],
@@ -180,50 +182,47 @@ export function DiffdiffApp({
   const currentBranchLabel = session.repository.currentBranch ?? "detached";
 
   return (
-    <box width="100%" height="100%" flexDirection="column" backgroundColor={uiTheme.appBackground}>
+    <box width="100%" height="100%" flexDirection="column" backgroundColor={theme.appBackground}>
       <box
         flexShrink={0}
         width="100%"
-        backgroundColor={uiTheme.chromeBackground}
+        backgroundColor={theme.chromeBackground}
         paddingX={2}
         paddingY={1}
         flexDirection="column"
         gap={0}
       >
         <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
-          <text fg={uiTheme.text} wrapMode="none">
-            <span fg={uiTheme.accent}>diffdiff</span>
-            <span fg={uiTheme.textMuted}>{"  •  "}</span>
+          <text fg={theme.text} wrapMode="none">
+            <span fg={theme.accent}>diffdiff</span>
+            <span fg={theme.textMuted}>{"  •  "}</span>
             <span>{session.repository.name}</span>
             <span> </span>
-            <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>{` ${currentBranchLabel} `}</span>
+            <span fg={theme.text} bg={theme.surfaceMuted}>{` ${currentBranchLabel} `}</span>
           </text>
-          <text fg={uiTheme.textMuted} wrapMode="none">
-            <span fg={uiTheme.text}>{session.files.length}</span>
+          <text fg={theme.textMuted} wrapMode="none">
+            <span fg={theme.text}>{session.files.length}</span>
             <span>{" files  •  "}</span>
-            <span fg={uiTheme.text}>{diffViewLabel}</span>
+            <span fg={theme.text}>{diffViewLabel}</span>
             <span>{" diff  •  "}</span>
-            <span fg={uiTheme.text}>{reviewedPaths.size}</span>
+            <span fg={theme.text}>{reviewedPaths.size}</span>
             <span>{" reviewed"}</span>
           </text>
         </box>
-        <text fg={uiTheme.textMuted} wrapMode="none">
-          <span
-            fg={uiTheme.chromeBackground}
-            bg={uiTheme.accent}
-          >{` ${comparisonModeLabel} `}</span>
+        <text fg={theme.textMuted} wrapMode="none">
+          <span fg={theme.inverseText} bg={theme.accent}>{` ${comparisonModeLabel} `}</span>
           <span>{"  "}</span>
-          <span fg={uiTheme.warning}>base</span>
+          <span fg={theme.warning}>base</span>
           <span>{` ${session.comparison.base}`}</span>
           <span>{"  •  "}</span>
-          <span fg={uiTheme.accent}>head</span>
+          <span fg={theme.accent}>head</span>
           <span>{` ${session.comparison.head}`}</span>
         </text>
-        <text fg={uiTheme.textMuted} wrapMode="none">
+        <text fg={theme.textMuted} wrapMode="none">
           {session.repository.rootPath}
         </text>
         {session.warnings[0] != null ? (
-          <text fg={uiTheme.warning} wrapMode="none">
+          <text fg={theme.warning} wrapMode="none">
             warning: {session.warnings[0].message}
           </text>
         ) : null}
@@ -234,22 +233,22 @@ export function DiffdiffApp({
         width="100%"
         flexGrow={1}
         focused
-        viewportOptions={{ backgroundColor: uiTheme.appBackground }}
-        contentOptions={{ backgroundColor: uiTheme.appBackground }}
-        verticalScrollbarOptions={{ trackOptions: { backgroundColor: uiTheme.border } }}
+        viewportOptions={{ backgroundColor: theme.appBackground }}
+        contentOptions={{ backgroundColor: theme.appBackground }}
+        verticalScrollbarOptions={{ trackOptions: { backgroundColor: theme.border } }}
       >
         <box width="100%" flexDirection="column" paddingX={2} paddingY={1} gap={1}>
           {session.files.length === 0 ? (
             <box
               border={["left"]}
-              borderColor={uiTheme.border}
-              backgroundColor={uiTheme.surface}
+              borderColor={theme.border}
+              backgroundColor={theme.surface}
               paddingLeft={2}
               paddingRight={1}
               paddingTop={1}
               paddingBottom={1}
             >
-              <text fg={uiTheme.text}>No changed files found for this comparison.</text>
+              <text fg={theme.text}>No changed files found for this comparison.</text>
             </box>
           ) : null}
 
@@ -268,7 +267,7 @@ export function DiffdiffApp({
                 isSelected={isSelected}
                 syntaxStyle={syntaxStyle}
                 terminalWidth={terminalDimensions.width}
-                theme={uiTheme}
+                theme={theme}
               />
             );
           })}
@@ -278,56 +277,56 @@ export function DiffdiffApp({
       <box
         flexShrink={0}
         width="100%"
-        backgroundColor={uiTheme.chromeBackground}
+        backgroundColor={theme.chromeBackground}
         paddingX={2}
         paddingY={1}
         flexDirection="column"
         gap={0}
       >
-        <text fg={isReloading ? uiTheme.accent : uiTheme.textMuted} wrapMode="none">
+        <text fg={isReloading ? theme.accent : theme.textMuted} wrapMode="none">
           {selectedFile != null ? `selected ${selectedFile.path}` : "No file selected."}
           <span>{"  •  "}</span>
-          <span fg={isReloading ? uiTheme.accent : uiTheme.text}>
+          <span fg={isReloading ? theme.accent : theme.text}>
             {isReloading ? "Loading comparison..." : statusMessage}
           </span>
         </text>
-        <text fg={uiTheme.textMuted} wrapMode="none">
-          <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
+        <text fg={theme.textMuted} wrapMode="none">
+          <span fg={theme.text} bg={theme.surfaceMuted}>
             {" "}
             q{" "}
           </span>
           <span>{" quit  "}</span>
-          <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
+          <span fg={theme.text} bg={theme.surfaceMuted}>
             {" "}
             j/k{" "}
           </span>
           <span>{" move  "}</span>
-          <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
+          <span fg={theme.text} bg={theme.surfaceMuted}>
             {" "}
             r{" "}
           </span>
           <span>{" reviewed  "}</span>
-          <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
+          <span fg={theme.text} bg={theme.surfaceMuted}>
             {" "}
             c{" "}
           </span>
           <span>{" collapse  "}</span>
-          <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
+          <span fg={theme.text} bg={theme.surfaceMuted}>
             {" "}
             v{" "}
           </span>
           <span>{" view  "}</span>
-          <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
+          <span fg={theme.text} bg={theme.surfaceMuted}>
             {" "}
             m{" "}
           </span>
           <span>{" review+next  "}</span>
-          <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
+          <span fg={theme.text} bg={theme.surfaceMuted}>
             {" "}
             l{" "}
           </span>
           <span>{" branches  "}</span>
-          <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
+          <span fg={theme.text} bg={theme.surfaceMuted}>
             {" "}
             ?{" "}
           </span>
@@ -346,11 +345,11 @@ export function DiffdiffApp({
           remoteIndex={remoteBranchIndex}
           remoteTotalCount={session.branches.remote.length}
           showAllRemoteBranches={showAllRemoteBranches}
-          theme={uiTheme}
+          theme={theme}
         />
       ) : null}
 
-      {showHelp ? <HelpModal theme={uiTheme} /> : null}
+      {showHelp ? <HelpModal theme={theme} /> : null}
     </box>
   );
 

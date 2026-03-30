@@ -7,6 +7,14 @@ import type { StartupOptions } from "@diffdiff/core";
 import packageJson from "../package.json";
 import { DiffdiffApp } from "./app.tsx";
 import { loadPreparedReviewSession } from "./pierre.ts";
+import { createTerminalSyntaxStyle, getSyntaxStyle } from "./syntax-style.ts";
+import {
+  createTerminalUiTheme,
+  getPierreThemeName,
+  getTerminalBackgroundMode,
+  getTerminalColors,
+  getUiTheme,
+} from "./theme.ts";
 
 async function main(): Promise<void> {
   const options = parseStartupOptions();
@@ -21,15 +29,28 @@ async function main(): Promise<void> {
     return;
   }
 
+  const mode = await getTerminalBackgroundMode();
+  const themeName = getPierreThemeName(mode);
+  const fallbackTheme = getUiTheme(themeName);
+
   const renderer = await createCliRenderer({
     useAlternateScreen: true,
     useConsole: false,
     exitOnCtrlC: true,
-    backgroundColor: "#07131b",
+    backgroundColor: "transparent",
   });
 
   try {
-    const themeName = renderer.themeMode === "light" ? "pierre-light" : "pierre-dark";
+    const terminalColors = await getTerminalColors(renderer);
+    const theme =
+      terminalColors == null ? fallbackTheme : createTerminalUiTheme(terminalColors, mode);
+    const syntaxStyle =
+      terminalColors == null
+        ? getSyntaxStyle(themeName)
+        : createTerminalSyntaxStyle(theme, terminalColors);
+
+    renderer.setBackgroundColor(theme.appBackground);
+
     const loadSession = (nextOptions: StartupOptions) =>
       loadPreparedReviewSession(nextOptions, themeName);
     const initialSession = await loadSession(options);
@@ -43,6 +64,8 @@ async function main(): Promise<void> {
           renderer.destroy();
           process.exit(0);
         }}
+        syntaxStyle={syntaxStyle}
+        theme={theme}
       />,
     );
   } catch (error) {
