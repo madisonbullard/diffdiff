@@ -1,6 +1,6 @@
 import type { BranchInfo, StartupOptions } from "@diffdiff/core";
 import { ScrollBoxRenderable } from "@opentui/core";
-import { useKeyboard, useTerminalDimensions } from "@opentui/react";
+import { useKeyboard } from "@opentui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BranchModal, FileCard, HelpModal, type BranchColumn } from "./components.tsx";
 import { getUiTheme } from "./theme.ts";
@@ -38,7 +38,6 @@ export function DiffdiffApp({
   const [remoteBranchIndex, setRemoteBranchIndex] = useState(0);
   const [isReloading, setIsReloading] = useState(false);
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
-  const { width } = useTerminalDimensions();
   const uiTheme = getUiTheme(session.themeName);
 
   const visibleRemoteBranches = useMemo(() => {
@@ -156,33 +155,50 @@ export function DiffdiffApp({
   });
 
   const selectedFile = session.files[selectedFileIndex];
-  const contentWidth = Math.max(width - 12, 32);
+  const comparisonModeLabel =
+    session.comparison.mode === "working-tree" ? "working tree" : "branch range";
 
   return (
     <box width="100%" height="100%" flexDirection="column" backgroundColor={uiTheme.appBackground}>
       <box
+        flexShrink={0}
         width="100%"
         border
-        bottom={undefined}
         borderStyle="single"
         borderColor={uiTheme.border}
         backgroundColor={uiTheme.chromeBackground}
         paddingX={1}
-        paddingY={1}
+        paddingY={0}
         flexDirection="column"
       >
-        <text fg={uiTheme.text}>
+        <text fg={uiTheme.text} wrapMode="none">
           <span fg={uiTheme.accent}>{session.repository.name}</span>
+          <span fg={uiTheme.text}> </span>
+          <span fg={uiTheme.chromeBackground} bg={uiTheme.accent}>
+            {` ${comparisonModeLabel} `}
+          </span>
           <span fg={uiTheme.textMuted}>
             {" "}
             {session.comparison.base}...{session.comparison.head}
           </span>
-          <span fg={uiTheme.textMuted}> {session.files.length} files</span>
-          <span fg={uiTheme.textMuted}> {reviewedPaths.size} reviewed</span>
+          <span fg={uiTheme.text}> </span>
+          <span
+            fg={uiTheme.text}
+            bg={uiTheme.surfaceMuted}
+          >{` ${session.files.length} files `}</span>
+          <span fg={uiTheme.text}> </span>
+          <span
+            fg={uiTheme.text}
+            bg={uiTheme.surfaceMuted}
+          >{` ${reviewedPaths.size} reviewed `}</span>
         </text>
-        <text fg={uiTheme.textMuted}>{session.repository.rootPath}</text>
+        <text fg={uiTheme.textMuted} wrapMode="none">
+          {session.repository.rootPath}
+        </text>
         {session.warnings[0] != null ? (
-          <text fg={uiTheme.warning}>{session.warnings[0].message}</text>
+          <text fg={uiTheme.warning} wrapMode="none">
+            {session.warnings[0].message}
+          </text>
         ) : null}
       </box>
 
@@ -217,7 +233,6 @@ export function DiffdiffApp({
               <FileCard
                 key={file.path}
                 file={file}
-                contentWidth={contentWidth}
                 isCollapsed={isCollapsed}
                 isReviewed={isReviewed}
                 isSelected={isSelected}
@@ -229,24 +244,59 @@ export function DiffdiffApp({
       </scrollbox>
 
       <box
+        flexShrink={0}
         width="100%"
         border
         borderStyle="single"
         borderColor={uiTheme.border}
         backgroundColor={uiTheme.chromeBackground}
         paddingX={1}
-        paddingY={1}
+        paddingY={0}
         flexDirection="column"
       >
-        <text fg={uiTheme.textMuted}>
-          q quit j/k next-prev r reviewed c collapse m reviewed+next l branches ? help
+        <text fg={uiTheme.textMuted} wrapMode="none">
+          <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
+            {" "}
+            q{" "}
+          </span>
+          <span>{" quit  "}</span>
+          <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
+            {" "}
+            j/k{" "}
+          </span>
+          <span>{" move  "}</span>
+          <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
+            {" "}
+            r{" "}
+          </span>
+          <span>{" reviewed  "}</span>
+          <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
+            {" "}
+            c{" "}
+          </span>
+          <span>{" collapse  "}</span>
+          <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
+            {" "}
+            m{" "}
+          </span>
+          <span>{" review+next  "}</span>
+          <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
+            {" "}
+            l{" "}
+          </span>
+          <span>{" branches  "}</span>
+          <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
+            {" "}
+            ?{" "}
+          </span>
+          <span>{" help"}</span>
         </text>
-        <text fg={isReloading ? uiTheme.accent : uiTheme.text}>
-          {isReloading ? "Loading comparison..." : statusMessage}
+        <text fg={isReloading ? uiTheme.accent : uiTheme.text} wrapMode="none">
+          <span>{isReloading ? "Loading comparison..." : statusMessage}</span>
+          {selectedFile != null ? (
+            <span fg={uiTheme.textMuted}>{`  •  selected ${selectedFile.path}`}</span>
+          ) : null}
         </text>
-        {selectedFile != null ? (
-          <text fg={uiTheme.textMuted}>Selected: {selectedFile.path}</text>
-        ) : null}
       </box>
 
       {showBranchModal ? (

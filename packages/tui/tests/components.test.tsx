@@ -24,7 +24,6 @@ test("renders an expanded file card snapshot", () => {
   const tree = render(
     <FileCard
       file={createPreparedFile()}
-      contentWidth={80}
       isCollapsed={false}
       isReviewed={false}
       isSelected={true}
@@ -61,7 +60,6 @@ test("shows binary, reviewed, and collapsed states clearly", () => {
         patch: "diff --git a/logo.png b/logo.png\nBinary files a/logo.png and b/logo.png differ",
         unifiedLines: [],
       })}
-      contentWidth={80}
       isCollapsed={false}
       isReviewed={true}
       isSelected={false}
@@ -79,7 +77,6 @@ test("shows binary, reviewed, and collapsed states clearly", () => {
       (
         <FileCard
           file={createPreparedFile({ isBinary: true, unifiedLines: [] })}
-          contentWidth={80}
           isCollapsed={true}
           isReviewed={true}
           isSelected={false}

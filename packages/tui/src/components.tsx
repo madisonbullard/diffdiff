@@ -1,30 +1,22 @@
 import type { BranchInfo } from "@diffdiff/core";
-import { Fragment } from "react";
+import { getFiletypeFromFileName } from "@pierre/diffs";
 import type { UiTheme } from "./theme.ts";
 import type { PreparedReviewFile } from "./types.ts";
-import { truncateSegments } from "./view-model.ts";
 
 export type BranchColumn = "local" | "remote";
 
 export interface FileCardProps {
   file: PreparedReviewFile;
-  contentWidth: number;
   isCollapsed: boolean;
   isReviewed: boolean;
   isSelected: boolean;
   theme: UiTheme;
 }
 
-export function FileCard({
-  file,
-  contentWidth,
-  isCollapsed,
-  isReviewed,
-  isSelected,
-  theme,
-}: FileCardProps) {
+export function FileCard({ file, isCollapsed, isReviewed, isSelected, theme }: FileCardProps) {
   const borderColor = isSelected ? theme.borderActive : theme.border;
   const headerBackground = isReviewed ? theme.reviewedBg : theme.surfaceMuted;
+  const filetype = getFiletypeFromFileName(file.path);
   const statusLabel = file.status === "modified" ? "Changed" : capitalize(file.status);
   const statusColor =
     file.status === "added"
@@ -48,10 +40,10 @@ export function FileCard({
         width="100%"
         backgroundColor={headerBackground}
         paddingX={1}
-        paddingY={1}
+        paddingY={0}
         flexDirection="column"
       >
-        <text fg={theme.text}>
+        <text fg={theme.text} wrapMode="none">
           <span fg={isSelected ? theme.accent : theme.text}>{file.path}</span>
           <span fg={theme.textMuted}>
             {" "}
@@ -64,101 +56,50 @@ export function FileCard({
         {file.previousPath != null ? (
           <text fg={theme.textMuted}>renamed from {file.previousPath}</text>
         ) : null}
-        <text fg={theme.textMuted}>
+        <text fg={theme.textMuted} wrapMode="none">
           {file.isBinary ? "Binary diff" : "GitHub-style unified diff"}
         </text>
       </box>
 
       {!isCollapsed ? (
-        <box width="100%" flexDirection="column" paddingX={1} paddingY={1}>
+        <box width="100%" flexDirection="column">
           {file.isBinary ? (
-            <text fg={theme.textMuted}>
-              Binary file changed. Content preview is not available yet.
-            </text>
+            <box paddingX={1}>
+              <text fg={theme.textMuted}>
+                Binary file changed. Content preview is not available yet.
+              </text>
+            </box>
           ) : null}
-          {!file.isBinary && file.renderError != null ? (
-            <text fg={theme.warning}>{file.renderError}</text>
+          {!file.isBinary && file.patch.trim() === "" ? (
+            <box paddingX={1}>
+              <text fg={theme.textMuted}>No textual diff available for this file.</text>
+            </box>
           ) : null}
-          {!file.isBinary && file.renderError == null && file.unifiedLines.length === 0 ? (
-            <text fg={theme.textMuted}>No textual diff available for this file.</text>
+          {!file.isBinary && file.patch.trim() !== "" ? (
+            <box paddingLeft={1} paddingRight={1}>
+              <diff
+                diff={file.patch}
+                view="unified"
+                filetype={filetype}
+                showLineNumbers={true}
+                width="100%"
+                wrapMode="word"
+                fg={theme.text}
+                addedBg={theme.additionBg}
+                removedBg={theme.deletionBg}
+                contextBg={theme.contextBg}
+                addedSignColor={theme.success}
+                removedSignColor={theme.danger}
+                lineNumberFg={theme.textMuted}
+                lineNumberBg={theme.contextBg}
+                addedLineNumberBg={theme.reviewedBg}
+                removedLineNumberBg={theme.surfaceMuted}
+              />
+            </box>
           ) : null}
-          {!file.isBinary && file.renderError == null
-            ? file.unifiedLines.map((line, index) => (
-                <DiffLineView
-                  key={`${file.path}-${index}`}
-                  line={line}
-                  lineNumberWidth={file.lineNumberWidth}
-                  maxWidth={contentWidth}
-                  theme={theme}
-                />
-              ))
-            : null}
         </box>
       ) : null}
     </box>
-  );
-}
-
-export function DiffLineView({
-  line,
-  lineNumberWidth,
-  maxWidth,
-  theme,
-}: {
-  line: PreparedReviewFile["unifiedLines"][number];
-  lineNumberWidth: number;
-  maxWidth: number;
-  theme: UiTheme;
-}) {
-  const prefix =
-    line.kind === "addition"
-      ? "+"
-      : line.kind === "deletion"
-        ? "-"
-        : line.kind === "hunk"
-          ? "@"
-          : line.kind === "gap"
-            ? "~"
-            : " ";
-  const backgroundColor =
-    line.kind === "addition"
-      ? theme.additionBg
-      : line.kind === "deletion"
-        ? theme.deletionBg
-        : line.kind === "hunk" || line.kind === "gap"
-          ? theme.hunkBg
-          : theme.contextBg;
-  const lineNumberFg = line.kind === "hunk" || line.kind === "gap" ? theme.accent : theme.textMuted;
-  const contentMaxWidth = Math.max(maxWidth - lineNumberWidth * 2 - 8, 8);
-  const segments = truncateSegments(line.segments, contentMaxWidth);
-
-  return (
-    <text fg={theme.text} bg={backgroundColor}>
-      <span fg={lineNumberFg}>{formatLineNumber(line.oldLineNumber, lineNumberWidth)}</span>
-      <span fg={lineNumberFg}> </span>
-      <span fg={lineNumberFg}>{formatLineNumber(line.newLineNumber, lineNumberWidth)}</span>
-      <span
-        fg={
-          line.kind === "addition"
-            ? theme.success
-            : line.kind === "deletion"
-              ? theme.danger
-              : line.kind === "hunk"
-                ? theme.accent
-                : theme.textMuted
-        }
-      >
-        {` ${prefix} `}
-      </span>
-      {segments.length === 0 ? <span>{line.kind === "gap" ? "" : " "}</span> : null}
-      {segments.map((segment, index) => (
-        <Fragment key={index}>
-          <span fg={segment.fg} bg={segment.bg}>
-            {segment.text}
-          </span>
-        </Fragment>
-      ))}
-    </text>
   );
 }
 
@@ -316,10 +257,6 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
       </box>
     </box>
   );
-}
-
-function formatLineNumber(lineNumber: number | undefined, width: number): string {
-  return lineNumber == null ? " ".repeat(width) : String(lineNumber).padStart(width, " ");
 }
 
 function capitalize(value: string): string {

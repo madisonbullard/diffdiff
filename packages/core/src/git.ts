@@ -18,7 +18,6 @@ import type {
 } from "./types.ts";
 
 const FIELD_SEPARATOR = "\u0000";
-const RECORD_SEPARATOR = "\u001e";
 const EMPTY_TREE_LABEL = "(empty tree)";
 const WORKING_TREE_LABEL = "working tree";
 const NULL_DEVICE_PATH = process.platform === "win32" ? "NUL" : "/dev/null";
@@ -262,9 +261,7 @@ class GitRepository implements RepositoryHandle {
       "%(upstream:short)",
       "%(HEAD)",
       "%(symref)",
-    ]
-      .join("%00")
-      .concat("%x1e");
+    ].join("%00");
 
     const stdout = await runCommand("git", ["for-each-ref", prefix, `--format=${format}`], {
       cwd: this.rootPath,
@@ -273,8 +270,8 @@ class GitRepository implements RepositoryHandle {
     const defaultBase = await this.selectDefaultBaseRef();
 
     return stdout
-      .split(RECORD_SEPARATOR)
-      .map((record) => record.trim())
+      .split(/\r?\n/u)
+      .map((record) => record.trimEnd())
       .filter((record) => record !== "")
       .map((record) => {
         const [ref, name, sha, upstream, headMarker, symref] = record.split(FIELD_SEPARATOR);
@@ -286,9 +283,13 @@ class GitRepository implements RepositoryHandle {
         const remoteName = kind === "remote" ? record.name.split("/")[0] : undefined;
         const remote = remoteName == null ? undefined : remotesByName.get(remoteName);
         const isCurrent = kind === "local" && record.name === currentBranch;
+        const remoteShortName =
+          remoteName == null ? undefined : record.name.slice((remoteName.length ?? 0) + 1);
         const isDefault =
           record.name === defaultBase ||
-          `${remoteName}/${record.name.slice(remoteName?.length ?? 0 + 1)}` === defaultBase;
+          (remoteShortName != null &&
+            (remoteShortName === defaultBase ||
+              `${remoteName}/${remoteShortName}` === defaultBase));
 
         return {
           kind,
