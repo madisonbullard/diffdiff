@@ -16,6 +16,9 @@ import type {
   TextSegment,
   UnifiedDiffLine,
 } from "./types.ts";
+import { createPierreSegmentColorResolver, type SegmentColorResolver } from "./pierre-colors.ts";
+import { getSyntaxPalette, type SyntaxPalette } from "./syntax-palette.ts";
+import { getUiTheme, type UiTheme } from "./theme.ts";
 
 interface HastTextNode {
   type: "text";
@@ -39,14 +42,18 @@ interface SegmentStyle {
 export async function loadPreparedReviewSession(
   options: StartupOptions,
   themeName: PierreThemeName,
+  theme: UiTheme = getUiTheme(themeName),
+  syntaxPalette: SyntaxPalette = getSyntaxPalette(themeName),
 ): Promise<PreparedReviewSession> {
   const session = await loadReviewSession(options);
-  return prepareReviewSession(session, themeName);
+  return prepareReviewSession(session, themeName, theme, syntaxPalette);
 }
 
 export async function prepareReviewSession(
   session: ReviewSession,
   themeName: PierreThemeName,
+  theme: UiTheme = getUiTheme(themeName),
+  syntaxPalette: SyntaxPalette = getSyntaxPalette(themeName),
 ): Promise<PreparedReviewSession> {
   const parsedFiles = session.files.map((file) => parseReviewFile(file));
   const languages = new Set<string>();
@@ -71,6 +78,7 @@ export async function prepareReviewSession(
     themes: [themeName],
     langs: [...languages],
   });
+  const resolveSegmentColor = createPierreSegmentColorResolver(themeName, theme, syntaxPalette);
 
   const files = parsedFiles.map((file) => {
     if (file.diff == null || file.isBinary) {
@@ -90,12 +98,14 @@ export async function prepareReviewSession(
         rendered.code.deletionLines as HastNode[],
         rendered.code.additionLines as HastNode[],
         themeVariables,
+        resolveSegmentColor,
       );
       const sideBySideRows = buildSideBySideRows(
         file.diff,
         rendered.code.deletionLines as HastNode[],
         rendered.code.additionLines as HastNode[],
         themeVariables,
+        resolveSegmentColor,
       );
 
       return {
@@ -168,6 +178,7 @@ function buildUnifiedLines(
   deletionLines: readonly HastNode[],
   additionLines: readonly HastNode[],
   themeVariables: ReadonlyMap<string, string>,
+  resolveSegmentColor: SegmentColorResolver,
 ): UnifiedDiffLine[] {
   const lines: UnifiedDiffLine[] = [];
   let deletionIndex = 0;
@@ -199,7 +210,11 @@ function buildUnifiedLines(
             kind: "context",
             oldLineNumber,
             newLineNumber,
-            segments: collectSegments(additionLines[additionIndex], themeVariables),
+            segments: collectSegments(
+              additionLines[additionIndex],
+              themeVariables,
+              resolveSegmentColor,
+            ),
           });
           oldLineNumber += 1;
           newLineNumber += 1;
@@ -213,7 +228,11 @@ function buildUnifiedLines(
         lines.push({
           kind: "deletion",
           oldLineNumber,
-          segments: collectSegments(deletionLines[deletionIndex], themeVariables),
+          segments: collectSegments(
+            deletionLines[deletionIndex],
+            themeVariables,
+            resolveSegmentColor,
+          ),
         });
         oldLineNumber += 1;
         deletionIndex += 1;
@@ -223,7 +242,11 @@ function buildUnifiedLines(
         lines.push({
           kind: "addition",
           newLineNumber,
-          segments: collectSegments(additionLines[additionIndex], themeVariables),
+          segments: collectSegments(
+            additionLines[additionIndex],
+            themeVariables,
+            resolveSegmentColor,
+          ),
         });
         newLineNumber += 1;
         additionIndex += 1;
@@ -239,6 +262,7 @@ function buildSideBySideRows(
   deletionLines: readonly HastNode[],
   additionLines: readonly HastNode[],
   themeVariables: ReadonlyMap<string, string>,
+  resolveSegmentColor: SegmentColorResolver,
 ): SideBySideDiffRow[] {
   const rows: SideBySideDiffRow[] = [];
   let deletionIndex = 0;
@@ -266,8 +290,16 @@ function buildSideBySideRows(
     for (const hunkContent of hunk.hunkContent) {
       if (hunkContent.type === "context") {
         for (let index = 0; index < hunkContent.lines; index += 1) {
-          const leftSegments = collectSegments(deletionLines[deletionIndex], themeVariables);
-          const rightSegments = collectSegments(additionLines[additionIndex], themeVariables);
+          const leftSegments = collectSegments(
+            deletionLines[deletionIndex],
+            themeVariables,
+            resolveSegmentColor,
+          );
+          const rightSegments = collectSegments(
+            additionLines[additionIndex],
+            themeVariables,
+            resolveSegmentColor,
+          );
 
           rows.push({
             kind: "line",
@@ -299,7 +331,11 @@ function buildSideBySideRows(
         deletions.push({
           kind: "deletion",
           lineNumber: oldLineNumber,
-          segments: collectSegments(deletionLines[deletionIndex], themeVariables),
+          segments: collectSegments(
+            deletionLines[deletionIndex],
+            themeVariables,
+            resolveSegmentColor,
+          ),
         });
         oldLineNumber += 1;
         deletionIndex += 1;
@@ -309,7 +345,11 @@ function buildSideBySideRows(
         additions.push({
           kind: "addition",
           lineNumber: newLineNumber,
-          segments: collectSegments(additionLines[additionIndex], themeVariables),
+          segments: collectSegments(
+            additionLines[additionIndex],
+            themeVariables,
+            resolveSegmentColor,
+          ),
         });
         newLineNumber += 1;
         additionIndex += 1;
@@ -333,19 +373,21 @@ function buildSideBySideRows(
 function collectSegments(
   node: HastNode | undefined,
   themeVariables: ReadonlyMap<string, string>,
+  resolveSegmentColor: SegmentColorResolver,
 ): TextSegment[] {
   if (node == null) {
     return [];
   }
 
   const segments: TextSegment[] = [];
-  visitNode(node, themeVariables, {}, segments);
+  visitNode(node, themeVariables, resolveSegmentColor, {}, segments);
   return compactSegments(segments);
 }
 
 function visitNode(
   node: HastNode,
   themeVariables: ReadonlyMap<string, string>,
+  resolveSegmentColor: SegmentColorResolver,
   inheritedStyle: SegmentStyle,
   output: TextSegment[],
 ): void {
@@ -364,15 +406,19 @@ function visitNode(
 
   const mergedStyle = {
     ...inheritedStyle,
-    ...parseStyle(node.properties?.style, themeVariables),
+    ...parseStyle(node.properties?.style, themeVariables, resolveSegmentColor),
   };
 
   for (const child of node.children ?? []) {
-    visitNode(child, themeVariables, mergedStyle, output);
+    visitNode(child, themeVariables, resolveSegmentColor, mergedStyle, output);
   }
 }
 
-function parseStyle(style: unknown, themeVariables: ReadonlyMap<string, string>): SegmentStyle {
+function parseStyle(
+  style: unknown,
+  themeVariables: ReadonlyMap<string, string>,
+  resolveSegmentColor: SegmentColorResolver,
+): SegmentStyle {
   if (style == null) {
     return {};
   }
@@ -397,7 +443,7 @@ function parseStyle(style: unknown, themeVariables: ReadonlyMap<string, string>)
   }
 
   return {
-    fg: resolveCssValue(css.color, themeVariables),
+    fg: resolveSegmentColor(resolveCssValue(css.color, themeVariables)),
     bg: resolveCssValue(css["background-color"], themeVariables),
   };
 }

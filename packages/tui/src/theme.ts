@@ -174,10 +174,12 @@ export function createTerminalUiTheme(colors: TerminalColors, mode: ThemeMode): 
     green: colorAt(2),
     yellow: colorAt(3),
     cyan: colorAt(6),
-    redBright: colorAt(9),
-    greenBright: colorAt(10),
   };
-  const diffAlpha = isDark ? 0.22 : 0.14;
+  const accent = boostSaturation(ansiColors.cyan, isDark ? 0.2 : 0.16);
+  const success = boostSaturation(ansiColors.green, isDark ? 0.16 : 0.12);
+  const danger = boostSaturation(ansiColors.red, isDark ? 0.16 : 0.12);
+  const warning = boostSaturation(ansiColors.yellow, isDark ? 0.12 : 0.08);
+  const diffAlpha = isDark ? 0.24 : 0.16;
 
   return {
     appBackground: "transparent",
@@ -186,22 +188,26 @@ export function createTerminalUiTheme(colors: TerminalColors, mode: ThemeMode): 
     surface: toHex(grays[2]),
     surfaceMuted: toHex(grays[3]),
     border: toHex(grays[7]),
-    borderActive: toHex(ansiColors.cyan),
+    borderActive: toHex(accent),
     text: toHex(foreground),
     textMuted: toHex(textMuted),
-    accent: toHex(ansiColors.cyan),
-    success: toHex(ansiColors.green),
-    danger: toHex(ansiColors.red),
-    warning: toHex(ansiColors.yellow),
-    additionBg: toHex(tint(background, ansiColors.green, diffAlpha)),
-    additionLineNumberBg: toHex(tint(grays[3], ansiColors.greenBright, diffAlpha)),
-    deletionBg: toHex(tint(background, ansiColors.red, diffAlpha)),
-    deletionLineNumberBg: toHex(tint(grays[3], ansiColors.redBright, diffAlpha)),
+    accent: toHex(accent),
+    success: toHex(success),
+    danger: toHex(danger),
+    warning: toHex(warning),
+    additionBg: toHex(tint(background, success, diffAlpha)),
+    additionLineNumberBg: toHex(tint(grays[3], success, diffAlpha)),
+    deletionBg: toHex(tint(background, danger, diffAlpha)),
+    deletionLineNumberBg: toHex(tint(grays[3], danger, diffAlpha)),
     contextBg: toHex(grays[1]),
-    hunkBg: toHex(tint(grays[1], ansiColors.yellow, isDark ? 0.14 : 0.1)),
+    hunkBg: toHex(tint(grays[1], warning, isDark ? 0.16 : 0.12)),
     modalBg: toHex(grays[2]),
-    reviewedBg: toHex(tint(grays[3], ansiColors.cyan, isDark ? 0.18 : 0.12)),
+    reviewedBg: toHex(tint(grays[3], accent, isDark ? 0.2 : 0.14)),
   };
+}
+
+export function boostTerminalColor(color: string, mode: ThemeMode, strength = 0.18): string {
+  return toHex(boostSaturation(parseHexColor(color), mode === "dark" ? strength : strength * 0.8));
 }
 
 export function getThemeModeFromTerminalColor(color: string): ThemeMode {
@@ -257,6 +263,16 @@ function tint(base: RgbColor, overlay: RgbColor, alpha: number): RgbColor {
     r: Math.round(base.r + (overlay.r - base.r) * alpha),
     g: Math.round(base.g + (overlay.g - base.g) * alpha),
     b: Math.round(base.b + (overlay.b - base.b) * alpha),
+  };
+}
+
+function boostSaturation(color: RgbColor, amount: number): RgbColor {
+  const average = (color.r + color.g + color.b) / 3;
+
+  return {
+    r: clampChannel(color.r + (color.r - average) * amount),
+    g: clampChannel(color.g + (color.g - average) * amount),
+    b: clampChannel(color.b + (color.b - average) * amount),
   };
 }
 
@@ -333,6 +349,10 @@ function toHex(color: RgbColor): string {
   return `#${[color.r, color.g, color.b]
     .map((value) => value.toString(16).padStart(2, "0"))
     .join("")}`;
+}
+
+function clampChannel(value: number): number {
+  return Math.max(0, Math.min(255, Math.round(value)));
 }
 
 function extractOsc11Color(value: string): string | undefined {

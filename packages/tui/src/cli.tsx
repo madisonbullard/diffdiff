@@ -7,6 +7,7 @@ import type { StartupOptions } from "@diffdiff/core";
 import packageJson from "../package.json";
 import { DiffdiffApp } from "./app.tsx";
 import { loadPreparedReviewSession } from "./pierre.ts";
+import { createTerminalSyntaxPalette, getSyntaxPalette } from "./syntax-palette.ts";
 import { createTerminalSyntaxStyle, getSyntaxStyle } from "./syntax-style.ts";
 import {
   createTerminalUiTheme,
@@ -44,6 +45,10 @@ async function main(): Promise<void> {
     const terminalColors = await getTerminalColors(renderer);
     const theme =
       terminalColors == null ? fallbackTheme : createTerminalUiTheme(terminalColors, mode);
+    const syntaxPalette =
+      terminalColors == null
+        ? getSyntaxPalette(themeName)
+        : createTerminalSyntaxPalette(theme, terminalColors);
     const syntaxStyle =
       terminalColors == null
         ? getSyntaxStyle(themeName)
@@ -52,7 +57,7 @@ async function main(): Promise<void> {
     renderer.setBackgroundColor(theme.appBackground);
 
     const loadSession = (nextOptions: StartupOptions) =>
-      loadPreparedReviewSession(nextOptions, themeName);
+      loadPreparedReviewSession(nextOptions, themeName, theme, syntaxPalette);
     const initialSession = await loadSession(options);
 
     createRoot(renderer).render(

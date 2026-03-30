@@ -15,9 +15,10 @@ test("builds a dark UI theme from terminal colors", () => {
   expect(formatColor(theme.appBackground)).toBe("transparent");
   expect(formatColor(theme.inverseText)).toBe("#101214");
   expect(formatColor(theme.text)).toBe("#e6edf3");
-  expect(formatColor(theme.accent)).toBe("#56b6c2");
-  expect(formatColor(theme.success)).toBe("#98c379");
-  expect(formatColor(theme.danger)).toBe("#e06c75");
+  expect(formatColor(theme.accent)).toBe("#48bcca");
+  expect(formatColor(theme.success)).toBe("#97c973");
+  expect(formatColor(theme.danger)).toBe("#ec6570");
+  expect(formatColor(theme.additionBg)).toBe("#303e2b");
 });
 
 test("builds a light UI theme from terminal colors", () => {
@@ -50,8 +51,9 @@ test("builds a light UI theme from terminal colors", () => {
   expect(formatColor(theme.appBackground)).toBe("transparent");
   expect(formatColor(theme.inverseText)).toBe("#f7f4eb");
   expect(formatColor(theme.text)).toBe("#2f2a24");
-  expect(formatColor(theme.warning)).toBe("#a97b1d");
-  expect(formatColor(theme.borderActive)).toBe("#2d7f88");
+  expect(formatColor(theme.warning)).toBe("#ae7c17");
+  expect(formatColor(theme.borderActive)).toBe("#24838d");
+  expect(formatColor(theme.deletionBg)).toBe("#edd9ce");
 });
 
 function createPalette(overrides: Partial<TerminalColors> = {}): TerminalColors {
