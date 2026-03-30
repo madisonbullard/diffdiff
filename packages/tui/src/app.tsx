@@ -1,6 +1,5 @@
 import type { BranchInfo, StartupOptions } from "@diffdiff/core";
-import type { BoxRenderable, SyntaxStyle } from "@opentui/core";
-import { ScrollBoxRenderable } from "@opentui/core";
+import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
 import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -36,6 +35,12 @@ interface DiffdiffAppProps {
   onExit: () => void;
   syntaxStyle: SyntaxStyle;
   theme: UiTheme;
+}
+
+interface KeyboardInput {
+  name: string;
+  sequence?: string;
+  shift?: boolean;
 }
 
 const LIST_FILTER_KEYS = ["workingTree", "localBranch", "openPr", "remoteBranch"] as const;
@@ -110,6 +115,14 @@ export function DiffdiffApp({
   const selectedCommitItem = commitItems[clampIndex(commitListIndex, commitItems.length)];
   const openPrCount = session.branches.remote.filter((branch) => branch.pullRequest != null).length;
   const remoteBranchCount = session.branches.remote.length - openPrCount;
+  const activeOverlay = showHelp
+    ? "help"
+    : showListFilterModal
+      ? "list-filter"
+      : showBranchModal
+        ? "branch"
+        : null;
+  const keyboardHandlerRef = useRef<(key: KeyboardInput) => void>(() => undefined);
 
   useEffect(() => {
     setSelectedFileIndex((currentIndex) => clampIndex(currentIndex, session.files.length));
@@ -186,20 +199,20 @@ export function DiffdiffApp({
     syncActiveFileIndex();
   }, [collapsedPaths, diffView, session.files, syncActiveFileIndex, terminalDimensions.width]);
 
-  useKeyboard((key) => {
-    if (showHelp) {
+  keyboardHandlerRef.current = (key) => {
+    if (activeOverlay === "help") {
       if (key.name === "escape" || key.name === "q" || key.sequence === "?") {
         setShowHelp(false);
       }
       return;
     }
 
-    if (showListFilterModal) {
+    if (activeOverlay === "list-filter") {
       handleListFilterModalKey(key);
       return;
     }
 
-    if (showBranchModal) {
+    if (activeOverlay === "branch") {
       handleBranchModalKey(key);
       return;
     }
@@ -259,7 +272,13 @@ export function DiffdiffApp({
     if (key.name === "m") {
       reviewCollapseAndAdvance(selectedFileIndex);
     }
-  });
+  };
+
+  useKeyboard(
+    useCallback((key: KeyboardInput) => {
+      keyboardHandlerRef.current(key);
+    }, []),
+  );
 
   const selectedFile = session.files[selectedFileIndex];
   const comparisonModeLabel =
@@ -334,7 +353,7 @@ export function DiffdiffApp({
         ref={scrollRef}
         width="100%"
         flexGrow={1}
-        focused
+        focused={activeOverlay == null}
         viewportOptions={{ backgroundColor: theme.appBackground }}
         contentOptions={{ backgroundColor: theme.appBackground }}
         verticalScrollbarOptions={{ trackOptions: { backgroundColor: theme.border } }}
@@ -557,7 +576,7 @@ export function DiffdiffApp({
     setStatusMessage("Opened list modal.");
   }
 
-  function handleBranchModalKey(key: { name: string; sequence?: string; shift?: boolean }): void {
+  function handleBranchModalKey(key: KeyboardInput): void {
     if (key.name === "escape" || key.name === "q" || key.name === "l") {
       setShowBranchModal(false);
       setShowListFilterModal(false);
@@ -664,11 +683,7 @@ export function DiffdiffApp({
     }
   }
 
-  function handleListFilterModalKey(key: {
-    name: string;
-    sequence?: string;
-    shift?: boolean;
-  }): void {
+  function handleListFilterModalKey(key: KeyboardInput): void {
     if (key.name === "escape" || key.name === "q" || key.name === "f") {
       setShowListFilterModal(false);
       setStatusMessage("Closed list filters.");
