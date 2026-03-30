@@ -3,6 +3,7 @@ import { expect, test } from "vite-plus/test";
 import {
   clampIndex,
   getDiffViewLabel,
+  getTopIntersectingFileIndex,
   getVisibleRemoteBranches,
   MIN_SIDE_BY_SIDE_DIFF_WIDTH,
   resolveDiffView,
@@ -80,4 +81,12 @@ test("resolveDiffView matches the split threshold used by side-by-side mode", ()
   expect(resolveDiffView("side-by-side", MIN_SIDE_BY_SIDE_DIFF_WIDTH)).toBe("split");
   expect(getDiffViewLabel("unified")).toBe("unified");
   expect(getDiffViewLabel("split")).toBe("side-by-side");
+});
+
+test("top intersecting file stays pinned until the next file reaches the viewport top", () => {
+  expect(getTopIntersectingFileIndex([1, 12, 20], 0)).toBe(0);
+  expect(getTopIntersectingFileIndex([1, 12, 20], 11)).toBe(0);
+  expect(getTopIntersectingFileIndex([1, 12, 20], 12)).toBe(1);
+  expect(getTopIntersectingFileIndex([1, 12, 20], 19)).toBe(1);
+  expect(getTopIntersectingFileIndex([1, 12, 20], 999)).toBe(2);
 });

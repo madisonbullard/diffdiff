@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import type { ReactTestRenderer } from "react-test-renderer";
 import { act, create } from "react-test-renderer";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
-import { BranchModal, FileCard, HelpModal } from "../src/components.tsx";
+import { BranchModal, FileCard, HelpModal, StickyFileHeader } from "../src/components.tsx";
 import { getUiTheme } from "../src/theme.ts";
 import type { PreparedReviewFile } from "../src/types.ts";
 
@@ -101,6 +101,21 @@ test("shows binary, reviewed, and collapsed states clearly", () => {
   });
 
   expect(collectText(tree.toJSON())).toContain("COLLAPSED");
+});
+
+test("renders a sticky file header for the active viewport file", () => {
+  const tree = render(
+    <StickyFileHeader
+      file={createPreparedFile()}
+      isReviewed={true}
+      isSelected={false}
+      theme={theme}
+    />,
+  );
+
+  expect(collectText(tree.toJSON())).toContain("src/app.ts");
+  expect(collectText(tree.toJSON())).toContain("+3");
+  expect(collectText(tree.toJSON())).toContain("-1");
 });
 
 test("renders empty branch columns and help copy", () => {

@@ -1,6 +1,6 @@
 import type { BranchInfo } from "@diffdiff/core";
-import type { ColorInput, SyntaxStyle } from "@opentui/core";
-import type { ReactNode } from "react";
+import type { BoxRenderable, ColorInput, SyntaxStyle } from "@opentui/core";
+import type { ReactNode, Ref } from "react";
 import { getDiffFiletype } from "./language.ts";
 import type { UiTheme } from "./theme.ts";
 import type {
@@ -37,6 +37,7 @@ export interface FileCardProps {
   isCollapsed: boolean;
   isReviewed: boolean;
   isSelected: boolean;
+  rootRef?: Ref<BoxRenderable>;
   syntaxStyle: SyntaxStyle;
   terminalWidth: number;
   theme: UiTheme;
@@ -48,12 +49,11 @@ export function FileCard({
   isCollapsed,
   isReviewed,
   isSelected,
+  rootRef,
   syntaxStyle,
   terminalWidth,
   theme,
 }: FileCardProps) {
-  const borderColor = isSelected ? theme.borderActive : isReviewed ? theme.success : theme.border;
-  const fileBackground = isSelected ? theme.surfaceMuted : theme.surface;
   const filetype = getDiffFiletype(file.path);
   const statusLabel = file.status === "modified" ? "Changed" : capitalize(file.status);
   const statusColor =
@@ -67,9 +67,11 @@ export function FileCard({
   const modeLabel = file.isBinary
     ? "binary change"
     : `${filetype ?? "text"} ${getDiffViewLabel(diffView)} diff`;
+  const { borderColor, fileBackground } = getFileCardChrome(isSelected, isReviewed, theme);
 
   return (
     <box
+      ref={rootRef}
       width="100%"
       border={["left"]}
       customBorderChars={SPLIT_BORDER}
@@ -82,16 +84,7 @@ export function FileCard({
       paddingBottom={isCollapsed ? 0 : 1}
       gap={1}
     >
-      <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
-        <text fg={theme.text} wrapMode="none">
-          <span fg={isSelected ? theme.accent : theme.text}>{file.path}</span>
-        </text>
-        <text fg={theme.textMuted} wrapMode="none">
-          <span fg={theme.success}>{`+${file.additions}`}</span>
-          <span>{" / "}</span>
-          <span fg={theme.danger}>{`-${file.deletions}`}</span>
-        </text>
-      </box>
+      <FileCardTitleRow file={file} isSelected={isSelected} theme={theme} />
 
       <text fg={theme.textMuted} wrapMode="none">
         <Tag label={statusLabel.toUpperCase()} fg={theme.inverseText} bg={statusColor} />
@@ -170,6 +163,65 @@ export function FileCard({
       ) : null}
     </box>
   );
+}
+
+export function StickyFileHeader({
+  file,
+  isReviewed,
+  isSelected,
+  theme,
+}: {
+  file: PreparedReviewFile;
+  isReviewed: boolean;
+  isSelected: boolean;
+  theme: UiTheme;
+}) {
+  const { borderColor, fileBackground } = getFileCardChrome(isSelected, isReviewed, theme);
+
+  return (
+    <box
+      width="100%"
+      border={["left"]}
+      customBorderChars={SPLIT_BORDER}
+      borderColor={borderColor}
+      backgroundColor={fileBackground}
+      paddingLeft={2}
+      paddingRight={1}
+      zIndex={10}
+    >
+      <FileCardTitleRow file={file} isSelected={isSelected} theme={theme} />
+    </box>
+  );
+}
+
+function FileCardTitleRow({
+  file,
+  isSelected,
+  theme,
+}: {
+  file: PreparedReviewFile;
+  isSelected: boolean;
+  theme: UiTheme;
+}) {
+  return (
+    <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
+      <text fg={theme.text} wrapMode="none">
+        <span fg={isSelected ? theme.accent : theme.text}>{file.path}</span>
+      </text>
+      <text fg={theme.textMuted} wrapMode="none">
+        <span fg={theme.success}>{`+${file.additions}`}</span>
+        <span>{" / "}</span>
+        <span fg={theme.danger}>{`-${file.deletions}`}</span>
+      </text>
+    </box>
+  );
+}
+
+function getFileCardChrome(isSelected: boolean, isReviewed: boolean, theme: UiTheme) {
+  return {
+    borderColor: isSelected ? theme.borderActive : isReviewed ? theme.success : theme.border,
+    fileBackground: isSelected ? theme.surfaceMuted : theme.surface,
+  };
 }
 
 function UnifiedDiffPreview({ file, theme }: { file: PreparedReviewFile; theme: UiTheme }) {

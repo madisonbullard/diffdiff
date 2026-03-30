@@ -4,7 +4,6 @@ export { loadPreparedReviewSession, prepareReviewSession } from "./pierre.ts";
 export { getUiTheme } from "./theme.ts";
 export {
   clampIndex,
-  estimateFileRows,
   getDiffViewLabel,
   getVisibleRemoteBranches,
   MIN_SIDE_BY_SIDE_DIFF_WIDTH,

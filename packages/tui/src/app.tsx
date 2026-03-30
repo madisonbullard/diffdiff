@@ -1,15 +1,21 @@
 import type { BranchInfo, StartupOptions } from "@diffdiff/core";
-import type { SyntaxStyle } from "@opentui/core";
+import type { BoxRenderable, SyntaxStyle } from "@opentui/core";
 import { ScrollBoxRenderable } from "@opentui/core";
 import { useKeyboard, useTerminalDimensions } from "@opentui/react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { BranchModal, FileCard, HelpModal, type BranchColumn } from "./components.tsx";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  BranchModal,
+  FileCard,
+  HelpModal,
+  StickyFileHeader,
+  type BranchColumn,
+} from "./components.tsx";
 import type { UiTheme } from "./theme.ts";
 import type { DiffViewPreference, PreparedReviewSession } from "./types.ts";
 import {
   clampIndex,
-  estimateFileRows,
   getDiffViewLabel,
+  getTopIntersectingFileIndex,
   getVisibleRemoteBranches,
   MIN_SIDE_BY_SIDE_DIFF_WIDTH,
   resolveDiffView,
@@ -46,7 +52,9 @@ export function DiffdiffApp({
   const [remoteBranchIndex, setRemoteBranchIndex] = useState(0);
   const [isReloading, setIsReloading] = useState(false);
   const [diffViewPreference, setDiffViewPreference] = useState<DiffViewPreference>("unified");
+  const [activeFileIndex, setActiveFileIndex] = useState(0);
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
+  const fileCardRefs = useRef<(BoxRenderable | null)[]>([]);
   const terminalDimensions = useTerminalDimensions();
   const diffView = useMemo(
     () => resolveDiffView(diffViewPreference, terminalDimensions.width),
@@ -68,22 +76,33 @@ export function DiffdiffApp({
     visibleRemoteBranches[clampIndex(remoteBranchIndex, visibleRemoteBranches.length)];
   const selectedBranch =
     activeBranchColumn === "local" ? selectedLocalBranch : selectedRemoteBranch;
-
-  const fileOffsets = useMemo(() => {
-    const offsets: number[] = [];
-    let runningTotal = 0;
-
-    for (const file of session.files) {
-      offsets.push(runningTotal);
-      runningTotal += estimateFileRows(file, collapsedPaths.has(file.path));
-    }
-
-    return offsets;
-  }, [collapsedPaths, session.files]);
+  const stickyFile = session.files[activeFileIndex];
 
   useEffect(() => {
     setSelectedFileIndex((currentIndex) => clampIndex(currentIndex, session.files.length));
   }, [session.files.length]);
+
+  useEffect(() => {
+    setActiveFileIndex((currentIndex) => clampIndex(currentIndex, session.files.length));
+  }, [session.files.length]);
+
+  useEffect(() => {
+    fileCardRefs.current.length = session.files.length;
+  }, [session.files.length]);
+
+  const getFileTopOffsets = useCallback((): number[] => {
+    const scrollBox = scrollRef.current;
+    if (scrollBox == null) {
+      return [];
+    }
+
+    const contentTop = scrollBox.content.y;
+
+    return session.files.map((_, index) => {
+      const fileCard = fileCardRefs.current[index];
+      return fileCard == null ? Number.POSITIVE_INFINITY : fileCard.y - contentTop;
+    });
+  }, [session.files]);
 
   useEffect(() => {
     setLocalBranchIndex((currentIndex) => clampIndex(currentIndex, session.branches.local.length));
@@ -94,13 +113,45 @@ export function DiffdiffApp({
   }, [visibleRemoteBranches.length]);
 
   useEffect(() => {
-    const offset = fileOffsets[selectedFileIndex];
-    if (offset == null) {
+    const scrollBox = scrollRef.current;
+    const offset = getFileTopOffsets()[selectedFileIndex];
+    if (scrollBox == null || offset == null || !Number.isFinite(offset)) {
       return;
     }
 
-    scrollRef.current?.scrollTo({ x: 0, y: offset });
-  }, [fileOffsets, selectedFileIndex]);
+    scrollBox.scrollTo({ x: 0, y: offset });
+    setActiveFileIndex(selectedFileIndex);
+  }, [getFileTopOffsets, selectedFileIndex]);
+
+  const syncActiveFileIndex = useCallback(() => {
+    const scrollBox = scrollRef.current;
+    if (scrollBox == null) {
+      return;
+    }
+
+    const fileTopOffsets = getFileTopOffsets();
+    const nextIndex = getTopIntersectingFileIndex(fileTopOffsets, scrollBox.scrollTop);
+
+    setActiveFileIndex((currentIndex) => (currentIndex === nextIndex ? currentIndex : nextIndex));
+  }, [getFileTopOffsets]);
+
+  useEffect(() => {
+    const scrollBox = scrollRef.current;
+    if (scrollBox == null) {
+      return;
+    }
+
+    syncActiveFileIndex();
+    scrollBox.verticalScrollBar.on("change", syncActiveFileIndex);
+
+    return () => {
+      scrollBox.verticalScrollBar.off("change", syncActiveFileIndex);
+    };
+  }, [syncActiveFileIndex]);
+
+  useEffect(() => {
+    syncActiveFileIndex();
+  }, [collapsedPaths, diffView, session.files, syncActiveFileIndex, terminalDimensions.width]);
 
   useKeyboard((key) => {
     if (showHelp) {
@@ -224,6 +275,23 @@ export function DiffdiffApp({
         ) : null}
       </box>
 
+      {stickyFile != null ? (
+        <box
+          flexShrink={0}
+          width="100%"
+          paddingX={2}
+          paddingTop={1}
+          backgroundColor={theme.appBackground}
+        >
+          <StickyFileHeader
+            file={stickyFile}
+            isReviewed={reviewedPaths.has(stickyFile.path)}
+            isSelected={activeFileIndex === selectedFileIndex}
+            theme={theme}
+          />
+        </box>
+      ) : null}
+
       <scrollbox
         ref={scrollRef}
         width="100%"
@@ -261,6 +329,9 @@ export function DiffdiffApp({
                 isCollapsed={isCollapsed}
                 isReviewed={isReviewed}
                 isSelected={isSelected}
+                rootRef={(node) => {
+                  fileCardRefs.current[index] = node;
+                }}
                 syntaxStyle={syntaxStyle}
                 terminalWidth={terminalDimensions.width}
                 theme={theme}

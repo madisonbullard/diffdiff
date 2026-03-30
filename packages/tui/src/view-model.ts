@@ -1,5 +1,5 @@
 import type { BranchInfo, ComparisonInfo } from "@diffdiff/core";
-import type { DiffView, DiffViewPreference, PreparedReviewFile, TextSegment } from "./types.ts";
+import type { DiffView, DiffViewPreference, TextSegment } from "./types.ts";
 
 export const MIN_SIDE_BY_SIDE_DIFF_WIDTH = 121;
 
@@ -30,14 +30,25 @@ export function clampIndex(index: number, size: number): number {
   return Math.max(0, Math.min(index, size - 1));
 }
 
-export function estimateFileRows(file: PreparedReviewFile, collapsed: boolean): number {
-  const headerRows = file.previousPath == null ? 4 : 5;
-  if (collapsed) {
-    return headerRows;
+export function getTopIntersectingFileIndex(
+  itemOffsets: readonly number[],
+  viewportTop: number,
+): number {
+  if (itemOffsets.length === 0) {
+    return 0;
   }
 
-  const diffRows = Math.max(file.unifiedLines.length, file.sideBySideRows.length, 1);
-  return headerRows + diffRows + 1;
+  let activeIndex = 0;
+
+  for (const [index, offset] of itemOffsets.entries()) {
+    if (offset > viewportTop) {
+      break;
+    }
+
+    activeIndex = index;
+  }
+
+  return activeIndex;
 }
 
 export function resolveDiffView(preference: DiffViewPreference, terminalWidth: number): DiffView {
