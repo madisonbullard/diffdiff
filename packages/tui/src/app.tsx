@@ -33,11 +33,7 @@ export function DiffdiffApp({
   theme,
 }: DiffdiffAppProps) {
   const [session, setSession] = useState(initialSession);
-  const [startupOptions, setStartupOptions] = useState<StartupOptions>({
-    ...initialOptions,
-    base: initialSession.comparison.base,
-    head: initialSession.comparison.head,
-  });
+  const [startupOptions, setStartupOptions] = useState<StartupOptions>({ ...initialOptions });
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [reviewedPaths, setReviewedPaths] = useState<Set<string>>(new Set());
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(new Set());
@@ -338,6 +334,7 @@ export function DiffdiffApp({
         <BranchModal
           activeColumn={activeBranchColumn}
           base={session.comparison.base}
+          comparisonMode={session.comparison.mode}
           head={session.comparison.head}
           localBranches={session.branches.local}
           localIndex={localBranchIndex}
@@ -530,6 +527,11 @@ export function DiffdiffApp({
       if (selectedBranch != null) {
         void applyBranchSelection("head", selectedBranch);
       }
+      return;
+    }
+
+    if (key.name === "w") {
+      void applyWorkingTreeSelection();
     }
   }
 
@@ -551,6 +553,29 @@ export function DiffdiffApp({
       setStatusMessage(`Updated ${target} to ${branch.name}.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : `Unable to update ${target}.`;
+      setStatusMessage(message);
+    } finally {
+      setIsReloading(false);
+    }
+  }
+
+  async function applyWorkingTreeSelection(): Promise<void> {
+    const { base: _base, head: _head, ...remainingOptions } = startupOptions;
+    const nextOptions = { ...remainingOptions } satisfies StartupOptions;
+
+    setIsReloading(true);
+    setStatusMessage("Reviewing working tree changes against HEAD...");
+
+    try {
+      const nextSession = await loadSession(nextOptions);
+      setSession(nextSession);
+      setStartupOptions(nextOptions);
+      setShowBranchModal(false);
+      setSelectedFileIndex(0);
+      setStatusMessage("Showing working tree changes against HEAD.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to review working tree changes.";
       setStatusMessage(message);
     } finally {
       setIsReloading(false);

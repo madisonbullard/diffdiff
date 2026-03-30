@@ -40,6 +40,58 @@ describe("parsePorcelainStatusEntries", () => {
 });
 
 describe("loadReviewSession", () => {
+  test("defaults to HEAD vs working tree when commits exist", async () => {
+    const repositoryPath = await createTemporaryRepository();
+
+    await mkdir(join(repositoryPath, "src"), { recursive: true });
+    await writeFile(join(repositoryPath, "src", "app.ts"), "export const app = true;\n");
+    await runGit(repositoryPath, ["add", "."]);
+    await runGit(repositoryPath, [
+      "-c",
+      "user.name=Diffdiff Test",
+      "-c",
+      "user.email=test@example.com",
+      "commit",
+      "-m",
+      "Initial commit",
+    ]);
+
+    await writeFile(join(repositoryPath, "src", "app.ts"), "export const app = false;\n");
+    await writeFile(join(repositoryPath, "src", "staged.ts"), "export const staged = true;\n");
+    await runGit(repositoryPath, ["add", "src/staged.ts"]);
+    await writeFile(
+      join(repositoryPath, "src", "untracked.ts"),
+      "export const untracked = true;\n",
+    );
+
+    const session = await loadReviewSession({ repoPath: repositoryPath });
+
+    expect(session.comparison).toMatchObject({
+      base: "HEAD",
+      head: "working tree",
+      mode: "working-tree",
+      usesMergeBase: false,
+    });
+
+    expect(session.files.map((file) => file.path).sort()).toEqual([
+      "src/app.ts",
+      "src/staged.ts",
+      "src/untracked.ts",
+    ]);
+    expect(session.files.find((file) => file.path === "src/app.ts")).toMatchObject({
+      status: "modified",
+    });
+    expect(session.files.find((file) => file.path === "src/staged.ts")).toMatchObject({
+      status: "added",
+    });
+    expect(session.files.find((file) => file.path === "src/untracked.ts")).toMatchObject({
+      status: "added",
+    });
+    expect(session.files.find((file) => file.path === "src/app.ts")?.patch).toContain(
+      "+export const app = false;",
+    );
+  });
+
   test("falls back to working tree mode for unborn repositories", async () => {
     const repositoryPath = await createTemporaryRepository();
 
@@ -84,4 +136,8 @@ async function createTemporaryRepository(): Promise<string> {
   await execFileAsync("git", ["init", repositoryPath]);
 
   return repositoryPath;
+}
+
+async function runGit(repositoryPath: string, args: string[]): Promise<void> {
+  await execFileAsync("git", args, { cwd: repositoryPath });
 }

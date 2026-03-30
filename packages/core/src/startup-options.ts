@@ -5,8 +5,9 @@ export function parseStartupOptions(
   argv: readonly string[] = process.argv.slice(2),
   env: NodeJS.ProcessEnv = process.env,
 ): ParsedStartupOptions {
+  const normalizedArgv = argv[0] === "tui" ? argv.slice(1) : argv;
   const { values } = parseArgs({
-    args: [...argv],
+    args: [...normalizedArgv],
     allowPositionals: false,
     strict: false,
     options: {
@@ -48,9 +49,10 @@ export function parseStartupOptions(
 
 export function formatHelpText(): string {
   return [
-    "diffdiff",
+    "diffdiff [tui]",
     "",
     "A git-backed terminal code review tool.",
+    "Defaults to reviewing staged, unstaged, and untracked changes against HEAD.",
     "",
     "Options:",
     "  --repo, -r   Path inside the repository to review",

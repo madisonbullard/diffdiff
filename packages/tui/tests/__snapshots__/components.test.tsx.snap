@@ -127,6 +127,84 @@ exports[`renders a branch modal snapshot 1`] = `
       </text>
     </box>
     <box
+      backgroundColor="#10202d"
+      border={
+        [
+          "left",
+        ]
+      }
+      borderColor="#29475c"
+      customBorderChars={
+        {
+          "bottomLeft": "",
+          "bottomRight": "",
+          "bottomT": "",
+          "cross": "",
+          "horizontal": " ",
+          "leftT": "",
+          "rightT": "",
+          "topLeft": "",
+          "topRight": "",
+          "topT": "",
+          "vertical": "┃",
+        }
+      }
+      flexDirection="column"
+      gap={1}
+      paddingBottom={1}
+      paddingLeft={2}
+      paddingRight={1}
+      paddingTop={1}
+      width="100%"
+    >
+      <box
+        flexDirection="row"
+        gap={1}
+        justifyContent="space-between"
+        width="100%"
+      >
+        <text
+          fg="#e6edf3"
+          wrapMode="none"
+        >
+          Working tree option
+        </text>
+        <text
+          fg="#8ea4b5"
+          wrapMode="none"
+        >
+          <span
+            bg="#152838"
+            fg="#e6edf3"
+          >
+             w 
+          </span>
+          <span>
+             select
+          </span>
+        </text>
+      </box>
+      <text
+        fg="#e6edf3"
+        wrapMode="none"
+      >
+        <span>
+          Working tree vs 
+        </span>
+        <span
+          fg="#9cdcfe"
+        >
+          HEAD
+        </span>
+      </text>
+      <text
+        fg="#8ea4b5"
+        wrapMode="none"
+      >
+        Includes staged, unstaged, and untracked changes that are not committed yet.
+      </text>
+    </box>
+    <box
       flexDirection="row"
       gap={2}
       width="100%"
@@ -497,6 +575,15 @@ exports[`renders a branch modal snapshot 1`] = `
         </span>
         <span>
            set head  
+        </span>
+        <span
+          bg="#152838"
+          fg="#e6edf3"
+        >
+           w 
+        </span>
+        <span>
+           working tree  
         </span>
         <span
           bg="#152838"

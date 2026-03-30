@@ -3,6 +3,12 @@ import { parseGitHubRemote } from "../src/github.ts";
 import { parseStartupOptions } from "../src/startup-options.ts";
 
 describe("parseStartupOptions", () => {
+  test("accepts the optional tui subcommand", () => {
+    const result = parseStartupOptions(["tui", "--base", "origin/main"]);
+
+    expect(result.base).toBe("origin/main");
+  });
+
   test("prefers CLI values over env values", () => {
     const result = parseStartupOptions(["--base", "origin/main", "--head", "feature"], {
       DIFFDIFF_BASE: "main",

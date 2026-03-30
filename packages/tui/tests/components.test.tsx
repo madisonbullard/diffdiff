@@ -43,6 +43,7 @@ test("renders a branch modal snapshot", () => {
     <BranchModal
       activeColumn="remote"
       base="origin/main"
+      comparisonMode="range"
       head="feature/tui"
       localBranches={createLocalBranches()}
       localIndex={0}
@@ -56,6 +57,7 @@ test("renders a branch modal snapshot", () => {
 
   expect(tree.toJSON()).toMatchSnapshot();
   expect(collectText(tree.toJSON())).toContain("OPEN PR #42");
+  expect(collectText(tree.toJSON())).toContain("Working tree vs");
 });
 
 test("shows binary, reviewed, and collapsed states clearly", () => {
@@ -106,6 +108,7 @@ test("renders empty branch columns and help copy", () => {
     <BranchModal
       activeColumn="local"
       base="(empty tree)"
+      comparisonMode="working-tree"
       head="working tree"
       localBranches={[]}
       localIndex={0}
@@ -119,7 +122,9 @@ test("renders empty branch columns and help copy", () => {
   const helpModal = render(<HelpModal theme={theme} />);
 
   expect(collectText(branchModal.toJSON())).toContain("Nothing to show.");
+  expect(collectText(branchModal.toJSON())).toContain("ACTIVE");
   expect(collectText(helpModal.toJSON())).toContain("branch list");
+  expect(collectText(helpModal.toJSON())).toContain("working tree");
 });
 
 test("uses the native diff renderer when Pierre segments are unavailable", () => {

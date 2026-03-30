@@ -59,9 +59,11 @@ class GitRepository implements RepositoryHandle {
   ): Promise<ReviewSession> {
     const warnings: ReviewWarning[] = [];
     const hasCommitHistory = await this.hasCommitHistory();
-    const resolvedComparison = hasCommitHistory
-      ? await this.resolveComparison(options)
-      : await this.resolveWorkingTreeComparison();
+    const resolvedComparison = !hasCommitHistory
+      ? await this.resolveWorkingTreeComparison(EMPTY_TREE_LABEL)
+      : options.base == null && options.head == null
+        ? await this.resolveWorkingTreeComparison("HEAD")
+        : await this.resolveComparison(options);
 
     if (!hasCommitHistory) {
       warnings.push({
@@ -81,7 +83,7 @@ class GitRepository implements RepositoryHandle {
     const repository = await this.buildRepositoryInfo(remotes, resolvedComparison.currentBranch);
     const files =
       resolvedComparison.comparison.mode === "working-tree"
-        ? await this.listWorkingTreeChanges()
+        ? await this.listWorkingTreeChanges(resolvedComparison.comparison.base)
         : await this.listChangedFiles(resolvedComparison.comparison.range);
     const branches = await this.listBranches(remotes, resolvedComparison.currentBranch);
     const enrichedBranches = await this.enrichRemoteBranches(
@@ -146,17 +148,17 @@ class GitRepository implements RepositoryHandle {
     };
   }
 
-  private async resolveWorkingTreeComparison(): Promise<ResolvedComparison> {
+  private async resolveWorkingTreeComparison(base: string): Promise<ResolvedComparison> {
     const currentBranch = await this.getCurrentBranch();
 
     return {
       currentBranch,
       comparison: {
-        base: EMPTY_TREE_LABEL,
+        base,
         head: WORKING_TREE_LABEL,
         mergeBase: undefined,
         mode: "working-tree",
-        range: `${EMPTY_TREE_LABEL}...${WORKING_TREE_LABEL}`,
+        range: `${base}...${WORKING_TREE_LABEL}`,
         usesMergeBase: false,
       },
     };
@@ -382,43 +384,95 @@ class GitRepository implements RepositoryHandle {
     return splitPatchIntoFiles(patch).map((filePatch) => parseChangedFilePatch(filePatch));
   }
 
-  private async listWorkingTreeChanges(): Promise<ChangedFile[]> {
+  private async listWorkingTreeChanges(base: string): Promise<ChangedFile[]> {
     const stdout = await runCommand(
       "git",
       ["status", "--porcelain=v1", "--untracked-files=all", "-z"],
       { cwd: this.rootPath },
     );
 
-    const paths = [...new Set(parsePorcelainStatusEntries(stdout).map((entry) => entry.path))];
+    const statusEntries = parsePorcelainStatusEntries(stdout);
+    const paths = [...new Set(statusEntries.map((entry) => entry.path))];
+    if (base === EMPTY_TREE_LABEL) {
+      return this.listUntrackedFiles(paths);
+    }
+
+    const trackedPatch = await runCommand(
+      "git",
+      [
+        "diff",
+        "--find-renames",
+        "--find-copies",
+        "--no-ext-diff",
+        "--submodule=diff",
+        "--full-index",
+        "--unified=3",
+        "--src-prefix=a/",
+        "--dst-prefix=b/",
+        base,
+      ],
+      { cwd: this.rootPath },
+    );
+    const trackedFilesByPath = new Map(
+      splitPatchIntoFiles(trackedPatch)
+        .map((filePatch) => parseChangedFilePatch(filePatch))
+        .map((file) => [file.path, file]),
+    );
     const changedFiles: ChangedFile[] = [];
 
     for (const path of paths) {
-      const patch = await runCommand(
-        "git",
-        [
-          "diff",
-          "--no-index",
-          "--find-renames",
-          "--find-copies",
-          "--no-ext-diff",
-          "--full-index",
-          "--unified=3",
-          "--src-prefix=a/",
-          "--dst-prefix=b/",
-          "--",
-          NULL_DEVICE_PATH,
-          path,
-        ],
-        {
-          allowedExitCodes: [1],
-          cwd: this.rootPath,
-        },
-      );
+      const statusEntry = statusEntries.find((entry) => entry.path === path);
+      if (statusEntry?.status === "??") {
+        changedFiles.push(await this.diffUntrackedFile(path));
+        continue;
+      }
 
-      changedFiles.push(parseChangedFilePatch(patch));
+      const trackedFile = trackedFilesByPath.get(path);
+      if (trackedFile != null) {
+        changedFiles.push(trackedFile);
+        trackedFilesByPath.delete(path);
+      }
+    }
+
+    changedFiles.push(...trackedFilesByPath.values());
+
+    return changedFiles;
+  }
+
+  private async listUntrackedFiles(paths: readonly string[]): Promise<ChangedFile[]> {
+    const changedFiles: ChangedFile[] = [];
+
+    for (const path of paths) {
+      changedFiles.push(await this.diffUntrackedFile(path));
     }
 
     return changedFiles;
+  }
+
+  private async diffUntrackedFile(path: string): Promise<ChangedFile> {
+    const patch = await runCommand(
+      "git",
+      [
+        "diff",
+        "--no-index",
+        "--find-renames",
+        "--find-copies",
+        "--no-ext-diff",
+        "--full-index",
+        "--unified=3",
+        "--src-prefix=a/",
+        "--dst-prefix=b/",
+        "--",
+        NULL_DEVICE_PATH,
+        path,
+      ],
+      {
+        allowedExitCodes: [1],
+        cwd: this.rootPath,
+      },
+    );
+
+    return parseChangedFilePatch(patch);
   }
 }
 

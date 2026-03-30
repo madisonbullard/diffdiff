@@ -384,6 +384,7 @@ function renderSegments(segments: readonly TextSegment[], defaultFg: ColorInput)
 export function BranchModal({
   activeColumn,
   base,
+  comparisonMode,
   head,
   localBranches,
   localIndex,
@@ -395,6 +396,7 @@ export function BranchModal({
 }: {
   activeColumn: BranchColumn;
   base: string;
+  comparisonMode: "range" | "working-tree";
   head: string;
   localBranches: readonly BranchInfo[];
   localIndex: number;
@@ -449,6 +451,43 @@ export function BranchModal({
             : hiddenRemoteCount > 0
               ? `  •  ${hiddenRemoteCount} hidden without open PRs`
               : "  •  focused on active/default remotes"}
+        </text>
+      </box>
+
+      <box
+        width="100%"
+        border={["left"]}
+        customBorderChars={SPLIT_BORDER}
+        borderColor={comparisonMode === "working-tree" ? theme.borderActive : theme.border}
+        backgroundColor={theme.surface}
+        paddingLeft={2}
+        paddingRight={1}
+        paddingTop={1}
+        paddingBottom={1}
+        flexDirection="column"
+        gap={1}
+      >
+        <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
+          <text fg={theme.text} wrapMode="none">
+            Working tree option
+          </text>
+          <text fg={theme.textMuted} wrapMode="none">
+            <KeyCap label="w" theme={theme} />
+            <span>{" select"}</span>
+          </text>
+        </box>
+        <text fg={theme.text} wrapMode="none">
+          <span>Working tree vs </span>
+          <span fg={theme.accent}>HEAD</span>
+          {comparisonMode === "working-tree" ? (
+            <>
+              <span> </span>
+              <Tag label="ACTIVE" fg={theme.inverseText} bg={theme.accent} />
+            </>
+          ) : null}
+        </text>
+        <text fg={theme.textMuted} wrapMode="none">
+          Includes staged, unstaged, and untracked changes that are not committed yet.
         </text>
       </box>
 
@@ -542,6 +581,8 @@ export function BranchModal({
           <span>{" set base  "}</span>
           <KeyCap label="h" theme={theme} />
           <span>{" set head  "}</span>
+          <KeyCap label="w" theme={theme} />
+          <span>{" working tree  "}</span>
           <KeyCap label="o" theme={theme} />
           <span>{showAllRemoteBranches ? " hide extra remotes" : " show all remotes"}</span>
         </text>
@@ -666,6 +707,8 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
           <span>{" set base / head"}</span>
         </text>
         <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="w" theme={theme} />
+          <span>{" working tree  "}</span>
           <KeyCap label="o" theme={theme} />
           <span>{" toggle extra remotes  "}</span>
           <KeyCap label="q" theme={theme} />
