@@ -112,8 +112,7 @@ export function DiffdiffApp({
     }
 
     if (key.name === "l") {
-      setShowBranchModal(true);
-      setStatusMessage("Opened branch list.");
+      openBranchModal();
       return;
     }
 
@@ -157,47 +156,52 @@ export function DiffdiffApp({
   const selectedFile = session.files[selectedFileIndex];
   const comparisonModeLabel =
     session.comparison.mode === "working-tree" ? "working tree" : "branch range";
+  const currentBranchLabel = session.repository.currentBranch ?? "detached";
 
   return (
     <box width="100%" height="100%" flexDirection="column" backgroundColor={uiTheme.appBackground}>
       <box
         flexShrink={0}
         width="100%"
-        border
-        borderStyle="single"
-        borderColor={uiTheme.border}
         backgroundColor={uiTheme.chromeBackground}
-        paddingX={1}
-        paddingY={0}
+        paddingX={2}
+        paddingY={1}
         flexDirection="column"
+        gap={0}
       >
-        <text fg={uiTheme.text} wrapMode="none">
-          <span fg={uiTheme.accent}>{session.repository.name}</span>
-          <span fg={uiTheme.text}> </span>
-          <span fg={uiTheme.chromeBackground} bg={uiTheme.accent}>
-            {` ${comparisonModeLabel} `}
-          </span>
-          <span fg={uiTheme.textMuted}>
-            {" "}
-            {session.comparison.base}...{session.comparison.head}
-          </span>
-          <span fg={uiTheme.text}> </span>
+        <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
+          <text fg={uiTheme.text} wrapMode="none">
+            <span fg={uiTheme.accent}>diffdiff</span>
+            <span fg={uiTheme.textMuted}>{"  •  "}</span>
+            <span>{session.repository.name}</span>
+            <span> </span>
+            <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>{` ${currentBranchLabel} `}</span>
+          </text>
+          <text fg={uiTheme.textMuted} wrapMode="none">
+            <span fg={uiTheme.text}>{session.files.length}</span>
+            <span>{" files  •  "}</span>
+            <span fg={uiTheme.text}>{reviewedPaths.size}</span>
+            <span>{" reviewed"}</span>
+          </text>
+        </box>
+        <text fg={uiTheme.textMuted} wrapMode="none">
           <span
-            fg={uiTheme.text}
-            bg={uiTheme.surfaceMuted}
-          >{` ${session.files.length} files `}</span>
-          <span fg={uiTheme.text}> </span>
-          <span
-            fg={uiTheme.text}
-            bg={uiTheme.surfaceMuted}
-          >{` ${reviewedPaths.size} reviewed `}</span>
+            fg={uiTheme.chromeBackground}
+            bg={uiTheme.accent}
+          >{` ${comparisonModeLabel} `}</span>
+          <span>{"  "}</span>
+          <span fg={uiTheme.warning}>base</span>
+          <span>{` ${session.comparison.base}`}</span>
+          <span>{"  •  "}</span>
+          <span fg={uiTheme.accent}>head</span>
+          <span>{` ${session.comparison.head}`}</span>
         </text>
         <text fg={uiTheme.textMuted} wrapMode="none">
           {session.repository.rootPath}
         </text>
         {session.warnings[0] != null ? (
           <text fg={uiTheme.warning} wrapMode="none">
-            {session.warnings[0].message}
+            warning: {session.warnings[0].message}
           </text>
         ) : null}
       </box>
@@ -211,14 +215,16 @@ export function DiffdiffApp({
         contentOptions={{ backgroundColor: uiTheme.appBackground }}
         verticalScrollbarOptions={{ trackOptions: { backgroundColor: uiTheme.border } }}
       >
-        <box width="100%" flexDirection="column" paddingX={1} paddingY={1} gap={1}>
+        <box width="100%" flexDirection="column" paddingX={2} paddingY={1} gap={1}>
           {session.files.length === 0 ? (
             <box
-              border
-              borderStyle="single"
+              border={["left"]}
               borderColor={uiTheme.border}
               backgroundColor={uiTheme.surface}
-              padding={2}
+              paddingLeft={2}
+              paddingRight={1}
+              paddingTop={1}
+              paddingBottom={1}
             >
               <text fg={uiTheme.text}>No changed files found for this comparison.</text>
             </box>
@@ -246,14 +252,19 @@ export function DiffdiffApp({
       <box
         flexShrink={0}
         width="100%"
-        border
-        borderStyle="single"
-        borderColor={uiTheme.border}
         backgroundColor={uiTheme.chromeBackground}
-        paddingX={1}
-        paddingY={0}
+        paddingX={2}
+        paddingY={1}
         flexDirection="column"
+        gap={0}
       >
+        <text fg={isReloading ? uiTheme.accent : uiTheme.textMuted} wrapMode="none">
+          {selectedFile != null ? `selected ${selectedFile.path}` : "No file selected."}
+          <span>{"  •  "}</span>
+          <span fg={isReloading ? uiTheme.accent : uiTheme.text}>
+            {isReloading ? "Loading comparison..." : statusMessage}
+          </span>
+        </text>
         <text fg={uiTheme.textMuted} wrapMode="none">
           <span fg={uiTheme.text} bg={uiTheme.surfaceMuted}>
             {" "}
@@ -291,12 +302,6 @@ export function DiffdiffApp({
           </span>
           <span>{" help"}</span>
         </text>
-        <text fg={isReloading ? uiTheme.accent : uiTheme.text} wrapMode="none">
-          <span>{isReloading ? "Loading comparison..." : statusMessage}</span>
-          {selectedFile != null ? (
-            <span fg={uiTheme.textMuted}>{`  •  selected ${selectedFile.path}`}</span>
-          ) : null}
-        </text>
       </box>
 
       {showBranchModal ? (
@@ -308,6 +313,7 @@ export function DiffdiffApp({
           localIndex={localBranchIndex}
           remoteBranches={visibleRemoteBranches}
           remoteIndex={remoteBranchIndex}
+          remoteTotalCount={session.branches.remote.length}
           showAllRemoteBranches={showAllRemoteBranches}
           theme={uiTheme}
         />
@@ -377,6 +383,28 @@ export function DiffdiffApp({
     setStatusMessage(`Reviewed ${file.path} and moved on.`);
   }
 
+  function openBranchModal(): void {
+    const localSelection = session.branches.local.findIndex(
+      (branch) => branch.name === session.comparison.head || branch.isCurrent,
+    );
+    const remoteSelection = visibleRemoteBranches.findIndex(
+      (branch) =>
+        branch.name === session.comparison.base || branch.name === session.comparison.head,
+    );
+
+    if (localSelection >= 0) {
+      setLocalBranchIndex(localSelection);
+    }
+
+    if (remoteSelection >= 0) {
+      setRemoteBranchIndex(remoteSelection);
+    }
+
+    setActiveBranchColumn(remoteSelection >= 0 ? "remote" : "local");
+    setShowBranchModal(true);
+    setStatusMessage("Opened branch list.");
+  }
+
   function handleBranchModalKey(key: { name: string; sequence?: string; shift?: boolean }): void {
     if (key.name === "escape" || key.name === "q" || key.name === "l") {
       setShowBranchModal(false);
@@ -390,7 +418,13 @@ export function DiffdiffApp({
     }
 
     if (key.name === "o") {
-      setShowAllRemoteBranches((currentValue) => !currentValue);
+      setShowAllRemoteBranches((currentValue) => {
+        const nextValue = !currentValue;
+        setStatusMessage(
+          nextValue ? "Showing all remote branches." : "Showing focused remote branches.",
+        );
+        return nextValue;
+      });
       return;
     }
 

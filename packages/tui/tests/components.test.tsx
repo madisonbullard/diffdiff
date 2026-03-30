@@ -44,12 +44,14 @@ test("renders a branch modal snapshot", () => {
       localIndex={0}
       remoteBranches={createRemoteBranches()}
       remoteIndex={0}
+      remoteTotalCount={4}
       showAllRemoteBranches={false}
       theme={theme}
     />,
   );
 
   expect(tree.toJSON()).toMatchSnapshot();
+  expect(collectText(tree.toJSON())).toContain("OPEN PR #42");
 });
 
 test("shows binary, reviewed, and collapsed states clearly", () => {
@@ -70,7 +72,7 @@ test("shows binary, reviewed, and collapsed states clearly", () => {
   expect(collectText(tree.toJSON())).toContain(
     "Binary file changed. Content preview is not available yet.",
   );
-  expect(collectText(tree.toJSON())).toContain("[Reviewed]");
+  expect(collectText(tree.toJSON())).toContain("REVIEWED");
 
   act(() => {
     tree.update(
@@ -86,7 +88,7 @@ test("shows binary, reviewed, and collapsed states clearly", () => {
     );
   });
 
-  expect(collectText(tree.toJSON())).toContain("[Collapsed]");
+  expect(collectText(tree.toJSON())).toContain("COLLAPSED");
 });
 
 test("renders empty branch columns and help copy", () => {
@@ -99,6 +101,7 @@ test("renders empty branch columns and help copy", () => {
       localIndex={0}
       remoteBranches={[]}
       remoteIndex={0}
+      remoteTotalCount={0}
       showAllRemoteBranches={true}
       theme={theme}
     />,
@@ -106,7 +109,7 @@ test("renders empty branch columns and help copy", () => {
   const helpModal = render(<HelpModal theme={theme} />);
 
   expect(collectText(branchModal.toJSON())).toContain("Nothing to show.");
-  expect(collectText(helpModal.toJSON())).toContain("q quit l branches ? help");
+  expect(collectText(helpModal.toJSON())).toContain("branch list");
 });
 
 function createPreparedFile(overrides: Partial<PreparedReviewFile> = {}): PreparedReviewFile {

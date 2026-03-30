@@ -3,128 +3,511 @@
 exports[`renders a branch modal snapshot 1`] = `
 <box
   alignItems="center"
-  bottom={2}
+  backgroundColor="#00000096"
+  bottom={0}
   justifyContent="center"
-  left={4}
+  left={0}
   position="absolute"
-  right={4}
-  top={2}
+  right={0}
+  top={0}
   zIndex={20}
 >
   <box
     backgroundColor="#0c1823"
-    border={true}
-    borderColor="#67b7e1"
-    borderStyle="single"
     flexDirection="column"
     gap={1}
     maxWidth={140}
     padding={1}
     width="92%"
   >
-    <text
-      fg="#e6edf3"
+    <box
+      flexDirection="column"
+      width="100%"
     >
-      Branch List
-    </text>
-    <text
-      fg="#8ea4b5"
+      <box
+        flexDirection="row"
+        gap={1}
+        justifyContent="space-between"
+        width="100%"
+      >
+        <text
+          fg="#e6edf3"
+          wrapMode="none"
+        >
+          Branch list
+        </text>
+        <text
+          fg="#8ea4b5"
+          wrapMode="none"
+        >
+          <span
+            bg="#152838"
+            fg="#e6edf3"
+          >
+             esc 
+          </span>
+          <span>
+             close
+          </span>
+        </text>
+      </box>
+      <text
+        fg="#8ea4b5"
+        wrapMode="none"
+      >
+        Pick a base or head directly from git refs.
+      </text>
+    </box>
+    <box
+      backgroundColor="#10202d"
+      border={
+        [
+          "left",
+        ]
+      }
+      borderColor="#29475c"
+      customBorderChars={
+        {
+          "bottomLeft": "",
+          "bottomRight": "",
+          "bottomT": "",
+          "cross": "",
+          "horizontal": " ",
+          "leftT": "",
+          "rightT": "",
+          "topLeft": "",
+          "topRight": "",
+          "topT": "",
+          "vertical": "┃",
+        }
+      }
+      flexDirection="column"
+      gap={1}
+      paddingBottom={1}
+      paddingLeft={2}
+      paddingRight={1}
+      paddingTop={1}
+      width="100%"
     >
-      tab switch columns b set base h set head o toggle hidden remotes esc close
-    </text>
+      <text
+        fg="#8ea4b5"
+        wrapMode="none"
+      >
+        <span
+          fg="#d4a72c"
+        >
+          base
+        </span>
+        <span>
+           origin/main
+        </span>
+        <span>
+            •  
+        </span>
+        <span
+          fg="#9cdcfe"
+        >
+          head
+        </span>
+        <span>
+           feature/tui
+        </span>
+      </text>
+      <text
+        fg="#8ea4b5"
+        wrapMode="none"
+      >
+        2
+         local • 
+        2
+        /
+        4
+         remote shown
+          •  2 hidden without open PRs
+      </text>
+    </box>
     <box
       flexDirection="row"
-      gap={1}
+      gap={2}
       width="100%"
     >
       <box
         backgroundColor="#10202d"
-        border={true}
+        border={
+          [
+            "left",
+          ]
+        }
         borderColor="#29475c"
-        borderStyle="single"
+        customBorderChars={
+          {
+            "bottomLeft": "",
+            "bottomRight": "",
+            "bottomT": "",
+            "cross": "",
+            "horizontal": " ",
+            "leftT": "",
+            "rightT": "",
+            "topLeft": "",
+            "topRight": "",
+            "topT": "",
+            "vertical": "┃",
+          }
+        }
         flexDirection="column"
-        padding={1}
+        gap={1}
+        paddingBottom={1}
+        paddingLeft={2}
+        paddingRight={1}
+        paddingTop={1}
         width="50%"
       >
-        <text
-          fg="#e6edf3"
+        <box
+          flexDirection="row"
+          gap={1}
+          justifyContent="space-between"
+          width="100%"
         >
-          Local branches
-        </text>
-        <text
-          bg="#152838"
-          fg="#9cdcfe"
-        >
-          <span
-            fg="#9cdcfe"
-          >
-            feature/tui
-          </span>
-          <span
-            fg="#9cdcfe"
-          >
-             [Head]
-          </span>
-          <span
-            fg="#8ea4b5"
-          >
-             [Current]
-          </span>
-        </text>
-        <text
-          fg="#e6edf3"
-        >
-          <span
+          <text
             fg="#e6edf3"
+            wrapMode="none"
           >
-            main
-          </span>
-        </text>
+            Local branches
+          </text>
+          <text
+            fg="#8ea4b5"
+            wrapMode="none"
+          >
+            2
+          </text>
+        </box>
+        <box
+          backgroundColor="#152838"
+          paddingLeft={1}
+          paddingRight={1}
+          width="100%"
+        >
+          <text
+            fg="#9cdcfe"
+            wrapMode="none"
+          >
+            <span
+              fg="#9cdcfe"
+            >
+              feature/tui
+            </span>
+            <span>
+               
+            </span>
+            <span
+              bg="#9cdcfe"
+              fg="#0b1b26"
+            >
+               HEAD 
+            </span>
+            <span>
+               
+            </span>
+            <span
+              bg="#0d2634"
+              fg="#e6edf3"
+            >
+               CURRENT 
+            </span>
+          </text>
+        </box>
+        <box
+          paddingLeft={1}
+          paddingRight={1}
+          width="100%"
+        >
+          <text
+            fg="#e6edf3"
+            wrapMode="none"
+          >
+            <span
+              fg="#e6edf3"
+            >
+              main
+            </span>
+          </text>
+        </box>
       </box>
       <box
         backgroundColor="#10202d"
-        border={true}
+        border={
+          [
+            "left",
+          ]
+        }
         borderColor="#67b7e1"
-        borderStyle="single"
+        customBorderChars={
+          {
+            "bottomLeft": "",
+            "bottomRight": "",
+            "bottomT": "",
+            "cross": "",
+            "horizontal": " ",
+            "leftT": "",
+            "rightT": "",
+            "topLeft": "",
+            "topRight": "",
+            "topT": "",
+            "vertical": "┃",
+          }
+        }
         flexDirection="column"
-        padding={1}
+        gap={1}
+        paddingBottom={1}
+        paddingLeft={2}
+        paddingRight={1}
+        paddingTop={1}
         width="50%"
       >
-        <text
-          fg="#9cdcfe"
+        <box
+          flexDirection="row"
+          gap={1}
+          justifyContent="space-between"
+          width="100%"
         >
-          Remote branches (open PRs)
-        </text>
-        <text
-          bg="#152838"
-          fg="#9cdcfe"
-        >
-          <span
+          <text
             fg="#9cdcfe"
+            wrapMode="none"
           >
-            origin/feature/tui
-          </span>
-          <span
-            fg="#3fb950"
+            Remote branches with context
+          </text>
+          <text
+            fg="#8ea4b5"
+            wrapMode="none"
           >
-             [Open]
-          </span>
-        </text>
+            2
+          </text>
+        </box>
+        <box
+          backgroundColor="#152838"
+          paddingLeft={1}
+          paddingRight={1}
+          width="100%"
+        >
+          <text
+            fg="#9cdcfe"
+            wrapMode="none"
+          >
+            <span
+              fg="#8ea4b5"
+            >
+              origin/
+            </span>
+            <span
+              fg="#9cdcfe"
+            >
+              feature/tui
+            </span>
+            <span>
+               
+            </span>
+            <span
+              bg="#3fb950"
+              fg="#0b1b26"
+            >
+               PR #42 
+            </span>
+          </text>
+        </box>
+        <box
+          paddingLeft={1}
+          paddingRight={1}
+          width="100%"
+        >
+          <text
+            fg="#e6edf3"
+            wrapMode="none"
+          >
+            <span
+              fg="#8ea4b5"
+            >
+              origin/
+            </span>
+            <span
+              fg="#e6edf3"
+            >
+              main
+            </span>
+            <span>
+               
+            </span>
+            <span
+              bg="#d4a72c"
+              fg="#0b1b26"
+            >
+               BASE 
+            </span>
+            <span>
+               
+            </span>
+            <span
+              bg="#152838"
+              fg="#e6edf3"
+            >
+               DEFAULT 
+            </span>
+          </text>
+        </box>
+      </box>
+    </box>
+    <box
+      backgroundColor="#10202d"
+      border={
+        [
+          "left",
+        ]
+      }
+      borderColor="#3fb950"
+      customBorderChars={
+        {
+          "bottomLeft": "",
+          "bottomRight": "",
+          "bottomT": "",
+          "cross": "",
+          "horizontal": " ",
+          "leftT": "",
+          "rightT": "",
+          "topLeft": "",
+          "topRight": "",
+          "topT": "",
+          "vertical": "┃",
+        }
+      }
+      flexDirection="column"
+      gap={1}
+      paddingBottom={1}
+      paddingLeft={2}
+      paddingRight={1}
+      paddingTop={1}
+      width="100%"
+    >
+      <box
+        flexDirection="row"
+        gap={1}
+        justifyContent="space-between"
+        width="100%"
+      >
         <text
           fg="#e6edf3"
+          wrapMode="none"
+        >
+          Selected 
+          remote
+           branch
+        </text>
+        <text
+          fg="#8ea4b5"
+          wrapMode="none"
         >
           <span
+            bg="#152838"
             fg="#e6edf3"
           >
-            origin/main
+             tab 
           </span>
-          <span
-            fg="#d4a72c"
-          >
-             [Base]
+          <span>
+             switch columns
           </span>
         </text>
       </box>
+      <text
+        fg="#e6edf3"
+        wrapMode="none"
+      >
+        <span
+          fg="#8ea4b5"
+        >
+          origin/
+        </span>
+        <span
+          fg="#e6edf3"
+        >
+          feature/tui
+        </span>
+        <span>
+           
+        </span>
+        <span
+          bg="#3fb950"
+          fg="#0b1b26"
+        >
+           OPEN PR #42 
+        </span>
+      </text>
+      <text
+        fg="#8ea4b5"
+        wrapMode="none"
+      >
+        <span>
+          sha abcdef0
+        </span>
+        <span>
+            •  remote origin
+        </span>
+      </text>
+      <text
+        fg="#e6edf3"
+        wrapMode="none"
+      >
+        <span
+          bg="#3fb950"
+          fg="#0b1b26"
+        >
+           OPEN PR #42 
+        </span>
+        <span>
+           
+        </span>
+        <span>
+          Build TUI reviewer
+        </span>
+      </text>
+      <text
+        fg="#8ea4b5"
+        wrapMode="none"
+      >
+        feature/tui
+         -&gt;
+         
+        main
+      </text>
+      <text
+        fg="#8ea4b5"
+        wrapMode="none"
+      >
+        <span
+          bg="#152838"
+          fg="#e6edf3"
+        >
+           enter / b 
+        </span>
+        <span>
+           set base  
+        </span>
+        <span
+          bg="#152838"
+          fg="#e6edf3"
+        >
+           h 
+        </span>
+        <span>
+           set head  
+        </span>
+        <span
+          bg="#152838"
+          fg="#e6edf3"
+        >
+           o 
+        </span>
+        <span>
+           show all remotes
+        </span>
+      </text>
     </box>
   </box>
 </box>
@@ -132,18 +515,40 @@ exports[`renders a branch modal snapshot 1`] = `
 
 exports[`renders an expanded file card snapshot 1`] = `
 <box
-  backgroundColor="#10202d"
-  border={true}
+  backgroundColor="#152838"
+  border={
+    [
+      "left",
+    ]
+  }
   borderColor="#67b7e1"
-  borderStyle="single"
+  customBorderChars={
+    {
+      "bottomLeft": "",
+      "bottomRight": "",
+      "bottomT": "",
+      "cross": "",
+      "horizontal": " ",
+      "leftT": "",
+      "rightT": "",
+      "topLeft": "",
+      "topRight": "",
+      "topT": "",
+      "vertical": "┃",
+    }
+  }
   flexDirection="column"
+  gap={1}
+  paddingBottom={1}
+  paddingLeft={2}
+  paddingRight={1}
+  paddingTop={1}
   width="100%"
 >
   <box
-    backgroundColor="#152838"
-    flexDirection="column"
-    paddingX={1}
-    paddingY={0}
+    flexDirection="row"
+    gap={1}
+    justifyContent="space-between"
     width="100%"
   >
     <text
@@ -155,41 +560,53 @@ exports[`renders an expanded file card snapshot 1`] = `
       >
         src/app.ts
       </span>
-      <span
-        fg="#8ea4b5"
-      >
-         
-        3
-        + / 
-        1
-        -
-      </span>
-      <span
-        fg="#9cdcfe"
-      >
-         [
-        Changed
-        ]
-      </span>
     </text>
     <text
       fg="#8ea4b5"
       wrapMode="none"
     >
-      GitHub-style unified diff
+      <span
+        fg="#3fb950"
+      >
+        +3
+      </span>
+      <span>
+         / 
+      </span>
+      <span
+        fg="#ff7b72"
+      >
+        -1
+      </span>
     </text>
   </box>
+  <text
+    fg="#8ea4b5"
+    wrapMode="none"
+  >
+    <span
+      bg="#9cdcfe"
+      fg="#0b1b26"
+    >
+       CHANGED 
+    </span>
+    <span>
+        
+    </span>
+    <span>
+      typescript unified diff
+    </span>
+  </text>
   <box
     flexDirection="column"
     width="100%"
   >
     <box
       paddingLeft={1}
-      paddingRight={1}
     >
       <diff
         addedBg="#0f2619"
-        addedLineNumberBg="#0d2634"
+        addedLineNumberBg="#163526"
         addedSignColor="#3fb950"
         contextBg="#0d1822"
         diff="diff --git a/src/app.ts b/src/app.ts"
@@ -198,7 +615,7 @@ exports[`renders an expanded file card snapshot 1`] = `
         lineNumberBg="#0d1822"
         lineNumberFg="#8ea4b5"
         removedBg="#2a1718"
-        removedLineNumberBg="#152838"
+        removedLineNumberBg="#3a2021"
         removedSignColor="#ff7b72"
         showLineNumbers={true}
         view="unified"

@@ -1,9 +1,26 @@
 import type { BranchInfo } from "@diffdiff/core";
 import { getFiletypeFromFileName } from "@pierre/diffs";
+import type { ReactNode } from "react";
 import type { UiTheme } from "./theme.ts";
 import type { PreparedReviewFile } from "./types.ts";
 
 export type BranchColumn = "local" | "remote";
+
+const SPLIT_BORDER = {
+  topLeft: "",
+  bottomLeft: "",
+  vertical: "┃",
+  topRight: "",
+  bottomRight: "",
+  horizontal: " ",
+  bottomT: "",
+  topT: "",
+  cross: "",
+  leftT: "",
+  rightT: "",
+} as const;
+
+const MODAL_OVERLAY = "#00000096";
 
 export interface FileCardProps {
   file: PreparedReviewFile;
@@ -14,9 +31,9 @@ export interface FileCardProps {
 }
 
 export function FileCard({ file, isCollapsed, isReviewed, isSelected, theme }: FileCardProps) {
-  const borderColor = isSelected ? theme.borderActive : theme.border;
-  const headerBackground = isReviewed ? theme.reviewedBg : theme.surfaceMuted;
-  const filetype = getFiletypeFromFileName(file.path);
+  const borderColor = isSelected ? theme.borderActive : isReviewed ? theme.success : theme.border;
+  const fileBackground = isSelected ? theme.surfaceMuted : theme.surface;
+  const filetype = file.diff?.lang ?? getFiletypeFromFileName(file.path) ?? "text";
   const statusLabel = file.status === "modified" ? "Changed" : capitalize(file.status);
   const statusColor =
     file.status === "added"
@@ -26,57 +43,79 @@ export function FileCard({ file, isCollapsed, isReviewed, isSelected, theme }: F
         : file.status === "renamed"
           ? theme.warning
           : theme.accent;
+  const modeLabel = file.isBinary ? "binary change" : `${filetype} unified diff`;
 
   return (
     <box
       width="100%"
-      border
-      borderStyle="single"
+      border={["left"]}
+      customBorderChars={SPLIT_BORDER}
       borderColor={borderColor}
-      backgroundColor={theme.surface}
+      backgroundColor={fileBackground}
       flexDirection="column"
+      paddingLeft={2}
+      paddingRight={1}
+      paddingTop={1}
+      paddingBottom={isCollapsed ? 0 : 1}
+      gap={1}
     >
-      <box
-        width="100%"
-        backgroundColor={headerBackground}
-        paddingX={1}
-        paddingY={0}
-        flexDirection="column"
-      >
+      <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
         <text fg={theme.text} wrapMode="none">
           <span fg={isSelected ? theme.accent : theme.text}>{file.path}</span>
-          <span fg={theme.textMuted}>
-            {" "}
-            {file.additions}+ / {file.deletions}-
-          </span>
-          <span fg={statusColor}> [{statusLabel}]</span>
-          {isReviewed ? <span fg={theme.success}> [Reviewed]</span> : null}
-          {isCollapsed ? <span fg={theme.warning}> [Collapsed]</span> : null}
         </text>
-        {file.previousPath != null ? (
-          <text fg={theme.textMuted}>renamed from {file.previousPath}</text>
-        ) : null}
         <text fg={theme.textMuted} wrapMode="none">
-          {file.isBinary ? "Binary diff" : "GitHub-style unified diff"}
+          <span fg={theme.success}>{`+${file.additions}`}</span>
+          <span>{" / "}</span>
+          <span fg={theme.danger}>{`-${file.deletions}`}</span>
         </text>
       </box>
+
+      <text fg={theme.textMuted} wrapMode="none">
+        <Tag label={statusLabel.toUpperCase()} fg={theme.chromeBackground} bg={statusColor} />
+        {isReviewed ? (
+          <>
+            <span> </span>
+            <Tag label="REVIEWED" fg={theme.text} bg={theme.reviewedBg} />
+          </>
+        ) : null}
+        {isCollapsed ? (
+          <>
+            <span> </span>
+            <Tag label="COLLAPSED" fg={theme.text} bg={theme.surface} />
+          </>
+        ) : null}
+        <span>{"  "}</span>
+        <span>{modeLabel}</span>
+      </text>
+
+      {file.previousPath != null ? (
+        <text fg={theme.textMuted} wrapMode="none">
+          <span fg={theme.warning}>rename</span>
+          <span>{` ${file.previousPath} -> ${file.path}`}</span>
+        </text>
+      ) : null}
 
       {!isCollapsed ? (
         <box width="100%" flexDirection="column">
           {file.isBinary ? (
-            <box paddingX={1}>
+            <box paddingLeft={1}>
               <text fg={theme.textMuted}>
                 Binary file changed. Content preview is not available yet.
               </text>
             </box>
           ) : null}
-          {!file.isBinary && file.patch.trim() === "" ? (
-            <box paddingX={1}>
+          {!file.isBinary && file.renderError != null ? (
+            <box paddingLeft={1}>
+              <text fg={theme.warning}>{file.renderError}</text>
+            </box>
+          ) : null}
+          {!file.isBinary && file.renderError == null && file.patch.trim() === "" ? (
+            <box paddingLeft={1}>
               <text fg={theme.textMuted}>No textual diff available for this file.</text>
             </box>
           ) : null}
-          {!file.isBinary && file.patch.trim() !== "" ? (
-            <box paddingLeft={1} paddingRight={1}>
+          {!file.isBinary && file.renderError == null && file.patch.trim() !== "" ? (
+            <box paddingLeft={1}>
               <diff
                 diff={file.patch}
                 view="unified"
@@ -92,8 +131,8 @@ export function FileCard({ file, isCollapsed, isReviewed, isSelected, theme }: F
                 removedSignColor={theme.danger}
                 lineNumberFg={theme.textMuted}
                 lineNumberBg={theme.contextBg}
-                addedLineNumberBg={theme.reviewedBg}
-                removedLineNumberBg={theme.surfaceMuted}
+                addedLineNumberBg={theme.additionLineNumberBg}
+                removedLineNumberBg={theme.deletionLineNumberBg}
               />
             </box>
           ) : null}
@@ -111,6 +150,7 @@ export function BranchModal({
   localIndex,
   remoteBranches,
   remoteIndex,
+  remoteTotalCount,
   showAllRemoteBranches,
   theme,
 }: {
@@ -121,57 +161,153 @@ export function BranchModal({
   localIndex: number;
   remoteBranches: readonly BranchInfo[];
   remoteIndex: number;
+  remoteTotalCount: number;
   showAllRemoteBranches: boolean;
   theme: UiTheme;
 }) {
+  const selectedBranch =
+    activeColumn === "local"
+      ? selectBranch(localBranches, localIndex)
+      : selectBranch(remoteBranches, remoteIndex);
+  const hiddenRemoteCount = Math.max(remoteTotalCount - remoteBranches.length, 0);
+
   return (
-    <box
-      position="absolute"
-      top={2}
-      right={4}
-      bottom={2}
-      left={4}
-      alignItems="center"
-      justifyContent="center"
-      zIndex={20}
+    <ModalFrame
+      title="Branch list"
+      subtitle="Pick a base or head directly from git refs."
+      theme={theme}
+      headerRight={
+        <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="esc" theme={theme} />
+          <span>{" close"}</span>
+        </text>
+      }
     >
       <box
-        width="92%"
-        maxWidth={140}
-        border
-        borderStyle="single"
-        borderColor={theme.borderActive}
-        backgroundColor={theme.modalBg}
-        padding={1}
+        width="100%"
+        border={["left"]}
+        customBorderChars={SPLIT_BORDER}
+        borderColor={theme.border}
+        backgroundColor={theme.surface}
+        paddingLeft={2}
+        paddingRight={1}
+        paddingTop={1}
+        paddingBottom={1}
         flexDirection="column"
         gap={1}
       >
-        <text fg={theme.text}>Branch List</text>
-        <text fg={theme.textMuted}>
-          tab switch columns b set base h set head o toggle hidden remotes esc close
+        <text fg={theme.textMuted} wrapMode="none">
+          <span fg={theme.warning}>base</span>
+          <span>{` ${base}`}</span>
+          <span>{"  •  "}</span>
+          <span fg={theme.accent}>head</span>
+          <span>{` ${head}`}</span>
         </text>
-        <box width="100%" flexDirection="row" gap={1}>
-          <BranchColumnView
-            title="Local branches"
-            branches={localBranches}
-            selectedIndex={localIndex}
-            isActive={activeColumn === "local"}
-            base={base}
-            head={head}
-            theme={theme}
-          />
-          <BranchColumnView
-            title={showAllRemoteBranches ? "Remote branches" : "Remote branches (open PRs)"}
-            branches={remoteBranches}
-            selectedIndex={remoteIndex}
-            isActive={activeColumn === "remote"}
-            base={base}
-            head={head}
-            theme={theme}
-          />
-        </box>
+        <text fg={theme.textMuted} wrapMode="none">
+          {localBranches.length} local • {remoteBranches.length}/{remoteTotalCount} remote shown
+          {showAllRemoteBranches
+            ? "  •  all remotes visible"
+            : hiddenRemoteCount > 0
+              ? `  •  ${hiddenRemoteCount} hidden without open PRs`
+              : "  •  focused on active/default remotes"}
+        </text>
       </box>
-    </box>
+
+      <box width="100%" flexDirection="row" gap={2}>
+        <BranchColumnView
+          title="Local branches"
+          branches={localBranches}
+          selectedIndex={localIndex}
+          isActive={activeColumn === "local"}
+          base={base}
+          head={head}
+          theme={theme}
+        />
+        <BranchColumnView
+          title={showAllRemoteBranches ? "Remote branches" : "Remote branches with context"}
+          branches={remoteBranches}
+          selectedIndex={remoteIndex}
+          isActive={activeColumn === "remote"}
+          base={base}
+          head={head}
+          theme={theme}
+        />
+      </box>
+
+      <box
+        width="100%"
+        border={["left"]}
+        customBorderChars={SPLIT_BORDER}
+        borderColor={selectedBranch?.pullRequest != null ? theme.success : theme.borderActive}
+        backgroundColor={theme.surface}
+        paddingLeft={2}
+        paddingRight={1}
+        paddingTop={1}
+        paddingBottom={1}
+        flexDirection="column"
+        gap={1}
+      >
+        <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
+          <text fg={theme.text} wrapMode="none">
+            Selected {activeColumn} branch
+          </text>
+          <text fg={theme.textMuted} wrapMode="none">
+            <KeyCap label="tab" theme={theme} />
+            <span>{" switch columns"}</span>
+          </text>
+        </box>
+
+        {selectedBranch != null ? (
+          <>
+            <text fg={theme.text} wrapMode="none">
+              <BranchName branch={selectedBranch} fg={theme.text} theme={theme} />
+              <BranchBadges branch={selectedBranch} base={base} head={head} theme={theme} />
+            </text>
+            <text fg={theme.textMuted} wrapMode="none">
+              <span>{`sha ${shortSha(selectedBranch.sha)}`}</span>
+              {selectedBranch.upstream != null ? (
+                <span>{`  •  upstream ${selectedBranch.upstream}`}</span>
+              ) : null}
+              {selectedBranch.remoteName != null ? (
+                <span>{`  •  remote ${selectedBranch.remoteName}`}</span>
+              ) : null}
+            </text>
+            {selectedBranch.pullRequest != null ? (
+              <>
+                <text fg={theme.text} wrapMode="none">
+                  <Tag
+                    label={`OPEN PR #${selectedBranch.pullRequest.number}`}
+                    fg={theme.chromeBackground}
+                    bg={theme.success}
+                  />
+                  <span> </span>
+                  <span>{selectedBranch.pullRequest.title}</span>
+                </text>
+                <text fg={theme.textMuted} wrapMode="none">
+                  {selectedBranch.pullRequest.headRefName} -&gt;{" "}
+                  {selectedBranch.pullRequest.baseRefName}
+                </text>
+              </>
+            ) : (
+              <text fg={theme.textMuted} wrapMode="none">
+                No open GitHub pull request metadata for this branch.
+              </text>
+            )}
+          </>
+        ) : (
+          <text fg={theme.textMuted}>Nothing to show.</text>
+        )}
+
+        <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="enter / b" theme={theme} />
+          <span>{" set base  "}</span>
+          <KeyCap label="h" theme={theme} />
+          <span>{" set head  "}</span>
+          <KeyCap label="o" theme={theme} />
+          <span>{showAllRemoteBranches ? " hide extra remotes" : " show all remotes"}</span>
+        </text>
+      </box>
+    </ModalFrame>
   );
 }
 
@@ -195,27 +331,43 @@ function BranchColumnView({
   return (
     <box
       width="50%"
-      border
-      borderStyle="single"
+      border={["left"]}
+      customBorderChars={SPLIT_BORDER}
       borderColor={isActive ? theme.borderActive : theme.border}
       backgroundColor={theme.surface}
-      padding={1}
+      paddingLeft={2}
+      paddingRight={1}
+      paddingTop={1}
+      paddingBottom={1}
       flexDirection="column"
+      gap={1}
     >
-      <text fg={isActive ? theme.accent : theme.text}>{title}</text>
+      <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
+        <text fg={isActive ? theme.accent : theme.text} wrapMode="none">
+          {title}
+        </text>
+        <text fg={theme.textMuted} wrapMode="none">
+          {branches.length}
+        </text>
+      </box>
       {branches.length === 0 ? <text fg={theme.textMuted}>Nothing to show.</text> : null}
       {branches.map((branch, index) => {
         const isSelected = index === selectedIndex;
         const fg = isSelected ? theme.accent : theme.text;
 
         return (
-          <text key={branch.ref} fg={fg} bg={isSelected ? theme.surfaceMuted : undefined}>
-            <span fg={fg}>{branch.name}</span>
-            {branch.pullRequest != null ? <span fg={theme.success}> [Open]</span> : null}
-            {branch.name === base ? <span fg={theme.warning}> [Base]</span> : null}
-            {branch.name === head ? <span fg={theme.accent}> [Head]</span> : null}
-            {branch.isCurrent ? <span fg={theme.textMuted}> [Current]</span> : null}
-          </text>
+          <box
+            key={branch.ref}
+            width="100%"
+            backgroundColor={isSelected ? theme.surfaceMuted : undefined}
+            paddingLeft={1}
+            paddingRight={1}
+          >
+            <text fg={fg} wrapMode="none">
+              <BranchName branch={branch} fg={fg} theme={theme} />
+              <BranchBadges branch={branch} base={base} head={head} theme={theme} compact />
+            </text>
+          </box>
         );
       })}
     </box>
@@ -224,39 +376,227 @@ function BranchColumnView({
 
 export function HelpModal({ theme }: { theme: UiTheme }) {
   return (
-    <box
-      position="absolute"
-      top={4}
-      right={10}
-      left={10}
+    <ModalFrame
+      title="Help"
+      subtitle="Review files quickly without leaving the keyboard."
+      theme={theme}
+      maxWidth={92}
       zIndex={30}
-      alignItems="center"
-      justifyContent="center"
+      headerRight={
+        <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="esc" theme={theme} />
+          <span>{" close"}</span>
+        </text>
+      }
     >
       <box
-        width="80%"
-        border
-        borderStyle="single"
+        width="100%"
+        border={["left"]}
+        customBorderChars={SPLIT_BORDER}
         borderColor={theme.borderActive}
+        backgroundColor={theme.surface}
+        paddingLeft={2}
+        paddingRight={1}
+        paddingTop={1}
+        paddingBottom={1}
+        flexDirection="column"
+        gap={1}
+      >
+        <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="j / k" theme={theme} />
+          <span>{" move between files  "}</span>
+          <KeyCap label="g / G" theme={theme} />
+          <span>{" first / last file"}</span>
+        </text>
+        <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="r" theme={theme} />
+          <span>{" toggle reviewed  "}</span>
+          <KeyCap label="c / enter" theme={theme} />
+          <span>{" collapse file  "}</span>
+          <KeyCap label="m" theme={theme} />
+          <span>{" review and advance"}</span>
+        </text>
+        <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="l" theme={theme} />
+          <span>{" branch list  "}</span>
+          <KeyCap label="tab" theme={theme} />
+          <span>{" switch branch columns  "}</span>
+          <KeyCap label="b / h" theme={theme} />
+          <span>{" set base / head"}</span>
+        </text>
+        <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="o" theme={theme} />
+          <span>{" toggle extra remotes  "}</span>
+          <KeyCap label="q" theme={theme} />
+          <span>{" quit"}</span>
+        </text>
+      </box>
+    </ModalFrame>
+  );
+}
+
+function ModalFrame({
+  children,
+  headerRight,
+  maxWidth = 140,
+  theme,
+  title,
+  subtitle,
+  width = "92%",
+  zIndex = 20,
+}: {
+  children: ReactNode;
+  headerRight?: ReactNode;
+  maxWidth?: number;
+  theme: UiTheme;
+  title: string;
+  subtitle?: string;
+  width?: `${number}%` | "auto" | number;
+  zIndex?: number;
+}) {
+  return (
+    <box
+      position="absolute"
+      top={0}
+      right={0}
+      bottom={0}
+      left={0}
+      alignItems="center"
+      justifyContent="center"
+      zIndex={zIndex}
+      backgroundColor={MODAL_OVERLAY}
+    >
+      <box
+        width={width}
+        maxWidth={maxWidth}
         backgroundColor={theme.modalBg}
         padding={1}
         flexDirection="column"
         gap={1}
       >
-        <text fg={theme.text}>Keybinds</text>
-        <text fg={theme.textMuted}>
-          q quit l branches ? help j/k or n/p next-prev file g/G first-last file
-        </text>
-        <text fg={theme.textMuted}>
-          r toggle reviewed c or enter collapse m review + collapse + next
-        </text>
-        <text fg={theme.textMuted}>
-          In the branch modal: tab switch columns, b set base, h set head, o toggle hidden remote
-          branches.
-        </text>
+        <box width="100%" flexDirection="column">
+          <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
+            <text fg={theme.text} wrapMode="none">
+              {title}
+            </text>
+            {headerRight}
+          </box>
+          {subtitle != null ? (
+            <text fg={theme.textMuted} wrapMode="none">
+              {subtitle}
+            </text>
+          ) : null}
+        </box>
+        {children}
       </box>
     </box>
   );
+}
+
+function BranchName({ branch, fg, theme }: { branch: BranchInfo; fg: string; theme: UiTheme }) {
+  if (branch.kind === "remote" && branch.remoteName != null) {
+    return (
+      <>
+        <span fg={theme.textMuted}>{`${branch.remoteName}/`}</span>
+        <span fg={fg}>{getRemoteShortName(branch)}</span>
+      </>
+    );
+  }
+
+  return <span fg={fg}>{branch.name}</span>;
+}
+
+function BranchBadges({
+  branch,
+  base,
+  head,
+  theme,
+  compact = false,
+}: {
+  branch: BranchInfo;
+  base: string;
+  head: string;
+  theme: UiTheme;
+  compact?: boolean;
+}) {
+  return (
+    <>
+      {branch.pullRequest != null ? (
+        <>
+          <span> </span>
+          <Tag
+            label={
+              compact ? `PR #${branch.pullRequest.number}` : `OPEN PR #${branch.pullRequest.number}`
+            }
+            fg={theme.chromeBackground}
+            bg={theme.success}
+          />
+        </>
+      ) : null}
+      {branch.name === base ? (
+        <>
+          <span> </span>
+          <Tag label="BASE" fg={theme.chromeBackground} bg={theme.warning} />
+        </>
+      ) : null}
+      {branch.name === head ? (
+        <>
+          <span> </span>
+          <Tag label="HEAD" fg={theme.chromeBackground} bg={theme.accent} />
+        </>
+      ) : null}
+      {branch.isCurrent ? (
+        <>
+          <span> </span>
+          <Tag label="CURRENT" fg={theme.text} bg={theme.reviewedBg} />
+        </>
+      ) : null}
+      {branch.isDefault ? (
+        <>
+          <span> </span>
+          <Tag label="DEFAULT" fg={theme.text} bg={theme.surfaceMuted} />
+        </>
+      ) : null}
+    </>
+  );
+}
+
+function KeyCap({ label, theme }: { label: string; theme: UiTheme }) {
+  return (
+    <span fg={theme.text} bg={theme.surfaceMuted}>
+      {` ${label} `}
+    </span>
+  );
+}
+
+function Tag({ label, fg, bg }: { label: string; fg: string; bg: string }) {
+  return (
+    <span fg={fg} bg={bg}>
+      {` ${label} `}
+    </span>
+  );
+}
+
+function selectBranch(branches: readonly BranchInfo[], index: number): BranchInfo | undefined {
+  if (branches.length === 0) {
+    return undefined;
+  }
+
+  return branches[Math.max(0, Math.min(index, branches.length - 1))];
+}
+
+function shortSha(sha: string): string {
+  return sha.slice(0, 7);
+}
+
+function getRemoteShortName(branch: BranchInfo): string {
+  if (branch.remoteName == null) {
+    return branch.name;
+  }
+
+  return branch.name.startsWith(`${branch.remoteName}/`)
+    ? branch.name.slice(branch.remoteName.length + 1)
+    : branch.name;
 }
 
 function capitalize(value: string): string {

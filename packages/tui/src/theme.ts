@@ -14,7 +14,9 @@ export interface UiTheme {
   danger: string;
   warning: string;
   additionBg: string;
+  additionLineNumberBg: string;
   deletionBg: string;
+  deletionLineNumberBg: string;
   contextBg: string;
   hunkBg: string;
   modalBg: string;
@@ -35,7 +37,9 @@ export const DARK_THEME: UiTheme = {
   danger: "#ff7b72",
   warning: "#d4a72c",
   additionBg: "#0f2619",
+  additionLineNumberBg: "#163526",
   deletionBg: "#2a1718",
+  deletionLineNumberBg: "#3a2021",
   contextBg: "#0d1822",
   hunkBg: "#183041",
   modalBg: "#0c1823",
@@ -56,7 +60,9 @@ export const LIGHT_THEME: UiTheme = {
   danger: "#a93a32",
   warning: "#8a6200",
   additionBg: "#e8f5ec",
+  additionLineNumberBg: "#dceee3",
   deletionBg: "#f9ebeb",
+  deletionLineNumberBg: "#f4dddd",
   contextBg: "#f5f9fb",
   hunkBg: "#e5f0f7",
   modalBg: "#fdfefe",
