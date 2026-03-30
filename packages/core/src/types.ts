@@ -14,6 +14,8 @@ export interface ReviewSession {
   comparison: ComparisonInfo;
   files: ChangedFile[];
   branches: BranchCollection;
+  commits: ComparisonCommit[];
+  workingTreeSummary: ChangeSummary;
   warnings: ReviewWarning[];
 }
 
@@ -23,6 +25,7 @@ export interface RepositoryInfo {
   name: string;
   remotes: GitRemote[];
   currentBranch?: string;
+  defaultBranch?: string;
 }
 
 export interface ComparisonInfo {
@@ -62,7 +65,28 @@ export interface BranchInfo {
   remoteName?: string;
   isCurrent: boolean;
   isDefault: boolean;
+  tipAuthor?: string;
   pullRequest?: PullRequestInfo;
+  summary?: BranchSummary;
+}
+
+export interface ChangeSummary {
+  filesChanged: number;
+  additions: number;
+  deletions: number;
+}
+
+export interface BranchSummary extends ChangeSummary {
+  comparedTo: string;
+  commitCount: number;
+  authors: string[];
+}
+
+export interface ComparisonCommit {
+  sha: string;
+  shortSha: string;
+  subject: string;
+  author: string;
 }
 
 export interface PullRequestInfo {

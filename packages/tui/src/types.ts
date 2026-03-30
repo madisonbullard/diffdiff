@@ -1,4 +1,10 @@
-import type { ChangedFile, ReviewSession } from "@diffdiff/core";
+import type {
+  BranchInfo,
+  ChangeSummary,
+  ChangedFile,
+  ComparisonCommit,
+  ReviewSession,
+} from "@diffdiff/core";
 import type { FileDiffMetadata } from "@pierre/diffs";
 
 export type PierreThemeName = "pierre-dark" | "pierre-light";
@@ -6,6 +12,29 @@ export type PierreThemeName = "pierre-dark" | "pierre-light";
 export type DiffViewPreference = "unified" | "side-by-side";
 
 export type DiffView = "unified" | "split";
+
+export type ListModalView = "branch" | "commit";
+
+export type BranchListItemKind = "working-tree" | "local-branch" | "open-pr" | "remote-branch";
+
+export interface BranchListFilters {
+  workingTree: boolean;
+  localBranch: boolean;
+  openPr: boolean;
+  remoteBranch: boolean;
+}
+
+export interface BranchListItem {
+  key: string;
+  kind: BranchListItemKind;
+  branch?: BranchInfo;
+  summary?: ChangeSummary;
+}
+
+export interface CommitListItem {
+  key: string;
+  commit: ComparisonCommit;
+}
 
 export interface TextSegment {
   text: string;

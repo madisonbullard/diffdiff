@@ -4,16 +4,24 @@ import type { ReactNode, Ref } from "react";
 import { getDiffFiletype } from "./language.ts";
 import type { UiTheme } from "./theme.ts";
 import type {
+  BranchListFilters,
+  BranchListItem,
+  CommitListItem,
   DiffView,
+  ListModalView,
   PreparedReviewFile,
   SideBySideDiffCell,
   SideBySideDiffRow,
   TextSegment,
   UnifiedDiffLine,
 } from "./types.ts";
-import { getDiffViewLabel, truncateSegments } from "./view-model.ts";
-
-export type BranchColumn = "local" | "remote";
+import {
+  formatAuthorList,
+  formatChangeSummary,
+  formatCommitDelta,
+  getDiffViewLabel,
+  truncateSegments,
+} from "./view-model.ts";
 
 const SPLIT_BORDER = {
   topLeft: "",
@@ -434,43 +442,57 @@ function renderSegments(segments: readonly TextSegment[], defaultFg: ColorInput)
 }
 
 export function BranchModal({
-  activeColumn,
+  activeView,
   base,
+  branchItems,
+  branchIndex,
+  commitItems,
+  commitIndex,
   comparisonMode,
+  filters,
   head,
-  localBranches,
-  localIndex,
-  remoteBranches,
-  remoteIndex,
-  remoteTotalCount,
-  showAllRemoteBranches,
+  localBranchCount,
+  openPrCount,
+  remoteBranchCount,
   theme,
 }: {
-  activeColumn: BranchColumn;
+  activeView: ListModalView;
   base: string;
+  branchItems: readonly BranchListItem[];
+  branchIndex: number;
+  commitItems: readonly CommitListItem[];
+  commitIndex: number;
   comparisonMode: "range" | "working-tree";
+  filters: BranchListFilters;
   head: string;
-  localBranches: readonly BranchInfo[];
-  localIndex: number;
-  remoteBranches: readonly BranchInfo[];
-  remoteIndex: number;
-  remoteTotalCount: number;
-  showAllRemoteBranches: boolean;
+  localBranchCount: number;
+  openPrCount: number;
+  remoteBranchCount: number;
   theme: UiTheme;
 }) {
-  const selectedBranch =
-    activeColumn === "local"
-      ? selectBranch(localBranches, localIndex)
-      : selectBranch(remoteBranches, remoteIndex);
-  const hiddenRemoteCount = Math.max(remoteTotalCount - remoteBranches.length, 0);
+  const selectedBranchItem = selectItem(branchItems, branchIndex);
+  const selectedCommitItem = selectItem(commitItems, commitIndex);
 
   return (
     <ModalFrame
-      title="Branch list"
-      subtitle="Pick a base or head directly from git refs."
+      title="List"
+      subtitle={
+        activeView === "branch"
+          ? "Browse working tree changes, branches, and open pull requests."
+          : "Inspect commits included in the active comparison."
+      }
       theme={theme}
+      maxWidth={108}
       headerRight={
         <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="tab" theme={theme} />
+          <span>{" switch view  "}</span>
+          {activeView === "branch" ? (
+            <>
+              <KeyCap label="f" theme={theme} />
+              <span>{" filters  "}</span>
+            </>
+          ) : null}
           <KeyCap label="esc" theme={theme} />
           <span>{" close"}</span>
         </text>
@@ -489,28 +511,68 @@ export function BranchModal({
         flexDirection="column"
         gap={1}
       >
-        <text fg={theme.textMuted} wrapMode="none">
-          <span fg={theme.warning}>base</span>
-          <span>{` ${base}`}</span>
-          <span>{"  •  "}</span>
-          <span fg={theme.accent}>head</span>
-          <span>{` ${head}`}</span>
-        </text>
-        <text fg={theme.textMuted} wrapMode="none">
-          {localBranches.length} local • {remoteBranches.length}/{remoteTotalCount} remote shown
-          {showAllRemoteBranches
-            ? "  •  all remotes visible"
-            : hiddenRemoteCount > 0
-              ? `  •  ${hiddenRemoteCount} hidden without open PRs`
-              : "  •  focused on active/default remotes"}
-        </text>
+        <box width="100%" flexDirection="row" justifyContent="space-between" gap={2}>
+          <text fg={theme.textMuted} wrapMode="none">
+            <span fg={theme.warning}>base</span>
+            <span>{` ${base}`}</span>
+            <span>{"  •  "}</span>
+            <span fg={theme.accent}>head</span>
+            <span>{` ${head}`}</span>
+          </text>
+          <box flexDirection="row" gap={1}>
+            <text wrapMode="none">
+              <ListViewTab label="Branches" isActive={activeView === "branch"} theme={theme} />
+            </text>
+            <text wrapMode="none">
+              <ListViewTab label="Commits" isActive={activeView === "commit"} theme={theme} />
+            </text>
+          </box>
+        </box>
+        {activeView === "branch" ? (
+          <text fg={theme.textMuted} wrapMode="none">
+            <span>{`${localBranchCount} local`}</span>
+            <span>{"  •  "}</span>
+            <span>{`${openPrCount} open PR`}</span>
+            <span>{"  •  "}</span>
+            <span>{`${remoteBranchCount} remote`}</span>
+            <span>{"  •  filters "}</span>
+            <CategoryPill label="working tree" isEnabled={filters.workingTree} theme={theme} />
+            <span> </span>
+            <CategoryPill label="local" isEnabled={filters.localBranch} theme={theme} />
+            <span> </span>
+            <CategoryPill label="PR" isEnabled={filters.openPr} theme={theme} />
+            <span> </span>
+            <CategoryPill label="remote" isEnabled={filters.remoteBranch} theme={theme} />
+          </text>
+        ) : (
+          <text fg={theme.textMuted} wrapMode="none">
+            {commitItems.length === 0
+              ? comparisonMode === "working-tree"
+                ? "Working tree changes are not committed yet."
+                : "No commits are unique to the selected head ref."
+              : `${commitItems.length} commits in the current comparison`}
+          </text>
+        )}
       </box>
+
+      {activeView === "branch" ? (
+        <BranchListView
+          base={base}
+          branchItems={branchItems}
+          comparisonMode={comparisonMode}
+          head={head}
+          selectedIndex={branchIndex}
+          theme={theme}
+        />
+      ) : (
+        <CommitListView commitItems={commitItems} selectedIndex={commitIndex} theme={theme} />
+      )}
 
       <box
         width="100%"
         border={["left"]}
         customBorderChars={SPLIT_BORDER}
-        borderColor={comparisonMode === "working-tree" ? theme.borderActive : theme.border}
+        borderColor={activeView === "branch" ? theme.borderActive : theme.border}
         backgroundColor={theme.surface}
         paddingLeft={2}
         paddingRight={1}
@@ -519,154 +581,292 @@ export function BranchModal({
         flexDirection="column"
         gap={1}
       >
-        <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
-          <text fg={theme.text} wrapMode="none">
-            Working tree option
-          </text>
-          <text fg={theme.textMuted} wrapMode="none">
-            <KeyCap label="w" theme={theme} />
-            <span>{" select"}</span>
-          </text>
-        </box>
-        <text fg={theme.text} wrapMode="none">
-          <span>Working tree vs </span>
-          <span fg={theme.accent}>HEAD</span>
-          {comparisonMode === "working-tree" ? (
-            <>
-              <span> </span>
-              <Tag label="ACTIVE" fg={theme.inverseText} bg={theme.accent} />
-            </>
-          ) : null}
-        </text>
-        <text fg={theme.textMuted} wrapMode="none">
-          Includes staged, unstaged, and untracked changes that are not committed yet.
-        </text>
-      </box>
-
-      <box width="100%" flexDirection="row" gap={2}>
-        <BranchColumnView
-          title="Local branches"
-          branches={localBranches}
-          selectedIndex={localIndex}
-          isActive={activeColumn === "local"}
-          base={base}
-          head={head}
-          theme={theme}
-        />
-        <BranchColumnView
-          title={showAllRemoteBranches ? "Remote branches" : "Remote branches with context"}
-          branches={remoteBranches}
-          selectedIndex={remoteIndex}
-          isActive={activeColumn === "remote"}
-          base={base}
-          head={head}
-          theme={theme}
-        />
-      </box>
-
-      <box
-        width="100%"
-        border={["left"]}
-        customBorderChars={SPLIT_BORDER}
-        borderColor={selectedBranch?.pullRequest != null ? theme.success : theme.borderActive}
-        backgroundColor={theme.surface}
-        paddingLeft={2}
-        paddingRight={1}
-        paddingTop={1}
-        paddingBottom={1}
-        flexDirection="column"
-        gap={1}
-      >
-        <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
-          <text fg={theme.text} wrapMode="none">
-            Selected {activeColumn} branch
-          </text>
-          <text fg={theme.textMuted} wrapMode="none">
-            <KeyCap label="tab" theme={theme} />
-            <span>{" switch columns"}</span>
-          </text>
-        </box>
-
-        {selectedBranch != null ? (
+        {activeView === "branch" ? (
           <>
-            <text fg={theme.text} wrapMode="none">
-              <BranchName branch={selectedBranch} fg={theme.text} theme={theme} />
-              <BranchBadges branch={selectedBranch} base={base} head={head} theme={theme} />
-            </text>
-            <text fg={theme.textMuted} wrapMode="none">
-              <span>{`sha ${shortSha(selectedBranch.sha)}`}</span>
-              {selectedBranch.upstream != null ? (
-                <span>{`  •  upstream ${selectedBranch.upstream}`}</span>
-              ) : null}
-              {selectedBranch.remoteName != null ? (
-                <span>{`  •  remote ${selectedBranch.remoteName}`}</span>
-              ) : null}
-            </text>
-            {selectedBranch.pullRequest != null ? (
+            {selectedBranchItem != null ? (
               <>
                 <text fg={theme.text} wrapMode="none">
-                  <Tag
-                    label={`OPEN PR #${selectedBranch.pullRequest.number}`}
-                    fg={theme.inverseText}
-                    bg={theme.success}
-                  />
-                  <span> </span>
-                  <span>{selectedBranch.pullRequest.title}</span>
+                  {getBranchListItemTitle(selectedBranchItem)}
                 </text>
                 <text fg={theme.textMuted} wrapMode="none">
-                  {selectedBranch.pullRequest.headRefName} -&gt;{" "}
-                  {selectedBranch.pullRequest.baseRefName}
+                  {getBranchListItemMeta(selectedBranchItem, base, head)}
                 </text>
               </>
             ) : (
-              <text fg={theme.textMuted} wrapMode="none">
-                No open GitHub pull request metadata for this branch.
+              <text fg={theme.textMuted}>
+                Enable at least one branch filter to populate the list.
               </text>
             )}
+            <text fg={theme.textMuted} wrapMode="none">
+              <KeyCap label="enter" theme={theme} />
+              <span>{" select  "}</span>
+              <KeyCap label="b" theme={theme} />
+              <span>{" set base  "}</span>
+              <KeyCap label="h" theme={theme} />
+              <span>{" set head  "}</span>
+              <KeyCap label="w" theme={theme} />
+              <span>{" working tree  "}</span>
+              <KeyCap label="o" theme={theme} />
+              <span>{" remote toggle  "}</span>
+              <KeyCap label="f" theme={theme} />
+              <span>{" filters"}</span>
+            </text>
+          </>
+        ) : selectedCommitItem != null ? (
+          <>
+            <text fg={theme.text} wrapMode="none">
+              {selectedCommitItem.commit.subject}
+            </text>
+            <text fg={theme.textMuted} wrapMode="none">
+              <span>{selectedCommitItem.commit.author}</span>
+              <span>{"  •  "}</span>
+              <span>{selectedCommitItem.commit.shortSha}</span>
+            </text>
+            <text fg={theme.textMuted} wrapMode="none">
+              <KeyCap label="enter / h" theme={theme} />
+              <span>{" set head  "}</span>
+              <KeyCap label="b" theme={theme} />
+              <span>{" set base  "}</span>
+              <KeyCap label="j / k" theme={theme} />
+              <span>{" move  "}</span>
+              <KeyCap label="tab" theme={theme} />
+              <span>{" branch view"}</span>
+            </text>
           </>
         ) : (
           <text fg={theme.textMuted}>Nothing to show.</text>
         )}
+      </box>
+    </ModalFrame>
+  );
+}
 
+export function ListFilterModal({
+  filters,
+  selectedIndex,
+  theme,
+}: {
+  filters: BranchListFilters;
+  selectedIndex: number;
+  theme: UiTheme;
+}) {
+  const entries = [
+    ["workingTree", "Working tree"],
+    ["localBranch", "Local branches"],
+    ["openPr", "Open PRs"],
+    ["remoteBranch", "Remote branches"],
+  ] as const;
+
+  return (
+    <ModalFrame
+      title="Filters"
+      subtitle="Choose which list item types are visible in the branch view."
+      theme={theme}
+      maxWidth={56}
+      width="68%"
+      zIndex={40}
+      headerRight={
         <text fg={theme.textMuted} wrapMode="none">
-          <KeyCap label="enter / b" theme={theme} />
-          <span>{" set base  "}</span>
-          <KeyCap label="h" theme={theme} />
-          <span>{" set head  "}</span>
-          <KeyCap label="w" theme={theme} />
-          <span>{" working tree  "}</span>
-          <KeyCap label="o" theme={theme} />
-          <span>{showAllRemoteBranches ? " hide extra remotes" : " show all remotes"}</span>
+          <KeyCap label="esc" theme={theme} />
+          <span>{" close"}</span>
+        </text>
+      }
+    >
+      <box width="100%" flexDirection="column" gap={1}>
+        {entries.map(([key, label], index) => {
+          const isSelected = index === selectedIndex;
+          const isEnabled = filters[key];
+
+          return (
+            <box
+              key={key}
+              width="100%"
+              border={["left"]}
+              customBorderChars={SPLIT_BORDER}
+              borderColor={isSelected ? theme.borderActive : theme.border}
+              backgroundColor={isSelected ? theme.surfaceMuted : theme.surface}
+              paddingLeft={2}
+              paddingRight={1}
+              paddingTop={1}
+              paddingBottom={1}
+              flexDirection="row"
+              justifyContent="space-between"
+              gap={1}
+            >
+              <text fg={isSelected ? theme.text : theme.textMuted} wrapMode="none">
+                {label}
+              </text>
+              <text wrapMode="none">
+                <CategoryPill
+                  label={isEnabled ? "ON" : "OFF"}
+                  isEnabled={isEnabled}
+                  theme={theme}
+                />
+              </text>
+            </box>
+          );
+        })}
+      </box>
+      <box
+        width="100%"
+        border={["left"]}
+        customBorderChars={SPLIT_BORDER}
+        borderColor={theme.border}
+        backgroundColor={theme.surface}
+        paddingLeft={2}
+        paddingRight={1}
+        paddingTop={1}
+        paddingBottom={1}
+      >
+        <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="space / enter" theme={theme} />
+          <span>{" toggle  "}</span>
+          <KeyCap label="a" theme={theme} />
+          <span>{" all on  "}</span>
+          <KeyCap label="n" theme={theme} />
+          <span>{" all off"}</span>
         </text>
       </box>
     </ModalFrame>
   );
 }
 
-function BranchColumnView({
-  title,
-  branches,
+function BranchListView({
+  base,
+  branchItems,
+  comparisonMode,
+  head,
   selectedIndex,
-  isActive,
+  theme,
+}: {
+  base: string;
+  branchItems: readonly BranchListItem[];
+  comparisonMode: "range" | "working-tree";
+  head: string;
+  selectedIndex: number;
+  theme: UiTheme;
+}) {
+  return (
+    <box width="100%" flexDirection="column" gap={1}>
+      {branchItems.length === 0 ? (
+        <box
+          width="100%"
+          border={["left"]}
+          customBorderChars={SPLIT_BORDER}
+          borderColor={theme.border}
+          backgroundColor={theme.surface}
+          paddingLeft={2}
+          paddingRight={1}
+          paddingTop={1}
+          paddingBottom={1}
+        >
+          <text fg={theme.textMuted}>No items match the current branch filters.</text>
+        </box>
+      ) : null}
+      {branchItems.map((item, index) => (
+        <BranchListCard
+          key={item.key}
+          item={item}
+          isActiveComparison={item.kind === "working-tree" && comparisonMode === "working-tree"}
+          isSelected={index === selectedIndex}
+          base={base}
+          head={head}
+          theme={theme}
+        />
+      ))}
+    </box>
+  );
+}
+
+function CommitListView({
+  commitItems,
+  selectedIndex,
+  theme,
+}: {
+  commitItems: readonly CommitListItem[];
+  selectedIndex: number;
+  theme: UiTheme;
+}) {
+  return (
+    <box width="100%" flexDirection="column" gap={1}>
+      {commitItems.length === 0 ? (
+        <box
+          width="100%"
+          border={["left"]}
+          customBorderChars={SPLIT_BORDER}
+          borderColor={theme.border}
+          backgroundColor={theme.surface}
+          paddingLeft={2}
+          paddingRight={1}
+          paddingTop={1}
+          paddingBottom={1}
+        >
+          <text fg={theme.textMuted}>No commits to show for the current comparison.</text>
+        </box>
+      ) : null}
+      {commitItems.map((item, index) => {
+        const isSelected = index === selectedIndex;
+        const borderColor = isSelected ? theme.borderActive : theme.accent;
+        const backgroundColor = isSelected
+          ? tintHex(theme.surface, theme.accent, 0.24)
+          : tintHex(theme.surface, theme.accent, 0.14);
+
+        return (
+          <box
+            key={item.key}
+            width="100%"
+            border={["left"]}
+            customBorderChars={SPLIT_BORDER}
+            borderColor={borderColor}
+            backgroundColor={backgroundColor}
+            paddingLeft={2}
+            paddingRight={1}
+            paddingTop={1}
+            paddingBottom={1}
+            flexDirection="column"
+            gap={1}
+          >
+            <text fg={theme.text} wrapMode="none">
+              {item.commit.subject}
+            </text>
+            <text fg={theme.textMuted} wrapMode="none">
+              <span>{item.commit.author}</span>
+              <span>{"  •  "}</span>
+              <span fg={theme.accent}>{item.commit.shortSha}</span>
+            </text>
+          </box>
+        );
+      })}
+    </box>
+  );
+}
+
+function BranchListCard({
+  item,
+  isActiveComparison,
+  isSelected,
   base,
   head,
   theme,
 }: {
-  title: string;
-  branches: readonly BranchInfo[];
-  selectedIndex: number;
-  isActive: boolean;
+  item: BranchListItem;
+  isActiveComparison: boolean;
+  isSelected: boolean;
   base: string;
   head: string;
   theme: UiTheme;
 }) {
+  const accent = getBranchListAccent(item, theme);
+  const borderColor = isSelected ? theme.borderActive : accent;
+  const backgroundColor = tintHex(theme.surface, accent, isSelected ? 0.24 : 0.14);
+
   return (
     <box
-      width="50%"
+      width="100%"
       border={["left"]}
       customBorderChars={SPLIT_BORDER}
-      borderColor={isActive ? theme.borderActive : theme.border}
-      backgroundColor={theme.surface}
+      borderColor={borderColor}
+      backgroundColor={backgroundColor}
       paddingLeft={2}
       paddingRight={1}
       paddingTop={1}
@@ -675,35 +875,169 @@ function BranchColumnView({
       gap={1}
     >
       <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
-        <text fg={isActive ? theme.accent : theme.text} wrapMode="none">
-          {title}
+        <text fg={theme.text} wrapMode="none">
+          {renderBranchListItemTitle(item, base, head, theme)}
         </text>
-        <text fg={theme.textMuted} wrapMode="none">
-          {branches.length}
-        </text>
+        {isActiveComparison ? (
+          <text wrapMode="none">
+            <Tag label="ACTIVE" fg={theme.inverseText} bg={accent} />
+          </text>
+        ) : null}
       </box>
-      {branches.length === 0 ? <text fg={theme.textMuted}>Nothing to show.</text> : null}
-      {branches.map((branch, index) => {
-        const isSelected = index === selectedIndex;
-        const fg = isSelected ? theme.accent : theme.text;
-
-        return (
-          <box
-            key={branch.ref}
-            width="100%"
-            backgroundColor={isSelected ? theme.surfaceMuted : undefined}
-            paddingLeft={1}
-            paddingRight={1}
-          >
-            <text fg={fg} wrapMode="none">
-              <BranchName branch={branch} fg={fg} theme={theme} />
-              <BranchBadges branch={branch} base={base} head={head} theme={theme} compact />
-            </text>
-          </box>
-        );
-      })}
+      <text fg={theme.textMuted} wrapMode="none">
+        {renderBranchListItemSummary(item)}
+      </text>
     </box>
   );
+}
+
+function ListViewTab({
+  label,
+  isActive,
+  theme,
+}: {
+  label: string;
+  isActive: boolean;
+  theme: UiTheme;
+}) {
+  return (
+    <span
+      fg={isActive ? theme.inverseText : theme.textMuted}
+      bg={isActive ? theme.accent : theme.surfaceMuted}
+    >
+      {` ${label} `}
+    </span>
+  );
+}
+
+function CategoryPill({
+  label,
+  isEnabled,
+  theme,
+}: {
+  label: string;
+  isEnabled: boolean;
+  theme: UiTheme;
+}) {
+  return (
+    <span
+      fg={isEnabled ? theme.inverseText : theme.textMuted}
+      bg={isEnabled ? theme.accent : theme.surfaceMuted}
+    >
+      {` ${label} `}
+    </span>
+  );
+}
+
+function renderBranchListItemTitle(
+  item: BranchListItem,
+  base: string,
+  head: string,
+  theme: UiTheme,
+): ReactNode {
+  if (item.kind === "working-tree") {
+    return <>Working tree</>;
+  }
+
+  if (item.kind === "open-pr" && item.branch?.pullRequest != null) {
+    return (
+      <>
+        <span fg={theme.success}>{item.branch.pullRequest.title}</span>
+        <span fg={theme.textMuted}>{` (#${item.branch.pullRequest.number})`}</span>
+        <BranchBadges
+          branch={item.branch}
+          base={base}
+          head={head}
+          theme={theme}
+          compact
+          hidePullRequest
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <BranchName branch={item.branch!} fg={theme.text} theme={theme} />
+      <BranchBadges branch={item.branch!} base={base} head={head} theme={theme} compact />
+    </>
+  );
+}
+
+function renderBranchListItemSummary(item: BranchListItem): ReactNode {
+  if (item.kind === "working-tree") {
+    return formatChangeSummary(item.summary ?? { filesChanged: 0, additions: 0, deletions: 0 });
+  }
+
+  const summary = item.branch?.summary;
+  if (summary == null) {
+    return item.branch?.tipAuthor ?? "No branch metadata available.";
+  }
+
+  if (item.kind === "open-pr") {
+    return `${formatAuthorList(summary.authors)}  •  ${formatCommitDelta(summary.commitCount, summary.comparedTo)}  •  +${summary.additions}/-${summary.deletions}`;
+  }
+
+  return `${formatAuthorList(summary.authors)}  •  ${formatCommitDelta(summary.commitCount, summary.comparedTo)}  •  ${formatChangeSummary(summary)}`;
+}
+
+function getBranchListItemTitle(item: BranchListItem): string {
+  if (item.kind === "working-tree") {
+    return "Working tree";
+  }
+
+  if (item.kind === "open-pr" && item.branch?.pullRequest != null) {
+    return `${item.branch.pullRequest.title} (#${item.branch.pullRequest.number})`;
+  }
+
+  if (item.branch == null) {
+    return "Nothing selected";
+  }
+
+  return item.branch.kind === "remote" ? getRemoteShortName(item.branch) : item.branch.name;
+}
+
+function getBranchListItemMeta(item: BranchListItem, base: string, head: string): string {
+  if (item.kind === "working-tree") {
+    return `Compares the working tree against ${head === "working tree" ? base : "HEAD"}.`;
+  }
+
+  if (item.branch == null) {
+    return "Nothing to show.";
+  }
+
+  const details = [`sha ${shortSha(item.branch.sha)}`];
+
+  if (item.branch.upstream != null) {
+    details.push(`upstream ${item.branch.upstream}`);
+  }
+
+  if (item.branch.summary != null) {
+    details.push(`diff vs ${item.branch.summary.comparedTo}`);
+  }
+
+  if (item.branch.name === base) {
+    details.push("selected as base");
+  }
+
+  if (item.branch.name === head) {
+    details.push("selected as head");
+  }
+
+  return details.join("  •  ");
+}
+
+function getBranchListAccent(item: BranchListItem, theme: UiTheme): string {
+  switch (item.kind) {
+    case "working-tree":
+      return theme.warning;
+    case "local-branch":
+      return theme.accent;
+    case "open-pr":
+      return theme.success;
+    case "remote-branch":
+      return theme.border;
+  }
 }
 
 export function HelpModal({ theme }: { theme: UiTheme }) {
@@ -752,9 +1086,9 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
           <KeyCap label="m" theme={theme} />
           <span>{" review and advance  "}</span>
           <KeyCap label="l" theme={theme} />
-          <span>{" branch list  "}</span>
+          <span>{" list modal  "}</span>
           <KeyCap label="tab" theme={theme} />
-          <span>{" switch branch columns  "}</span>
+          <span>{" switch branch/commit view  "}</span>
           <KeyCap label="b / h" theme={theme} />
           <span>{" set base / head"}</span>
         </text>
@@ -762,7 +1096,9 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
           <KeyCap label="w" theme={theme} />
           <span>{" working tree  "}</span>
           <KeyCap label="o" theme={theme} />
-          <span>{" toggle extra remotes  "}</span>
+          <span>{" remote toggle  "}</span>
+          <KeyCap label="f" theme={theme} />
+          <span>{" list filters  "}</span>
           <KeyCap label="q" theme={theme} />
           <span>{" quit"}</span>
         </text>
@@ -848,16 +1184,18 @@ function BranchBadges({
   head,
   theme,
   compact = false,
+  hidePullRequest = false,
 }: {
   branch: BranchInfo;
   base: string;
   head: string;
   theme: UiTheme;
   compact?: boolean;
+  hidePullRequest?: boolean;
 }) {
   return (
     <>
-      {branch.pullRequest != null ? (
+      {branch.pullRequest != null && !hidePullRequest ? (
         <>
           <span> </span>
           <Tag
@@ -913,12 +1251,12 @@ function Tag({ label, fg, bg }: { label: string; fg: ColorInput; bg: ColorInput 
   );
 }
 
-function selectBranch(branches: readonly BranchInfo[], index: number): BranchInfo | undefined {
-  if (branches.length === 0) {
+function selectItem<T>(items: readonly T[], index: number): T | undefined {
+  if (items.length === 0) {
     return undefined;
   }
 
-  return branches[Math.max(0, Math.min(index, branches.length - 1))];
+  return items[Math.max(0, Math.min(index, items.length - 1))];
 }
 
 function shortSha(sha: string): string {
@@ -933,6 +1271,31 @@ function getRemoteShortName(branch: BranchInfo): string {
   return branch.name.startsWith(`${branch.remoteName}/`)
     ? branch.name.slice(branch.remoteName.length + 1)
     : branch.name;
+}
+
+function tintHex(base: string, overlay: string, alpha: number): string {
+  const baseRgb = parseHexColor(base);
+  const overlayRgb = parseHexColor(overlay);
+
+  return toHexColor({
+    r: Math.round(baseRgb.r + (overlayRgb.r - baseRgb.r) * alpha),
+    g: Math.round(baseRgb.g + (overlayRgb.g - baseRgb.g) * alpha),
+    b: Math.round(baseRgb.b + (overlayRgb.b - baseRgb.b) * alpha),
+  });
+}
+
+function parseHexColor(color: string): { r: number; g: number; b: number } {
+  return {
+    r: Number.parseInt(color.slice(1, 3), 16),
+    g: Number.parseInt(color.slice(3, 5), 16),
+    b: Number.parseInt(color.slice(5, 7), 16),
+  };
+}
+
+function toHexColor(color: { r: number; g: number; b: number }): string {
+  return `#${[color.r, color.g, color.b]
+    .map((value) => value.toString(16).padStart(2, "0"))
+    .join("")}`;
 }
 
 function capitalize(value: string): string {

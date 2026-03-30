@@ -1,7 +1,21 @@
-import type { BranchInfo, ComparisonInfo } from "@diffdiff/core";
-import type { DiffView, DiffViewPreference, TextSegment } from "./types.ts";
+import type { BranchInfo, ChangeSummary, ComparisonCommit, ComparisonInfo } from "@diffdiff/core";
+import type {
+  BranchListFilters,
+  BranchListItem,
+  CommitListItem,
+  DiffView,
+  DiffViewPreference,
+  TextSegment,
+} from "./types.ts";
 
 export const MIN_SIDE_BY_SIDE_DIFF_WIDTH = 121;
+
+export const DEFAULT_BRANCH_LIST_FILTERS: BranchListFilters = {
+  workingTree: true,
+  localBranch: true,
+  openPr: true,
+  remoteBranch: false,
+};
 
 export function getVisibleRemoteBranches(
   branches: readonly BranchInfo[],
@@ -20,6 +34,129 @@ export function getVisibleRemoteBranches(
       branch.isDefault
     );
   });
+}
+
+export function buildBranchListItems({
+  filters,
+  localBranches,
+  remoteBranches,
+  workingTreeSummary,
+}: {
+  filters: BranchListFilters;
+  localBranches: readonly BranchInfo[];
+  remoteBranches: readonly BranchInfo[];
+  workingTreeSummary: ChangeSummary;
+}): BranchListItem[] {
+  const items: BranchListItem[] = [];
+
+  if (filters.workingTree) {
+    items.push({
+      key: "working-tree",
+      kind: "working-tree",
+      summary: workingTreeSummary,
+    });
+  }
+
+  if (filters.localBranch) {
+    items.push(
+      ...localBranches.map((branch) => ({
+        key: `local:${branch.ref}`,
+        kind: "local-branch" as const,
+        branch,
+      })),
+    );
+  }
+
+  if (filters.openPr) {
+    items.push(
+      ...remoteBranches
+        .filter((branch) => branch.pullRequest != null)
+        .map((branch) => ({
+          key: `pr:${branch.ref}`,
+          kind: "open-pr" as const,
+          branch,
+        })),
+    );
+  }
+
+  if (filters.remoteBranch) {
+    items.push(
+      ...remoteBranches
+        .filter((branch) => branch.pullRequest == null)
+        .map((branch) => ({
+          key: `remote:${branch.ref}`,
+          kind: "remote-branch" as const,
+          branch,
+        })),
+    );
+  }
+
+  return items;
+}
+
+export function buildCommitListItems(commits: readonly ComparisonCommit[]): CommitListItem[] {
+  return commits.map((commit) => ({
+    key: commit.sha,
+    commit,
+  }));
+}
+
+export function findInitialBranchListSelection({
+  comparison,
+  currentBranch,
+  items,
+}: {
+  comparison: ComparisonInfo;
+  currentBranch?: string;
+  items: readonly BranchListItem[];
+}): number {
+  if (comparison.mode === "working-tree") {
+    const workingTreeIndex = items.findIndex((item) => item.kind === "working-tree");
+    if (workingTreeIndex >= 0) {
+      return workingTreeIndex;
+    }
+  }
+
+  const matchingIndex = items.findIndex((item) => {
+    if (item.branch == null) {
+      return false;
+    }
+
+    return (
+      item.branch.name === comparison.head ||
+      item.branch.name === comparison.base ||
+      item.branch.isCurrent ||
+      item.branch.name === currentBranch
+    );
+  });
+
+  return matchingIndex >= 0 ? matchingIndex : 0;
+}
+
+export function hasEnabledBranchListFilters(filters: BranchListFilters): boolean {
+  return Object.values(filters).some(Boolean);
+}
+
+export function formatAuthorList(authors: readonly string[], maxAuthors = 2): string {
+  if (authors.length === 0) {
+    return "No unique commits";
+  }
+
+  if (authors.length <= maxAuthors) {
+    return authors.join(", ");
+  }
+
+  return `${authors.slice(0, maxAuthors).join(", ")} +${authors.length - maxAuthors}`;
+}
+
+export function formatCommitDelta(count: number, comparedTo: string): string {
+  const commitLabel = count === 1 ? "commit" : "commits";
+  return `${count} ${commitLabel} vs ${comparedTo}`;
+}
+
+export function formatChangeSummary(summary: ChangeSummary): string {
+  const fileLabel = summary.filesChanged === 1 ? "file" : "files";
+  return `${summary.filesChanged} ${fileLabel}  •  +${summary.additions}/-${summary.deletions}`;
 }
 
 export function clampIndex(index: number, size: number): number {

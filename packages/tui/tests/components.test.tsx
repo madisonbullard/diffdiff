@@ -3,9 +3,16 @@ import type { ReactNode } from "react";
 import type { ReactTestRenderer } from "react-test-renderer";
 import { act, create } from "react-test-renderer";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
-import { BranchModal, FileCard, HelpModal, StickyFileHeader } from "../src/components.tsx";
+import {
+  BranchModal,
+  FileCard,
+  HelpModal,
+  ListFilterModal,
+  StickyFileHeader,
+} from "../src/components.tsx";
 import { getUiTheme } from "../src/theme.ts";
-import type { PreparedReviewFile } from "../src/types.ts";
+import type { BranchListFilters, PreparedReviewFile } from "../src/types.ts";
+import { buildBranchListItems, buildCommitListItems } from "../src/view-model.ts";
 
 const theme = getUiTheme("pierre-dark");
 const syntaxStyle = { kind: "syntax-style" } as unknown as import("@opentui/core").SyntaxStyle;
@@ -39,25 +46,75 @@ test("renders an expanded file card snapshot", () => {
 });
 
 test("renders a branch modal snapshot", () => {
+  const filters: BranchListFilters = {
+    workingTree: true,
+    localBranch: true,
+    openPr: true,
+    remoteBranch: false,
+  };
   const tree = render(
     <BranchModal
-      activeColumn="remote"
+      activeView="branch"
       base="origin/main"
+      branchItems={buildBranchListItems({
+        filters,
+        localBranches: createLocalBranches(),
+        remoteBranches: createRemoteBranches(),
+        workingTreeSummary: { filesChanged: 4, additions: 18, deletions: 6 },
+      })}
+      branchIndex={1}
+      commitItems={buildCommitListItems(createComparisonCommits())}
+      commitIndex={0}
       comparisonMode="range"
+      filters={filters}
       head="feature/tui"
-      localBranches={createLocalBranches()}
-      localIndex={0}
-      remoteBranches={createRemoteBranches()}
-      remoteIndex={0}
-      remoteTotalCount={4}
-      showAllRemoteBranches={false}
+      localBranchCount={2}
+      openPrCount={1}
+      remoteBranchCount={1}
       theme={theme}
     />,
   );
 
   expect(tree.toJSON()).toMatchSnapshot();
-  expect(collectText(tree.toJSON())).toContain("OPEN PR #42");
-  expect(collectText(tree.toJSON())).toContain("Working tree vs");
+  expect(collectText(tree.toJSON())).toContain("Build TUI reviewer");
+  expect(collectText(tree.toJSON())).toContain("(#42)");
+  expect(collectText(tree.toJSON())).toContain("Working tree");
+  expect(collectText(tree.toJSON())).toContain("feature/tui");
+});
+
+test("renders a commit view snapshot", () => {
+  const filters: BranchListFilters = {
+    workingTree: true,
+    localBranch: true,
+    openPr: true,
+    remoteBranch: false,
+  };
+  const tree = render(
+    <BranchModal
+      activeView="commit"
+      base="origin/main"
+      branchItems={buildBranchListItems({
+        filters,
+        localBranches: createLocalBranches(),
+        remoteBranches: createRemoteBranches(),
+        workingTreeSummary: { filesChanged: 4, additions: 18, deletions: 6 },
+      })}
+      branchIndex={1}
+      commitItems={buildCommitListItems(createComparisonCommits())}
+      commitIndex={1}
+      comparisonMode="range"
+      filters={filters}
+      head="feature/tui"
+      localBranchCount={2}
+      openPrCount={1}
+      remoteBranchCount={1}
+      theme={theme}
+    />,
+  );
+
+  expect(collectText(tree.toJSON())).toContain("2 commits in the current comparison");
+  expect(collectText(tree.toJSON())).toContain("Polish branch categories");
+  expect(collectText(tree.toJSON())).toContain("enter / h");
 });
 
 test("shows binary, reviewed, and collapsed states clearly", () => {
@@ -119,26 +176,41 @@ test("renders a sticky file header for the active viewport file", () => {
 });
 
 test("renders empty branch columns and help copy", () => {
+  const filters: BranchListFilters = {
+    workingTree: true,
+    localBranch: false,
+    openPr: false,
+    remoteBranch: false,
+  };
   const branchModal = render(
     <BranchModal
-      activeColumn="local"
+      activeView="branch"
       base="(empty tree)"
+      branchItems={buildBranchListItems({
+        filters,
+        localBranches: [],
+        remoteBranches: [],
+        workingTreeSummary: { filesChanged: 0, additions: 0, deletions: 0 },
+      })}
+      branchIndex={0}
+      commitItems={[]}
+      commitIndex={0}
       comparisonMode="working-tree"
+      filters={filters}
       head="working tree"
-      localBranches={[]}
-      localIndex={0}
-      remoteBranches={[]}
-      remoteIndex={0}
-      remoteTotalCount={0}
-      showAllRemoteBranches={true}
+      localBranchCount={0}
+      openPrCount={0}
+      remoteBranchCount={0}
       theme={theme}
     />,
   );
+  const filterModal = render(<ListFilterModal filters={filters} selectedIndex={0} theme={theme} />);
   const helpModal = render(<HelpModal theme={theme} />);
 
-  expect(collectText(branchModal.toJSON())).toContain("Nothing to show.");
+  expect(collectText(branchModal.toJSON())).toContain("Working tree");
   expect(collectText(branchModal.toJSON())).toContain("ACTIVE");
-  expect(collectText(helpModal.toJSON())).toContain("branch list");
+  expect(collectText(filterModal.toJSON())).toContain("Remote branches");
+  expect(collectText(helpModal.toJSON())).toContain("list modal");
   expect(collectText(helpModal.toJSON())).toContain("working tree");
 });
 
@@ -277,15 +349,33 @@ function createLocalBranches(): BranchInfo[] {
       kind: "local",
       name: "feature/tui",
       ref: "refs/heads/feature/tui",
+      summary: {
+        additions: 18,
+        authors: ["Madison Bullard", "Pierre Bot"],
+        commitCount: 3,
+        comparedTo: "origin/main",
+        deletions: 6,
+        filesChanged: 4,
+      },
       sha: "1234567",
+      tipAuthor: "Madison Bullard",
     },
     {
       isCurrent: false,
-      isDefault: false,
+      isDefault: true,
       kind: "local",
       name: "main",
       ref: "refs/heads/main",
+      summary: {
+        additions: 0,
+        authors: ["Madison Bullard"],
+        commitCount: 0,
+        comparedTo: "origin/main",
+        deletions: 0,
+        filesChanged: 0,
+      },
       sha: "7654321",
+      tipAuthor: "Madison Bullard",
     },
   ];
 }
@@ -306,7 +396,16 @@ function createRemoteBranches(): BranchInfo[] {
       },
       ref: "refs/remotes/origin/feature/tui",
       remoteName: "origin",
+      summary: {
+        additions: 18,
+        authors: ["Madison Bullard", "Pierre Bot"],
+        commitCount: 3,
+        comparedTo: "origin/main",
+        deletions: 6,
+        filesChanged: 4,
+      },
       sha: "abcdef0",
+      tipAuthor: "Madison Bullard",
     },
     {
       isCurrent: false,
@@ -315,7 +414,33 @@ function createRemoteBranches(): BranchInfo[] {
       name: "origin/main",
       ref: "refs/remotes/origin/main",
       remoteName: "origin",
+      summary: {
+        additions: 0,
+        authors: ["Madison Bullard"],
+        commitCount: 0,
+        comparedTo: "origin/main",
+        deletions: 0,
+        filesChanged: 0,
+      },
       sha: "fedcba0",
+      tipAuthor: "Madison Bullard",
+    },
+  ];
+}
+
+function createComparisonCommits() {
+  return [
+    {
+      author: "Madison Bullard",
+      sha: "1234567890abcdef",
+      shortSha: "1234567",
+      subject: "Revamp the list modal",
+    },
+    {
+      author: "Pierre Bot",
+      sha: "abcdef0123456789",
+      shortSha: "abcdef0",
+      subject: "Polish branch categories",
     },
   ];
 }

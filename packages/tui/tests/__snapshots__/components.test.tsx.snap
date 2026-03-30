@@ -16,7 +16,7 @@ exports[`renders a branch modal snapshot 1`] = `
     backgroundColor="#0c1823"
     flexDirection="column"
     gap={1}
-    maxWidth={140}
+    maxWidth={108}
     padding={1}
     width="92%"
   >
@@ -34,12 +34,30 @@ exports[`renders a branch modal snapshot 1`] = `
           fg="#e6edf3"
           wrapMode="none"
         >
-          Branch list
+          List
         </text>
         <text
           fg="#8ea4b5"
           wrapMode="none"
         >
+          <span
+            bg="#152838"
+            fg="#e6edf3"
+          >
+             tab 
+          </span>
+          <span>
+             switch view  
+          </span>
+          <span
+            bg="#152838"
+            fg="#e6edf3"
+          >
+             f 
+          </span>
+          <span>
+             filters  
+          </span>
           <span
             bg="#152838"
             fg="#e6edf3"
@@ -55,75 +73,7 @@ exports[`renders a branch modal snapshot 1`] = `
         fg="#8ea4b5"
         wrapMode="none"
       >
-        Pick a base or head directly from git refs.
-      </text>
-    </box>
-    <box
-      backgroundColor="#10202d"
-      border={
-        [
-          "left",
-        ]
-      }
-      borderColor="#29475c"
-      customBorderChars={
-        {
-          "bottomLeft": "",
-          "bottomRight": "",
-          "bottomT": "",
-          "cross": "",
-          "horizontal": " ",
-          "leftT": "",
-          "rightT": "",
-          "topLeft": "",
-          "topRight": "",
-          "topT": "",
-          "vertical": "┃",
-        }
-      }
-      flexDirection="column"
-      gap={1}
-      paddingBottom={1}
-      paddingLeft={2}
-      paddingRight={1}
-      paddingTop={1}
-      width="100%"
-    >
-      <text
-        fg="#8ea4b5"
-        wrapMode="none"
-      >
-        <span
-          fg="#d4a72c"
-        >
-          base
-        </span>
-        <span>
-           origin/main
-        </span>
-        <span>
-            •  
-        </span>
-        <span
-          fg="#9cdcfe"
-        >
-          head
-        </span>
-        <span>
-           feature/tui
-        </span>
-      </text>
-      <text
-        fg="#8ea4b5"
-        wrapMode="none"
-      >
-        2
-         local • 
-        2
-        /
-        4
-         remote shown
-          •  2 hidden without open PRs
+        Browse working tree changes, branches, and open pull requests.
       </text>
     </box>
     <box
@@ -159,64 +109,130 @@ exports[`renders a branch modal snapshot 1`] = `
     >
       <box
         flexDirection="row"
-        gap={1}
+        gap={2}
         justifyContent="space-between"
         width="100%"
       >
-        <text
-          fg="#e6edf3"
-          wrapMode="none"
-        >
-          Working tree option
-        </text>
         <text
           fg="#8ea4b5"
           wrapMode="none"
         >
           <span
-            bg="#152838"
-            fg="#e6edf3"
+            fg="#d4a72c"
           >
-             w 
+            base
           </span>
           <span>
-             select
+             origin/main
+          </span>
+          <span>
+              •  
+          </span>
+          <span
+            fg="#9cdcfe"
+          >
+            head
+          </span>
+          <span>
+             feature/tui
           </span>
         </text>
-      </box>
-      <text
-        fg="#e6edf3"
-        wrapMode="none"
-      >
-        <span>
-          Working tree vs 
-        </span>
-        <span
-          fg="#9cdcfe"
+        <box
+          flexDirection="row"
+          gap={1}
         >
-          HEAD
-        </span>
-      </text>
+          <text
+            wrapMode="none"
+          >
+            <span
+              bg="#9cdcfe"
+              fg="#0b1b26"
+            >
+               Branches 
+            </span>
+          </text>
+          <text
+            wrapMode="none"
+          >
+            <span
+              bg="#152838"
+              fg="#8ea4b5"
+            >
+               Commits 
+            </span>
+          </text>
+        </box>
+      </box>
       <text
         fg="#8ea4b5"
         wrapMode="none"
       >
-        Includes staged, unstaged, and untracked changes that are not committed yet.
+        <span>
+          2 local
+        </span>
+        <span>
+            •  
+        </span>
+        <span>
+          1 open PR
+        </span>
+        <span>
+            •  
+        </span>
+        <span>
+          1 remote
+        </span>
+        <span>
+            •  filters 
+        </span>
+        <span
+          bg="#9cdcfe"
+          fg="#0b1b26"
+        >
+           working tree 
+        </span>
+        <span>
+           
+        </span>
+        <span
+          bg="#9cdcfe"
+          fg="#0b1b26"
+        >
+           local 
+        </span>
+        <span>
+           
+        </span>
+        <span
+          bg="#9cdcfe"
+          fg="#0b1b26"
+        >
+           PR 
+        </span>
+        <span>
+           
+        </span>
+        <span
+          bg="#152838"
+          fg="#8ea4b5"
+        >
+           remote 
+        </span>
       </text>
     </box>
     <box
-      flexDirection="row"
-      gap={2}
+      flexDirection="column"
+      gap={1}
       width="100%"
     >
       <box
-        backgroundColor="#10202d"
+        backgroundColor="#2b332d"
         border={
           [
             "left",
           ]
         }
-        borderColor="#29475c"
+        borderColor="#d4a72c"
         customBorderChars={
           {
             "bottomLeft": "",
@@ -238,7 +254,7 @@ exports[`renders a branch modal snapshot 1`] = `
         paddingLeft={2}
         paddingRight={1}
         paddingTop={1}
-        width="50%"
+        width="100%"
       >
         <box
           flexDirection="row"
@@ -250,69 +266,18 @@ exports[`renders a branch modal snapshot 1`] = `
             fg="#e6edf3"
             wrapMode="none"
           >
-            Local branches
-          </text>
-          <text
-            fg="#8ea4b5"
-            wrapMode="none"
-          >
-            2
+            Working tree
           </text>
         </box>
-        <box
-          backgroundColor="#152838"
-          paddingLeft={1}
-          paddingRight={1}
-          width="100%"
+        <text
+          fg="#8ea4b5"
+          wrapMode="none"
         >
-          <text
-            fg="#9cdcfe"
-            wrapMode="none"
-          >
-            <span
-              fg="#9cdcfe"
-            >
-              feature/tui
-            </span>
-            <span>
-               
-            </span>
-            <span
-              bg="#9cdcfe"
-              fg="#0b1b26"
-            >
-               HEAD 
-            </span>
-            <span>
-               
-            </span>
-            <span
-              bg="#0d2634"
-              fg="#e6edf3"
-            >
-               CURRENT 
-            </span>
-          </text>
-        </box>
-        <box
-          paddingLeft={1}
-          paddingRight={1}
-          width="100%"
-        >
-          <text
-            fg="#e6edf3"
-            wrapMode="none"
-          >
-            <span
-              fg="#e6edf3"
-            >
-              main
-            </span>
-          </text>
-        </box>
+          4 files  •  +18/-6
+        </text>
       </box>
       <box
-        backgroundColor="#10202d"
+        backgroundColor="#324d5f"
         border={
           [
             "left",
@@ -340,7 +305,7 @@ exports[`renders a branch modal snapshot 1`] = `
         paddingLeft={2}
         paddingRight={1}
         paddingTop={1}
-        width="50%"
+        width="100%"
       >
         <box
           flexDirection="row"
@@ -349,35 +314,11 @@ exports[`renders a branch modal snapshot 1`] = `
           width="100%"
         >
           <text
-            fg="#9cdcfe"
-            wrapMode="none"
-          >
-            Remote branches with context
-          </text>
-          <text
-            fg="#8ea4b5"
-            wrapMode="none"
-          >
-            2
-          </text>
-        </box>
-        <box
-          backgroundColor="#152838"
-          paddingLeft={1}
-          paddingRight={1}
-          width="100%"
-        >
-          <text
-            fg="#9cdcfe"
+            fg="#e6edf3"
             wrapMode="none"
           >
             <span
-              fg="#8ea4b5"
-            >
-              origin/
-            </span>
-            <span
-              fg="#9cdcfe"
+              fg="#e6edf3"
             >
               feature/tui
             </span>
@@ -385,16 +326,64 @@ exports[`renders a branch modal snapshot 1`] = `
                
             </span>
             <span
-              bg="#3fb950"
+              bg="#9cdcfe"
               fg="#0b1b26"
             >
-               PR #42 
+               HEAD 
+            </span>
+            <span>
+               
+            </span>
+            <span
+              bg="#0d2634"
+              fg="#e6edf3"
+            >
+               CURRENT 
             </span>
           </text>
         </box>
+        <text
+          fg="#8ea4b5"
+          wrapMode="none"
+        >
+          Madison Bullard, Pierre Bot  •  3 commits vs origin/main  •  4 files  •  +18/-6
+        </text>
+      </box>
+      <box
+        backgroundColor="#243a4a"
+        border={
+          [
+            "left",
+          ]
+        }
+        borderColor="#9cdcfe"
+        customBorderChars={
+          {
+            "bottomLeft": "",
+            "bottomRight": "",
+            "bottomT": "",
+            "cross": "",
+            "horizontal": " ",
+            "leftT": "",
+            "rightT": "",
+            "topLeft": "",
+            "topRight": "",
+            "topT": "",
+            "vertical": "┃",
+          }
+        }
+        flexDirection="column"
+        gap={1}
+        paddingBottom={1}
+        paddingLeft={2}
+        paddingRight={1}
+        paddingTop={1}
+        width="100%"
+      >
         <box
-          paddingLeft={1}
-          paddingRight={1}
+          flexDirection="row"
+          gap={1}
+          justifyContent="space-between"
           width="100%"
         >
           <text
@@ -402,23 +391,9 @@ exports[`renders a branch modal snapshot 1`] = `
             wrapMode="none"
           >
             <span
-              fg="#8ea4b5"
-            >
-              origin/
-            </span>
-            <span
               fg="#e6edf3"
             >
               main
-            </span>
-            <span>
-               
-            </span>
-            <span
-              bg="#d4a72c"
-              fg="#0b1b26"
-            >
-               BASE 
             </span>
             <span>
                
@@ -431,6 +406,72 @@ exports[`renders a branch modal snapshot 1`] = `
             </span>
           </text>
         </box>
+        <text
+          fg="#8ea4b5"
+          wrapMode="none"
+        >
+          Madison Bullard  •  0 commits vs origin/main  •  0 files  •  +0/-0
+        </text>
+      </box>
+      <box
+        backgroundColor="#173532"
+        border={
+          [
+            "left",
+          ]
+        }
+        borderColor="#3fb950"
+        customBorderChars={
+          {
+            "bottomLeft": "",
+            "bottomRight": "",
+            "bottomT": "",
+            "cross": "",
+            "horizontal": " ",
+            "leftT": "",
+            "rightT": "",
+            "topLeft": "",
+            "topRight": "",
+            "topT": "",
+            "vertical": "┃",
+          }
+        }
+        flexDirection="column"
+        gap={1}
+        paddingBottom={1}
+        paddingLeft={2}
+        paddingRight={1}
+        paddingTop={1}
+        width="100%"
+      >
+        <box
+          flexDirection="row"
+          gap={1}
+          justifyContent="space-between"
+          width="100%"
+        >
+          <text
+            fg="#e6edf3"
+            wrapMode="none"
+          >
+            <span
+              fg="#3fb950"
+            >
+              Build TUI reviewer
+            </span>
+            <span
+              fg="#8ea4b5"
+            >
+               (#42)
+            </span>
+          </text>
+        </box>
+        <text
+          fg="#8ea4b5"
+          wrapMode="none"
+        >
+          Madison Bullard, Pierre Bot  •  3 commits vs origin/main  •  +18/-6
+        </text>
       </box>
     </box>
     <box
@@ -440,7 +481,7 @@ exports[`renders a branch modal snapshot 1`] = `
           "left",
         ]
       }
-      borderColor="#3fb950"
+      borderColor="#67b7e1"
       customBorderChars={
         {
           "bottomLeft": "",
@@ -464,95 +505,17 @@ exports[`renders a branch modal snapshot 1`] = `
       paddingTop={1}
       width="100%"
     >
-      <box
-        flexDirection="row"
-        gap={1}
-        justifyContent="space-between"
-        width="100%"
-      >
-        <text
-          fg="#e6edf3"
-          wrapMode="none"
-        >
-          Selected 
-          remote
-           branch
-        </text>
-        <text
-          fg="#8ea4b5"
-          wrapMode="none"
-        >
-          <span
-            bg="#152838"
-            fg="#e6edf3"
-          >
-             tab 
-          </span>
-          <span>
-             switch columns
-          </span>
-        </text>
-      </box>
       <text
         fg="#e6edf3"
-        wrapMode="none"
-      >
-        <span
-          fg="#8ea4b5"
-        >
-          origin/
-        </span>
-        <span
-          fg="#e6edf3"
-        >
-          feature/tui
-        </span>
-        <span>
-           
-        </span>
-        <span
-          bg="#3fb950"
-          fg="#0b1b26"
-        >
-           OPEN PR #42 
-        </span>
-      </text>
-      <text
-        fg="#8ea4b5"
-        wrapMode="none"
-      >
-        <span>
-          sha abcdef0
-        </span>
-        <span>
-            •  remote origin
-        </span>
-      </text>
-      <text
-        fg="#e6edf3"
-        wrapMode="none"
-      >
-        <span
-          bg="#3fb950"
-          fg="#0b1b26"
-        >
-           OPEN PR #42 
-        </span>
-        <span>
-           
-        </span>
-        <span>
-          Build TUI reviewer
-        </span>
-      </text>
-      <text
-        fg="#8ea4b5"
         wrapMode="none"
       >
         feature/tui
-         -&gt;
-         
-        main
+      </text>
+      <text
+        fg="#8ea4b5"
+        wrapMode="none"
+      >
+        sha 1234567  •  diff vs origin/main  •  selected as head
       </text>
       <text
         fg="#8ea4b5"
@@ -562,7 +525,16 @@ exports[`renders a branch modal snapshot 1`] = `
           bg="#152838"
           fg="#e6edf3"
         >
-           enter / b 
+           enter 
+        </span>
+        <span>
+           select  
+        </span>
+        <span
+          bg="#152838"
+          fg="#e6edf3"
+        >
+           b 
         </span>
         <span>
            set base  
@@ -592,7 +564,16 @@ exports[`renders a branch modal snapshot 1`] = `
            o 
         </span>
         <span>
-           show all remotes
+           remote toggle  
+        </span>
+        <span
+          bg="#152838"
+          fg="#e6edf3"
+        >
+           f 
+        </span>
+        <span>
+           filters
         </span>
       </text>
     </box>

@@ -7,16 +7,24 @@ import {
   BranchModal,
   FileCard,
   HelpModal,
+  ListFilterModal,
   StickyFileHeader,
-  type BranchColumn,
 } from "./components.tsx";
 import type { UiTheme } from "./theme.ts";
-import type { DiffViewPreference, PreparedReviewSession } from "./types.ts";
+import type {
+  BranchListFilters,
+  DiffViewPreference,
+  ListModalView,
+  PreparedReviewSession,
+} from "./types.ts";
 import {
+  buildBranchListItems,
+  buildCommitListItems,
   clampIndex,
+  DEFAULT_BRANCH_LIST_FILTERS,
+  findInitialBranchListSelection,
   getDiffViewLabel,
   getTopIntersectingFileIndex,
-  getVisibleRemoteBranches,
   MIN_SIDE_BY_SIDE_DIFF_WIDTH,
   resolveDiffView,
 } from "./view-model.ts";
@@ -28,6 +36,21 @@ interface DiffdiffAppProps {
   onExit: () => void;
   syntaxStyle: SyntaxStyle;
   theme: UiTheme;
+}
+
+const LIST_FILTER_KEYS = ["workingTree", "localBranch", "openPr", "remoteBranch"] as const;
+
+function getBranchFilterLabel(key: keyof BranchListFilters): string {
+  switch (key) {
+    case "workingTree":
+      return "Working tree";
+    case "localBranch":
+      return "Local branches";
+    case "openPr":
+      return "Open PRs";
+    case "remoteBranch":
+      return "Remote branches";
+  }
 }
 
 export function DiffdiffApp({
@@ -46,10 +69,14 @@ export function DiffdiffApp({
   const [statusMessage, setStatusMessage] = useState<string>("Ready.");
   const [showHelp, setShowHelp] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
-  const [showAllRemoteBranches, setShowAllRemoteBranches] = useState(false);
-  const [activeBranchColumn, setActiveBranchColumn] = useState<BranchColumn>("local");
-  const [localBranchIndex, setLocalBranchIndex] = useState(0);
-  const [remoteBranchIndex, setRemoteBranchIndex] = useState(0);
+  const [showListFilterModal, setShowListFilterModal] = useState(false);
+  const [activeListView, setActiveListView] = useState<ListModalView>("branch");
+  const [branchListFilters, setBranchListFilters] = useState<BranchListFilters>({
+    ...DEFAULT_BRANCH_LIST_FILTERS,
+  });
+  const [branchListIndex, setBranchListIndex] = useState(0);
+  const [commitListIndex, setCommitListIndex] = useState(0);
+  const [filterIndex, setFilterIndex] = useState(0);
   const [isReloading, setIsReloading] = useState(false);
   const [diffViewPreference, setDiffViewPreference] = useState<DiffViewPreference>("unified");
   const [activeFileIndex, setActiveFileIndex] = useState(0);
@@ -62,21 +89,27 @@ export function DiffdiffApp({
   );
   const diffViewLabel = useMemo(() => getDiffViewLabel(diffView), [diffView]);
 
-  const visibleRemoteBranches = useMemo(() => {
-    return getVisibleRemoteBranches(
+  const branchItems = useMemo(
+    () =>
+      buildBranchListItems({
+        filters: branchListFilters,
+        localBranches: session.branches.local,
+        remoteBranches: session.branches.remote,
+        workingTreeSummary: session.workingTreeSummary,
+      }),
+    [
+      branchListFilters,
+      session.branches.local,
       session.branches.remote,
-      session.comparison,
-      showAllRemoteBranches,
-    );
-  }, [session.branches.remote, session.comparison, showAllRemoteBranches]);
-
-  const selectedLocalBranch =
-    session.branches.local[clampIndex(localBranchIndex, session.branches.local.length)];
-  const selectedRemoteBranch =
-    visibleRemoteBranches[clampIndex(remoteBranchIndex, visibleRemoteBranches.length)];
-  const selectedBranch =
-    activeBranchColumn === "local" ? selectedLocalBranch : selectedRemoteBranch;
+      session.workingTreeSummary,
+    ],
+  );
+  const commitItems = useMemo(() => buildCommitListItems(session.commits), [session.commits]);
   const stickyFile = session.files[activeFileIndex];
+  const selectedBranchItem = branchItems[clampIndex(branchListIndex, branchItems.length)];
+  const selectedCommitItem = commitItems[clampIndex(commitListIndex, commitItems.length)];
+  const openPrCount = session.branches.remote.filter((branch) => branch.pullRequest != null).length;
+  const remoteBranchCount = session.branches.remote.length - openPrCount;
 
   useEffect(() => {
     setSelectedFileIndex((currentIndex) => clampIndex(currentIndex, session.files.length));
@@ -105,12 +138,12 @@ export function DiffdiffApp({
   }, [session.files]);
 
   useEffect(() => {
-    setLocalBranchIndex((currentIndex) => clampIndex(currentIndex, session.branches.local.length));
-  }, [session.branches.local.length]);
+    setBranchListIndex((currentIndex) => clampIndex(currentIndex, branchItems.length));
+  }, [branchItems.length]);
 
   useEffect(() => {
-    setRemoteBranchIndex((currentIndex) => clampIndex(currentIndex, visibleRemoteBranches.length));
-  }, [visibleRemoteBranches.length]);
+    setCommitListIndex((currentIndex) => clampIndex(currentIndex, commitItems.length));
+  }, [commitItems.length]);
 
   useEffect(() => {
     const scrollBox = scrollRef.current;
@@ -158,6 +191,11 @@ export function DiffdiffApp({
       if (key.name === "escape" || key.name === "q" || key.sequence === "?") {
         setShowHelp(false);
       }
+      return;
+    }
+
+    if (showListFilterModal) {
+      handleListFilterModalKey(key);
       return;
     }
 
@@ -392,7 +430,7 @@ export function DiffdiffApp({
             {" "}
             l{" "}
           </span>
-          <span>{" branches  "}</span>
+          <span>{" list  "}</span>
           <span fg={theme.text} bg={theme.surfaceMuted}>
             {" "}
             ?{" "}
@@ -403,18 +441,24 @@ export function DiffdiffApp({
 
       {showBranchModal ? (
         <BranchModal
-          activeColumn={activeBranchColumn}
+          activeView={activeListView}
           base={session.comparison.base}
+          branchItems={branchItems}
+          branchIndex={branchListIndex}
+          commitItems={commitItems}
+          commitIndex={commitListIndex}
           comparisonMode={session.comparison.mode}
+          filters={branchListFilters}
           head={session.comparison.head}
-          localBranches={session.branches.local}
-          localIndex={localBranchIndex}
-          remoteBranches={visibleRemoteBranches}
-          remoteIndex={remoteBranchIndex}
-          remoteTotalCount={session.branches.remote.length}
-          showAllRemoteBranches={showAllRemoteBranches}
+          localBranchCount={session.branches.local.length}
+          openPrCount={openPrCount}
+          remoteBranchCount={remoteBranchCount}
           theme={theme}
         />
+      ) : null}
+
+      {showBranchModal && showListFilterModal ? (
+        <ListFilterModal filters={branchListFilters} selectedIndex={filterIndex} theme={theme} />
       ) : null}
 
       {showHelp ? <HelpModal theme={theme} /> : null}
@@ -499,111 +543,201 @@ export function DiffdiffApp({
   }
 
   function openBranchModal(): void {
-    const localSelection = session.branches.local.findIndex(
-      (branch) => branch.name === session.comparison.head || branch.isCurrent,
+    setBranchListIndex(
+      findInitialBranchListSelection({
+        comparison: session.comparison,
+        currentBranch: session.repository.currentBranch,
+        items: branchItems,
+      }),
     );
-    const remoteSelection = visibleRemoteBranches.findIndex(
-      (branch) =>
-        branch.name === session.comparison.base || branch.name === session.comparison.head,
-    );
-
-    if (localSelection >= 0) {
-      setLocalBranchIndex(localSelection);
-    }
-
-    if (remoteSelection >= 0) {
-      setRemoteBranchIndex(remoteSelection);
-    }
-
-    setActiveBranchColumn(remoteSelection >= 0 ? "remote" : "local");
+    setCommitListIndex(Math.max(commitItems.length - 1, 0));
+    setActiveListView("branch");
+    setShowListFilterModal(false);
     setShowBranchModal(true);
-    setStatusMessage("Opened branch list.");
+    setStatusMessage("Opened list modal.");
   }
 
   function handleBranchModalKey(key: { name: string; sequence?: string; shift?: boolean }): void {
     if (key.name === "escape" || key.name === "q" || key.name === "l") {
       setShowBranchModal(false);
-      setStatusMessage("Closed branch list.");
+      setShowListFilterModal(false);
+      setStatusMessage("Closed list modal.");
       return;
     }
 
     if (key.name === "tab" || key.name === "left" || key.name === "right") {
-      setActiveBranchColumn((currentColumn) => (currentColumn === "local" ? "remote" : "local"));
+      setActiveListView((currentView) => (currentView === "branch" ? "commit" : "branch"));
       return;
     }
 
-    if (key.name === "o") {
-      setShowAllRemoteBranches((currentValue) => {
-        const nextValue = !currentValue;
-        setStatusMessage(
-          nextValue ? "Showing all remote branches." : "Showing focused remote branches.",
-        );
-        return nextValue;
-      });
+    if (activeListView === "branch" && key.name === "f") {
+      setFilterIndex(0);
+      setShowListFilterModal(true);
+      setStatusMessage("Opened list filters.");
       return;
     }
 
     if (key.name === "j" || key.name === "down") {
-      if (activeBranchColumn === "local") {
-        setLocalBranchIndex((currentIndex) =>
-          clampIndex(currentIndex + 1, session.branches.local.length),
-        );
+      if (activeListView === "branch") {
+        setBranchListIndex((currentIndex) => clampIndex(currentIndex + 1, branchItems.length));
       } else {
-        setRemoteBranchIndex((currentIndex) =>
-          clampIndex(currentIndex + 1, visibleRemoteBranches.length),
-        );
+        setCommitListIndex((currentIndex) => clampIndex(currentIndex + 1, commitItems.length));
       }
       return;
     }
 
     if (key.name === "k" || key.name === "up") {
-      if (activeBranchColumn === "local") {
-        setLocalBranchIndex((currentIndex) =>
-          clampIndex(currentIndex - 1, session.branches.local.length),
-        );
+      if (activeListView === "branch") {
+        setBranchListIndex((currentIndex) => clampIndex(currentIndex - 1, branchItems.length));
       } else {
-        setRemoteBranchIndex((currentIndex) =>
-          clampIndex(currentIndex - 1, visibleRemoteBranches.length),
-        );
+        setCommitListIndex((currentIndex) => clampIndex(currentIndex - 1, commitItems.length));
       }
       return;
     }
 
     if (key.name === "g" && !key.shift) {
-      if (activeBranchColumn === "local") {
-        setLocalBranchIndex(0);
+      if (activeListView === "branch") {
+        setBranchListIndex(0);
       } else {
-        setRemoteBranchIndex(0);
+        setCommitListIndex(0);
       }
       return;
     }
 
     if (key.name === "g" && key.shift) {
-      if (activeBranchColumn === "local") {
-        setLocalBranchIndex(Math.max(session.branches.local.length - 1, 0));
+      if (activeListView === "branch") {
+        setBranchListIndex(Math.max(branchItems.length - 1, 0));
       } else {
-        setRemoteBranchIndex(Math.max(visibleRemoteBranches.length - 1, 0));
+        setCommitListIndex(Math.max(commitItems.length - 1, 0));
       }
       return;
     }
 
-    if (key.name === "return" || key.name === "b") {
-      if (selectedBranch != null) {
-        void applyBranchSelection("base", selectedBranch);
+    if (activeListView === "branch") {
+      if (key.name === "o") {
+        toggleBranchFilter("remoteBranch");
+        return;
+      }
+
+      if (key.name === "return" || key.name === "b") {
+        if (selectedBranchItem?.kind === "working-tree") {
+          void applyWorkingTreeSelection();
+        } else if (selectedBranchItem?.branch != null) {
+          void applyBranchSelection("base", selectedBranchItem.branch);
+        }
+        return;
+      }
+
+      if (key.name === "h") {
+        if (selectedBranchItem?.branch != null) {
+          void applyBranchSelection("head", selectedBranchItem.branch);
+        }
+        return;
+      }
+
+      if (key.name === "w") {
+        void applyWorkingTreeSelection();
+      }
+
+      return;
+    }
+
+    if (key.name === "return" || key.name === "h") {
+      if (selectedCommitItem != null) {
+        void applyCommitSelection(
+          "head",
+          selectedCommitItem.commit.sha,
+          selectedCommitItem.commit.shortSha,
+        );
       }
       return;
     }
 
-    if (key.name === "h") {
-      if (selectedBranch != null) {
-        void applyBranchSelection("head", selectedBranch);
+    if (key.name === "b") {
+      if (selectedCommitItem != null) {
+        void applyCommitSelection(
+          "base",
+          selectedCommitItem.commit.sha,
+          selectedCommitItem.commit.shortSha,
+        );
+      }
+    }
+  }
+
+  function handleListFilterModalKey(key: {
+    name: string;
+    sequence?: string;
+    shift?: boolean;
+  }): void {
+    if (key.name === "escape" || key.name === "q" || key.name === "f") {
+      setShowListFilterModal(false);
+      setStatusMessage("Closed list filters.");
+      return;
+    }
+
+    if (key.name === "j" || key.name === "down") {
+      setFilterIndex((currentIndex) => clampIndex(currentIndex + 1, LIST_FILTER_KEYS.length));
+      return;
+    }
+
+    if (key.name === "k" || key.name === "up") {
+      setFilterIndex((currentIndex) => clampIndex(currentIndex - 1, LIST_FILTER_KEYS.length));
+      return;
+    }
+
+    if (key.name === "g" && !key.shift) {
+      setFilterIndex(0);
+      return;
+    }
+
+    if (key.name === "g" && key.shift) {
+      setFilterIndex(Math.max(LIST_FILTER_KEYS.length - 1, 0));
+      return;
+    }
+
+    if (key.name === "return" || key.name === "space") {
+      const filterKey = LIST_FILTER_KEYS[filterIndex];
+      if (filterKey != null) {
+        toggleBranchFilter(filterKey);
       }
       return;
     }
 
-    if (key.name === "w") {
-      void applyWorkingTreeSelection();
+    if (key.name === "a") {
+      setBranchListFilters({
+        workingTree: true,
+        localBranch: true,
+        openPr: true,
+        remoteBranch: true,
+      });
+      setStatusMessage("Enabled all list filters.");
+      return;
     }
+
+    if (key.name === "n") {
+      setBranchListFilters({
+        workingTree: false,
+        localBranch: false,
+        openPr: false,
+        remoteBranch: false,
+      });
+      setStatusMessage("Disabled all list filters.");
+    }
+  }
+
+  function toggleBranchFilter(key: keyof BranchListFilters): void {
+    setBranchListFilters((currentFilters) => {
+      const nextFilters = {
+        ...currentFilters,
+        [key]: !currentFilters[key],
+      } satisfies BranchListFilters;
+
+      setStatusMessage(
+        `${nextFilters[key] ? "Showing" : "Hiding"} ${getBranchFilterLabel(key).toLowerCase()}.`,
+      );
+
+      return nextFilters;
+    });
   }
 
   async function applyBranchSelection(target: "base" | "head", branch: BranchInfo): Promise<void> {
@@ -620,8 +754,38 @@ export function DiffdiffApp({
       setSession(nextSession);
       setStartupOptions(nextOptions);
       setShowBranchModal(false);
+      setShowListFilterModal(false);
       setSelectedFileIndex(0);
       setStatusMessage(`Updated ${target} to ${branch.name}.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `Unable to update ${target}.`;
+      setStatusMessage(message);
+    } finally {
+      setIsReloading(false);
+    }
+  }
+
+  async function applyCommitSelection(
+    target: "base" | "head",
+    sha: string,
+    shortSha: string,
+  ): Promise<void> {
+    const nextOptions = {
+      ...startupOptions,
+      [target]: sha,
+    } satisfies StartupOptions;
+
+    setIsReloading(true);
+    setStatusMessage(`Updating ${target} to commit ${shortSha}...`);
+
+    try {
+      const nextSession = await loadSession(nextOptions);
+      setSession(nextSession);
+      setStartupOptions(nextOptions);
+      setShowBranchModal(false);
+      setShowListFilterModal(false);
+      setSelectedFileIndex(0);
+      setStatusMessage(`Updated ${target} to commit ${shortSha}.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : `Unable to update ${target}.`;
       setStatusMessage(message);
@@ -642,6 +806,7 @@ export function DiffdiffApp({
       setSession(nextSession);
       setStartupOptions(nextOptions);
       setShowBranchModal(false);
+      setShowListFilterModal(false);
       setSelectedFileIndex(0);
       setStatusMessage("Showing working tree changes against HEAD.");
     } catch (error) {

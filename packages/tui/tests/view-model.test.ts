@@ -1,7 +1,12 @@
 import type { BranchInfo } from "@diffdiff/core";
 import { expect, test } from "vite-plus/test";
 import {
+  buildBranchListItems,
+  DEFAULT_BRANCH_LIST_FILTERS,
   clampIndex,
+  formatAuthorList,
+  formatChangeSummary,
+  formatCommitDelta,
   getDiffViewLabel,
   getTopIntersectingFileIndex,
   getVisibleRemoteBranches,
@@ -55,6 +60,64 @@ test("getVisibleRemoteBranches keeps open PRs and active refs when collapsed", (
   expect(visibleBranches).toHaveLength(2);
 });
 
+test("buildBranchListItems groups working tree, locals, PRs, and remotes in order", () => {
+  const items = buildBranchListItems({
+    filters: {
+      ...DEFAULT_BRANCH_LIST_FILTERS,
+      remoteBranch: true,
+    },
+    localBranches: [
+      {
+        kind: "local",
+        name: "feature/ui",
+        ref: "refs/heads/feature/ui",
+        sha: "abc",
+        isCurrent: true,
+        isDefault: false,
+      },
+    ],
+    remoteBranches: [
+      {
+        kind: "remote",
+        name: "origin/feature/ui",
+        ref: "refs/remotes/origin/feature/ui",
+        sha: "def",
+        remoteName: "origin",
+        isCurrent: false,
+        isDefault: false,
+        pullRequest: {
+          number: 42,
+          title: "UI polish",
+          url: "https://github.com/diffdiff/diffdiff/pull/42",
+          headRefName: "feature/ui",
+          baseRefName: "main",
+        },
+      },
+      {
+        kind: "remote",
+        name: "origin/main",
+        ref: "refs/remotes/origin/main",
+        sha: "ghi",
+        remoteName: "origin",
+        isCurrent: false,
+        isDefault: true,
+      },
+    ],
+    workingTreeSummary: {
+      filesChanged: 3,
+      additions: 12,
+      deletions: 4,
+    },
+  });
+
+  expect(items.map((item) => item.kind)).toEqual([
+    "working-tree",
+    "local-branch",
+    "open-pr",
+    "remote-branch",
+  ]);
+});
+
 test("clampIndex stays inside range", () => {
   expect(clampIndex(-1, 3)).toBe(0);
   expect(clampIndex(9, 3)).toBe(2);
@@ -81,6 +144,16 @@ test("resolveDiffView matches the split threshold used by side-by-side mode", ()
   expect(resolveDiffView("side-by-side", MIN_SIDE_BY_SIDE_DIFF_WIDTH)).toBe("split");
   expect(getDiffViewLabel("unified")).toBe("unified");
   expect(getDiffViewLabel("split")).toBe("side-by-side");
+});
+
+test("format helpers keep list metadata concise", () => {
+  expect(formatAuthorList(["Madison Bullard", "Pierre Bot", "Review Dog"])).toBe(
+    "Madison Bullard, Pierre Bot +1",
+  );
+  expect(formatCommitDelta(3, "origin/main")).toBe("3 commits vs origin/main");
+  expect(formatChangeSummary({ filesChanged: 2, additions: 11, deletions: 5 })).toBe(
+    "2 files  •  +11/-5",
+  );
 });
 
 test("top intersecting file stays pinned until the next file reaches the viewport top", () => {

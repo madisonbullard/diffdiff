@@ -90,6 +90,12 @@ describe("loadReviewSession", () => {
     expect(session.files.find((file) => file.path === "src/app.ts")?.patch).toContain(
       "+export const app = false;",
     );
+    expect(session.workingTreeSummary).toEqual({
+      filesChanged: 3,
+      additions: 3,
+      deletions: 1,
+    });
+    expect(session.commits).toEqual([]);
   });
 
   test("falls back to working tree mode for unborn repositories", async () => {
@@ -109,6 +115,12 @@ describe("loadReviewSession", () => {
     });
     expect(session.files.map((file) => file.path)).toEqual(["README.md", "src/app.ts"]);
     expect(session.files.every((file) => file.status === "added")).toBe(true);
+    expect(session.workingTreeSummary).toEqual({
+      filesChanged: 2,
+      additions: 2,
+      deletions: 0,
+    });
+    expect(session.commits).toEqual([]);
     expect(session.warnings.map((warning) => warning.code)).toContain(
       "unborn-repository-working-tree",
     );

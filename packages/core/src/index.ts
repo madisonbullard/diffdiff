@@ -12,8 +12,11 @@ export { formatHelpText, parseStartupOptions } from "./startup-options.ts";
 export type {
   BranchCollection,
   BranchInfo,
+  BranchSummary,
   ChangedFile,
+  ChangeSummary,
   ComparisonMode,
+  ComparisonCommit,
   ComparisonInfo,
   FileStatus,
   ForgeBranchMetadataRequest,

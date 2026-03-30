@@ -5,7 +5,10 @@ import { parseGitHubRemote, prioritizeRemoteBranches } from "./github.ts";
 import type {
   BranchCollection,
   BranchInfo,
+  BranchSummary,
   ChangedFile,
+  ChangeSummary,
+  ComparisonCommit,
   ComparisonInfo,
   ForgeMetadataProvider,
   GitRemote,
@@ -31,6 +34,7 @@ interface StatusEntry {
 interface ResolvedComparison {
   comparison: ComparisonInfo;
   currentBranch?: string;
+  defaultBranch?: string;
 }
 
 export class GitRepositoryProvider implements RepositoryProvider {
@@ -80,24 +84,42 @@ class GitRepository implements RepositoryHandle {
     }
 
     const remotes = await this.listRemotes();
-    const repository = await this.buildRepositoryInfo(remotes, resolvedComparison.currentBranch);
+    const repository = await this.buildRepositoryInfo(
+      remotes,
+      resolvedComparison.currentBranch,
+      resolvedComparison.defaultBranch,
+    );
     const files =
       resolvedComparison.comparison.mode === "working-tree"
         ? await this.listWorkingTreeChanges(resolvedComparison.comparison.base)
         : await this.listChangedFiles(resolvedComparison.comparison.range);
-    const branches = await this.listBranches(remotes, resolvedComparison.currentBranch);
-    const enrichedBranches = await this.enrichRemoteBranches(
+    const workingTreeSummary = await this.summarizeWorkingTreeChanges(
+      hasCommitHistory ? "HEAD" : EMPTY_TREE_LABEL,
+    );
+    const branches = await this.listBranches(
+      remotes,
+      resolvedComparison.currentBranch,
+      resolvedComparison.defaultBranch,
+    );
+    const enrichedRemoteBranches = await this.enrichRemoteBranches(
       branches,
       remotes,
       forgeProviders,
       warnings,
     );
+    const enrichedBranches = await this.enrichBranchSummaries(
+      enrichedRemoteBranches,
+      resolvedComparison.defaultBranch,
+    );
+    const commits = await this.listComparisonCommits(resolvedComparison.comparison);
 
     return {
       repository,
       comparison: resolvedComparison.comparison,
       files,
+      commits,
       branches: enrichedBranches,
+      workingTreeSummary,
       warnings,
     };
   }
@@ -105,6 +127,7 @@ class GitRepository implements RepositoryHandle {
   private async buildRepositoryInfo(
     remotes: GitRemote[],
     currentBranch?: string,
+    defaultBranch?: string,
   ): Promise<RepositoryInfo> {
     return {
       kind: this.kind,
@@ -112,13 +135,15 @@ class GitRepository implements RepositoryHandle {
       name: basename(this.rootPath),
       remotes,
       currentBranch,
+      defaultBranch,
     };
   }
 
   private async resolveComparison(options: StartupOptions): Promise<ResolvedComparison> {
     const currentBranch = await this.getCurrentBranch();
+    const defaultBranch = await this.selectDefaultBaseRef();
     const head = options.head ?? currentBranch ?? "HEAD";
-    const base = options.base ?? (await this.selectDefaultBaseRef());
+    const base = options.base ?? defaultBranch;
 
     if (base == null) {
       throw new DiffdiffError(
@@ -137,6 +162,7 @@ class GitRepository implements RepositoryHandle {
 
     return {
       currentBranch,
+      defaultBranch,
       comparison: {
         base,
         head,
@@ -150,9 +176,11 @@ class GitRepository implements RepositoryHandle {
 
   private async resolveWorkingTreeComparison(base: string): Promise<ResolvedComparison> {
     const currentBranch = await this.getCurrentBranch();
+    const defaultBranch = base === EMPTY_TREE_LABEL ? undefined : await this.selectDefaultBaseRef();
 
     return {
       currentBranch,
+      defaultBranch,
       comparison: {
         base,
         head: WORKING_TREE_LABEL,
@@ -240,9 +268,22 @@ class GitRepository implements RepositoryHandle {
   private async listBranches(
     remotes: GitRemote[],
     currentBranch?: string,
+    defaultBranch?: string,
   ): Promise<BranchCollection> {
-    const localBranches = await this.listRefs("refs/heads", "local", remotes, currentBranch);
-    const remoteBranches = await this.listRefs("refs/remotes", "remote", remotes, currentBranch);
+    const localBranches = await this.listRefs(
+      "refs/heads",
+      "local",
+      remotes,
+      currentBranch,
+      defaultBranch,
+    );
+    const remoteBranches = await this.listRefs(
+      "refs/remotes",
+      "remote",
+      remotes,
+      currentBranch,
+      defaultBranch,
+    );
 
     return {
       local: localBranches.sort((left, right) => left.name.localeCompare(right.name)),
@@ -255,6 +296,7 @@ class GitRepository implements RepositoryHandle {
     kind: BranchInfo["kind"],
     remotes: GitRemote[],
     currentBranch?: string,
+    defaultBase?: string,
   ): Promise<BranchInfo[]> {
     const format = [
       "%(refname)",
@@ -263,21 +305,22 @@ class GitRepository implements RepositoryHandle {
       "%(upstream:short)",
       "%(HEAD)",
       "%(symref)",
+      "%(authorname)",
     ].join("%00");
 
     const stdout = await runCommand("git", ["for-each-ref", prefix, `--format=${format}`], {
       cwd: this.rootPath,
     });
     const remotesByName = new Map(remotes.map((remote) => [remote.name, remote]));
-    const defaultBase = await this.selectDefaultBaseRef();
 
     return stdout
       .split(/\r?\n/u)
       .map((record) => record.trimEnd())
       .filter((record) => record !== "")
       .map((record) => {
-        const [ref, name, sha, upstream, headMarker, symref] = record.split(FIELD_SEPARATOR);
-        return { ref, name, sha, upstream, headMarker, symref };
+        const [ref, name, sha, upstream, headMarker, symref, authorName] =
+          record.split(FIELD_SEPARATOR);
+        return { ref, name, sha, upstream, headMarker, symref, authorName };
       })
       .filter((record) => record.symref === "")
       .filter((record) => !record.name.endsWith("/HEAD"))
@@ -302,6 +345,7 @@ class GitRepository implements RepositoryHandle {
           remoteName,
           isCurrent: isCurrent || record.headMarker === "*",
           isDefault,
+          tipAuthor: record.authorName || undefined,
           pullRequest: undefined,
           remote,
         };
@@ -361,6 +405,99 @@ class GitRepository implements RepositoryHandle {
       local: branches.local,
       remote: prioritizeRemoteBranches(enrichedRemoteBranches),
     };
+  }
+
+  private async enrichBranchSummaries(
+    branches: BranchCollection,
+    defaultBranch?: string,
+  ): Promise<BranchCollection> {
+    if (defaultBranch == null) {
+      return branches;
+    }
+
+    return {
+      local: await Promise.all(
+        branches.local.map((branch) => this.attachBranchSummary(branch, defaultBranch)),
+      ),
+      remote: await Promise.all(
+        branches.remote.map((branch) => this.attachBranchSummary(branch, defaultBranch)),
+      ),
+    };
+  }
+
+  private async attachBranchSummary(
+    branch: BranchInfo,
+    defaultBranch: string,
+  ): Promise<BranchInfo> {
+    const summary = await this.buildBranchSummary(branch.name, defaultBranch, branch.tipAuthor);
+    return { ...branch, summary };
+  }
+
+  private async buildBranchSummary(
+    branchName: string,
+    defaultBranch: string,
+    tipAuthor?: string,
+  ): Promise<BranchSummary> {
+    const stdout = await runCommand(
+      "git",
+      ["log", "--format=%an", `${defaultBranch}..${branchName}`],
+      { cwd: this.rootPath },
+    );
+    const commitAuthors = stdout
+      .split(/\r?\n/u)
+      .map((line) => line.trim())
+      .filter((line) => line !== "");
+    const authors = [...new Set(commitAuthors)];
+    const changeSummary = await this.summarizeDiffRange(`${defaultBranch}...${branchName}`);
+
+    return {
+      comparedTo: defaultBranch,
+      commitCount: commitAuthors.length,
+      authors: authors.length > 0 ? authors : tipAuthor != null ? [tipAuthor] : [],
+      ...changeSummary,
+    };
+  }
+
+  private async listComparisonCommits(comparison: ComparisonInfo): Promise<ComparisonCommit[]> {
+    if (comparison.mode === "working-tree") {
+      return [];
+    }
+
+    const stdout = await runCommand(
+      "git",
+      ["log", "--reverse", "--format=%H%x00%an%x00%s", `${comparison.base}..${comparison.head}`],
+      { cwd: this.rootPath },
+    );
+
+    return stdout
+      .split(/\r?\n/u)
+      .map((line) => line.trim())
+      .filter((line) => line !== "")
+      .map((line) => {
+        const [sha = "", author = "Unknown author", subject = ""] = line.split(FIELD_SEPARATOR);
+
+        return {
+          sha,
+          shortSha: sha.slice(0, 7),
+          subject,
+          author,
+        } satisfies ComparisonCommit;
+      });
+  }
+
+  private async summarizeWorkingTreeChanges(base: string): Promise<ChangeSummary> {
+    const files = await this.listWorkingTreeChanges(base);
+    return summarizeChangedFiles(files);
+  }
+
+  private async summarizeDiffRange(range: string): Promise<ChangeSummary> {
+    const stdout = await runCommand(
+      "git",
+      ["diff", "--numstat", "--find-renames", "--find-copies", range],
+      { cwd: this.rootPath },
+    );
+
+    return parseNumstatSummary(stdout);
   }
 
   private async listChangedFiles(range: string): Promise<ChangedFile[]> {
@@ -474,6 +611,48 @@ class GitRepository implements RepositoryHandle {
 
     return parseChangedFilePatch(patch);
   }
+}
+
+function summarizeChangedFiles(files: readonly ChangedFile[]): ChangeSummary {
+  return files.reduce<ChangeSummary>(
+    (summary, file) => ({
+      filesChanged: summary.filesChanged + 1,
+      additions: summary.additions + file.additions,
+      deletions: summary.deletions + file.deletions,
+    }),
+    {
+      filesChanged: 0,
+      additions: 0,
+      deletions: 0,
+    },
+  );
+}
+
+function parseNumstatSummary(stdout: string): ChangeSummary {
+  return stdout
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line !== "")
+    .reduce<ChangeSummary>(
+      (summary, line) => {
+        const [additions, deletions] = line.split("\t", 3);
+
+        return {
+          filesChanged: summary.filesChanged + 1,
+          additions:
+            summary.additions +
+            (additions != null && additions !== "-" ? Number.parseInt(additions, 10) : 0),
+          deletions:
+            summary.deletions +
+            (deletions != null && deletions !== "-" ? Number.parseInt(deletions, 10) : 0),
+        };
+      },
+      {
+        filesChanged: 0,
+        additions: 0,
+        deletions: 0,
+      },
+    );
 }
 
 function parsePorcelainStatusEntries(stdout: string): StatusEntry[] {
