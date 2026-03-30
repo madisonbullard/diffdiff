@@ -1,0 +1,304 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`renders a branch modal snapshot 1`] = `
+<box
+  alignItems="center"
+  bottom={2}
+  justifyContent="center"
+  left={4}
+  position="absolute"
+  right={4}
+  top={2}
+  zIndex={20}
+>
+  <box
+    backgroundColor="#0c1823"
+    border={true}
+    borderColor="#67b7e1"
+    borderStyle="single"
+    flexDirection="column"
+    gap={1}
+    maxWidth={140}
+    padding={1}
+    width="92%"
+  >
+    <text
+      fg="#e6edf3"
+    >
+      Branch List
+    </text>
+    <text
+      fg="#8ea4b5"
+    >
+      tab switch columns b set base h set head o toggle hidden remotes esc close
+    </text>
+    <box
+      flexDirection="row"
+      gap={1}
+      width="100%"
+    >
+      <box
+        backgroundColor="#10202d"
+        border={true}
+        borderColor="#29475c"
+        borderStyle="single"
+        flexDirection="column"
+        padding={1}
+        width="50%"
+      >
+        <text
+          fg="#e6edf3"
+        >
+          Local branches
+        </text>
+        <text
+          bg="#152838"
+          fg="#9cdcfe"
+        >
+          <span
+            fg="#9cdcfe"
+          >
+            feature/tui
+          </span>
+          <span
+            fg="#9cdcfe"
+          >
+             [Head]
+          </span>
+          <span
+            fg="#8ea4b5"
+          >
+             [Current]
+          </span>
+        </text>
+        <text
+          fg="#e6edf3"
+        >
+          <span
+            fg="#e6edf3"
+          >
+            main
+          </span>
+        </text>
+      </box>
+      <box
+        backgroundColor="#10202d"
+        border={true}
+        borderColor="#67b7e1"
+        borderStyle="single"
+        flexDirection="column"
+        padding={1}
+        width="50%"
+      >
+        <text
+          fg="#9cdcfe"
+        >
+          Remote branches (open PRs)
+        </text>
+        <text
+          bg="#152838"
+          fg="#9cdcfe"
+        >
+          <span
+            fg="#9cdcfe"
+          >
+            origin/feature/tui
+          </span>
+          <span
+            fg="#3fb950"
+          >
+             [Open]
+          </span>
+        </text>
+        <text
+          fg="#e6edf3"
+        >
+          <span
+            fg="#e6edf3"
+          >
+            origin/main
+          </span>
+          <span
+            fg="#d4a72c"
+          >
+             [Base]
+          </span>
+        </text>
+      </box>
+    </box>
+  </box>
+</box>
+`;
+
+exports[`renders an expanded file card snapshot 1`] = `
+<box
+  backgroundColor="#10202d"
+  border={true}
+  borderColor="#67b7e1"
+  borderStyle="single"
+  flexDirection="column"
+  width="100%"
+>
+  <box
+    backgroundColor="#152838"
+    flexDirection="column"
+    paddingX={1}
+    paddingY={1}
+    width="100%"
+  >
+    <text
+      fg="#e6edf3"
+    >
+      <span
+        fg="#9cdcfe"
+      >
+        src/app.ts
+      </span>
+      <span
+        fg="#8ea4b5"
+      >
+         
+        3
+        + / 
+        1
+        -
+      </span>
+      <span
+        fg="#9cdcfe"
+      >
+         [
+        Changed
+        ]
+      </span>
+    </text>
+    <text
+      fg="#8ea4b5"
+    >
+      GitHub-style unified diff
+    </text>
+  </box>
+  <box
+    flexDirection="column"
+    paddingX={1}
+    paddingY={1}
+    width="100%"
+  >
+    <text
+      bg="#183041"
+      fg="#e6edf3"
+    >
+      <span
+        fg="#9cdcfe"
+      >
+          
+      </span>
+      <span
+        fg="#9cdcfe"
+      >
+         
+      </span>
+      <span
+        fg="#9cdcfe"
+      >
+          
+      </span>
+      <span
+        fg="#9cdcfe"
+      >
+         @ 
+      </span>
+      <span>
+        @@ -1,2 +1,3 @@
+      </span>
+    </text>
+    <text
+      bg="#2a1718"
+      fg="#e6edf3"
+    >
+      <span
+        fg="#8ea4b5"
+      >
+         1
+      </span>
+      <span
+        fg="#8ea4b5"
+      >
+         
+      </span>
+      <span
+        fg="#8ea4b5"
+      >
+          
+      </span>
+      <span
+        fg="#ff7b72"
+      >
+         - 
+      </span>
+      <span
+        fg="#ff7b72"
+      >
+        const count = 0
+      </span>
+    </text>
+    <text
+      bg="#0f2619"
+      fg="#e6edf3"
+    >
+      <span
+        fg="#8ea4b5"
+      >
+          
+      </span>
+      <span
+        fg="#8ea4b5"
+      >
+         
+      </span>
+      <span
+        fg="#8ea4b5"
+      >
+         1
+      </span>
+      <span
+        fg="#3fb950"
+      >
+         + 
+      </span>
+      <span
+        fg="#3fb950"
+      >
+        const count = 1
+      </span>
+    </text>
+    <text
+      bg="#0d1822"
+      fg="#e6edf3"
+    >
+      <span
+        fg="#8ea4b5"
+      >
+         2
+      </span>
+      <span
+        fg="#8ea4b5"
+      >
+         
+      </span>
+      <span
+        fg="#8ea4b5"
+      >
+         2
+      </span>
+      <span
+        fg="#8ea4b5"
+      >
+           
+      </span>
+      <span>
+        console.log(count)
+      </span>
+    </text>
+  </box>
+</box>
+`;
