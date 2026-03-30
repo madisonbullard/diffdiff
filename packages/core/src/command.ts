@@ -6,6 +6,7 @@ const execFileAsync = promisify(execFile);
 
 export interface RunCommandOptions {
   cwd: string;
+  allowedExitCodes?: readonly number[];
 }
 
 export async function runCommand(
@@ -25,11 +26,16 @@ export async function runCommand(
   } catch (error) {
     const failure = error as NodeJS.ErrnoException & {
       code?: number | string;
+      stdout?: string;
       stderr?: string;
     };
 
     const exitCode = typeof failure.code === "number" ? failure.code : undefined;
     const stderr = typeof failure.stderr === "string" ? failure.stderr.trim() : "";
+
+    if (exitCode != null && options.allowedExitCodes?.includes(exitCode)) {
+      return typeof failure.stdout === "string" ? failure.stdout : "";
+    }
 
     throw new CommandError(
       stderr || `Failed to run ${command}.`,

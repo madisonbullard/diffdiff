@@ -1,4 +1,4 @@
-import { dirname, basename } from "node:path";
+import { basename, dirname } from "node:path";
 import { runCommand } from "./command.ts";
 import { DiffdiffError } from "./errors.ts";
 import { parseGitHubRemote, prioritizeRemoteBranches } from "./github.ts";
@@ -19,6 +19,15 @@ import type {
 
 const FIELD_SEPARATOR = "\u0000";
 const RECORD_SEPARATOR = "\u001e";
+const EMPTY_TREE_LABEL = "(empty tree)";
+const WORKING_TREE_LABEL = "working tree";
+const NULL_DEVICE_PATH = process.platform === "win32" ? "NUL" : "/dev/null";
+
+interface StatusEntry {
+  status: string;
+  path: string;
+  originalPath?: string;
+}
 
 interface ResolvedComparison {
   comparison: ComparisonInfo;
@@ -50,10 +59,31 @@ class GitRepository implements RepositoryHandle {
     forgeProviders: ForgeMetadataProvider[],
   ): Promise<ReviewSession> {
     const warnings: ReviewWarning[] = [];
-    const resolvedComparison = await this.resolveComparison(options);
+    const hasCommitHistory = await this.hasCommitHistory();
+    const resolvedComparison = hasCommitHistory
+      ? await this.resolveComparison(options)
+      : await this.resolveWorkingTreeComparison();
+
+    if (!hasCommitHistory) {
+      warnings.push({
+        code: "unborn-repository-working-tree",
+        message: "No commits found yet; reviewing the working tree against an empty tree.",
+      });
+
+      if (options.base != null || options.head != null) {
+        warnings.push({
+          code: "ignored-ref-comparison",
+          message: "Base/head refs are ignored until the repository has at least one commit.",
+        });
+      }
+    }
+
     const remotes = await this.listRemotes();
     const repository = await this.buildRepositoryInfo(remotes, resolvedComparison.currentBranch);
-    const files = await this.listChangedFiles(resolvedComparison.comparison.range);
+    const files =
+      resolvedComparison.comparison.mode === "working-tree"
+        ? await this.listWorkingTreeChanges()
+        : await this.listChangedFiles(resolvedComparison.comparison.range);
     const branches = await this.listBranches(remotes, resolvedComparison.currentBranch);
     const enrichedBranches = await this.enrichRemoteBranches(
       branches,
@@ -110,10 +140,31 @@ class GitRepository implements RepositoryHandle {
         base,
         head,
         mergeBase,
+        mode: "range",
         range: `${base}...${head}`,
         usesMergeBase: true,
       },
     };
+  }
+
+  private async resolveWorkingTreeComparison(): Promise<ResolvedComparison> {
+    const currentBranch = await this.getCurrentBranch();
+
+    return {
+      currentBranch,
+      comparison: {
+        base: EMPTY_TREE_LABEL,
+        head: WORKING_TREE_LABEL,
+        mergeBase: undefined,
+        mode: "working-tree",
+        range: `${EMPTY_TREE_LABEL}...${WORKING_TREE_LABEL}`,
+        usesMergeBase: false,
+      },
+    };
+  }
+
+  private async hasCommitHistory(): Promise<boolean> {
+    return this.hasRef("HEAD^{commit}");
   }
 
   private async selectDefaultBaseRef(): Promise<string | undefined> {
@@ -329,6 +380,85 @@ class GitRepository implements RepositoryHandle {
 
     return splitPatchIntoFiles(patch).map((filePatch) => parseChangedFilePatch(filePatch));
   }
+
+  private async listWorkingTreeChanges(): Promise<ChangedFile[]> {
+    const stdout = await runCommand(
+      "git",
+      ["status", "--porcelain=v1", "--untracked-files=all", "-z"],
+      { cwd: this.rootPath },
+    );
+
+    const paths = [...new Set(parsePorcelainStatusEntries(stdout).map((entry) => entry.path))];
+    const changedFiles: ChangedFile[] = [];
+
+    for (const path of paths) {
+      const patch = await runCommand(
+        "git",
+        [
+          "diff",
+          "--no-index",
+          "--find-renames",
+          "--find-copies",
+          "--no-ext-diff",
+          "--full-index",
+          "--unified=3",
+          "--src-prefix=a/",
+          "--dst-prefix=b/",
+          "--",
+          NULL_DEVICE_PATH,
+          path,
+        ],
+        {
+          allowedExitCodes: [1],
+          cwd: this.rootPath,
+        },
+      );
+
+      changedFiles.push(parseChangedFilePatch(patch));
+    }
+
+    return changedFiles;
+  }
+}
+
+function parsePorcelainStatusEntries(stdout: string): StatusEntry[] {
+  const entries: StatusEntry[] = [];
+  let offset = 0;
+
+  while (offset < stdout.length) {
+    const status = stdout.slice(offset, offset + 2);
+    if (status.length < 2) {
+      break;
+    }
+
+    offset += 3;
+    const pathEnd = stdout.indexOf(FIELD_SEPARATOR, offset);
+    if (pathEnd === -1) {
+      break;
+    }
+
+    const firstPath = stdout.slice(offset, pathEnd);
+    offset = pathEnd + 1;
+
+    if (status.startsWith("R") || status.startsWith("C")) {
+      const renamedPathEnd = stdout.indexOf(FIELD_SEPARATOR, offset);
+      if (renamedPathEnd === -1) {
+        break;
+      }
+
+      entries.push({
+        status,
+        path: stdout.slice(offset, renamedPathEnd),
+        originalPath: firstPath,
+      });
+      offset = renamedPathEnd + 1;
+      continue;
+    }
+
+    entries.push({ status, path: firstPath });
+  }
+
+  return entries;
 }
 
 function splitPatchIntoFiles(patch: string): string[] {
@@ -415,4 +545,4 @@ export function getRepositorySearchPath(startPath?: string): string {
     : dirname(new URL(`file://${process.cwd()}/${startPath}`).pathname);
 }
 
-export { parseChangedFilePatch, splitPatchIntoFiles };
+export { parseChangedFilePatch, parsePorcelainStatusEntries, splitPatchIntoFiles };

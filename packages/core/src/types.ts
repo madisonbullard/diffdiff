@@ -30,6 +30,7 @@ export interface ComparisonInfo {
   head: string;
   mergeBase?: string;
   range: string;
+  mode: ComparisonMode;
   usesMergeBase: boolean;
 }
 
@@ -44,6 +45,8 @@ export interface ChangedFile {
 }
 
 export type FileStatus = "added" | "modified" | "deleted" | "renamed";
+
+export type ComparisonMode = "range" | "working-tree";
 
 export interface BranchCollection {
   local: BranchInfo[];

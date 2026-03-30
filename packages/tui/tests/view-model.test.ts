@@ -37,6 +37,7 @@ test("getVisibleRemoteBranches keeps open PRs and active refs when collapsed", (
       base: "origin/main",
       head: "feature",
       mergeBase: undefined,
+      mode: "range",
       range: "origin/main...feature",
       usesMergeBase: true,
     },
