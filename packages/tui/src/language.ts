@@ -121,8 +121,6 @@ export const LANGUAGE_EXTENSIONS: Record<string, string> = {
   makefile: "makefile",
 } as const;
 
-const TYPESCRIPT_FILETYPES = new Set(["javascript", "javascriptreact", "typescriptreact"]);
-
 export function getDiffFiletype(input?: string): string | undefined {
   if (!input) {
     return "none";
@@ -135,10 +133,6 @@ export function getDiffFiletype(input?: string): string | undefined {
 
   if (language == null) {
     return undefined;
-  }
-
-  if (TYPESCRIPT_FILETYPES.has(language)) {
-    return "typescript";
   }
 
   return language;

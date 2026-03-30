@@ -130,7 +130,7 @@ test("passes opencode-style diff syntax settings through to the diff renderer", 
 
   const diff = tree.root.find((node) => String(node.type) === "diff");
 
-  expect(diff.props.filetype).toBe("typescript");
+  expect(diff.props.filetype).toBe("typescriptreact");
   expect(diff.props.syntaxStyle).toBe(syntaxStyle);
 });
 
