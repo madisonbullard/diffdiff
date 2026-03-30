@@ -134,6 +134,22 @@ test("passes opencode-style diff syntax settings through to the diff renderer", 
   expect(diff.props.syntaxStyle).toBe(syntaxStyle);
 });
 
+test("falls back to pre-highlighted Pierre segments for unsupported filetypes", () => {
+  const tree = render(
+    <FileCard
+      file={createPreparedFile({ path: "package.json" })}
+      isCollapsed={false}
+      isReviewed={false}
+      isSelected={false}
+      syntaxStyle={syntaxStyle}
+      theme={theme}
+    />,
+  );
+
+  expect(tree.root.findAll((node) => String(node.type) === "diff")).toHaveLength(0);
+  expect(collectText(tree.toJSON())).toContain("const count = 1");
+});
+
 function createPreparedFile(overrides: Partial<PreparedReviewFile> = {}): PreparedReviewFile {
   return {
     additions: 3,

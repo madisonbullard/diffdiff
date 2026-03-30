@@ -1,5 +1,15 @@
 import path from "node:path";
 
+const NATIVE_DIFF_FILETYPES = new Set([
+  "javascript",
+  "javascriptreact",
+  "markdown",
+  "markdown_inline",
+  "typescript",
+  "typescriptreact",
+  "zig",
+]);
+
 // Copied from OpenCode's TUI language mapping and normalized for OpenTUI diffs.
 export const LANGUAGE_EXTENSIONS: Record<string, string> = {
   ".abap": "abap",
@@ -136,4 +146,8 @@ export function getDiffFiletype(input?: string): string | undefined {
   }
 
   return language;
+}
+
+export function supportsNativeDiffFiletype(filetype?: string): boolean {
+  return filetype != null && NATIVE_DIFF_FILETYPES.has(filetype);
 }

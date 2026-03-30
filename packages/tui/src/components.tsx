@@ -1,9 +1,9 @@
 import type { BranchInfo } from "@diffdiff/core";
 import type { SyntaxStyle } from "@opentui/core";
 import type { ReactNode } from "react";
-import { getDiffFiletype } from "./language.ts";
+import { getDiffFiletype, supportsNativeDiffFiletype } from "./language.ts";
 import type { UiTheme } from "./theme.ts";
-import type { PreparedReviewFile } from "./types.ts";
+import type { PreparedReviewFile, TextSegment, UnifiedDiffLine } from "./types.ts";
 
 export type BranchColumn = "local" | "remote";
 
@@ -43,6 +43,7 @@ export function FileCard({
   const borderColor = isSelected ? theme.borderActive : isReviewed ? theme.success : theme.border;
   const fileBackground = isSelected ? theme.surfaceMuted : theme.surface;
   const filetype = getDiffFiletype(file.path);
+  const shouldUseNativeDiff = supportsNativeDiffFiletype(filetype);
   const statusLabel = file.status === "modified" ? "Changed" : capitalize(file.status);
   const statusColor =
     file.status === "added"
@@ -125,31 +126,118 @@ export function FileCard({
           ) : null}
           {!file.isBinary && file.renderError == null && file.patch.trim() !== "" ? (
             <box paddingLeft={1}>
-              <diff
-                diff={file.patch}
-                view="unified"
-                filetype={filetype}
-                showLineNumbers={true}
-                syntaxStyle={syntaxStyle}
-                width="100%"
-                wrapMode="word"
-                fg={theme.text}
-                addedBg={theme.additionBg}
-                removedBg={theme.deletionBg}
-                contextBg={theme.contextBg}
-                addedSignColor={theme.success}
-                removedSignColor={theme.danger}
-                lineNumberFg={theme.textMuted}
-                lineNumberBg={theme.contextBg}
-                addedLineNumberBg={theme.additionLineNumberBg}
-                removedLineNumberBg={theme.deletionLineNumberBg}
-              />
+              {shouldUseNativeDiff || file.unifiedLines.length === 0 ? (
+                <diff
+                  diff={file.patch}
+                  view="unified"
+                  filetype={filetype}
+                  showLineNumbers={true}
+                  syntaxStyle={syntaxStyle}
+                  width="100%"
+                  wrapMode="word"
+                  fg={theme.text}
+                  addedBg={theme.additionBg}
+                  removedBg={theme.deletionBg}
+                  contextBg={theme.contextBg}
+                  addedSignColor={theme.success}
+                  removedSignColor={theme.danger}
+                  lineNumberFg={theme.textMuted}
+                  lineNumberBg={theme.contextBg}
+                  addedLineNumberBg={theme.additionLineNumberBg}
+                  removedLineNumberBg={theme.deletionLineNumberBg}
+                />
+              ) : (
+                <UnifiedDiffPreview file={file} theme={theme} />
+              )}
             </box>
           ) : null}
         </box>
       ) : null}
     </box>
   );
+}
+
+function UnifiedDiffPreview({ file, theme }: { file: PreparedReviewFile; theme: UiTheme }) {
+  return (
+    <box width="100%" flexDirection="column">
+      {file.unifiedLines.map((line, index) => (
+        <UnifiedDiffRow
+          key={`${line.kind}-${index}`}
+          line={line}
+          lineNumberWidth={file.lineNumberWidth}
+          theme={theme}
+        />
+      ))}
+    </box>
+  );
+}
+
+function UnifiedDiffRow({
+  line,
+  lineNumberWidth,
+  theme,
+}: {
+  line: UnifiedDiffLine;
+  lineNumberWidth: number;
+  theme: UiTheme;
+}) {
+  if (line.kind === "hunk" || line.kind === "gap") {
+    return (
+      <box width="100%" backgroundColor={line.kind === "hunk" ? theme.hunkBg : theme.contextBg}>
+        <text fg={line.kind === "hunk" ? theme.warning : theme.textMuted} wrapMode="word">
+          <span>{" ".repeat(lineNumberWidth + 3)}</span>
+          {renderSegments(line.segments, theme.text)}
+        </text>
+      </box>
+    );
+  }
+
+  const lineNumber = line.newLineNumber ?? line.oldLineNumber;
+  const sign = line.kind === "addition" ? "+" : line.kind === "deletion" ? "-" : " ";
+  const lineNumberBg =
+    line.kind === "addition"
+      ? theme.additionLineNumberBg
+      : line.kind === "deletion"
+        ? theme.deletionLineNumberBg
+        : theme.contextBg;
+  const contentBg =
+    line.kind === "addition"
+      ? theme.additionBg
+      : line.kind === "deletion"
+        ? theme.deletionBg
+        : theme.contextBg;
+  const signColor =
+    line.kind === "addition"
+      ? theme.success
+      : line.kind === "deletion"
+        ? theme.danger
+        : theme.textMuted;
+
+  return (
+    <box width="100%" flexDirection="row">
+      <box width={lineNumberWidth + 3} backgroundColor={lineNumberBg}>
+        <text fg={theme.textMuted} wrapMode="none">
+          {lineNumber != null
+            ? String(lineNumber).padStart(lineNumberWidth, " ")
+            : " ".repeat(lineNumberWidth)}
+          <span fg={signColor}>{` ${sign}`}</span>
+        </text>
+      </box>
+      <box flexGrow={1} backgroundColor={contentBg}>
+        <text fg={theme.text} wrapMode="word">
+          {renderSegments(line.segments, theme.text)}
+        </text>
+      </box>
+    </box>
+  );
+}
+
+function renderSegments(segments: readonly TextSegment[], defaultFg: string) {
+  return segments.map((segment, index) => (
+    <span key={index} fg={segment.fg ?? defaultFg}>
+      {segment.text}
+    </span>
+  ));
 }
 
 export function BranchModal({
