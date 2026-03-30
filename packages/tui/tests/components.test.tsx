@@ -116,10 +116,10 @@ test("renders empty branch columns and help copy", () => {
   expect(collectText(helpModal.toJSON())).toContain("branch list");
 });
 
-test("passes opencode-style diff syntax settings through to the diff renderer", () => {
+test("uses the native diff renderer when Pierre segments are unavailable", () => {
   const tree = render(
     <FileCard
-      file={createPreparedFile({ path: "src/app.tsx" })}
+      file={createPreparedFile({ path: "src/app.tsx", unifiedLines: [] })}
       isCollapsed={false}
       isReviewed={false}
       isSelected={false}
@@ -134,7 +134,7 @@ test("passes opencode-style diff syntax settings through to the diff renderer", 
   expect(diff.props.syntaxStyle).toBe(syntaxStyle);
 });
 
-test("falls back to pre-highlighted Pierre segments for unsupported filetypes", () => {
+test("renders Pierre-highlighted segments when they are available", () => {
   const tree = render(
     <FileCard
       file={createPreparedFile({ path: "package.json" })}
@@ -148,6 +148,7 @@ test("falls back to pre-highlighted Pierre segments for unsupported filetypes", 
 
   expect(tree.root.findAll((node) => String(node.type) === "diff")).toHaveLength(0);
   expect(collectText(tree.toJSON())).toContain("const count = 1");
+  expect(tree.root.findAll((node) => node.props?.fg === "#3fb950")).not.toHaveLength(0);
 });
 
 function createPreparedFile(overrides: Partial<PreparedReviewFile> = {}): PreparedReviewFile {

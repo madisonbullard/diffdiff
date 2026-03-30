@@ -1,7 +1,7 @@
 import type { BranchInfo } from "@diffdiff/core";
 import type { SyntaxStyle } from "@opentui/core";
 import type { ReactNode } from "react";
-import { getDiffFiletype, supportsNativeDiffFiletype } from "./language.ts";
+import { getDiffFiletype } from "./language.ts";
 import type { UiTheme } from "./theme.ts";
 import type { PreparedReviewFile, TextSegment, UnifiedDiffLine } from "./types.ts";
 
@@ -43,7 +43,6 @@ export function FileCard({
   const borderColor = isSelected ? theme.borderActive : isReviewed ? theme.success : theme.border;
   const fileBackground = isSelected ? theme.surfaceMuted : theme.surface;
   const filetype = getDiffFiletype(file.path);
-  const shouldUseNativeDiff = supportsNativeDiffFiletype(filetype);
   const statusLabel = file.status === "modified" ? "Changed" : capitalize(file.status);
   const statusColor =
     file.status === "added"
@@ -126,7 +125,9 @@ export function FileCard({
           ) : null}
           {!file.isBinary && file.renderError == null && file.patch.trim() !== "" ? (
             <box paddingLeft={1}>
-              {shouldUseNativeDiff || file.unifiedLines.length === 0 ? (
+              {file.unifiedLines.length > 0 ? (
+                <UnifiedDiffPreview file={file} theme={theme} />
+              ) : (
                 <diff
                   diff={file.patch}
                   view="unified"
@@ -146,8 +147,6 @@ export function FileCard({
                   addedLineNumberBg={theme.additionLineNumberBg}
                   removedLineNumberBg={theme.deletionLineNumberBg}
                 />
-              ) : (
-                <UnifiedDiffPreview file={file} theme={theme} />
               )}
             </box>
           ) : null}
@@ -234,7 +233,7 @@ function UnifiedDiffRow({
 
 function renderSegments(segments: readonly TextSegment[], defaultFg: string) {
   return segments.map((segment, index) => (
-    <span key={index} fg={segment.fg ?? defaultFg}>
+    <span key={index} fg={segment.fg ?? defaultFg} bg={segment.bg}>
       {segment.text}
     </span>
   ));
