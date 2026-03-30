@@ -618,6 +618,11 @@ exports[`renders an expanded file card snapshot 1`] = `
         removedLineNumberBg="#3a2021"
         removedSignColor="#ff7b72"
         showLineNumbers={true}
+        syntaxStyle={
+          {
+            "kind": "syntax-style",
+          }
+        }
         view="unified"
         width="100%"
         wrapMode="word"

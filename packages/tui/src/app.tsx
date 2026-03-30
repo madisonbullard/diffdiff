@@ -3,6 +3,7 @@ import { ScrollBoxRenderable } from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BranchModal, FileCard, HelpModal, type BranchColumn } from "./components.tsx";
+import { getSyntaxStyle } from "./syntax-style.ts";
 import { getUiTheme } from "./theme.ts";
 import type { PreparedReviewSession } from "./types.ts";
 import { clampIndex, estimateFileRows, getVisibleRemoteBranches } from "./view-model.ts";
@@ -39,6 +40,7 @@ export function DiffdiffApp({
   const [isReloading, setIsReloading] = useState(false);
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
   const uiTheme = getUiTheme(session.themeName);
+  const syntaxStyle = useMemo(() => getSyntaxStyle(session.themeName), [session.themeName]);
 
   const visibleRemoteBranches = useMemo(() => {
     return getVisibleRemoteBranches(
@@ -242,6 +244,7 @@ export function DiffdiffApp({
                 isCollapsed={isCollapsed}
                 isReviewed={isReviewed}
                 isSelected={isSelected}
+                syntaxStyle={syntaxStyle}
                 theme={uiTheme}
               />
             );

@@ -8,6 +8,7 @@ import { getUiTheme } from "../src/theme.ts";
 import type { PreparedReviewFile } from "../src/types.ts";
 
 const theme = getUiTheme("pierre-dark");
+const syntaxStyle = { kind: "syntax-style" } as unknown as import("@opentui/core").SyntaxStyle;
 
 beforeEach(() => {
   (
@@ -27,6 +28,7 @@ test("renders an expanded file card snapshot", () => {
       isCollapsed={false}
       isReviewed={false}
       isSelected={true}
+      syntaxStyle={syntaxStyle}
       theme={theme}
     />,
   );
@@ -65,6 +67,7 @@ test("shows binary, reviewed, and collapsed states clearly", () => {
       isCollapsed={false}
       isReviewed={true}
       isSelected={false}
+      syntaxStyle={syntaxStyle}
       theme={theme}
     />,
   );
@@ -82,6 +85,7 @@ test("shows binary, reviewed, and collapsed states clearly", () => {
           isCollapsed={true}
           isReviewed={true}
           isSelected={false}
+          syntaxStyle={syntaxStyle}
           theme={theme}
         />
       ) as never,
@@ -110,6 +114,24 @@ test("renders empty branch columns and help copy", () => {
 
   expect(collectText(branchModal.toJSON())).toContain("Nothing to show.");
   expect(collectText(helpModal.toJSON())).toContain("branch list");
+});
+
+test("passes opencode-style diff syntax settings through to the diff renderer", () => {
+  const tree = render(
+    <FileCard
+      file={createPreparedFile({ path: "src/app.tsx" })}
+      isCollapsed={false}
+      isReviewed={false}
+      isSelected={false}
+      syntaxStyle={syntaxStyle}
+      theme={theme}
+    />,
+  );
+
+  const diff = tree.root.find((node) => String(node.type) === "diff");
+
+  expect(diff.props.filetype).toBe("typescript");
+  expect(diff.props.syntaxStyle).toBe(syntaxStyle);
 });
 
 function createPreparedFile(overrides: Partial<PreparedReviewFile> = {}): PreparedReviewFile {

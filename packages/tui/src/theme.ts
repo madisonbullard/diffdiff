@@ -21,6 +21,15 @@ export interface UiTheme {
   hunkBg: string;
   modalBg: string;
   reviewedBg: string;
+  syntaxComment: string;
+  syntaxFunction: string;
+  syntaxKeyword: string;
+  syntaxNumber: string;
+  syntaxOperator: string;
+  syntaxPunctuation: string;
+  syntaxString: string;
+  syntaxType: string;
+  syntaxVariable: string;
 }
 
 export const DARK_THEME: UiTheme = {
@@ -44,6 +53,15 @@ export const DARK_THEME: UiTheme = {
   hunkBg: "#183041",
   modalBg: "#0c1823",
   reviewedBg: "#0d2634",
+  syntaxComment: "#8ea4b5",
+  syntaxFunction: "#9cdcfe",
+  syntaxKeyword: "#ff7b72",
+  syntaxNumber: "#79c0ff",
+  syntaxOperator: "#8ea4b5",
+  syntaxPunctuation: "#8ea4b5",
+  syntaxString: "#7ee787",
+  syntaxType: "#d4a72c",
+  syntaxVariable: "#e6edf3",
 };
 
 export const LIGHT_THEME: UiTheme = {
@@ -67,6 +85,15 @@ export const LIGHT_THEME: UiTheme = {
   hunkBg: "#e5f0f7",
   modalBg: "#fdfefe",
   reviewedBg: "#e8f3f8",
+  syntaxComment: "#5b7383",
+  syntaxFunction: "#0c6d97",
+  syntaxKeyword: "#a93a32",
+  syntaxNumber: "#2676a3",
+  syntaxOperator: "#5b7383",
+  syntaxPunctuation: "#5b7383",
+  syntaxString: "#177245",
+  syntaxType: "#8a6200",
+  syntaxVariable: "#10202d",
 };
 
 export function getUiTheme(themeName: PierreThemeName): UiTheme {

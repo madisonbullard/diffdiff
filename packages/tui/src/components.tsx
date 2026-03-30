@@ -1,6 +1,7 @@
 import type { BranchInfo } from "@diffdiff/core";
-import { getFiletypeFromFileName } from "@pierre/diffs";
+import type { SyntaxStyle } from "@opentui/core";
 import type { ReactNode } from "react";
+import { getDiffFiletype } from "./language.ts";
 import type { UiTheme } from "./theme.ts";
 import type { PreparedReviewFile } from "./types.ts";
 
@@ -27,13 +28,21 @@ export interface FileCardProps {
   isCollapsed: boolean;
   isReviewed: boolean;
   isSelected: boolean;
+  syntaxStyle: SyntaxStyle;
   theme: UiTheme;
 }
 
-export function FileCard({ file, isCollapsed, isReviewed, isSelected, theme }: FileCardProps) {
+export function FileCard({
+  file,
+  isCollapsed,
+  isReviewed,
+  isSelected,
+  syntaxStyle,
+  theme,
+}: FileCardProps) {
   const borderColor = isSelected ? theme.borderActive : isReviewed ? theme.success : theme.border;
   const fileBackground = isSelected ? theme.surfaceMuted : theme.surface;
-  const filetype = file.diff?.lang ?? getFiletypeFromFileName(file.path) ?? "text";
+  const filetype = getDiffFiletype(file.path);
   const statusLabel = file.status === "modified" ? "Changed" : capitalize(file.status);
   const statusColor =
     file.status === "added"
@@ -43,7 +52,7 @@ export function FileCard({ file, isCollapsed, isReviewed, isSelected, theme }: F
         : file.status === "renamed"
           ? theme.warning
           : theme.accent;
-  const modeLabel = file.isBinary ? "binary change" : `${filetype} unified diff`;
+  const modeLabel = file.isBinary ? "binary change" : `${filetype ?? "text"} unified diff`;
 
   return (
     <box
@@ -121,6 +130,7 @@ export function FileCard({ file, isCollapsed, isReviewed, isSelected, theme }: F
                 view="unified"
                 filetype={filetype}
                 showLineNumbers={true}
+                syntaxStyle={syntaxStyle}
                 width="100%"
                 wrapMode="word"
                 fg={theme.text}
