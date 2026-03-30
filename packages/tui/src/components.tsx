@@ -821,10 +821,10 @@ function CommitListView({
             backgroundColor={backgroundColor}
             paddingLeft={2}
             paddingRight={1}
-            paddingTop={1}
-            paddingBottom={1}
+            paddingTop={0}
+            paddingBottom={0}
             flexDirection="column"
-            gap={1}
+            gap={0}
           >
             <text fg={theme.text} wrapMode="none">
               {item.commit.subject}
@@ -869,10 +869,10 @@ function BranchListCard({
       backgroundColor={backgroundColor}
       paddingLeft={2}
       paddingRight={1}
-      paddingTop={1}
-      paddingBottom={1}
+      paddingTop={0}
+      paddingBottom={0}
       flexDirection="column"
-      gap={1}
+      gap={0}
     >
       <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
         <text fg={theme.text} wrapMode="none">

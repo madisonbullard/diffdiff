@@ -249,11 +249,11 @@ exports[`renders a branch modal snapshot 1`] = `
           }
         }
         flexDirection="column"
-        gap={1}
-        paddingBottom={1}
+        gap={0}
+        paddingBottom={0}
         paddingLeft={2}
         paddingRight={1}
-        paddingTop={1}
+        paddingTop={0}
         width="100%"
       >
         <box
@@ -300,11 +300,11 @@ exports[`renders a branch modal snapshot 1`] = `
           }
         }
         flexDirection="column"
-        gap={1}
-        paddingBottom={1}
+        gap={0}
+        paddingBottom={0}
         paddingLeft={2}
         paddingRight={1}
-        paddingTop={1}
+        paddingTop={0}
         width="100%"
       >
         <box
@@ -373,11 +373,11 @@ exports[`renders a branch modal snapshot 1`] = `
           }
         }
         flexDirection="column"
-        gap={1}
-        paddingBottom={1}
+        gap={0}
+        paddingBottom={0}
         paddingLeft={2}
         paddingRight={1}
-        paddingTop={1}
+        paddingTop={0}
         width="100%"
       >
         <box
@@ -437,11 +437,11 @@ exports[`renders a branch modal snapshot 1`] = `
           }
         }
         flexDirection="column"
-        gap={1}
-        paddingBottom={1}
+        gap={0}
+        paddingBottom={0}
         paddingLeft={2}
         paddingRight={1}
-        paddingTop={1}
+        paddingTop={0}
         width="100%"
       >
         <box
