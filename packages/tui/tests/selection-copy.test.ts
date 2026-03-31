@@ -1,111 +1,122 @@
-import type { Selection } from "@opentui/core";
 import { expect, test, vi } from "vite-plus/test";
-import {
-  copyTextToClipboard,
-  copyTextWithPlatformClipboard,
-  installSelectionAutoCopy,
-  type SelectionClipboardRenderer,
-} from "../src/selection-copy.ts";
+import { copyTextToClipboard } from "../src/clipboard.ts";
+import { copySelection, type SelectionClipboardRenderer } from "../src/selection-copy.ts";
 
-test("copies selected text and clears the selection", () => {
-  const renderer = createRenderer();
-  const copyText = vi.fn(() => true);
+test("copies the current selection and clears it immediately", async () => {
+  const renderer = createRenderer("stack trace");
+  const copyText = vi.fn<(text: string) => Promise<boolean>>().mockResolvedValue(true);
+  const onSuccess = vi.fn<() => void>();
 
-  installSelectionAutoCopy(renderer, copyText);
-
-  renderer.emitSelection("stack trace");
-
-  expect(copyText).toHaveBeenCalledWith("stack trace", renderer);
+  expect(copySelection(renderer, { copyText, onSuccess })).toBe(true);
+  expect(copyText).toHaveBeenCalledWith("stack trace");
   expect(renderer.clearSelection).toHaveBeenCalledTimes(1);
+
+  await Promise.resolve();
+
+  expect(onSuccess).toHaveBeenCalledTimes(1);
 });
 
-test("clears the selection even when copying fails", () => {
-  const renderer = createRenderer();
+test("returns false when there is no active selection", () => {
+  const renderer = createRenderer(null);
+  const copyText = vi.fn<(text: string) => Promise<boolean>>().mockResolvedValue(true);
 
-  installSelectionAutoCopy(
-    renderer,
-    vi.fn(() => {
-      throw new Error("clipboard unavailable");
+  expect(copySelection(renderer, { copyText })).toBe(false);
+  expect(copyText).not.toHaveBeenCalled();
+  expect(renderer.clearSelection).not.toHaveBeenCalled();
+});
+
+test("reports clipboard failures without throwing", async () => {
+  const renderer = createRenderer("fatal error");
+  const onError = vi.fn<() => void>();
+
+  expect(
+    copySelection(renderer, {
+      copyText: vi.fn<(text: string) => Promise<boolean>>().mockResolvedValue(false),
+      onError,
     }),
-  );
+  ).toBe(true);
 
-  expect(() => renderer.emitSelection("fatal error")).not.toThrow();
+  await Promise.resolve();
+
+  expect(onError).toHaveBeenCalledTimes(1);
   expect(renderer.clearSelection).toHaveBeenCalledTimes(1);
 });
 
-test("detaches the renderer selection listener", () => {
-  const renderer = createRenderer();
-
-  const detach = installSelectionAutoCopy(renderer);
-  const registeredHandler = renderer.on.mock.calls[0]?.[1];
-
-  detach();
-
-  expect(renderer.off).toHaveBeenCalledWith("selection", registeredHandler);
-});
-
-test("falls back to the platform clipboard command when OSC52 fails", () => {
-  const renderer = createRenderer({ osc52Result: false });
+test("writes OSC52 and uses the native macOS clipboard command", async () => {
+  const write = vi.fn<(text: string) => unknown>();
   const runCommand = vi
-    .fn<(command: string, args: string[], text: string) => boolean>()
-    .mockReturnValue(true);
+    .fn<(command: { command: string; args: string[]; input?: string }) => Promise<boolean>>()
+    .mockResolvedValue(true);
 
-  const copied = copyTextToClipboard("copied text", renderer, {
+  const copied = await copyTextToClipboard("copied text", {
     platform: "darwin",
+    stdout: { isTTY: true, write },
+    env: {},
     runCommand,
   });
 
   expect(copied).toBe(true);
-  expect(renderer.copyToClipboardOSC52).toHaveBeenCalledWith("copied text");
-  expect(runCommand).toHaveBeenCalledWith("pbcopy", [], "copied text");
+  expect(write).toHaveBeenCalledWith("\u001b]52;c;Y29waWVkIHRleHQ=\u0007");
+  expect(runCommand).toHaveBeenCalledWith({
+    command: "osascript",
+    args: ["-e", 'set the clipboard to "copied text"'],
+  });
 });
 
-test("tries multiple Linux clipboard commands until one succeeds", () => {
+test("tries Linux clipboard commands in opencode order before falling back", async () => {
   const runCommand = vi
-    .fn<(command: string, args: string[], text: string) => boolean>()
-    .mockImplementation((command) => command === "xclip");
+    .fn<(command: { command: string; args: string[]; input?: string }) => Promise<boolean>>()
+    .mockImplementation(async ({ command }) => command === "xclip");
+  const clipboardWrite = vi.fn<(text: string) => Promise<void>>().mockResolvedValue();
 
-  const copied = copyTextWithPlatformClipboard("copied text", {
+  const copied = await copyTextToClipboard("copied text", {
     platform: "linux",
+    env: { WAYLAND_DISPLAY: "wayland-0" },
+    stdout: { isTTY: false, write: vi.fn<(text: string) => unknown>() },
     runCommand,
+    clipboardWrite,
   });
 
   expect(copied).toBe(true);
   expect(runCommand.mock.calls).toEqual([
-    ["wl-copy", [], "copied text"],
-    ["xclip", ["-selection", "clipboard"], "copied text"],
+    [{ command: "wl-copy", args: [], input: "copied text" }],
+    [{ command: "xclip", args: ["-selection", "clipboard"], input: "copied text" }],
   ]);
+  expect(clipboardWrite).not.toHaveBeenCalled();
 });
 
-function createRenderer(options: { osc52Result?: boolean } = {}) {
-  let selectionHandler: ((selection: Selection) => void) | undefined;
+test("falls back to clipboardy when native commands fail", async () => {
+  const clipboardWrite = vi.fn<(text: string) => Promise<void>>().mockResolvedValue();
 
-  const clearSelection = vi.fn<() => void>();
-  const copyToClipboardOSC52 = vi
-    .fn<(text: string) => boolean>()
-    .mockImplementation(() => options.osc52Result ?? true);
-  const on = vi.fn<SelectionClipboardRenderer["on"]>().mockImplementation((event, listener) => {
-    if (event === "selection") {
-      selectionHandler = listener;
-    }
+  const copied = await copyTextToClipboard("copied text", {
+    platform: "linux",
+    env: {},
+    stdout: { isTTY: false, write: vi.fn<(text: string) => unknown>() },
+    runCommand: vi
+      .fn<(command: { command: string; args: string[]; input?: string }) => Promise<boolean>>()
+      .mockResolvedValue(false),
+    clipboardWrite,
   });
-  const off = vi.fn<SelectionClipboardRenderer["off"]>();
 
-  const renderer: SelectionClipboardRenderer & {
-    clearSelection: typeof clearSelection;
-    copyToClipboardOSC52: typeof copyToClipboardOSC52;
-    on: typeof on;
-    off: typeof off;
-    emitSelection(text: string): void;
-  } = {
+  expect(copied).toBe(true);
+  expect(clipboardWrite).toHaveBeenCalledWith("copied text");
+});
+
+function createRenderer(selectedText: string | null): SelectionClipboardRenderer & {
+  clearSelection: ReturnType<typeof vi.fn<() => void>>;
+} {
+  const clearSelection = vi.fn<() => void>();
+
+  return {
     clearSelection,
-    copyToClipboardOSC52,
-    on,
-    off,
-    emitSelection(text: string) {
-      selectionHandler?.({ getSelectedText: () => text } as Selection);
+    getSelection() {
+      if (selectedText == null) {
+        return null;
+      }
+
+      return {
+        getSelectedText: () => selectedText,
+      };
     },
   };
-
-  return renderer;
 }

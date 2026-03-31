@@ -1,6 +1,6 @@
 import type { BranchInfo, StartupOptions } from "@diffdiff/core";
 import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
-import { useKeyboard, useTerminalDimensions } from "@opentui/react";
+import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BranchModal,
@@ -27,6 +27,7 @@ import {
   MIN_SIDE_BY_SIDE_DIFF_WIDTH,
   resolveDiffView,
 } from "./view-model.ts";
+import { copySelection } from "./selection-copy.ts";
 
 interface DiffdiffAppProps {
   initialSession: PreparedReviewSession;
@@ -110,6 +111,7 @@ export function DiffdiffApp({
     reconcileCollapsedPaths(new Set<string>(), initialSession.files),
   );
   const [statusMessage, setStatusMessage] = useState<string>("Ready.");
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [showListFilterModal, setShowListFilterModal] = useState(false);
@@ -125,6 +127,8 @@ export function DiffdiffApp({
   const [activeFileIndex, setActiveFileIndex] = useState(0);
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
   const fileCardRefs = useRef<(BoxRenderable | null)[]>([]);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const renderer = useRenderer();
   const terminalDimensions = useTerminalDimensions();
   const diffView = useMemo(
     () => resolveDiffView(diffViewPreference, terminalDimensions.width),
@@ -173,6 +177,14 @@ export function DiffdiffApp({
   useEffect(() => {
     fileCardRefs.current.length = session.files.length;
   }, [session.files.length]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current != null) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setCollapsedPaths((currentPaths) => {
@@ -329,9 +341,36 @@ export function DiffdiffApp({
   const comparisonModeLabel =
     session.comparison.mode === "working-tree" ? "working tree" : "branch range";
   const currentBranchLabel = session.repository.currentBranch ?? "detached";
+  const showToast = useCallback((message: string) => {
+    if (toastTimeoutRef.current != null) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+
+    setToastMessage(message);
+    toastTimeoutRef.current = setTimeout(() => {
+      toastTimeoutRef.current = null;
+      setToastMessage(null);
+    }, 5000);
+  }, []);
+  const handleMouseUp = useCallback(() => {
+    copySelection(renderer, {
+      onSuccess: () => {
+        showToast("Copied to clipboard");
+      },
+      onError: () => {
+        setStatusMessage("Unable to copy selection.");
+      },
+    });
+  }, [renderer, showToast]);
 
   return (
-    <box width="100%" height="100%" flexDirection="column" backgroundColor={theme.appBackground}>
+    <box
+      width="100%"
+      height="100%"
+      flexDirection="column"
+      backgroundColor={theme.appBackground}
+      onMouseUp={handleMouseUp}
+    >
       <box
         flexShrink={0}
         width="100%"
@@ -496,6 +535,21 @@ export function DiffdiffApp({
           <span>{" help"}</span>
         </text>
       </box>
+
+      {toastMessage != null ? (
+        <box position="absolute" right={2} bottom={4} marginBottom={1} zIndex={40}>
+          <box
+            backgroundColor={theme.modalBg}
+            border={["left"]}
+            borderColor={theme.success}
+            padding={1}
+          >
+            <text fg={theme.text} wrapMode="none">
+              {toastMessage}
+            </text>
+          </box>
+        </box>
+      ) : null}
 
       {showBranchModal ? (
         <BranchModal

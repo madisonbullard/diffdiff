@@ -14,6 +14,10 @@ interface KeyboardInput {
   shift?: boolean;
 }
 
+const selectionCopyState = vi.hoisted(() => ({
+  copySelection: vi.fn(),
+}));
+
 const registeredKeyboardHandlers = new Set<(key: KeyboardInput) => void>();
 
 vi.mock("@opentui/react", () => {
@@ -21,11 +25,25 @@ vi.mock("@opentui/react", () => {
     useKeyboard(handler: (key: KeyboardInput) => void) {
       registeredKeyboardHandlers.add(handler);
     },
+    useRenderer() {
+      return {
+        clearSelection() {
+          return undefined;
+        },
+        getSelection() {
+          return null;
+        },
+      };
+    },
     useTerminalDimensions() {
       return { width: 160, height: 40 };
     },
   };
 });
+
+vi.mock("../src/selection-copy.ts", () => ({
+  copySelection: selectionCopyState.copySelection,
+}));
 
 const theme = getUiTheme("pierre-dark");
 const syntaxStyle = { kind: "syntax-style" } as unknown as import("@opentui/core").SyntaxStyle;
@@ -35,11 +53,13 @@ beforeEach(() => {
     globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
   ).IS_REACT_ACT_ENVIRONMENT = true;
   registeredKeyboardHandlers.clear();
+  selectionCopyState.copySelection.mockReset().mockReturnValue(false);
   vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 
 afterEach(() => {
   registeredKeyboardHandlers.clear();
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -87,6 +107,38 @@ test("starts deleted file diffs collapsed", () => {
 
   expect(deletedCard?.props.file.path).toBe("src/removed.ts");
   expect(deletedCard?.props.isCollapsed).toBe(true);
+});
+
+test("shows a copy toast for five seconds after a successful copy", () => {
+  vi.useFakeTimers();
+  selectionCopyState.copySelection.mockImplementation(
+    (_renderer: unknown, options?: { onSuccess?: () => void }) => {
+      options?.onSuccess?.();
+      return true;
+    },
+  );
+
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  expect(getAppText(tree)).not.toContain("Copied to clipboard");
+
+  act(() => {
+    getRootBox(tree).props.onMouseUp?.();
+  });
+
+  expect(getAppText(tree)).toContain("Copied to clipboard");
+
+  act(() => {
+    vi.advanceTimersByTime(4999);
+  });
+
+  expect(getAppText(tree)).toContain("Copied to clipboard");
+
+  act(() => {
+    vi.advanceTimersByTime(1);
+  });
+
+  expect(getAppText(tree)).not.toContain("Copied to clipboard");
 });
 
 function createAppProps(overrides: Partial<ReturnType<typeof createAppPropsBase>> = {}) {
@@ -262,7 +314,15 @@ function getScrollbox(tree: ReactTestRenderer) {
   return tree.root.find((node) => String(node.type) === "scrollbox");
 }
 
+function getRootBox(tree: ReactTestRenderer) {
+  return tree.root.find((node) => String(node.type) === "box");
+}
+
 function getSelectedFileLabel(tree: ReactTestRenderer): string {
+  return getAppText(tree);
+}
+
+function getAppText(tree: ReactTestRenderer): string {
   return collectText(tree.toJSON());
 }
 
