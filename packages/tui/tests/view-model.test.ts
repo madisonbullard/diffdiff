@@ -1,15 +1,21 @@
 import type { BranchInfo } from "@diffdiff/core";
 import { expect, test } from "vite-plus/test";
 import {
+  buildFileTreeNodes,
   buildBranchListItems,
   DEFAULT_BRANCH_LIST_FILTERS,
+  FILE_TREE_SIDEBAR_MAX_WIDTH,
+  FILE_TREE_SIDEBAR_MIN_WIDTH,
   clampIndex,
   formatCommitListEntry,
   formatAuthorList,
   formatChangeSummary,
   formatCommitDelta,
+  getDiffPaneWidth,
   getDiffViewLabel,
+  getFileTreeSidebarWidth,
   getTopIntersectingFileIndex,
+  getVisibleFileTreeNodes,
   getVisibleRemoteBranches,
   MIN_SIDE_BY_SIDE_DIFF_WIDTH,
   resolveDiffView,
@@ -124,6 +130,75 @@ test("clampIndex stays inside range", () => {
   expect(clampIndex(9, 3)).toBe(2);
 });
 
+test("buildFileTreeNodes groups nested directories before files", () => {
+  const nodes = buildFileTreeNodes([
+    {
+      path: "src/app.ts",
+      status: "modified",
+      additions: 4,
+      deletions: 1,
+      isBinary: false,
+      patch: "",
+    },
+    {
+      path: "src/lib/math.ts",
+      status: "added",
+      additions: 10,
+      deletions: 0,
+      isBinary: false,
+      patch: "",
+    },
+    {
+      path: "README.md",
+      status: "modified",
+      additions: 1,
+      deletions: 1,
+      isBinary: false,
+      patch: "",
+    },
+  ]);
+
+  expect(nodes.map((node) => `${node.kind}:${node.path}:${node.depth}`)).toEqual([
+    "directory:src:0",
+    "directory:src/lib:1",
+    "file:src/lib/math.ts:2",
+    "file:src/app.ts:1",
+    "file:README.md:0",
+  ]);
+  expect(nodes[0]).toMatchObject({ kind: "directory", path: "src", fileCount: 2 });
+  expect(nodes[2]).toMatchObject({ kind: "file", path: "src/lib/math.ts", fileIndex: 1 });
+});
+
+test("getVisibleFileTreeNodes hides descendants of collapsed directories", () => {
+  const nodes = buildFileTreeNodes([
+    {
+      path: "src/app.ts",
+      status: "modified",
+      additions: 1,
+      deletions: 1,
+      isBinary: false,
+      patch: "",
+    },
+    {
+      path: "src/lib/math.ts",
+      status: "modified",
+      additions: 1,
+      deletions: 1,
+      isBinary: false,
+      patch: "",
+    },
+  ]);
+
+  expect(getVisibleFileTreeNodes(nodes, new Set(["src"])).map((node) => node.path)).toEqual([
+    "src",
+  ]);
+  expect(getVisibleFileTreeNodes(nodes, new Set(["src/lib"])).map((node) => node.path)).toEqual([
+    "src",
+    "src/lib",
+    "src/app.ts",
+  ]);
+});
+
 test("truncateSegments preserves order while trimming", () => {
   const result = truncateSegments(
     [
@@ -145,6 +220,9 @@ test("resolveDiffView matches the split threshold used by side-by-side mode", ()
   expect(resolveDiffView("side-by-side", MIN_SIDE_BY_SIDE_DIFF_WIDTH)).toBe("split");
   expect(getDiffViewLabel("unified")).toBe("unified");
   expect(getDiffViewLabel("split")).toBe("side-by-side");
+  expect(getFileTreeSidebarWidth(80)).toBe(FILE_TREE_SIDEBAR_MIN_WIDTH);
+  expect(getFileTreeSidebarWidth(300)).toBe(FILE_TREE_SIDEBAR_MAX_WIDTH);
+  expect(getDiffPaneWidth(160, 32)).toBe(122);
 });
 
 test("format helpers keep list metadata concise", () => {

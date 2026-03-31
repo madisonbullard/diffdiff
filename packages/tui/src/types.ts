@@ -15,6 +15,8 @@ export type DiffView = "unified" | "split";
 
 export type ListModalView = "branch" | "commit";
 
+export type AppPane = "tree" | "diff";
+
 export type BranchListItemKind = "working-tree" | "local-branch" | "open-pr" | "remote-branch";
 
 export interface BranchListFilters {
@@ -61,6 +63,29 @@ export interface SideBySideDiffRow {
   left?: SideBySideDiffCell;
   right?: SideBySideDiffCell;
 }
+
+interface FileTreeNodeBase {
+  path: string;
+  name: string;
+  depth: number;
+  parentPath?: string;
+  ancestorPaths: string[];
+}
+
+export interface FileTreeDirectoryNode extends FileTreeNodeBase {
+  kind: "directory";
+  fileCount: number;
+}
+
+export interface FileTreeFileNode extends FileTreeNodeBase {
+  kind: "file";
+  fileIndex: number;
+  status: ChangedFile["status"];
+  additions: number;
+  deletions: number;
+}
+
+export type FileTreeNode = FileTreeDirectoryNode | FileTreeFileNode;
 
 export interface PreparedReviewFile extends ChangedFile {
   diff?: FileDiffMetadata;

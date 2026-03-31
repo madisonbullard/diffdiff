@@ -1,14 +1,23 @@
-import type { BranchInfo, ChangeSummary, ComparisonCommit, ComparisonInfo } from "@diffdiff/core";
+import type {
+  BranchInfo,
+  ChangeSummary,
+  ChangedFile,
+  ComparisonCommit,
+  ComparisonInfo,
+} from "@diffdiff/core";
 import type {
   BranchListFilters,
   BranchListItem,
   CommitListItem,
   DiffView,
   DiffViewPreference,
+  FileTreeNode,
   TextSegment,
 } from "./types.ts";
 
 export const MIN_SIDE_BY_SIDE_DIFF_WIDTH = 121;
+export const FILE_TREE_SIDEBAR_MIN_WIDTH = 24;
+export const FILE_TREE_SIDEBAR_MAX_WIDTH = 36;
 
 export const DEFAULT_BRANCH_LIST_FILTERS: BranchListFilters = {
   workingTree: true,
@@ -192,6 +201,154 @@ export function getTopIntersectingFileIndex(
   }
 
   return activeIndex;
+}
+
+export function buildFileTreeNodes(files: readonly ChangedFile[]): FileTreeNode[] {
+  interface DirectoryBuilder {
+    path: string;
+    name: string;
+    parentPath?: string;
+    directories: Map<string, DirectoryBuilder>;
+    files: Array<{ file: ChangedFile; fileIndex: number }>;
+  }
+
+  const root: DirectoryBuilder = {
+    path: "",
+    name: "",
+    parentPath: undefined,
+    directories: new Map(),
+    files: [],
+  };
+
+  for (const [fileIndex, file] of files.entries()) {
+    const parts = file.path.split("/").filter(Boolean);
+    const fileName = parts.pop();
+    if (fileName == null) {
+      continue;
+    }
+
+    let directory = root;
+    let currentPath = "";
+
+    for (const part of parts) {
+      currentPath = currentPath === "" ? part : `${currentPath}/${part}`;
+      let nextDirectory = directory.directories.get(part);
+      if (nextDirectory == null) {
+        nextDirectory = {
+          path: currentPath,
+          name: part,
+          parentPath: directory.path === "" ? undefined : directory.path,
+          directories: new Map(),
+          files: [],
+        };
+        directory.directories.set(part, nextDirectory);
+      }
+      directory = nextDirectory;
+    }
+
+    directory.files.push({ file, fileIndex });
+  }
+
+  const nodes: FileTreeNode[] = [];
+
+  function emitDirectory(
+    directory: DirectoryBuilder,
+    depth: number,
+    ancestorPaths: string[],
+  ): void {
+    const childDirectories = Array.from(directory.directories.values()).sort((left, right) =>
+      left.name.localeCompare(right.name),
+    );
+    const childFiles = [...directory.files].sort((left, right) =>
+      left.file.path.localeCompare(right.file.path),
+    );
+
+    const fileCount = countFiles(directory);
+
+    nodes.push({
+      kind: "directory",
+      path: directory.path,
+      name: directory.name,
+      depth,
+      parentPath: directory.parentPath,
+      ancestorPaths: ancestorPaths.filter(Boolean),
+      fileCount,
+    });
+
+    for (const childDirectory of childDirectories) {
+      emitDirectory(childDirectory, depth + 1, [...ancestorPaths, directory.path]);
+    }
+
+    for (const { file, fileIndex } of childFiles) {
+      const fileName = file.path.split("/").pop() ?? file.path;
+      nodes.push({
+        kind: "file",
+        path: file.path,
+        name: fileName,
+        depth: depth + 1,
+        parentPath: directory.path,
+        ancestorPaths: [...ancestorPaths, directory.path].filter(Boolean),
+        fileIndex,
+        status: file.status,
+        additions: file.additions,
+        deletions: file.deletions,
+      });
+    }
+  }
+
+  function countFiles(directory: DirectoryBuilder): number {
+    let fileCount = directory.files.length;
+    for (const childDirectory of directory.directories.values()) {
+      fileCount += countFiles(childDirectory);
+    }
+    return fileCount;
+  }
+
+  const rootDirectories = Array.from(root.directories.values()).sort((left, right) =>
+    left.name.localeCompare(right.name),
+  );
+  const rootFiles = [...root.files].sort((left, right) =>
+    left.file.path.localeCompare(right.file.path),
+  );
+
+  for (const directory of rootDirectories) {
+    emitDirectory(directory, 0, []);
+  }
+
+  for (const { file, fileIndex } of rootFiles) {
+    nodes.push({
+      kind: "file",
+      path: file.path,
+      name: file.path,
+      depth: 0,
+      parentPath: undefined,
+      ancestorPaths: [],
+      fileIndex,
+      status: file.status,
+      additions: file.additions,
+      deletions: file.deletions,
+    });
+  }
+
+  return nodes;
+}
+
+export function getVisibleFileTreeNodes(
+  nodes: readonly FileTreeNode[],
+  collapsedDirectories: ReadonlySet<string>,
+): FileTreeNode[] {
+  return nodes.filter((node) => !node.ancestorPaths.some((path) => collapsedDirectories.has(path)));
+}
+
+export function getFileTreeSidebarWidth(terminalWidth: number): number {
+  return Math.max(
+    FILE_TREE_SIDEBAR_MIN_WIDTH,
+    Math.min(Math.floor(terminalWidth * 0.24), FILE_TREE_SIDEBAR_MAX_WIDTH),
+  );
+}
+
+export function getDiffPaneWidth(terminalWidth: number, sidebarWidth: number): number {
+  return Math.max(terminalWidth - sidebarWidth - 6, 0);
 }
 
 export function resolveDiffView(preference: DiffViewPreference, terminalWidth: number): DiffView {

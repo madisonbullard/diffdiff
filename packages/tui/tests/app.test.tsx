@@ -66,13 +66,32 @@ afterEach(() => {
 test("removes main scroll focus while a modal is open", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 
-  expect(getScrollbox(tree).props.focused).toBe(true);
+  expect(getTreeScrollbox(tree).props.focused).toBe(false);
+  expect(getDiffScrollbox(tree).props.focused).toBe(true);
 
   emitKey({ name: "l" });
-  expect(getScrollbox(tree).props.focused).toBe(false);
+  expect(getTreeScrollbox(tree).props.focused).toBe(false);
+  expect(getDiffScrollbox(tree).props.focused).toBe(false);
 
   emitKey({ name: "escape" });
-  expect(getScrollbox(tree).props.focused).toBe(true);
+  expect(getTreeScrollbox(tree).props.focused).toBe(false);
+  expect(getDiffScrollbox(tree).props.focused).toBe(true);
+});
+
+test("tab switches to the file tree and tree navigation opens files", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ name: "tab", sequence: "\t" });
+
+  expect(getTreeScrollbox(tree).props.focused).toBe(true);
+  expect(getDiffScrollbox(tree).props.focused).toBe(false);
+
+  emitKey({ name: "j" });
+  expect(getSelectedFileLabel(tree)).toContain("selected src/utils.ts");
+
+  emitKey({ name: "right" });
+  expect(getTreeScrollbox(tree).props.focused).toBe(false);
+  expect(getDiffScrollbox(tree).props.focused).toBe(true);
 });
 
 test("keeps background file selection stable when modal handlers rerender", () => {
@@ -342,8 +361,12 @@ function emitKey(key: KeyboardInput): void {
   });
 }
 
-function getScrollbox(tree: ReactTestRenderer) {
-  return tree.root.find((node) => String(node.type) === "scrollbox");
+function getTreeScrollbox(tree: ReactTestRenderer) {
+  return tree.root.findAll((node) => String(node.type) === "scrollbox")[0]!;
+}
+
+function getDiffScrollbox(tree: ReactTestRenderer) {
+  return tree.root.findAll((node) => String(node.type) === "scrollbox")[1]!;
 }
 
 function getRootBox(tree: ReactTestRenderer) {

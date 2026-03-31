@@ -4,10 +4,12 @@ import type { ReactNode, Ref } from "react";
 import { getDiffFiletype } from "./language.ts";
 import type { UiTheme } from "./theme.ts";
 import type {
+  AppPane,
   BranchListFilters,
   BranchListItem,
   CommitListItem,
   DiffView,
+  FileTreeNode,
   ListModalView,
   PreparedReviewFile,
   SideBySideDiffCell,
@@ -49,6 +51,19 @@ export interface FileCardProps {
   rootRef?: Ref<BoxRenderable>;
   syntaxStyle: SyntaxStyle;
   terminalWidth: number;
+  theme: UiTheme;
+}
+
+export interface FileTreeSidebarProps {
+  activePane: AppPane;
+  collapsedDirectories: ReadonlySet<string>;
+  collapsedPaths: ReadonlySet<string>;
+  nodes: readonly FileTreeNode[];
+  onNodeMouseUp: (node: FileTreeNode) => void;
+  onRowRef?: (index: number, node: BoxRenderable | null) => void;
+  reviewedPaths: ReadonlySet<string>;
+  selectedFilePath?: string;
+  selectedPath?: string;
   theme: UiTheme;
 }
 
@@ -206,6 +221,120 @@ export function StickyFileHeader({
   );
 }
 
+export function FileTreeSidebar({
+  activePane,
+  collapsedDirectories,
+  collapsedPaths,
+  nodes,
+  onNodeMouseUp,
+  onRowRef,
+  reviewedPaths,
+  selectedFilePath,
+  selectedPath,
+  theme,
+}: FileTreeSidebarProps) {
+  if (nodes.length === 0) {
+    return (
+      <box
+        width="100%"
+        border={["left"]}
+        customBorderChars={SPLIT_BORDER}
+        borderColor={activePane === "tree" ? theme.borderActive : theme.border}
+        backgroundColor={theme.surface}
+        paddingLeft={2}
+        paddingRight={1}
+        paddingTop={1}
+        paddingBottom={1}
+      >
+        <text fg={theme.textMuted}>No files in this comparison.</text>
+      </box>
+    );
+  }
+
+  return (
+    <box width="100%" flexDirection="column" gap={0}>
+      {nodes.map((node, index) => {
+        const isSelected = node.path === selectedPath;
+        const isCurrentFile = node.kind === "file" && node.path === selectedFilePath;
+        const isReviewed = node.kind === "file" && reviewedPaths.has(node.path);
+        const isFileCollapsed = node.kind === "file" && collapsedPaths.has(node.path);
+        const isDirectoryCollapsed =
+          node.kind === "directory" && collapsedDirectories.has(node.path);
+        const accent =
+          node.kind === "directory"
+            ? theme.warning
+            : node.status === "added"
+              ? theme.success
+              : node.status === "deleted"
+                ? theme.danger
+                : node.status === "renamed"
+                  ? theme.warning
+                  : theme.accent;
+        const borderColor = isSelected
+          ? theme.borderActive
+          : isCurrentFile
+            ? theme.accent
+            : isReviewed
+              ? theme.success
+              : theme.border;
+        const backgroundColor = isSelected
+          ? tintHex(theme.surface, accent, 0.24)
+          : isCurrentFile
+            ? tintHex(theme.surface, theme.accent, 0.14)
+            : isReviewed
+              ? theme.reviewedBg
+              : theme.surface;
+        const labelColor = isSelected || isCurrentFile ? theme.text : theme.textMuted;
+        const prefix =
+          node.kind === "directory"
+            ? `${"  ".repeat(node.depth)}${isDirectoryCollapsed ? ">" : "v"} `
+            : `${"  ".repeat(node.depth)}${getFileTreeStatusGlyph(node.status)} `;
+
+        return (
+          <box
+            key={node.path}
+            ref={(renderable) => {
+              onRowRef?.(index, renderable);
+            }}
+            width="100%"
+            border={["left"]}
+            customBorderChars={SPLIT_BORDER}
+            borderColor={borderColor}
+            backgroundColor={backgroundColor}
+            paddingLeft={1}
+            paddingRight={1}
+            paddingTop={0}
+            paddingBottom={0}
+            onMouseUp={() => {
+              onNodeMouseUp(node);
+            }}
+          >
+            <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
+              <text fg={labelColor} wrapMode="none">
+                <span fg={node.kind === "directory" ? theme.warning : accent}>{prefix}</span>
+                <span fg={isCurrentFile ? theme.text : labelColor}>{node.name}</span>
+              </text>
+              <text fg={theme.textMuted} wrapMode="none">
+                {node.kind === "directory" ? (
+                  <span>{`${node.fileCount}`}</span>
+                ) : (
+                  <>
+                    {isReviewed ? <span fg={theme.success}>{"r "}</span> : null}
+                    {isFileCollapsed ? <span fg={theme.warning}>{"c "}</span> : null}
+                    <span fg={theme.success}>{`+${node.additions}`}</span>
+                    <span> </span>
+                    <span fg={theme.danger}>{`-${node.deletions}`}</span>
+                  </>
+                )}
+              </text>
+            </box>
+          </box>
+        );
+      })}
+    </box>
+  );
+}
+
 function FileCardTitleRow({
   file,
   isSelected,
@@ -234,6 +363,19 @@ function getFileCardChrome(isSelected: boolean, isReviewed: boolean, theme: UiTh
     borderColor: isSelected ? theme.borderActive : isReviewed ? theme.success : theme.border,
     fileBackground: isSelected ? theme.surfaceMuted : theme.surface,
   };
+}
+
+function getFileTreeStatusGlyph(status: PreparedReviewFile["status"]): string {
+  switch (status) {
+    case "added":
+      return "A";
+    case "deleted":
+      return "D";
+    case "renamed":
+      return "R";
+    case "modified":
+      return "M";
+  }
 }
 
 function UnifiedDiffPreview({ file, theme }: { file: PreparedReviewFile; theme: UiTheme }) {
@@ -1066,10 +1208,12 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
         gap={1}
       >
         <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="tab" theme={theme} />
+          <span>{" switch tree/diff pane  "}</span>
           <KeyCap label="j / k" theme={theme} />
-          <span>{" move between files  "}</span>
+          <span>{" move in the active pane  "}</span>
           <KeyCap label="g / G" theme={theme} />
-          <span>{" first / last file"}</span>
+          <span>{" first / last item"}</span>
         </text>
         <text fg={theme.textMuted} wrapMode="none">
           <KeyCap label="r" theme={theme} />
@@ -1080,12 +1224,12 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
           <span>{" toggle diff view"}</span>
         </text>
         <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="left / right" theme={theme} />
+          <span>{" collapse, expand, or open from the tree  "}</span>
           <KeyCap label="m" theme={theme} />
           <span>{" review and advance  "}</span>
           <KeyCap label="l" theme={theme} />
           <span>{" list modal  "}</span>
-          <KeyCap label="tab" theme={theme} />
-          <span>{" switch branch/commit view  "}</span>
           <KeyCap label="b / h" theme={theme} />
           <span>{" set base / head"}</span>
         </text>

@@ -5,25 +5,32 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BranchModal,
   FileCard,
+  FileTreeSidebar,
   HelpModal,
   ListFilterModal,
   StickyFileHeader,
 } from "./components.tsx";
 import type { UiTheme } from "./theme.ts";
 import type {
+  AppPane,
   BranchListFilters,
   DiffViewPreference,
+  FileTreeNode,
   ListModalView,
   PreparedReviewSession,
 } from "./types.ts";
 import {
+  buildFileTreeNodes,
   buildBranchListItems,
   buildCommitListItems,
   clampIndex,
   DEFAULT_BRANCH_LIST_FILTERS,
   findInitialBranchListSelection,
+  getDiffPaneWidth,
   getDiffViewLabel,
+  getFileTreeSidebarWidth,
   getTopIntersectingFileIndex,
+  getVisibleFileTreeNodes,
   MIN_SIDE_BY_SIDE_DIFF_WIDTH,
   resolveDiffView,
 } from "./view-model.ts";
@@ -82,6 +89,36 @@ function reconcileCollapsedPaths(
   return nextPaths;
 }
 
+function getAncestorDirectoryPaths(path: string): string[] {
+  const parts = path.split("/").filter(Boolean);
+  const ancestors: string[] = [];
+
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    const ancestorPath = index === 0 ? parts[index]! : `${ancestors[index - 1]}/${parts[index]}`;
+    ancestors.push(ancestorPath);
+  }
+
+  return ancestors;
+}
+
+function reconcileCollapsedDirectories(
+  currentPaths: ReadonlySet<string>,
+  nodes: readonly FileTreeNode[],
+): Set<string> {
+  const availablePaths = new Set(
+    nodes.filter((node) => node.kind === "directory").map((node) => node.path),
+  );
+  const nextPaths = new Set<string>();
+
+  for (const path of currentPaths) {
+    if (availablePaths.has(path)) {
+      nextPaths.add(path);
+    }
+  }
+
+  return nextPaths;
+}
+
 function getBranchFilterLabel(key: keyof BranchListFilters): string {
   switch (key) {
     case "workingTree":
@@ -125,14 +162,32 @@ export function DiffdiffApp({
   const [isReloading, setIsReloading] = useState(false);
   const [diffViewPreference, setDiffViewPreference] = useState<DiffViewPreference>("unified");
   const [activeFileIndex, setActiveFileIndex] = useState(0);
+  const [activePane, setActivePane] = useState<AppPane>("diff");
+  const [collapsedDirectories, setCollapsedDirectories] = useState<Set<string>>(new Set());
+  const [selectedTreePath, setSelectedTreePath] = useState(initialSession.files[0]?.path ?? "");
+  const treeScrollRef = useRef<ScrollBoxRenderable | null>(null);
+  const treeRowRefs = useRef<(BoxRenderable | null)[]>([]);
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
   const fileCardRefs = useRef<(BoxRenderable | null)[]>([]);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const renderer = useRenderer();
   const terminalDimensions = useTerminalDimensions();
+  const sidebarWidth = useMemo(
+    () => getFileTreeSidebarWidth(terminalDimensions.width),
+    [terminalDimensions.width],
+  );
+  const diffPaneWidth = useMemo(
+    () => getDiffPaneWidth(terminalDimensions.width, sidebarWidth),
+    [sidebarWidth, terminalDimensions.width],
+  );
+  const fileTreeNodes = useMemo(() => buildFileTreeNodes(session.files), [session.files]);
+  const visibleTreeNodes = useMemo(
+    () => getVisibleFileTreeNodes(fileTreeNodes, collapsedDirectories),
+    [collapsedDirectories, fileTreeNodes],
+  );
   const diffView = useMemo(
-    () => resolveDiffView(diffViewPreference, terminalDimensions.width),
-    [diffViewPreference, terminalDimensions.width],
+    () => resolveDiffView(diffViewPreference, diffPaneWidth),
+    [diffPaneWidth, diffViewPreference],
   );
   const diffViewLabel = useMemo(() => getDiffViewLabel(diffView), [diffView]);
 
@@ -155,6 +210,7 @@ export function DiffdiffApp({
   const stickyFile = session.files[activeFileIndex];
   const selectedBranchItem = branchItems[clampIndex(branchListIndex, branchItems.length)];
   const selectedCommitItem = commitItems[clampIndex(commitListIndex, commitItems.length)];
+  const selectedTreeNode = fileTreeNodes.find((node) => node.path === selectedTreePath);
   const openPrCount = session.branches.remote.filter((branch) => branch.pullRequest != null).length;
   const remoteBranchCount = session.branches.remote.length - openPrCount;
   const activeOverlay = showHelp
@@ -179,6 +235,10 @@ export function DiffdiffApp({
   }, [session.files.length]);
 
   useEffect(() => {
+    treeRowRefs.current.length = visibleTreeNodes.length;
+  }, [visibleTreeNodes.length]);
+
+  useEffect(() => {
     return () => {
       if (toastTimeoutRef.current != null) {
         clearTimeout(toastTimeoutRef.current);
@@ -193,6 +253,57 @@ export function DiffdiffApp({
     });
   }, [session.files]);
 
+  useEffect(() => {
+    setCollapsedDirectories((currentPaths) => {
+      const nextPaths = reconcileCollapsedDirectories(currentPaths, fileTreeNodes);
+      return haveSamePaths(currentPaths, nextPaths) ? currentPaths : nextPaths;
+    });
+  }, [fileTreeNodes]);
+
+  useEffect(() => {
+    if (fileTreeNodes.length === 0) {
+      setSelectedTreePath("");
+      return;
+    }
+
+    const selectedFilePath = session.files[selectedFileIndex]?.path;
+    setSelectedTreePath((currentPath) => {
+      if (currentPath !== "" && fileTreeNodes.some((node) => node.path === currentPath)) {
+        return currentPath;
+      }
+
+      if (
+        selectedFilePath != null &&
+        fileTreeNodes.some((node) => node.path === selectedFilePath)
+      ) {
+        return selectedFilePath;
+      }
+
+      return fileTreeNodes[0]?.path ?? "";
+    });
+  }, [fileTreeNodes, selectedFileIndex, session.files]);
+
+  useEffect(() => {
+    const selectedFilePath = session.files[selectedFileIndex]?.path;
+    if (activePane !== "diff" || selectedFilePath == null) {
+      return;
+    }
+
+    setCollapsedDirectories((currentPaths) => {
+      const nextPaths = new Set(currentPaths);
+      let changed = false;
+
+      for (const path of getAncestorDirectoryPaths(selectedFilePath)) {
+        if (nextPaths.delete(path)) {
+          changed = true;
+        }
+      }
+
+      return changed ? nextPaths : currentPaths;
+    });
+    setSelectedTreePath(selectedFilePath);
+  }, [activePane, selectedFileIndex, session.files]);
+
   const getFileTopOffsets = useCallback((): number[] => {
     const scrollBox = scrollRef.current;
     if (scrollBox == null) {
@@ -206,6 +317,20 @@ export function DiffdiffApp({
       return fileCard == null ? Number.POSITIVE_INFINITY : fileCard.y - contentTop;
     });
   }, [session.files]);
+
+  const getTreeTopOffsets = useCallback((): number[] => {
+    const scrollBox = treeScrollRef.current;
+    if (scrollBox == null) {
+      return [];
+    }
+
+    const contentTop = scrollBox.content.y;
+
+    return visibleTreeNodes.map((_, index) => {
+      const row = treeRowRefs.current[index];
+      return row == null ? Number.POSITIVE_INFINITY : row.y - contentTop;
+    });
+  }, [visibleTreeNodes]);
 
   useEffect(() => {
     setBranchListIndex((currentIndex) => clampIndex(currentIndex, branchItems.length));
@@ -225,6 +350,17 @@ export function DiffdiffApp({
     scrollBox.scrollTo({ x: 0, y: offset });
     setActiveFileIndex(selectedFileIndex);
   }, [getFileTopOffsets, selectedFileIndex]);
+
+  useEffect(() => {
+    const selectedTreeIndex = visibleTreeNodes.findIndex((node) => node.path === selectedTreePath);
+    const offset = getTreeTopOffsets()[selectedTreeIndex];
+    const scrollBox = treeScrollRef.current;
+    if (scrollBox == null || offset == null || !Number.isFinite(offset)) {
+      return;
+    }
+
+    scrollBox.scrollTo({ x: 0, y: Math.max(offset - 2, 0) });
+  }, [getTreeTopOffsets, selectedTreePath, visibleTreeNodes]);
 
   const syncActiveFileIndex = useCallback(() => {
     const scrollBox = scrollRef.current;
@@ -289,6 +425,21 @@ export function DiffdiffApp({
       return;
     }
 
+    if (key.name === "tab") {
+      toggleActivePane();
+      return;
+    }
+
+    if (key.name === "v") {
+      toggleDiffView();
+      return;
+    }
+
+    if (activePane === "tree") {
+      handleTreePaneKey(key);
+      return;
+    }
+
     if (key.name === "j" || key.name === "down" || key.name === "n") {
       moveSelectedFile(1);
       return;
@@ -313,11 +464,6 @@ export function DiffdiffApp({
 
     if (key.name === "c" || key.name === "return") {
       toggleCollapsed(selectedFileIndex);
-      return;
-    }
-
-    if (key.name === "v") {
-      toggleDiffView();
       return;
     }
 
@@ -416,65 +562,147 @@ export function DiffdiffApp({
         ) : null}
       </box>
 
-      {stickyFile != null ? (
-        <box flexShrink={0} width="100%" paddingX={2} backgroundColor={theme.appBackground}>
-          <StickyFileHeader
-            file={stickyFile}
-            isReviewed={reviewedPaths.has(stickyFile.path)}
-            isSelected={activeFileIndex === selectedFileIndex}
-            theme={theme}
-          />
-        </box>
-      ) : null}
+      <box width="100%" flexGrow={1} flexDirection="row">
+        <box
+          flexShrink={0}
+          width={sidebarWidth}
+          backgroundColor={theme.appBackground}
+          paddingLeft={2}
+          paddingRight={1}
+          paddingY={1}
+          flexDirection="column"
+          gap={1}
+        >
+          <box
+            width="100%"
+            border={["left"]}
+            borderColor={activePane === "tree" ? theme.borderActive : theme.border}
+            backgroundColor={theme.surfaceMuted}
+            paddingLeft={2}
+            paddingRight={1}
+            paddingTop={1}
+            paddingBottom={1}
+            flexDirection="column"
+            gap={0}
+          >
+            <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
+              <text fg={theme.text} wrapMode="none">
+                File tree
+              </text>
+              <text fg={theme.textMuted} wrapMode="none">
+                {`${session.files.length}`}
+              </text>
+            </box>
+            <text fg={theme.textMuted} wrapMode="none">
+              <span
+                fg={activePane === "tree" ? theme.inverseText : theme.textMuted}
+                bg={activePane === "tree" ? theme.accent : theme.surface}
+              >{` ${activePane === "tree" ? "tree" : "diff"} `}</span>
+              <span>{"  tab pane  enter open"}</span>
+            </text>
+          </box>
 
-      <scrollbox
-        ref={scrollRef}
-        width="100%"
-        flexGrow={1}
-        focused={activeOverlay == null}
-        viewportOptions={{ backgroundColor: theme.appBackground }}
-        contentOptions={{ backgroundColor: theme.appBackground }}
-        verticalScrollbarOptions={{ trackOptions: { backgroundColor: theme.border } }}
-      >
-        <box width="100%" flexDirection="column" paddingX={2} paddingY={1} gap={1}>
-          {session.files.length === 0 ? (
+          <scrollbox
+            ref={treeScrollRef}
+            width="100%"
+            flexGrow={1}
+            focused={activeOverlay == null && activePane === "tree"}
+            viewportOptions={{ backgroundColor: theme.appBackground }}
+            contentOptions={{ backgroundColor: theme.appBackground }}
+            verticalScrollbarOptions={{ trackOptions: { backgroundColor: theme.border } }}
+          >
+            <FileTreeSidebar
+              activePane={activePane}
+              collapsedDirectories={collapsedDirectories}
+              collapsedPaths={collapsedPaths}
+              nodes={visibleTreeNodes}
+              onNodeMouseUp={handleFileTreeMouseUp}
+              onRowRef={(index, node) => {
+                treeRowRefs.current[index] = node;
+              }}
+              reviewedPaths={reviewedPaths}
+              selectedFilePath={selectedFile?.path}
+              selectedPath={selectedTreePath}
+              theme={theme}
+            />
+          </scrollbox>
+        </box>
+
+        <box flexGrow={1} flexDirection="column">
+          {stickyFile != null ? (
             <box
-              border={["left"]}
-              borderColor={theme.border}
-              backgroundColor={theme.surface}
-              paddingLeft={2}
-              paddingRight={1}
-              paddingTop={1}
-              paddingBottom={1}
+              flexShrink={0}
+              width="100%"
+              paddingLeft={1}
+              paddingRight={2}
+              backgroundColor={theme.appBackground}
             >
-              <text fg={theme.text}>No changed files found for this comparison.</text>
+              <StickyFileHeader
+                file={stickyFile}
+                isReviewed={reviewedPaths.has(stickyFile.path)}
+                isSelected={activePane === "diff" && activeFileIndex === selectedFileIndex}
+                theme={theme}
+              />
             </box>
           ) : null}
 
-          {session.files.map((file, index) => {
-            const isSelected = index === selectedFileIndex;
-            const isReviewed = reviewedPaths.has(file.path);
-            const isCollapsed = collapsedPaths.has(file.path);
+          <scrollbox
+            ref={scrollRef}
+            width="100%"
+            flexGrow={1}
+            focused={activeOverlay == null && activePane === "diff"}
+            viewportOptions={{ backgroundColor: theme.appBackground }}
+            contentOptions={{ backgroundColor: theme.appBackground }}
+            verticalScrollbarOptions={{ trackOptions: { backgroundColor: theme.border } }}
+          >
+            <box
+              width="100%"
+              flexDirection="column"
+              paddingLeft={1}
+              paddingRight={2}
+              paddingY={1}
+              gap={1}
+            >
+              {session.files.length === 0 ? (
+                <box
+                  border={["left"]}
+                  borderColor={theme.border}
+                  backgroundColor={theme.surface}
+                  paddingLeft={2}
+                  paddingRight={1}
+                  paddingTop={1}
+                  paddingBottom={1}
+                >
+                  <text fg={theme.text}>No changed files found for this comparison.</text>
+                </box>
+              ) : null}
 
-            return (
-              <FileCard
-                key={file.path}
-                file={file}
-                diffView={diffView}
-                isCollapsed={isCollapsed}
-                isReviewed={isReviewed}
-                isSelected={isSelected}
-                rootRef={(node) => {
-                  fileCardRefs.current[index] = node;
-                }}
-                syntaxStyle={syntaxStyle}
-                terminalWidth={terminalDimensions.width}
-                theme={theme}
-              />
-            );
-          })}
+              {session.files.map((file, index) => {
+                const isSelected = index === selectedFileIndex;
+                const isReviewed = reviewedPaths.has(file.path);
+                const isCollapsed = collapsedPaths.has(file.path);
+
+                return (
+                  <FileCard
+                    key={file.path}
+                    file={file}
+                    diffView={diffView}
+                    isCollapsed={isCollapsed}
+                    isReviewed={isReviewed}
+                    isSelected={isSelected}
+                    rootRef={(node) => {
+                      fileCardRefs.current[index] = node;
+                    }}
+                    syntaxStyle={syntaxStyle}
+                    terminalWidth={diffPaneWidth}
+                    theme={theme}
+                  />
+                );
+              })}
+            </box>
+          </scrollbox>
         </box>
-      </scrollbox>
+      </box>
 
       <box
         flexShrink={0}
@@ -495,6 +723,11 @@ export function DiffdiffApp({
         <text fg={theme.textMuted} wrapMode="none">
           <span fg={theme.text} bg={theme.surfaceMuted}>
             {" "}
+            tab{" "}
+          </span>
+          <span>{" pane  "}</span>
+          <span fg={theme.text} bg={theme.surfaceMuted}>
+            {" "}
             q{" "}
           </span>
           <span>{" quit  "}</span>
@@ -503,6 +736,11 @@ export function DiffdiffApp({
             j/k{" "}
           </span>
           <span>{" move  "}</span>
+          <span fg={theme.text} bg={theme.surfaceMuted}>
+            {" "}
+            left/right{" "}
+          </span>
+          <span>{" tree  "}</span>
           <span fg={theme.text} bg={theme.surfaceMuted}>
             {" "}
             r{" "}
@@ -628,11 +866,11 @@ export function DiffdiffApp({
   function toggleDiffView(): void {
     setDiffViewPreference((currentView) => {
       const nextPreference = currentView === "unified" ? "side-by-side" : "unified";
-      const nextView = resolveDiffView(nextPreference, terminalDimensions.width);
+      const nextView = resolveDiffView(nextPreference, diffPaneWidth);
 
       if (nextPreference === "side-by-side" && nextView !== "split") {
         setStatusMessage(
-          `Need at least ${MIN_SIDE_BY_SIDE_DIFF_WIDTH} columns for side-by-side diffs; showing unified.`,
+          `Need at least ${MIN_SIDE_BY_SIDE_DIFF_WIDTH} columns in the diff pane for side-by-side diffs; showing unified.`,
         );
       } else {
         setStatusMessage(`Showing ${getDiffViewLabel(nextView)} diffs.`);
@@ -652,6 +890,178 @@ export function DiffdiffApp({
     setCollapsedPaths((currentPaths) => new Set(currentPaths).add(file.path));
     setSelectedFileIndex((currentIndex) => clampIndex(currentIndex + 1, session.files.length));
     setStatusMessage(`Reviewed ${file.path} and moved on.`);
+  }
+
+  function toggleActivePane(): void {
+    setActivePane((currentPane) => {
+      const nextPane = currentPane === "diff" ? "tree" : "diff";
+      if (nextPane === "tree") {
+        setStatusMessage("File tree active.");
+      } else {
+        setStatusMessage("Diff view active.");
+      }
+      return nextPane;
+    });
+  }
+
+  function expandFileTreeAncestors(path: string): void {
+    setCollapsedDirectories((currentPaths) => {
+      const nextPaths = new Set(currentPaths);
+      let changed = false;
+
+      for (const ancestorPath of getAncestorDirectoryPaths(path)) {
+        if (nextPaths.delete(ancestorPath)) {
+          changed = true;
+        }
+      }
+
+      return changed ? nextPaths : currentPaths;
+    });
+  }
+
+  function setFileTreeDirectoryCollapsed(path: string, isCollapsed: boolean): void {
+    setCollapsedDirectories((currentPaths) => {
+      const nextPaths = new Set(currentPaths);
+
+      if (isCollapsed) {
+        if (nextPaths.has(path)) {
+          return currentPaths;
+        }
+
+        nextPaths.add(path);
+        setStatusMessage(`Collapsed ${path}/ in the file tree.`);
+        return nextPaths;
+      }
+
+      if (!nextPaths.delete(path)) {
+        return currentPaths;
+      }
+
+      setStatusMessage(`Expanded ${path}/ in the file tree.`);
+      return nextPaths;
+    });
+  }
+
+  function selectTreeNode(node: FileTreeNode, options?: { openDiff?: boolean }): void {
+    setSelectedTreePath(node.path);
+
+    if (node.kind === "directory") {
+      setStatusMessage(`Selected ${node.path}/ in the file tree.`);
+      return;
+    }
+
+    expandFileTreeAncestors(node.path);
+    setSelectedFileIndex(node.fileIndex);
+    setStatusMessage(options?.openDiff ? `Opened ${node.path}.` : `Selected ${node.path}.`);
+
+    if (options?.openDiff) {
+      setActivePane("diff");
+    }
+  }
+
+  function moveTreeSelection(delta: number): void {
+    if (visibleTreeNodes.length === 0) {
+      return;
+    }
+
+    const currentIndex = visibleTreeNodes.findIndex((node) => node.path === selectedTreePath);
+    const startIndex = currentIndex >= 0 ? currentIndex : 0;
+    const nextIndex = clampIndex(startIndex + delta, visibleTreeNodes.length);
+    const nextNode = visibleTreeNodes[nextIndex];
+    if (nextNode != null) {
+      selectTreeNode(nextNode);
+    }
+  }
+
+  function handleTreePaneKey(key: KeyboardInput): void {
+    if (key.name === "j" || key.name === "down" || key.name === "n") {
+      moveTreeSelection(1);
+      return;
+    }
+
+    if (key.name === "k" || key.name === "up" || key.name === "p") {
+      moveTreeSelection(-1);
+      return;
+    }
+
+    if (key.name === "g" && !key.shift) {
+      const firstNode = visibleTreeNodes[0];
+      if (firstNode != null) {
+        selectTreeNode(firstNode);
+      }
+      return;
+    }
+
+    if (key.name === "g" && key.shift) {
+      const lastNode = visibleTreeNodes[Math.max(visibleTreeNodes.length - 1, 0)];
+      if (lastNode != null) {
+        selectTreeNode(lastNode);
+      }
+      return;
+    }
+
+    const currentNode =
+      selectedTreeNode ??
+      visibleTreeNodes.find((node) => node.kind === "file") ??
+      visibleTreeNodes[0];
+    if (currentNode == null) {
+      return;
+    }
+
+    if (key.name === "left") {
+      if (currentNode.kind === "directory" && !collapsedDirectories.has(currentNode.path)) {
+        setFileTreeDirectoryCollapsed(currentNode.path, true);
+        return;
+      }
+
+      if (currentNode.parentPath != null) {
+        const parentNode = fileTreeNodes.find((node) => node.path === currentNode.parentPath);
+        if (parentNode != null) {
+          selectTreeNode(parentNode);
+        }
+      }
+      return;
+    }
+
+    if (key.name === "right") {
+      if (currentNode.kind === "directory") {
+        if (collapsedDirectories.has(currentNode.path)) {
+          setFileTreeDirectoryCollapsed(currentNode.path, false);
+          return;
+        }
+
+        const childNode = visibleTreeNodes.find((node) => node.parentPath === currentNode.path);
+        if (childNode != null) {
+          selectTreeNode(childNode);
+        }
+        return;
+      }
+
+      selectTreeNode(currentNode, { openDiff: true });
+      return;
+    }
+
+    if (key.name === "return" || key.name === "space") {
+      if (currentNode.kind === "directory") {
+        setFileTreeDirectoryCollapsed(
+          currentNode.path,
+          !collapsedDirectories.has(currentNode.path),
+        );
+      } else {
+        selectTreeNode(currentNode, { openDiff: true });
+      }
+    }
+  }
+
+  function handleFileTreeMouseUp(node: FileTreeNode): void {
+    if (node.kind === "directory") {
+      setActivePane("tree");
+      setSelectedTreePath(node.path);
+      setFileTreeDirectoryCollapsed(node.path, !collapsedDirectories.has(node.path));
+      return;
+    }
+
+    selectTreeNode(node, { openDiff: true });
   }
 
   function openBranchModal(): void {

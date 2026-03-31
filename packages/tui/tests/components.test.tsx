@@ -6,13 +6,18 @@ import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 import {
   BranchModal,
   FileCard,
+  FileTreeSidebar,
   HelpModal,
   ListFilterModal,
   StickyFileHeader,
 } from "../src/components.tsx";
 import { getUiTheme } from "../src/theme.ts";
 import type { BranchListFilters, PreparedReviewFile } from "../src/types.ts";
-import { buildBranchListItems, buildCommitListItems } from "../src/view-model.ts";
+import {
+  buildBranchListItems,
+  buildCommitListItems,
+  buildFileTreeNodes,
+} from "../src/view-model.ts";
 
 const theme = getUiTheme("pierre-dark");
 const syntaxStyle = { kind: "syntax-style" } as unknown as import("@opentui/core").SyntaxStyle;
@@ -214,6 +219,41 @@ test("renders a sticky file header for the active viewport file", () => {
   expect(collectText(tree.toJSON())).toContain("-1");
 });
 
+test("renders a clickable file tree sidebar", () => {
+  const nodes = buildFileTreeNodes([
+    createPreparedFile({ path: "src/app.ts" }),
+    createPreparedFile({ path: "src/lib/math.ts", status: "added" }),
+  ]);
+  const onNodeMouseUp = vi.fn();
+  const tree = render(
+    <FileTreeSidebar
+      activePane="tree"
+      collapsedDirectories={new Set(["src/lib"])}
+      collapsedPaths={new Set(["src/app.ts"])}
+      nodes={nodes.filter((node) => node.path !== "src/lib/math.ts")}
+      onNodeMouseUp={onNodeMouseUp}
+      reviewedPaths={new Set(["src/app.ts"])}
+      selectedFilePath="src/app.ts"
+      selectedPath="src/app.ts"
+      theme={theme}
+    />,
+  );
+
+  expect(collectText(tree.toJSON())).toContain("src");
+  expect(collectText(tree.toJSON())).toContain("app.ts");
+  expect(collectText(tree.toJSON())).toContain("+3");
+  expect(collectText(tree.toJSON())).toContain("-1");
+
+  const clickableRows = tree.root.findAll(
+    (node) => String(node.type) === "box" && typeof node.props.onMouseUp === "function",
+  );
+  act(() => {
+    clickableRows[0]?.props.onMouseUp?.();
+  });
+
+  expect(onNodeMouseUp).toHaveBeenCalledWith(expect.objectContaining({ path: "src" }));
+});
+
 test("renders empty branch columns and help copy", () => {
   const filters: BranchListFilters = {
     workingTree: true,
@@ -251,6 +291,7 @@ test("renders empty branch columns and help copy", () => {
   expect(collectText(filterModal.toJSON())).toContain("Remote branches");
   expect(collectText(helpModal.toJSON())).toContain("list modal");
   expect(collectText(helpModal.toJSON())).toContain("working tree");
+  expect(collectText(helpModal.toJSON())).toContain("switch tree/diff pane");
 });
 
 test("uses the native diff renderer when Pierre segments are unavailable", () => {
