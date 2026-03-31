@@ -7,6 +7,7 @@ import type { StartupOptions } from "@diffdiff/core";
 import packageJson from "../package.json";
 import { DiffdiffApp } from "./app.tsx";
 import { loadPreparedReviewSession } from "./pierre.ts";
+import { installSelectionAutoCopy } from "./selection-copy.ts";
 import { createTerminalSyntaxPalette, getSyntaxPalette } from "./syntax-palette.ts";
 import { createTerminalSyntaxStyle, getSyntaxStyle } from "./syntax-style.ts";
 import {
@@ -40,6 +41,7 @@ async function main(): Promise<void> {
     exitOnCtrlC: true,
     backgroundColor: "transparent",
   });
+  const detachSelectionAutoCopy = installSelectionAutoCopy(renderer);
 
   try {
     const terminalColors = await getTerminalColors(renderer);
@@ -78,6 +80,8 @@ async function main(): Promise<void> {
     const message = error instanceof Error ? error.message : "Unknown error";
     process.stderr.write(`diffdiff: ${message}\n`);
     process.exitCode = 1;
+  } finally {
+    detachSelectionAutoCopy();
   }
 }
 
