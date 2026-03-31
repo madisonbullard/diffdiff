@@ -1,9 +1,3 @@
-import {
-  getFiletypeFromFileName,
-  getSharedHighlighter,
-  parsePatchFiles,
-  renderDiffWithHighlighter,
-} from "@pierre/diffs";
 import type { FileDiffMetadata } from "@pierre/diffs";
 import type { ChangedFile, ReviewSession, StartupOptions } from "@diffdiff/core";
 import { loadReviewSession } from "@diffdiff/core";
@@ -39,14 +33,50 @@ interface SegmentStyle {
   bg?: string;
 }
 
+export interface PrepareReviewSessionOptions {
+  // Use raw patches during launch so startup can skip expensive syntax preparation work.
+  deferSyntaxRendering?: boolean;
+}
+
+interface PierreDiffsModule {
+  getFiletypeFromFileName(path: string): string | undefined;
+  getSharedHighlighter(options: { themes: string[]; langs: string[] }): Promise<unknown>;
+  parsePatchFiles(patch: string): Array<{ files?: FileDiffMetadata[] }>;
+  renderDiffWithHighlighter(
+    diff: FileDiffMetadata,
+    highlighter: unknown,
+    options: {
+      theme: string;
+      tokenizeMaxLineLength: number;
+      lineDiffType: "word";
+    },
+  ): {
+    themeStyles: string;
+    code: {
+      deletionLines: unknown[];
+      additionLines: unknown[];
+    };
+  };
+}
+
+let pierreDiffsPromise: Promise<PierreDiffsModule> | undefined;
+
+async function loadPierreDiffs(): Promise<PierreDiffsModule> {
+  // Load Pierre lazily so the fast startup path can avoid pulling in Shiki language bundles before
+  // the first screen is visible.
+  pierreDiffsPromise ??= import("@pierre/diffs") as Promise<PierreDiffsModule>;
+  return pierreDiffsPromise;
+}
+
 export async function loadPreparedReviewSession(
   options: StartupOptions,
   themeName: PierreThemeName,
   theme: UiTheme = getUiTheme(themeName),
   syntaxPalette: SyntaxPalette = getSyntaxPalette(themeName),
+  prepareOptions: PrepareReviewSessionOptions = {},
 ): Promise<PreparedReviewSession> {
   const session = await loadReviewSession(options);
-  return prepareReviewSession(session, themeName, theme, syntaxPalette);
+  return prepareReviewSession(session, themeName, theme, syntaxPalette, prepareOptions);
 }
 
 export async function prepareReviewSession(
@@ -54,8 +84,21 @@ export async function prepareReviewSession(
   themeName: PierreThemeName,
   theme: UiTheme = getUiTheme(themeName),
   syntaxPalette: SyntaxPalette = getSyntaxPalette(themeName),
+  prepareOptions: PrepareReviewSessionOptions = {},
 ): Promise<PreparedReviewSession> {
-  const parsedFiles = session.files.map((file) => parseReviewFile(file));
+  // Startup is noticeably faster when we skip eager syntax tokenization for every diff and let the
+  // built-in diff widget render from the raw patch data on demand.
+  if (prepareOptions.deferSyntaxRendering) {
+    return {
+      ...session,
+      files: session.files.map((file) => createDeferredPreparedFile(file)),
+      themeName,
+    };
+  }
+
+  const pierreDiffs = await loadPierreDiffs();
+  const parsedFiles = session.files.map((file) => parseReviewFile(file, pierreDiffs));
+
   const languages = new Set<string>();
 
   for (const parsedFile of parsedFiles) {
@@ -64,7 +107,7 @@ export async function prepareReviewSession(
       continue;
     }
 
-    const inferredLanguage = getFiletypeFromFileName(parsedFile.path);
+    const inferredLanguage = pierreDiffs.getFiletypeFromFileName(parsedFile.path);
     if (inferredLanguage != null) {
       languages.add(inferredLanguage);
     }
@@ -74,7 +117,7 @@ export async function prepareReviewSession(
     languages.add("text");
   }
 
-  const highlighter = await getSharedHighlighter({
+  const highlighter = await pierreDiffs.getSharedHighlighter({
     themes: [themeName],
     langs: [...languages],
   });
@@ -86,7 +129,7 @@ export async function prepareReviewSession(
     }
 
     try {
-      const rendered = renderDiffWithHighlighter(file.diff, highlighter, {
+      const rendered = pierreDiffs.renderDiffWithHighlighter(file.diff, highlighter, {
         theme: themeName,
         tokenizeMaxLineLength: 500,
         lineDiffType: "word",
@@ -129,7 +172,19 @@ export async function prepareReviewSession(
   };
 }
 
-function parseReviewFile(file: ChangedFile): PreparedReviewFile {
+function createDeferredPreparedFile(file: ChangedFile): PreparedReviewFile {
+  // Keep just enough metadata for the fallback diff renderer and avoid parsing/tokenizing until a
+  // slower, richer rendering path is explicitly needed later.
+  return {
+    ...file,
+    diff: undefined,
+    sideBySideRows: [],
+    unifiedLines: [],
+    lineNumberWidth: 3,
+  };
+}
+
+function parseReviewFile(file: ChangedFile, pierreDiffs: PierreDiffsModule): PreparedReviewFile {
   if (file.isBinary) {
     return {
       ...file,
@@ -140,7 +195,7 @@ function parseReviewFile(file: ChangedFile): PreparedReviewFile {
   }
 
   try {
-    const diff = parsePatchFiles(file.patch)[0]?.files[0];
+    const diff = pierreDiffs.parsePatchFiles(file.patch)[0]?.files?.[0];
 
     return {
       ...file,

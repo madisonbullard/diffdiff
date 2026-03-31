@@ -83,20 +83,27 @@ class GitRepository implements RepositoryHandle {
       }
     }
 
-    const remotes = await this.listRemotes();
-    const repository = await this.buildRepositoryInfo(
-      remotes,
-      resolvedComparison.currentBranch,
-      resolvedComparison.defaultBranch,
-    );
-    const files =
+    // Hold onto the diff load so both the file list and the summary can share the same git work.
+    const filesPromise =
       resolvedComparison.comparison.mode === "working-tree"
-        ? await this.listWorkingTreeChanges(resolvedComparison.comparison.base)
-        : await this.listChangedFiles(resolvedComparison.comparison.range);
-    const workingTreeSummary = await this.summarizeWorkingTreeChanges(
-      hasCommitHistory ? "HEAD" : EMPTY_TREE_LABEL,
-    );
-    const branches = await this.listBranches(
+        ? this.listWorkingTreeChanges(resolvedComparison.comparison.base)
+        : this.listChangedFiles(resolvedComparison.comparison.range);
+    // Reuse the already-loaded working tree diff for the summary so startup does not pay for the
+    // same `git status` + `git diff` work twice before the first screen appears.
+    const workingTreeSummaryPromise =
+      resolvedComparison.comparison.mode === "working-tree"
+        ? filesPromise.then((files) => summarizeChangedFiles(files))
+        : this.summarizeWorkingTreeChanges(hasCommitHistory ? "HEAD" : EMPTY_TREE_LABEL);
+    // Most repository reads are independent, so overlap them instead of serializing a long chain of
+    // git processes on every launch.
+    const [remotes, files, workingTreeSummary, branches, commits] = await Promise.all([
+      this.listRemotes(),
+      filesPromise,
+      workingTreeSummaryPromise,
+      this.listBranches(resolvedComparison.currentBranch, resolvedComparison.defaultBranch),
+      this.listComparisonCommits(resolvedComparison.comparison),
+    ]);
+    const repository = await this.buildRepositoryInfo(
       remotes,
       resolvedComparison.currentBranch,
       resolvedComparison.defaultBranch,
@@ -111,8 +118,6 @@ class GitRepository implements RepositoryHandle {
       enrichedRemoteBranches,
       resolvedComparison.defaultBranch,
     );
-    const commits = await this.listComparisonCommits(resolvedComparison.comparison);
-
     return {
       repository,
       comparison: resolvedComparison.comparison,
@@ -266,21 +271,13 @@ class GitRepository implements RepositoryHandle {
   }
 
   private async listBranches(
-    remotes: GitRemote[],
     currentBranch?: string,
     defaultBranch?: string,
   ): Promise<BranchCollection> {
-    const localBranches = await this.listRefs(
-      "refs/heads",
-      "local",
-      remotes,
-      currentBranch,
-      defaultBranch,
-    );
+    const localBranches = await this.listRefs("refs/heads", "local", currentBranch, defaultBranch);
     const remoteBranches = await this.listRefs(
       "refs/remotes",
       "remote",
-      remotes,
       currentBranch,
       defaultBranch,
     );
@@ -294,7 +291,6 @@ class GitRepository implements RepositoryHandle {
   private async listRefs(
     prefix: string,
     kind: BranchInfo["kind"],
-    remotes: GitRemote[],
     currentBranch?: string,
     defaultBase?: string,
   ): Promise<BranchInfo[]> {
@@ -311,7 +307,6 @@ class GitRepository implements RepositoryHandle {
     const stdout = await runCommand("git", ["for-each-ref", prefix, `--format=${format}`], {
       cwd: this.rootPath,
     });
-    const remotesByName = new Map(remotes.map((remote) => [remote.name, remote]));
 
     return stdout
       .split(/\r?\n/u)
@@ -326,7 +321,6 @@ class GitRepository implements RepositoryHandle {
       .filter((record) => !record.name.endsWith("/HEAD"))
       .map((record) => {
         const remoteName = kind === "remote" ? record.name.split("/")[0] : undefined;
-        const remote = remoteName == null ? undefined : remotesByName.get(remoteName);
         const isCurrent = kind === "local" && record.name === currentBranch;
         const remoteShortName =
           remoteName == null ? undefined : record.name.slice((remoteName.length ?? 0) + 1);
@@ -347,10 +341,8 @@ class GitRepository implements RepositoryHandle {
           isDefault,
           tipAuthor: record.authorName || undefined,
           pullRequest: undefined,
-          remote,
         };
-      })
-      .map(({ remote: _remote, ...branch }) => branch);
+      });
   }
 
   private async enrichRemoteBranches(
@@ -541,6 +533,9 @@ class GitRepository implements RepositoryHandle {
     );
 
     const statusEntries = parsePorcelainStatusEntries(stdout);
+    // Keep status lookups O(1) so large working trees do not spend extra startup time repeatedly
+    // scanning the same porcelain records while we build the changed-file list.
+    const statusEntriesByPath = new Map(statusEntries.map((entry) => [entry.path, entry]));
     const paths = [...new Set(statusEntries.map((entry) => entry.path))];
     if (base === EMPTY_TREE_LABEL) {
       return this.listUntrackedFiles(paths);
@@ -570,7 +565,7 @@ class GitRepository implements RepositoryHandle {
     const changedFiles: ChangedFile[] = [];
 
     for (const path of paths) {
-      const statusEntry = statusEntries.find((entry) => entry.path === path);
+      const statusEntry = statusEntriesByPath.get(path);
       if (statusEntry?.status === "??") {
         changedFiles.push(await this.diffUntrackedFile(path));
         continue;

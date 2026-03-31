@@ -1,6 +1,8 @@
+import type { ReviewSession } from "@diffdiff/core";
 import type { TerminalColors } from "@opentui/core";
 import { expect, test } from "vite-plus/test";
 import { createPierreSegmentColorResolver } from "../src/pierre-colors.ts";
+import { prepareReviewSession } from "../src/pierre.ts";
 import { createTerminalSyntaxPalette } from "../src/syntax-palette.ts";
 import { createTerminalUiTheme } from "../src/theme.ts";
 
@@ -32,6 +34,26 @@ test("remaps Pierre light syntax colors to the terminal palette", async () => {
     "#24838d",
     "#b17d13",
   ]);
+});
+
+test("can defer eager syntax rendering during startup", async () => {
+  const prepared = await prepareReviewSession(
+    createReviewSession(),
+    "pierre-dark",
+    undefined,
+    undefined,
+    {
+      deferSyntaxRendering: true,
+    },
+  );
+
+  expect(prepared.files).toHaveLength(1);
+  expect(prepared.files[0]).toMatchObject({
+    path: "src/app.ts",
+    lineNumberWidth: 3,
+    sideBySideRows: [],
+    unifiedLines: [],
+  });
 });
 
 function createDarkPalette(): TerminalColors {
@@ -95,5 +117,54 @@ function createLightPalette(): TerminalColors {
     ],
     tekBackground: null,
     tekForeground: null,
+  };
+}
+
+function createReviewSession(): ReviewSession {
+  return {
+    repository: {
+      kind: "git",
+      rootPath: "/tmp/diffdiff",
+      name: "diffdiff",
+      remotes: [],
+      currentBranch: "main",
+      defaultBranch: "main",
+    },
+    comparison: {
+      base: "HEAD",
+      head: "working tree",
+      range: "HEAD...working tree",
+      mode: "working-tree",
+      usesMergeBase: false,
+    },
+    files: [
+      {
+        path: "src/app.ts",
+        status: "modified",
+        additions: 1,
+        deletions: 1,
+        isBinary: false,
+        patch: [
+          "diff --git a/src/app.ts b/src/app.ts",
+          "index 1111111..2222222 100644",
+          "--- a/src/app.ts",
+          "+++ b/src/app.ts",
+          "@@ -1 +1 @@",
+          "-export const app = true;",
+          "+export const app = false;",
+        ].join("\n"),
+      },
+    ],
+    commits: [],
+    branches: {
+      local: [],
+      remote: [],
+    },
+    workingTreeSummary: {
+      filesChanged: 1,
+      additions: 1,
+      deletions: 1,
+    },
+    warnings: [],
   };
 }

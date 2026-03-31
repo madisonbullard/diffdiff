@@ -5,17 +5,31 @@ import { createRoot } from "@opentui/react";
 import { formatHelpText, parseStartupOptions } from "@diffdiff/core";
 import type { StartupOptions } from "@diffdiff/core";
 import packageJson from "../package.json";
-import { DiffdiffApp } from "./app.tsx";
-import { loadPreparedReviewSession } from "./pierre.ts";
-import { createTerminalSyntaxPalette, getSyntaxPalette } from "./syntax-palette.ts";
-import { createTerminalSyntaxStyle, getSyntaxStyle } from "./syntax-style.ts";
-import {
-  createTerminalUiTheme,
-  getPierreThemeName,
-  getTerminalBackgroundMode,
-  getTerminalColors,
-  getUiTheme,
-} from "./theme.ts";
+
+// This tiny shell gives users immediate feedback while the heavier repository and diff prep runs.
+function StartupScreen({
+  chromeBackground,
+  path,
+  text,
+  textMuted,
+}: {
+  chromeBackground: string;
+  path: string;
+  text: string;
+  textMuted: string;
+}) {
+  return (
+    <box width="100%" height="100%" backgroundColor={chromeBackground} paddingX={2} paddingY={1}>
+      <box width="100%" flexDirection="column" gap={1}>
+        <text fg="#9cdcfe" wrapMode="none">
+          diffdiff
+        </text>
+        <text fg={text}>Loading review session...</text>
+        <text fg={textMuted}>{path}</text>
+      </box>
+    </box>
+  );
+}
 
 async function main(): Promise<void> {
   const options = parseStartupOptions();
@@ -30,9 +44,26 @@ async function main(): Promise<void> {
     return;
   }
 
-  const mode = await getTerminalBackgroundMode();
-  const themeName = getPierreThemeName(mode);
-  const fallbackTheme = getUiTheme(themeName);
+  // Keep the initial module graph light so `--help` and `--version` stay instant, then overlap the
+  // background-color probe with the heavier TUI/runtime imports for the real app launch.
+  const themeModulePromise = import("./theme.ts");
+  const runtimeModulesPromise = Promise.all([
+    import("./app.tsx"),
+    import("./pierre.ts"),
+    import("./syntax-palette.ts"),
+    import("./syntax-style.ts"),
+  ]);
+  const themeModule = await themeModulePromise;
+  const modePromise = themeModule.getTerminalBackgroundMode();
+  const [
+    { DiffdiffApp },
+    { loadPreparedReviewSession },
+    { createTerminalSyntaxPalette, getSyntaxPalette },
+    { createTerminalSyntaxStyle, getSyntaxStyle },
+  ] = await runtimeModulesPromise;
+  const mode = await modePromise;
+  const themeName = themeModule.getPierreThemeName(mode);
+  const fallbackTheme = themeModule.getUiTheme(themeName);
 
   const renderer = await createCliRenderer({
     useAlternateScreen: true,
@@ -42,9 +73,11 @@ async function main(): Promise<void> {
   });
 
   try {
-    const terminalColors = await getTerminalColors(renderer);
+    const terminalColors = await themeModule.getTerminalColors(renderer);
     const theme =
-      terminalColors == null ? fallbackTheme : createTerminalUiTheme(terminalColors, mode);
+      terminalColors == null
+        ? fallbackTheme
+        : themeModule.createTerminalUiTheme(terminalColors, mode);
     const syntaxPalette =
       terminalColors == null
         ? getSyntaxPalette(themeName)
@@ -55,12 +88,28 @@ async function main(): Promise<void> {
         : createTerminalSyntaxStyle(theme, terminalColors);
 
     renderer.setBackgroundColor(theme.appBackground);
+    const root = createRoot(renderer);
 
+    // Render a lightweight shell first so the user gets immediate feedback while git and syntax
+    // preparation finish in the background.
+    root.render(
+      <StartupScreen
+        chromeBackground={theme.chromeBackground}
+        path={options.repoPath ?? process.cwd()}
+        text={theme.text}
+        textMuted={theme.textMuted}
+      />,
+    );
+
+    // Launch with deferred syntax rendering so the first interactive frame is ready before we do
+    // any eager Shiki/Pierre tokenization work.
     const loadSession = (nextOptions: StartupOptions) =>
-      loadPreparedReviewSession(nextOptions, themeName, theme, syntaxPalette);
+      loadPreparedReviewSession(nextOptions, themeName, theme, syntaxPalette, {
+        deferSyntaxRendering: true,
+      });
     const initialSession = await loadSession(options);
 
-    createRoot(renderer).render(
+    root.render(
       <DiffdiffApp
         initialOptions={options}
         initialSession={initialSession}

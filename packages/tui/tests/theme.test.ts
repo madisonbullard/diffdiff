@@ -1,6 +1,11 @@
+import { EventEmitter } from "node:events";
 import type { TerminalColors } from "@opentui/core";
 import { expect, test } from "vite-plus/test";
-import { createTerminalUiTheme, getThemeModeFromTerminalColor } from "../src/theme.ts";
+import {
+  createTerminalUiTheme,
+  getTerminalBackgroundMode,
+  getThemeModeFromTerminalColor,
+} from "../src/theme.ts";
 
 test("matches opencode terminal background color parsing", () => {
   expect(getThemeModeFromTerminalColor("rgb:ffff/ffff/ffff")).toBe("light");
@@ -56,6 +61,35 @@ test("builds a light UI theme from terminal colors", () => {
   expect(formatColor(theme.deletionBg)).toBe("#edd9ce");
 });
 
+test("falls back quickly when the terminal does not answer the background probe", async () => {
+  const stdin = createMockTtyInput();
+  const stdout = { write: () => true };
+
+  await expect(
+    getTerminalBackgroundMode({
+      stdin,
+      stdout,
+      timeoutMs: 1,
+    }),
+  ).resolves.toBe("dark");
+  expect(stdin.setRawModeCalls).toEqual([true, false]);
+});
+
+test("uses the terminal reply when the background probe succeeds", async () => {
+  const stdin = createMockTtyInput();
+  const stdout = { write: () => true };
+  const modePromise = getTerminalBackgroundMode({
+    stdin,
+    stdout,
+    timeoutMs: 50,
+  });
+
+  stdin.emit("data", Buffer.from("\u001B]11;rgb:ffff/ffff/ffff\u0007"));
+
+  await expect(modePromise).resolves.toBe("light");
+  expect(stdin.setRawModeCalls).toEqual([true, false]);
+});
+
 function createPalette(overrides: Partial<TerminalColors> = {}): TerminalColors {
   return {
     cursorColor: null,
@@ -91,4 +125,23 @@ function createPalette(overrides: Partial<TerminalColors> = {}): TerminalColors 
 
 function formatColor(color: string): string {
   return color;
+}
+
+function createMockTtyInput() {
+  const emitter = new EventEmitter();
+  const setRawModeCalls: boolean[] = [];
+
+  return Object.assign(emitter, {
+    isTTY: true,
+    on(event: "data", listener: (data: Buffer) => void) {
+      EventEmitter.prototype.on.call(emitter, event, listener);
+    },
+    removeListener(event: "data", listener: (data: Buffer) => void) {
+      EventEmitter.prototype.removeListener.call(emitter, event, listener);
+    },
+    setRawMode(mode: boolean) {
+      setRawModeCalls.push(mode);
+    },
+    setRawModeCalls,
+  });
 }

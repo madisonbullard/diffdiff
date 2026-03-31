@@ -3,8 +3,28 @@ import type { PierreThemeName } from "./types.ts";
 
 export type ThemeMode = "dark" | "light";
 
+// Keep the non-responsive terminal fallback short so launch time is dominated by real app work.
+const TERMINAL_BACKGROUND_QUERY_TIMEOUT_MS = 150;
+
 export interface TerminalPaletteSource {
   getPalette(options?: { size?: number; timeout?: number }): Promise<TerminalColors>;
+}
+
+interface TerminalBackgroundInput {
+  isTTY?: boolean;
+  setRawMode(mode: boolean): void;
+  on(event: "data", listener: (data: Buffer) => void): void;
+  removeListener(event: "data", listener: (data: Buffer) => void): void;
+}
+
+interface TerminalBackgroundOutput {
+  write(data: string): boolean;
+}
+
+export interface TerminalBackgroundQueryOptions {
+  stdin?: TerminalBackgroundInput;
+  stdout?: TerminalBackgroundOutput;
+  timeoutMs?: number;
 }
 
 export interface UiTheme {
@@ -112,8 +132,14 @@ export function getPierreThemeName(mode: ThemeMode): PierreThemeName {
   return mode === "light" ? "pierre-light" : "pierre-dark";
 }
 
-export async function getTerminalBackgroundMode(): Promise<ThemeMode> {
-  if (!process.stdin.isTTY) {
+export async function getTerminalBackgroundMode(
+  options: TerminalBackgroundQueryOptions = {},
+): Promise<ThemeMode> {
+  const stdin = options.stdin ?? process.stdin;
+  const stdout = options.stdout ?? process.stdout;
+  const timeoutMs = options.timeoutMs ?? TERMINAL_BACKGROUND_QUERY_TIMEOUT_MS;
+
+  if (!stdin.isTTY) {
     return "dark";
   }
 
@@ -121,8 +147,8 @@ export async function getTerminalBackgroundMode(): Promise<ThemeMode> {
     let timeout: NodeJS.Timeout;
 
     const cleanup = () => {
-      process.stdin.setRawMode(false);
-      process.stdin.removeListener("data", handler);
+      stdin.setRawMode(false);
+      stdin.removeListener("data", handler);
       clearTimeout(timeout);
     };
 
@@ -136,14 +162,16 @@ export async function getTerminalBackgroundMode(): Promise<ThemeMode> {
       resolve(getThemeModeFromTerminalColor(color));
     };
 
-    process.stdin.setRawMode(true);
-    process.stdin.on("data", handler);
-    process.stdout.write("\x1b]11;?\x07");
+    stdin.setRawMode(true);
+    stdin.on("data", handler);
+    stdout.write("\x1b]11;?\x07");
 
+    // Keep the fallback fast because terminals that ignore OSC 11 were adding a full second to
+    // every launch before the app could even start loading repository data.
     timeout = setTimeout(() => {
       cleanup();
       resolve("dark");
-    }, 1000);
+    }, timeoutMs);
   });
 }
 
