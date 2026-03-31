@@ -102,6 +102,43 @@ test("deferred rendering handles blank added lines without surfacing parser erro
   ).toBe(false);
 });
 
+test("deferred rendering preserves syntax highlighting for blank context lines", async () => {
+  const prepared = await prepareReviewSession(
+    createReviewSession({
+      files: [
+        {
+          path: "src/app.ts",
+          status: "modified",
+          additions: 1,
+          deletions: 1,
+          isBinary: false,
+          patch: [
+            "diff --git a/src/app.ts b/src/app.ts",
+            "index 1111111..2222222 100644",
+            "--- a/src/app.ts",
+            "+++ b/src/app.ts",
+            "@@ -1,4 +1,4 @@",
+            " export function run() {",
+            " ",
+            "-  return oldValue();",
+            "+  return nextValue();",
+            " }",
+          ].join("\n"),
+        },
+      ],
+    }),
+    "pierre-dark",
+    undefined,
+    undefined,
+    {
+      deferSyntaxRendering: true,
+    },
+  );
+
+  expect(prepared.files[0]?.renderError).toBeUndefined();
+  expect(prepared.files[0]?.unifiedLines.some((line) => line.kind === "context")).toBe(true);
+});
+
 function createDarkPalette(): TerminalColors {
   return {
     cursorColor: null,

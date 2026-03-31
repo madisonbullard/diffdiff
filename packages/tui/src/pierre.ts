@@ -91,10 +91,105 @@ export async function prepareReviewSession(
   // widget's parser.
   if (prepareOptions.deferSyntaxRendering) {
     const pierreDiffs = await loadPierreDiffs();
+    const files = session.files.map((file) => createDeferredPreparedFile(file, pierreDiffs));
+    const deferredPreviewFiles = files.filter(
+      (file): file is PreparedReviewFile & { diff: FileDiffMetadata } =>
+        file.diff != null && requiresPlainDeferredPreview(file.patch),
+    );
+
+    if (deferredPreviewFiles.length === 0) {
+      return {
+        ...session,
+        files,
+        themeName,
+      };
+    }
+
+    const languages = new Set<string>();
+
+    for (const file of deferredPreviewFiles) {
+      if (file.diff.lang != null) {
+        languages.add(file.diff.lang);
+        continue;
+      }
+
+      const inferredLanguage = pierreDiffs.getFiletypeFromFileName(file.path);
+      if (inferredLanguage != null) {
+        languages.add(inferredLanguage);
+      }
+    }
+
+    if (languages.size === 0) {
+      languages.add("text");
+    }
+
+    let highlighter: unknown;
+
+    try {
+      highlighter = await pierreDiffs.getSharedHighlighter({
+        themes: [themeName],
+        langs: [...languages],
+      });
+    } catch {
+      return {
+        ...session,
+        files: files.map((file) => {
+          if (file.diff == null || !requiresPlainDeferredPreview(file.patch)) {
+            return file;
+          }
+
+          return {
+            ...file,
+            sideBySideRows: buildPlainSideBySideRows(file.diff),
+            unifiedLines: buildPlainUnifiedLines(file.diff),
+          };
+        }),
+        themeName,
+      };
+    }
+
+    const resolveSegmentColor = createPierreSegmentColorResolver(themeName, theme, syntaxPalette);
 
     return {
       ...session,
-      files: session.files.map((file) => createDeferredPreparedFile(file, pierreDiffs)),
+      files: files.map((file) => {
+        if (file.diff == null || !requiresPlainDeferredPreview(file.patch)) {
+          return file;
+        }
+
+        try {
+          const rendered = pierreDiffs.renderDiffWithHighlighter(file.diff, highlighter, {
+            theme: themeName,
+            tokenizeMaxLineLength: 500,
+            lineDiffType: "word",
+          });
+          const themeVariables = parseThemeVariables(rendered.themeStyles);
+
+          return {
+            ...file,
+            sideBySideRows: buildSideBySideRows(
+              file.diff,
+              rendered.code.deletionLines as HastNode[],
+              rendered.code.additionLines as HastNode[],
+              themeVariables,
+              resolveSegmentColor,
+            ),
+            unifiedLines: buildUnifiedLines(
+              file.diff,
+              rendered.code.deletionLines as HastNode[],
+              rendered.code.additionLines as HastNode[],
+              themeVariables,
+              resolveSegmentColor,
+            ),
+          };
+        } catch {
+          return {
+            ...file,
+            sideBySideRows: buildPlainSideBySideRows(file.diff),
+            unifiedLines: buildPlainUnifiedLines(file.diff),
+          };
+        }
+      }),
       themeName,
     };
   }
@@ -191,13 +286,12 @@ function createDeferredPreparedFile(
 
   try {
     const diff = pierreDiffs.parsePatchFiles(file.patch)[0]?.files?.[0];
-    const shouldUsePlainPreview = requiresPlainDeferredPreview(file.patch);
 
     return {
       ...file,
       diff,
-      sideBySideRows: diff == null || !shouldUsePlainPreview ? [] : buildPlainSideBySideRows(diff),
-      unifiedLines: diff == null || !shouldUsePlainPreview ? [] : buildPlainUnifiedLines(diff),
+      sideBySideRows: [],
+      unifiedLines: [],
       lineNumberWidth: diff == null ? 3 : getLineNumberWidth(diff),
       renderError: undefined,
     };
