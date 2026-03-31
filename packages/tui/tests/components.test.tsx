@@ -170,6 +170,7 @@ test("renders a sticky file header for the active viewport file", () => {
     />,
   );
 
+  expect(tree.toJSON()).toMatchSnapshot();
   expect(collectText(tree.toJSON())).toContain("src/app.ts");
   expect(collectText(tree.toJSON())).toContain("+3");
   expect(collectText(tree.toJSON())).toContain("-1");

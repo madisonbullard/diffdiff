@@ -333,13 +333,7 @@ export function DiffdiffApp({
       </box>
 
       {stickyFile != null ? (
-        <box
-          flexShrink={0}
-          width="100%"
-          paddingX={2}
-          paddingTop={1}
-          backgroundColor={theme.appBackground}
-        >
+        <box flexShrink={0} width="100%" paddingX={2} backgroundColor={theme.appBackground}>
           <StickyFileHeader
             file={stickyFile}
             isReviewed={reviewedPaths.has(stickyFile.path)}

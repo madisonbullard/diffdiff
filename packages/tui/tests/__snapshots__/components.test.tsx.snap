@@ -581,6 +581,76 @@ exports[`renders a branch modal snapshot 1`] = `
 </box>
 `;
 
+exports[`renders a sticky file header for the active viewport file 1`] = `
+<box
+  backgroundColor="#10202d"
+  border={
+    [
+      "left",
+    ]
+  }
+  borderColor="#3fb950"
+  customBorderChars={
+    {
+      "bottomLeft": "",
+      "bottomRight": "",
+      "bottomT": "",
+      "cross": "",
+      "horizontal": " ",
+      "leftT": "",
+      "rightT": "",
+      "topLeft": "",
+      "topRight": "",
+      "topT": "",
+      "vertical": "┃",
+    }
+  }
+  flexDirection="column"
+  paddingBottom={1}
+  paddingLeft={2}
+  paddingRight={1}
+  paddingTop={1}
+  width="100%"
+  zIndex={10}
+>
+  <box
+    flexDirection="row"
+    gap={1}
+    justifyContent="space-between"
+    width="100%"
+  >
+    <text
+      fg="#e6edf3"
+      wrapMode="none"
+    >
+      <span
+        fg="#e6edf3"
+      >
+        src/app.ts
+      </span>
+    </text>
+    <text
+      fg="#8ea4b5"
+      wrapMode="none"
+    >
+      <span
+        fg="#3fb950"
+      >
+        +3
+      </span>
+      <span>
+         / 
+      </span>
+      <span
+        fg="#ff7b72"
+      >
+        -1
+      </span>
+    </text>
+  </box>
+</box>
+`;
+
 exports[`renders an expanded file card snapshot 1`] = `
 <box
   backgroundColor="#152838"

@@ -193,8 +193,11 @@ export function StickyFileHeader({
       customBorderChars={SPLIT_BORDER}
       borderColor={borderColor}
       backgroundColor={fileBackground}
+      flexDirection="column"
       paddingLeft={2}
       paddingRight={1}
+      paddingTop={1}
+      paddingBottom={1}
       zIndex={10}
     >
       <FileCardTitleRow file={file} isSelected={isSelected} theme={theme} />
