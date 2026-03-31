@@ -49,11 +49,57 @@ test("can defer eager syntax rendering during startup", async () => {
 
   expect(prepared.files).toHaveLength(1);
   expect(prepared.files[0]).toMatchObject({
+    diff: expect.any(Object),
     path: "src/app.ts",
     lineNumberWidth: 3,
-    sideBySideRows: [],
-    unifiedLines: [],
+    renderError: undefined,
   });
+  expect(prepared.files[0].unifiedLines).toEqual([]);
+  expect(prepared.files[0].sideBySideRows).toEqual([]);
+});
+
+test("deferred rendering handles blank added lines without surfacing parser errors", async () => {
+  const prepared = await prepareReviewSession(
+    createReviewSession({
+      files: [
+        {
+          path: "src/app.ts",
+          status: "modified",
+          additions: 3,
+          deletions: 2,
+          isBinary: false,
+          patch: [
+            "diff --git a/src/app.ts b/src/app.ts",
+            "index 1111111..2222222 100644",
+            "--- a/src/app.ts",
+            "+++ b/src/app.ts",
+            "@@ -1,4 +1,5 @@",
+            " export function run() {",
+            "-  return oldValue();",
+            "+  const value = nextValue();",
+            "+",
+            "+  return value;",
+            " }",
+          ].join("\n"),
+        },
+      ],
+    }),
+    "pierre-dark",
+    undefined,
+    undefined,
+    {
+      deferSyntaxRendering: true,
+    },
+  );
+
+  expect(prepared.files[0]?.renderError).toBeUndefined();
+  expect(prepared.files[0]?.unifiedLines.some((line) => line.kind === "addition")).toBe(true);
+  expect(prepared.files[0]?.sideBySideRows.some((row) => row.kind === "line")).toBe(true);
+  expect(
+    prepared.files[0]?.unifiedLines
+      .flatMap((line) => line.segments)
+      .some((segment) => segment.text.includes("\n")),
+  ).toBe(false);
 });
 
 function createDarkPalette(): TerminalColors {
@@ -120,7 +166,7 @@ function createLightPalette(): TerminalColors {
   };
 }
 
-function createReviewSession(): ReviewSession {
+function createReviewSession(overrides: Partial<ReviewSession> = {}): ReviewSession {
   return {
     repository: {
       kind: "git",
@@ -166,5 +212,6 @@ function createReviewSession(): ReviewSession {
       deletions: 1,
     },
     warnings: [],
+    ...overrides,
   };
 }

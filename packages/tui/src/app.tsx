@@ -662,7 +662,7 @@ export function DiffdiffApp({
         items: branchItems,
       }),
     );
-    setCommitListIndex(Math.max(commitItems.length - 1, 0));
+    setCommitListIndex(0);
     setActiveListView("branch");
     setShowListFilterModal(false);
     setShowBranchModal(true);

@@ -112,9 +112,47 @@ test("renders a commit view snapshot", () => {
     />,
   );
 
+  expect(tree.toJSON()).toMatchSnapshot();
   expect(collectText(tree.toJSON())).toContain("2 commits in the current comparison");
   expect(collectText(tree.toJSON())).toContain("abcdef0 (origin/main) Polish branch categories");
   expect(collectText(tree.toJSON())).toContain("enter / h");
+});
+
+test("shows commit history in working tree commit view", () => {
+  const filters: BranchListFilters = {
+    workingTree: true,
+    localBranch: true,
+    openPr: true,
+    remoteBranch: false,
+  };
+  const tree = render(
+    <BranchModal
+      activeView="commit"
+      base="HEAD"
+      branchItems={buildBranchListItems({
+        filters,
+        localBranches: createLocalBranches(),
+        remoteBranches: createRemoteBranches(),
+        workingTreeSummary: { filesChanged: 4, additions: 18, deletions: 6 },
+      })}
+      branchIndex={0}
+      commitItems={buildCommitListItems(createComparisonCommits())}
+      commitIndex={0}
+      comparisonMode="working-tree"
+      filters={filters}
+      head="working tree"
+      localBranchCount={2}
+      openPrCount={1}
+      remoteBranchCount={1}
+      theme={theme}
+    />,
+  );
+
+  expect(collectText(tree.toJSON())).toContain("2 commits in the current comparison");
+  expect(collectText(tree.toJSON())).toContain(
+    "1234567 (HEAD -> feature/tui, origin/feature/tui) Revamp the list modal",
+  );
+  expect(collectText(tree.toJSON())).not.toContain("Working tree changes are not committed yet.");
 });
 
 test("shows binary, reviewed, and collapsed states clearly", () => {

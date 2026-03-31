@@ -86,12 +86,15 @@ export async function prepareReviewSession(
   syntaxPalette: SyntaxPalette = getSyntaxPalette(themeName),
   prepareOptions: PrepareReviewSessionOptions = {},
 ): Promise<PreparedReviewSession> {
-  // Startup is noticeably faster when we skip eager syntax tokenization for every diff and let the
-  // built-in diff widget render from the raw patch data on demand.
+  // Startup is noticeably faster when we skip eager syntax tokenization, but we still parse the
+  // patch structure so the first screen can render stable diff rows without relying on the fallback
+  // widget's parser.
   if (prepareOptions.deferSyntaxRendering) {
+    const pierreDiffs = await loadPierreDiffs();
+
     return {
       ...session,
-      files: session.files.map((file) => createDeferredPreparedFile(file)),
+      files: session.files.map((file) => createDeferredPreparedFile(file, pierreDiffs)),
       themeName,
     };
   }
@@ -172,16 +175,42 @@ export async function prepareReviewSession(
   };
 }
 
-function createDeferredPreparedFile(file: ChangedFile): PreparedReviewFile {
-  // Keep just enough metadata for the fallback diff renderer and avoid parsing/tokenizing until a
-  // slower, richer rendering path is explicitly needed later.
-  return {
-    ...file,
-    diff: undefined,
-    sideBySideRows: [],
-    unifiedLines: [],
-    lineNumberWidth: 3,
-  };
+function createDeferredPreparedFile(
+  file: ChangedFile,
+  pierreDiffs: PierreDiffsModule,
+): PreparedReviewFile {
+  if (file.isBinary) {
+    return {
+      ...file,
+      diff: undefined,
+      sideBySideRows: [],
+      unifiedLines: [],
+      lineNumberWidth: 3,
+    };
+  }
+
+  try {
+    const diff = pierreDiffs.parsePatchFiles(file.patch)[0]?.files?.[0];
+    const shouldUsePlainPreview = requiresPlainDeferredPreview(file.patch);
+
+    return {
+      ...file,
+      diff,
+      sideBySideRows: diff == null || !shouldUsePlainPreview ? [] : buildPlainSideBySideRows(diff),
+      unifiedLines: diff == null || !shouldUsePlainPreview ? [] : buildPlainUnifiedLines(diff),
+      lineNumberWidth: diff == null ? 3 : getLineNumberWidth(diff),
+      renderError: undefined,
+    };
+  } catch {
+    return {
+      ...file,
+      diff: undefined,
+      sideBySideRows: [],
+      unifiedLines: [],
+      lineNumberWidth: 3,
+      renderError: undefined,
+    };
+  }
 }
 
 function parseReviewFile(file: ChangedFile, pierreDiffs: PierreDiffsModule): PreparedReviewFile {
@@ -226,6 +255,182 @@ function getLineNumberWidth(diff: FileDiffMetadata): number {
   );
 
   return Math.max(String(highestLineNumber).length, 3);
+}
+
+function buildPlainUnifiedLines(diff: FileDiffMetadata): UnifiedDiffLine[] {
+  const lines: UnifiedDiffLine[] = [];
+  let deletionIndex = 0;
+  let additionIndex = 0;
+
+  for (let hunkIndex = 0; hunkIndex < diff.hunks.length; hunkIndex += 1) {
+    const hunk = diff.hunks[hunkIndex];
+
+    if (hunk.collapsedBefore > 0 && hunkIndex > 0) {
+      lines.push({
+        kind: "gap",
+        segments: [{ text: `... ${hunk.collapsedBefore} unchanged lines ...` }],
+      });
+    }
+
+    const hunkHeader = sanitizePlainText(
+      [hunk.hunkSpecs, hunk.hunkContext].filter(Boolean).join(" "),
+    );
+    lines.push({
+      kind: "hunk",
+      segments: [{ text: hunkHeader || "@@" }],
+    });
+
+    let oldLineNumber = hunk.deletionStart;
+    let newLineNumber = hunk.additionStart;
+
+    for (const hunkContent of hunk.hunkContent) {
+      if (hunkContent.type === "context") {
+        for (let index = 0; index < hunkContent.lines; index += 1) {
+          lines.push({
+            kind: "context",
+            oldLineNumber,
+            newLineNumber,
+            segments: toPlainSegments(diff.additionLines[additionIndex]),
+          });
+          oldLineNumber += 1;
+          newLineNumber += 1;
+          deletionIndex += 1;
+          additionIndex += 1;
+        }
+
+        continue;
+      }
+
+      for (let index = 0; index < hunkContent.deletions; index += 1) {
+        lines.push({
+          kind: "deletion",
+          oldLineNumber,
+          segments: toPlainSegments(diff.deletionLines[deletionIndex]),
+        });
+        oldLineNumber += 1;
+        deletionIndex += 1;
+      }
+
+      for (let index = 0; index < hunkContent.additions; index += 1) {
+        lines.push({
+          kind: "addition",
+          newLineNumber,
+          segments: toPlainSegments(diff.additionLines[additionIndex]),
+        });
+        newLineNumber += 1;
+        additionIndex += 1;
+      }
+    }
+  }
+
+  return lines;
+}
+
+function buildPlainSideBySideRows(diff: FileDiffMetadata): SideBySideDiffRow[] {
+  const rows: SideBySideDiffRow[] = [];
+  let deletionIndex = 0;
+  let additionIndex = 0;
+
+  for (let hunkIndex = 0; hunkIndex < diff.hunks.length; hunkIndex += 1) {
+    const hunk = diff.hunks[hunkIndex];
+
+    if (hunk.collapsedBefore > 0 && hunkIndex > 0) {
+      rows.push({
+        kind: "gap",
+        segments: [{ text: `... ${hunk.collapsedBefore} unchanged lines ...` }],
+      });
+    }
+
+    const hunkHeader = sanitizePlainText(
+      [hunk.hunkSpecs, hunk.hunkContext].filter(Boolean).join(" "),
+    );
+    rows.push({
+      kind: "hunk",
+      segments: [{ text: hunkHeader || "@@" }],
+    });
+
+    let oldLineNumber = hunk.deletionStart;
+    let newLineNumber = hunk.additionStart;
+
+    for (const hunkContent of hunk.hunkContent) {
+      if (hunkContent.type === "context") {
+        for (let index = 0; index < hunkContent.lines; index += 1) {
+          rows.push({
+            kind: "line",
+            left: {
+              kind: "context",
+              lineNumber: oldLineNumber,
+              segments: toPlainSegments(diff.deletionLines[deletionIndex]),
+            },
+            right: {
+              kind: "context",
+              lineNumber: newLineNumber,
+              segments: toPlainSegments(diff.additionLines[additionIndex]),
+            },
+          });
+
+          oldLineNumber += 1;
+          newLineNumber += 1;
+          deletionIndex += 1;
+          additionIndex += 1;
+        }
+
+        continue;
+      }
+
+      const deletions: SideBySideDiffCell[] = [];
+      const additions: SideBySideDiffCell[] = [];
+
+      for (let index = 0; index < hunkContent.deletions; index += 1) {
+        deletions.push({
+          kind: "deletion",
+          lineNumber: oldLineNumber,
+          segments: toPlainSegments(diff.deletionLines[deletionIndex]),
+        });
+        oldLineNumber += 1;
+        deletionIndex += 1;
+      }
+
+      for (let index = 0; index < hunkContent.additions; index += 1) {
+        additions.push({
+          kind: "addition",
+          lineNumber: newLineNumber,
+          segments: toPlainSegments(diff.additionLines[additionIndex]),
+        });
+        newLineNumber += 1;
+        additionIndex += 1;
+      }
+
+      const pairCount = Math.max(deletions.length, additions.length);
+
+      for (let index = 0; index < pairCount; index += 1) {
+        rows.push({
+          kind: "line",
+          left: deletions[index] ?? { kind: "empty", segments: [] },
+          right: additions[index] ?? { kind: "empty", segments: [] },
+        });
+      }
+    }
+  }
+
+  return rows;
+}
+
+function toPlainSegments(line: string | undefined): TextSegment[] {
+  if (line == null) {
+    return [];
+  }
+
+  const text = sanitizePlainText(line);
+  return text === "" ? [] : [{ text }];
+}
+
+function sanitizePlainText(text: string): string {
+  return text.replace(/\r?\n$/u, "");
+}
+
+function requiresPlainDeferredPreview(patch: string): boolean {
+  return patch.split(/\r?\n/u).some((line) => line === "+" || line === "-" || line === " ");
 }
 
 function buildUnifiedLines(

@@ -790,7 +790,7 @@ function CommitListView({
   theme: UiTheme;
 }) {
   return (
-    <box width="100%" flexDirection="column" gap={1}>
+    <box width="100%" flexDirection="column" gap={0}>
       {commitItems.length === 0 ? (
         <box
           width="100%"

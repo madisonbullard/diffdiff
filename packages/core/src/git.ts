@@ -451,18 +451,18 @@ class GitRepository implements RepositoryHandle {
   }
 
   private async listComparisonCommits(comparison: ComparisonInfo): Promise<ComparisonCommit[]> {
-    if (comparison.mode === "working-tree") {
+    if (comparison.mode === "working-tree" && comparison.base === EMPTY_TREE_LABEL) {
       return [];
     }
 
+    const logRange =
+      comparison.mode === "working-tree"
+        ? comparison.base
+        : `${comparison.base}..${comparison.head}`;
+
     const stdout = await runCommand(
       "git",
-      [
-        "log",
-        "--decorate=short",
-        "--format=%H%x00%h%x00%D%x00%s%x00%an",
-        `${comparison.base}..${comparison.head}`,
-      ],
+      ["log", "--decorate=short", "--format=%H%x00%h%x00%D%x00%s%x00%an", logRange],
       { cwd: this.rootPath },
     );
 

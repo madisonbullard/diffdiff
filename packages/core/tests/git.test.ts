@@ -95,7 +95,11 @@ describe("loadReviewSession", () => {
       additions: 3,
       deletions: 1,
     });
-    expect(session.commits).toEqual([]);
+    expect(session.commits).toHaveLength(1);
+    expect(session.commits[0]).toMatchObject({
+      author: "Diffdiff Test",
+      subject: "Initial commit",
+    });
   });
 
   test("falls back to working tree mode for unborn repositories", async () => {

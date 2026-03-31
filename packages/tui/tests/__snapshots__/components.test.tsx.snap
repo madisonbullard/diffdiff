@@ -581,6 +581,338 @@ exports[`renders a branch modal snapshot 1`] = `
 </box>
 `;
 
+exports[`renders a commit view snapshot 1`] = `
+<box
+  alignItems="center"
+  backgroundColor="#00000096"
+  bottom={0}
+  justifyContent="center"
+  left={0}
+  position="absolute"
+  right={0}
+  top={0}
+  zIndex={20}
+>
+  <box
+    backgroundColor="#0c1823"
+    flexDirection="column"
+    gap={1}
+    maxWidth={108}
+    padding={1}
+    width="92%"
+  >
+    <box
+      flexDirection="column"
+      width="100%"
+    >
+      <box
+        flexDirection="row"
+        gap={1}
+        justifyContent="space-between"
+        width="100%"
+      >
+        <text
+          fg="#e6edf3"
+          wrapMode="none"
+        >
+          List
+        </text>
+        <text
+          fg="#8ea4b5"
+          wrapMode="none"
+        >
+          <span
+            bg="#152838"
+            fg="#e6edf3"
+          >
+             tab 
+          </span>
+          <span>
+             switch view  
+          </span>
+          <span
+            bg="#152838"
+            fg="#e6edf3"
+          >
+             esc 
+          </span>
+          <span>
+             close
+          </span>
+        </text>
+      </box>
+      <text
+        fg="#8ea4b5"
+        wrapMode="none"
+      >
+        Browse the comparison commit log and choose base/head commits.
+      </text>
+    </box>
+    <box
+      backgroundColor="#10202d"
+      border={
+        [
+          "left",
+        ]
+      }
+      borderColor="#29475c"
+      customBorderChars={
+        {
+          "bottomLeft": "",
+          "bottomRight": "",
+          "bottomT": "",
+          "cross": "",
+          "horizontal": " ",
+          "leftT": "",
+          "rightT": "",
+          "topLeft": "",
+          "topRight": "",
+          "topT": "",
+          "vertical": "┃",
+        }
+      }
+      flexDirection="column"
+      gap={1}
+      paddingBottom={1}
+      paddingLeft={2}
+      paddingRight={1}
+      paddingTop={1}
+      width="100%"
+    >
+      <box
+        flexDirection="row"
+        gap={2}
+        justifyContent="space-between"
+        width="100%"
+      >
+        <text
+          fg="#8ea4b5"
+          wrapMode="none"
+        >
+          <span
+            fg="#d4a72c"
+          >
+            base
+          </span>
+          <span>
+             origin/main
+          </span>
+          <span>
+              •  
+          </span>
+          <span
+            fg="#9cdcfe"
+          >
+            head
+          </span>
+          <span>
+             feature/tui
+          </span>
+        </text>
+        <box
+          flexDirection="row"
+          gap={1}
+        >
+          <text
+            wrapMode="none"
+          >
+            <span
+              bg="#152838"
+              fg="#8ea4b5"
+            >
+               Branches 
+            </span>
+          </text>
+          <text
+            wrapMode="none"
+          >
+            <span
+              bg="#9cdcfe"
+              fg="#0b1b26"
+            >
+               Commits 
+            </span>
+          </text>
+        </box>
+      </box>
+      <text
+        fg="#8ea4b5"
+        wrapMode="none"
+      >
+        2 commits in the current comparison
+      </text>
+    </box>
+    <box
+      flexDirection="column"
+      gap={0}
+      width="100%"
+    >
+      <box
+        backgroundColor="#243a4a"
+        border={
+          [
+            "left",
+          ]
+        }
+        borderColor="#9cdcfe"
+        customBorderChars={
+          {
+            "bottomLeft": "",
+            "bottomRight": "",
+            "bottomT": "",
+            "cross": "",
+            "horizontal": " ",
+            "leftT": "",
+            "rightT": "",
+            "topLeft": "",
+            "topRight": "",
+            "topT": "",
+            "vertical": "┃",
+          }
+        }
+        flexDirection="row"
+        paddingBottom={0}
+        paddingLeft={2}
+        paddingRight={1}
+        paddingTop={0}
+        width="100%"
+      >
+        <text
+          fg="#8ea4b5"
+          wrapMode="none"
+        >
+          1234567 (HEAD -&gt; feature/tui, origin/feature/tui) Revamp the list modal
+        </text>
+      </box>
+      <box
+        backgroundColor="#324d5f"
+        border={
+          [
+            "left",
+          ]
+        }
+        borderColor="#67b7e1"
+        customBorderChars={
+          {
+            "bottomLeft": "",
+            "bottomRight": "",
+            "bottomT": "",
+            "cross": "",
+            "horizontal": " ",
+            "leftT": "",
+            "rightT": "",
+            "topLeft": "",
+            "topRight": "",
+            "topT": "",
+            "vertical": "┃",
+          }
+        }
+        flexDirection="row"
+        paddingBottom={0}
+        paddingLeft={2}
+        paddingRight={1}
+        paddingTop={0}
+        width="100%"
+      >
+        <text
+          fg="#e6edf3"
+          wrapMode="none"
+        >
+          abcdef0 (origin/main) Polish branch categories
+        </text>
+      </box>
+    </box>
+    <box
+      backgroundColor="#10202d"
+      border={
+        [
+          "left",
+        ]
+      }
+      borderColor="#29475c"
+      customBorderChars={
+        {
+          "bottomLeft": "",
+          "bottomRight": "",
+          "bottomT": "",
+          "cross": "",
+          "horizontal": " ",
+          "leftT": "",
+          "rightT": "",
+          "topLeft": "",
+          "topRight": "",
+          "topT": "",
+          "vertical": "┃",
+        }
+      }
+      flexDirection="column"
+      gap={1}
+      paddingBottom={1}
+      paddingLeft={2}
+      paddingRight={1}
+      paddingTop={1}
+      width="100%"
+    >
+      <text
+        fg="#e6edf3"
+        wrapMode="none"
+      >
+        abcdef0 (origin/main) Polish branch categories
+      </text>
+      <text
+        fg="#8ea4b5"
+        wrapMode="none"
+      >
+        <span>
+          Pierre Bot
+        </span>
+      </text>
+      <text
+        fg="#8ea4b5"
+        wrapMode="none"
+      >
+        <span
+          bg="#152838"
+          fg="#e6edf3"
+        >
+           enter / h 
+        </span>
+        <span>
+           set head  
+        </span>
+        <span
+          bg="#152838"
+          fg="#e6edf3"
+        >
+           b 
+        </span>
+        <span>
+           set base  
+        </span>
+        <span
+          bg="#152838"
+          fg="#e6edf3"
+        >
+           j / k 
+        </span>
+        <span>
+           move  
+        </span>
+        <span
+          bg="#152838"
+          fg="#e6edf3"
+        >
+           tab 
+        </span>
+        <span>
+           branch view
+        </span>
+      </text>
+    </box>
+  </box>
+</box>
+`;
+
 exports[`renders a sticky file header for the active viewport file 1`] = `
 <box
   backgroundColor="#10202d"

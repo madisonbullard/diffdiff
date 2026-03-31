@@ -141,6 +141,38 @@ test("shows a copy toast for five seconds after a successful copy", () => {
   expect(getAppText(tree)).not.toContain("Copied to clipboard");
 });
 
+test("starts commit browsing at the top of the commit list", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({
+          commits: [
+            {
+              sha: "1111111111111111",
+              shortSha: "1111111",
+              subject: "Newest commit",
+              author: "Top Author",
+            },
+            {
+              sha: "2222222222222222",
+              shortSha: "2222222",
+              subject: "Older commit",
+              author: "Bottom Author",
+            },
+          ],
+        }),
+      })}
+    />,
+  );
+
+  emitKey({ name: "l" });
+  emitKey({ name: "tab", sequence: "\t" });
+
+  expect(getAppText(tree)).toContain("Newest commit");
+  expect(getAppText(tree)).toContain("Top Author");
+  expect(getAppText(tree)).not.toContain("Bottom Author");
+});
+
 function createAppProps(overrides: Partial<ReturnType<typeof createAppPropsBase>> = {}) {
   return {
     ...createAppPropsBase(),
