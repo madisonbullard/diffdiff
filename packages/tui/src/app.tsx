@@ -45,6 +45,42 @@ interface KeyboardInput {
 
 const LIST_FILTER_KEYS = ["workingTree", "localBranch", "openPr", "remoteBranch"] as const;
 
+function haveSamePaths(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
+  if (left.size !== right.size) {
+    return false;
+  }
+
+  for (const path of left) {
+    if (!right.has(path)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function reconcileCollapsedPaths(
+  currentPaths: ReadonlySet<string>,
+  files: PreparedReviewSession["files"],
+): Set<string> {
+  const availablePaths = new Set(files.map((file) => file.path));
+  const nextPaths = new Set<string>();
+
+  for (const path of currentPaths) {
+    if (availablePaths.has(path)) {
+      nextPaths.add(path);
+    }
+  }
+
+  for (const file of files) {
+    if (file.status === "deleted") {
+      nextPaths.add(file.path);
+    }
+  }
+
+  return nextPaths;
+}
+
 function getBranchFilterLabel(key: keyof BranchListFilters): string {
   switch (key) {
     case "workingTree":
@@ -70,7 +106,9 @@ export function DiffdiffApp({
   const [startupOptions, setStartupOptions] = useState<StartupOptions>({ ...initialOptions });
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [reviewedPaths, setReviewedPaths] = useState<Set<string>>(new Set());
-  const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(new Set());
+  const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() =>
+    reconcileCollapsedPaths(new Set<string>(), initialSession.files),
+  );
   const [statusMessage, setStatusMessage] = useState<string>("Ready.");
   const [showHelp, setShowHelp] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
@@ -135,6 +173,13 @@ export function DiffdiffApp({
   useEffect(() => {
     fileCardRefs.current.length = session.files.length;
   }, [session.files.length]);
+
+  useEffect(() => {
+    setCollapsedPaths((currentPaths) => {
+      const nextPaths = reconcileCollapsedPaths(currentPaths, session.files);
+      return haveSamePaths(currentPaths, nextPaths) ? currentPaths : nextPaths;
+    });
+  }, [session.files]);
 
   const getFileTopOffsets = useCallback((): number[] => {
     const scrollBox = scrollRef.current;
