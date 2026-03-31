@@ -113,7 +113,7 @@ test("renders a commit view snapshot", () => {
   );
 
   expect(collectText(tree.toJSON())).toContain("2 commits in the current comparison");
-  expect(collectText(tree.toJSON())).toContain("Polish branch categories");
+  expect(collectText(tree.toJSON())).toContain("abcdef0 (origin/main) Polish branch categories");
   expect(collectText(tree.toJSON())).toContain("enter / h");
 });
 
@@ -433,12 +433,14 @@ function createComparisonCommits() {
   return [
     {
       author: "Madison Bullard",
+      decoration: "HEAD -> feature/tui, origin/feature/tui",
       sha: "1234567890abcdef",
       shortSha: "1234567",
       subject: "Revamp the list modal",
     },
     {
       author: "Pierre Bot",
+      decoration: "origin/main",
       sha: "abcdef0123456789",
       shortSha: "abcdef0",
       subject: "Polish branch categories",

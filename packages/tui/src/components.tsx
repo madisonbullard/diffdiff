@@ -16,6 +16,7 @@ import type {
   UnifiedDiffLine,
 } from "./types.ts";
 import {
+  formatCommitListEntry,
   formatAuthorList,
   formatChangeSummary,
   formatCommitDelta,
@@ -482,7 +483,7 @@ export function BranchModal({
       subtitle={
         activeView === "branch"
           ? "Browse working tree changes, branches, and open pull requests."
-          : "Inspect commits included in the active comparison."
+          : "Browse the comparison commit log and choose base/head commits."
       }
       theme={theme}
       maxWidth={108}
@@ -618,12 +619,10 @@ export function BranchModal({
         ) : selectedCommitItem != null ? (
           <>
             <text fg={theme.text} wrapMode="none">
-              {selectedCommitItem.commit.subject}
+              {formatCommitListEntry(selectedCommitItem.commit)}
             </text>
             <text fg={theme.textMuted} wrapMode="none">
               <span>{selectedCommitItem.commit.author}</span>
-              <span>{"  •  "}</span>
-              <span>{selectedCommitItem.commit.shortSha}</span>
             </text>
             <text fg={theme.textMuted} wrapMode="none">
               <KeyCap label="enter / h" theme={theme} />
@@ -813,6 +812,7 @@ function CommitListView({
         const backgroundColor = isSelected
           ? tintHex(theme.surface, theme.accent, 0.24)
           : tintHex(theme.surface, theme.accent, 0.14);
+        const textColor = isSelected ? theme.text : theme.textMuted;
 
         return (
           <box
@@ -826,16 +826,10 @@ function CommitListView({
             paddingRight={1}
             paddingTop={0}
             paddingBottom={0}
-            flexDirection="column"
-            gap={0}
+            flexDirection="row"
           >
-            <text fg={theme.text} wrapMode="none">
-              {item.commit.subject}
-            </text>
-            <text fg={theme.textMuted} wrapMode="none">
-              <span>{item.commit.author}</span>
-              <span>{"  •  "}</span>
-              <span fg={theme.accent}>{item.commit.shortSha}</span>
+            <text fg={textColor} wrapMode="none">
+              {formatCommitListEntry(item.commit)}
             </text>
           </box>
         );

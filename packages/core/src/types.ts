@@ -85,6 +85,7 @@ export interface BranchSummary extends ChangeSummary {
 export interface ComparisonCommit {
   sha: string;
   shortSha: string;
+  decoration?: string;
   subject: string;
   author: string;
 }

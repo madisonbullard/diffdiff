@@ -4,6 +4,7 @@ import {
   buildBranchListItems,
   DEFAULT_BRANCH_LIST_FILTERS,
   clampIndex,
+  formatCommitListEntry,
   formatAuthorList,
   formatChangeSummary,
   formatCommitDelta,
@@ -151,6 +152,15 @@ test("format helpers keep list metadata concise", () => {
     "Madison Bullard, Pierre Bot +1",
   );
   expect(formatCommitDelta(3, "origin/main")).toBe("3 commits vs origin/main");
+  expect(
+    formatCommitListEntry({
+      author: "Madison Bullard",
+      decoration: "HEAD -> feature/tui, origin/feature/tui",
+      sha: "1234567890abcdef",
+      shortSha: "1234567",
+      subject: "Revamp the list modal",
+    }),
+  ).toBe("1234567 (HEAD -> feature/tui, origin/feature/tui) Revamp the list modal");
   expect(formatChangeSummary({ filesChanged: 2, additions: 11, deletions: 5 })).toBe(
     "2 files  •  +11/-5",
   );

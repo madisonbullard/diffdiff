@@ -465,7 +465,12 @@ class GitRepository implements RepositoryHandle {
 
     const stdout = await runCommand(
       "git",
-      ["log", "--reverse", "--format=%H%x00%an%x00%s", `${comparison.base}..${comparison.head}`],
+      [
+        "log",
+        "--decorate=short",
+        "--format=%H%x00%h%x00%D%x00%s%x00%an",
+        `${comparison.base}..${comparison.head}`,
+      ],
       { cwd: this.rootPath },
     );
 
@@ -474,11 +479,18 @@ class GitRepository implements RepositoryHandle {
       .map((line) => line.trim())
       .filter((line) => line !== "")
       .map((line) => {
-        const [sha = "", author = "Unknown author", subject = ""] = line.split(FIELD_SEPARATOR);
+        const [
+          sha = "",
+          shortSha = sha.slice(0, 7),
+          decoration = "",
+          subject = "",
+          author = "Unknown author",
+        ] = line.split(FIELD_SEPARATOR);
 
         return {
           sha,
-          shortSha: sha.slice(0, 7),
+          shortSha,
+          decoration: decoration === "" ? undefined : decoration,
           subject,
           author,
         } satisfies ComparisonCommit;

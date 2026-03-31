@@ -101,6 +101,12 @@ export function buildCommitListItems(commits: readonly ComparisonCommit[]): Comm
   }));
 }
 
+export function formatCommitListEntry(commit: ComparisonCommit): string {
+  const decoration = commit.decoration == null ? "" : ` (${commit.decoration})`;
+  const subject = commit.subject === "" ? "" : ` ${commit.subject}`;
+  return `${commit.shortSha}${decoration}${subject}`;
+}
+
 export function findInitialBranchListSelection({
   comparison,
   currentBranch,
