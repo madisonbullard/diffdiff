@@ -240,7 +240,7 @@ test("format helpers keep list metadata concise", () => {
     }),
   ).toBe("1234567 (HEAD -> feature/tui, origin/feature/tui) Revamp the list modal");
   expect(formatChangeSummary({ filesChanged: 2, additions: 11, deletions: 5 })).toBe(
-    "2 files  •  +11/-5",
+    "2 files  \u2502  +11/-5",
   );
 });
 

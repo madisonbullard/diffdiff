@@ -87,7 +87,7 @@ test("tab switches to the file tree and tree navigation opens files", () => {
   expect(getDiffScrollbox(tree).props.focused).toBe(false);
 
   emitKey({ name: "j" });
-  expect(getSelectedFileLabel(tree)).toContain("selected src/utils.ts");
+  expect(getSelectedFileLabel(tree)).toContain("src/utils.ts");
 
   emitKey({ name: "right" });
   expect(getTreeScrollbox(tree).props.focused).toBe(false);
@@ -97,7 +97,7 @@ test("tab switches to the file tree and tree navigation opens files", () => {
 test("keeps background file selection stable when modal handlers rerender", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 
-  expect(getSelectedFileLabel(tree)).toContain("selected src/app.ts");
+  expect(getSelectedFileLabel(tree)).toContain("src/app.ts");
   expect(registeredKeyboardHandlers.size).toBe(1);
 
   emitKey({ name: "l" });
@@ -105,7 +105,7 @@ test("keeps background file selection stable when modal handlers rerender", () =
 
   emitKey({ name: "j" });
 
-  expect(getSelectedFileLabel(tree)).toContain("selected src/app.ts");
+  expect(getSelectedFileLabel(tree)).toContain("src/app.ts");
 });
 
 test("starts deleted file diffs collapsed", () => {

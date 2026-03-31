@@ -20,12 +20,17 @@ function StartupScreen({
 }) {
   return (
     <box width="100%" height="100%" backgroundColor={chromeBackground} paddingX={2} paddingY={1}>
-      <box width="100%" flexDirection="column" gap={1}>
+      <box width="100%" flexDirection="column" gap={0}>
         <text fg="#9cdcfe" wrapMode="none">
           diffdiff
         </text>
-        <text fg={text}>Loading review session...</text>
-        <text fg={textMuted}>{path}</text>
+        <text wrapMode="none">
+          <span fg={text}>Loading review session</span>
+          <span fg={textMuted}>{"..."}</span>
+        </text>
+        <text fg={textMuted} wrapMode="none">
+          {path}
+        </text>
       </box>
     </box>
   );

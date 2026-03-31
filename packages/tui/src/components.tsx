@@ -115,23 +115,26 @@ export function FileCard({
         {isReviewed ? (
           <>
             <span> </span>
-            <Tag label="REVIEWED" fg={theme.text} bg={theme.reviewedBg} />
+            <Tag label="REVIEWED" fg={theme.success} bg={theme.reviewedBg} />
           </>
         ) : null}
         {isCollapsed ? (
           <>
             <span> </span>
-            <Tag label="COLLAPSED" fg={theme.text} bg={theme.surface} />
+            <Tag label="COLLAPSED" fg={theme.textMuted} bg={theme.surface} />
           </>
         ) : null}
-        <span>{"  "}</span>
+        <span fg={theme.border}>{"  \u2502  "}</span>
         <span>{modeLabel}</span>
       </text>
 
       {file.previousPath != null ? (
         <text fg={theme.textMuted} wrapMode="none">
           <span fg={theme.warning}>rename</span>
-          <span>{` ${file.previousPath} -> ${file.path}`}</span>
+          <span> </span>
+          <span>{file.previousPath}</span>
+          <span fg={theme.warning}>{" \u2192 "}</span>
+          <span>{file.path}</span>
         </text>
       ) : null}
 
@@ -312,17 +315,19 @@ export function FileTreeSidebar({
             <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
               <text fg={labelColor} wrapMode="none">
                 <span fg={node.kind === "directory" ? theme.warning : accent}>{prefix}</span>
-                <span fg={isCurrentFile ? theme.text : labelColor}>{node.name}</span>
+                <span fg={isSelected ? theme.text : isCurrentFile ? theme.accent : labelColor}>
+                  {node.name}
+                </span>
               </text>
               <text fg={theme.textMuted} wrapMode="none">
                 {node.kind === "directory" ? (
                   <span>{`${node.fileCount}`}</span>
                 ) : (
                   <>
-                    {isReviewed ? <span fg={theme.success}>{"r "}</span> : null}
-                    {isFileCollapsed ? <span fg={theme.warning}>{"c "}</span> : null}
+                    {isReviewed ? <span fg={theme.success}>{"\u2713 "}</span> : null}
+                    {isFileCollapsed ? <span fg={theme.textMuted}>{"\u2212 "}</span> : null}
                     <span fg={theme.success}>{`+${node.additions}`}</span>
-                    <span> </span>
+                    <span fg={theme.border}> </span>
                     <span fg={theme.danger}>{`-${node.deletions}`}</span>
                   </>
                 )}
@@ -351,7 +356,7 @@ function FileCardTitleRow({
       </text>
       <text fg={theme.textMuted} wrapMode="none">
         <span fg={theme.success}>{`+${file.additions}`}</span>
-        <span>{" / "}</span>
+        <span fg={theme.border}>{" / "}</span>
         <span fg={theme.danger}>{`-${file.deletions}`}</span>
       </text>
     </box>
@@ -660,10 +665,12 @@ export function BranchModal({
         <box width="100%" flexDirection="row" justifyContent="space-between" gap={2}>
           <text fg={theme.textMuted} wrapMode="none">
             <span fg={theme.warning}>base</span>
-            <span>{` ${base}`}</span>
-            <span>{"  •  "}</span>
+            <span fg={theme.textMuted}>{" \u2190 "}</span>
+            <span fg={theme.text}>{base}</span>
+            <span fg={theme.border}>{"  \u2502  "}</span>
             <span fg={theme.accent}>head</span>
-            <span>{` ${head}`}</span>
+            <span fg={theme.textMuted}>{" \u2192 "}</span>
+            <span fg={theme.text}>{head}</span>
           </text>
           <box flexDirection="row" gap={1}>
             <text wrapMode="none">
@@ -676,12 +683,15 @@ export function BranchModal({
         </box>
         {activeView === "branch" ? (
           <text fg={theme.textMuted} wrapMode="none">
-            <span>{`${localBranchCount} local`}</span>
-            <span>{"  •  "}</span>
-            <span>{`${openPrCount} open PR`}</span>
-            <span>{"  •  "}</span>
-            <span>{`${remoteBranchCount} remote`}</span>
-            <span>{"  •  filters "}</span>
+            <span>{`${localBranchCount}`}</span>
+            <span>{" local"}</span>
+            <span fg={theme.border}>{"  \u2502  "}</span>
+            <span>{`${openPrCount}`}</span>
+            <span>{" open PR"}</span>
+            <span fg={theme.border}>{"  \u2502  "}</span>
+            <span>{`${remoteBranchCount}`}</span>
+            <span>{" remote"}</span>
+            <span fg={theme.border}>{"  \u2502  "}</span>
             <CategoryPill label="working tree" isEnabled={filters.workingTree} theme={theme} />
             <span> </span>
             <CategoryPill label="local" isEnabled={filters.localBranch} theme={theme} />
@@ -750,6 +760,7 @@ export function BranchModal({
               <span>{" set base  "}</span>
               <KeyCap label="h" theme={theme} />
               <span>{" set head  "}</span>
+              <span fg={theme.border}>{"\u2502  "}</span>
               <KeyCap label="w" theme={theme} />
               <span>{" working tree  "}</span>
               <KeyCap label="o" theme={theme} />
@@ -771,6 +782,7 @@ export function BranchModal({
               <span>{" set head  "}</span>
               <KeyCap label="b" theme={theme} />
               <span>{" set base  "}</span>
+              <span fg={theme.border}>{"\u2502  "}</span>
               <KeyCap label="j / k" theme={theme} />
               <span>{" move  "}</span>
               <KeyCap label="tab" theme={theme} />
@@ -816,7 +828,7 @@ export function ListFilterModal({
         </text>
       }
     >
-      <box width="100%" flexDirection="column" gap={1}>
+      <box width="100%" flexDirection="column" gap={0}>
         {entries.map(([key, label], index) => {
           const isSelected = index === selectedIndex;
           const isEnabled = filters[key];
@@ -1114,10 +1126,10 @@ function renderBranchListItemSummary(item: BranchListItem): ReactNode {
   }
 
   if (item.kind === "open-pr") {
-    return `${formatAuthorList(summary.authors)}  •  ${formatCommitDelta(summary.commitCount, summary.comparedTo)}  •  +${summary.additions}/-${summary.deletions}`;
+    return `${formatAuthorList(summary.authors)}  \u2502  ${formatCommitDelta(summary.commitCount, summary.comparedTo)}  \u2502  +${summary.additions}/-${summary.deletions}`;
   }
 
-  return `${formatAuthorList(summary.authors)}  •  ${formatCommitDelta(summary.commitCount, summary.comparedTo)}  •  ${formatChangeSummary(summary)}`;
+  return `${formatAuthorList(summary.authors)}  \u2502  ${formatCommitDelta(summary.commitCount, summary.comparedTo)}  \u2502  ${formatChangeSummary(summary)}`;
 }
 
 function getBranchListItemTitle(item: BranchListItem): string {
@@ -1163,7 +1175,7 @@ function getBranchListItemMeta(item: BranchListItem, base: string, head: string)
     details.push("selected as head");
   }
 
-  return details.join("  •  ");
+  return details.join("  \u2502  ");
 }
 
 function getBranchListAccent(item: BranchListItem, theme: UiTheme): string {
@@ -1198,44 +1210,83 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
         width="100%"
         border={["left"]}
         customBorderChars={SPLIT_BORDER}
-        borderColor={theme.borderActive}
+        borderColor={theme.accent}
         backgroundColor={theme.surface}
         paddingLeft={2}
         paddingRight={1}
         paddingTop={1}
         paddingBottom={1}
         flexDirection="column"
-        gap={1}
+        gap={0}
       >
+        <text fg={theme.accent} wrapMode="none">
+          Navigation
+        </text>
         <text fg={theme.textMuted} wrapMode="none">
-          <KeyCap label="tab" theme={theme} />
-          <span>{" switch tree/diff pane  "}</span>
           <KeyCap label="j / k" theme={theme} />
           <span>{" move in the active pane  "}</span>
           <KeyCap label="g / G" theme={theme} />
           <span>{" first / last item"}</span>
         </text>
         <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="tab" theme={theme} />
+          <span>{" switch tree/diff pane  "}</span>
+          <KeyCap label="left / right" theme={theme} />
+          <span>{" collapse, expand, or open from the tree"}</span>
+        </text>
+      </box>
+      <box
+        width="100%"
+        border={["left"]}
+        customBorderChars={SPLIT_BORDER}
+        borderColor={theme.success}
+        backgroundColor={theme.surface}
+        paddingLeft={2}
+        paddingRight={1}
+        paddingTop={1}
+        paddingBottom={1}
+        flexDirection="column"
+        gap={0}
+      >
+        <text fg={theme.success} wrapMode="none">
+          Review
+        </text>
+        <text fg={theme.textMuted} wrapMode="none">
           <KeyCap label="r" theme={theme} />
           <span>{" toggle reviewed  "}</span>
+          <KeyCap label="m" theme={theme} />
+          <span>{" review and advance  "}</span>
           <KeyCap label="c / enter" theme={theme} />
           <span>{" collapse file  "}</span>
           <KeyCap label="v" theme={theme} />
           <span>{" toggle diff view"}</span>
         </text>
+      </box>
+      <box
+        width="100%"
+        border={["left"]}
+        customBorderChars={SPLIT_BORDER}
+        borderColor={theme.warning}
+        backgroundColor={theme.surface}
+        paddingLeft={2}
+        paddingRight={1}
+        paddingTop={1}
+        paddingBottom={1}
+        flexDirection="column"
+        gap={0}
+      >
+        <text fg={theme.warning} wrapMode="none">
+          Comparison
+        </text>
         <text fg={theme.textMuted} wrapMode="none">
-          <KeyCap label="left / right" theme={theme} />
-          <span>{" collapse, expand, or open from the tree  "}</span>
-          <KeyCap label="m" theme={theme} />
-          <span>{" review and advance  "}</span>
           <KeyCap label="l" theme={theme} />
           <span>{" list modal  "}</span>
           <KeyCap label="b / h" theme={theme} />
-          <span>{" set base / head"}</span>
+          <span>{" set base / head  "}</span>
+          <KeyCap label="w" theme={theme} />
+          <span>{" working tree"}</span>
         </text>
         <text fg={theme.textMuted} wrapMode="none">
-          <KeyCap label="w" theme={theme} />
-          <span>{" working tree  "}</span>
           <KeyCap label="o" theme={theme} />
           <span>{" remote toggle  "}</span>
           <KeyCap label="f" theme={theme} />
@@ -1289,7 +1340,7 @@ function ModalFrame({
       >
         <box width="100%" flexDirection="column">
           <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
-            <text fg={theme.text} wrapMode="none">
+            <text fg={theme.accent} wrapMode="none">
               {title}
             </text>
             {headerRight}
@@ -1378,7 +1429,7 @@ function BranchBadges({
 
 function KeyCap({ label, theme }: { label: string; theme: UiTheme }) {
   return (
-    <span fg={theme.text} bg={theme.surfaceMuted}>
+    <span fg={theme.accent} bg={theme.surfaceMuted}>
       {` ${label} `}
     </span>
   );

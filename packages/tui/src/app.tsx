@@ -522,42 +522,51 @@ export function DiffdiffApp({
         width="100%"
         backgroundColor={theme.chromeBackground}
         paddingX={2}
-        paddingY={1}
+        paddingTop={1}
+        paddingBottom={1}
         flexDirection="column"
         gap={0}
       >
         <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
           <text fg={theme.text} wrapMode="none">
             <span fg={theme.accent}>diffdiff</span>
-            <span fg={theme.textMuted}>{"  •  "}</span>
+            <span fg={theme.border}>{" / "}</span>
             <span>{session.repository.name}</span>
-            <span> </span>
-            <span fg={theme.text} bg={theme.surfaceMuted}>{` ${currentBranchLabel} `}</span>
+            <span>{"  "}</span>
+            <span fg={theme.inverseText} bg={theme.accent}>{` ${currentBranchLabel} `}</span>
           </text>
           <text fg={theme.textMuted} wrapMode="none">
             <span fg={theme.text}>{session.files.length}</span>
-            <span>{" files  •  "}</span>
-            <span fg={theme.text}>{diffViewLabel}</span>
-            <span>{" diff  •  "}</span>
-            <span fg={theme.text}>{reviewedPaths.size}</span>
-            <span>{" reviewed"}</span>
+            <span>{" files"}</span>
+            <span fg={theme.border}>{"  \u2502  "}</span>
+            <span>{diffViewLabel}</span>
+            <span fg={theme.border}>{"  \u2502  "}</span>
+            <span fg={reviewedPaths.size > 0 ? theme.success : theme.textMuted}>
+              {reviewedPaths.size}
+            </span>
+            <span>{` / ${session.files.length} reviewed`}</span>
           </text>
         </box>
-        <text fg={theme.textMuted} wrapMode="none">
-          <span fg={theme.inverseText} bg={theme.accent}>{` ${comparisonModeLabel} `}</span>
-          <span>{"  "}</span>
-          <span fg={theme.warning}>base</span>
-          <span>{` ${session.comparison.base}`}</span>
-          <span>{"  •  "}</span>
-          <span fg={theme.accent}>head</span>
-          <span>{` ${session.comparison.head}`}</span>
-        </text>
-        <text fg={theme.textMuted} wrapMode="none">
-          {session.repository.rootPath}
-        </text>
+        <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
+          <text fg={theme.textMuted} wrapMode="none">
+            <span fg={theme.inverseText} bg={theme.border}>{` ${comparisonModeLabel} `}</span>
+            <span>{"  "}</span>
+            <span fg={theme.warning}>base</span>
+            <span fg={theme.textMuted}>{" \u2190 "}</span>
+            <span fg={theme.text}>{session.comparison.base}</span>
+            <span fg={theme.border}>{"  \u2502  "}</span>
+            <span fg={theme.accent}>head</span>
+            <span fg={theme.textMuted}>{" \u2192 "}</span>
+            <span fg={theme.text}>{session.comparison.head}</span>
+          </text>
+          <text fg={theme.textMuted} wrapMode="none">
+            {session.repository.rootPath}
+          </text>
+        </box>
         {session.warnings[0] != null ? (
           <text fg={theme.warning} wrapMode="none">
-            warning: {session.warnings[0].message}
+            <span>{"warning "}</span>
+            <span>{session.warnings[0].message}</span>
           </text>
         ) : null}
       </box>
@@ -577,7 +586,7 @@ export function DiffdiffApp({
             width="100%"
             border={["left"]}
             borderColor={activePane === "tree" ? theme.borderActive : theme.border}
-            backgroundColor={theme.surfaceMuted}
+            backgroundColor={activePane === "tree" ? theme.surfaceMuted : theme.surface}
             paddingLeft={2}
             paddingRight={1}
             paddingTop={1}
@@ -586,8 +595,8 @@ export function DiffdiffApp({
             gap={0}
           >
             <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
-              <text fg={theme.text} wrapMode="none">
-                File tree
+              <text fg={activePane === "tree" ? theme.accent : theme.textMuted} wrapMode="none">
+                Files
               </text>
               <text fg={theme.textMuted} wrapMode="none">
                 {`${session.files.length}`}
@@ -598,7 +607,11 @@ export function DiffdiffApp({
                 fg={activePane === "tree" ? theme.inverseText : theme.textMuted}
                 bg={activePane === "tree" ? theme.accent : theme.surface}
               >{` ${activePane === "tree" ? "tree" : "diff"} `}</span>
-              <span>{"  tab pane  enter open"}</span>
+              <span>{"  "}</span>
+              <span fg={theme.accent} bg={theme.surfaceMuted}>
+                {" tab "}
+              </span>
+              <span>{" pane"}</span>
             </text>
           </box>
 
@@ -673,7 +686,7 @@ export function DiffdiffApp({
                   paddingTop={1}
                   paddingBottom={1}
                 >
-                  <text fg={theme.text}>No changed files found for this comparison.</text>
+                  <text fg={theme.textMuted}>No changed files found for this comparison.</text>
                 </box>
               ) : null}
 
@@ -709,81 +722,83 @@ export function DiffdiffApp({
         width="100%"
         backgroundColor={theme.chromeBackground}
         paddingX={2}
-        paddingY={1}
+        paddingTop={1}
+        paddingBottom={1}
         flexDirection="column"
         gap={0}
       >
-        <text fg={isReloading ? theme.accent : theme.textMuted} wrapMode="none">
-          {selectedFile != null ? `selected ${selectedFile.path}` : "No file selected."}
-          <span>{"  •  "}</span>
-          <span fg={isReloading ? theme.accent : theme.text}>
-            {isReloading ? "Loading comparison..." : statusMessage}
-          </span>
-        </text>
+        <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
+          <text fg={theme.textMuted} wrapMode="none">
+            {selectedFile != null ? (
+              <>
+                <span fg={theme.text}>{selectedFile.path}</span>
+              </>
+            ) : (
+              <span>No file selected</span>
+            )}
+          </text>
+          <text fg={isReloading ? theme.accent : theme.textMuted} wrapMode="none">
+            {isReloading ? <span fg={theme.accent}>Loading...</span> : <span>{statusMessage}</span>}
+          </text>
+        </box>
         <text fg={theme.textMuted} wrapMode="none">
-          <span fg={theme.text} bg={theme.surfaceMuted}>
-            {" "}
-            tab{" "}
+          <span fg={theme.accent} bg={theme.surfaceMuted}>
+            {" j/k "}
           </span>
-          <span>{" pane  "}</span>
-          <span fg={theme.text} bg={theme.surfaceMuted}>
-            {" "}
-            q{" "}
+          <span>{" move "}</span>
+          <span fg={theme.accent} bg={theme.surfaceMuted}>
+            {" \u2190/\u2192 "}
           </span>
-          <span>{" quit  "}</span>
-          <span fg={theme.text} bg={theme.surfaceMuted}>
-            {" "}
-            j/k{" "}
+          <span>{" tree "}</span>
+          <span fg={theme.accent} bg={theme.surfaceMuted}>
+            {" tab "}
           </span>
-          <span>{" move  "}</span>
-          <span fg={theme.text} bg={theme.surfaceMuted}>
-            {" "}
-            left/right{" "}
+          <span>{" pane"}</span>
+          <span fg={theme.border}>{"  \u2502  "}</span>
+          <span fg={theme.accent} bg={theme.surfaceMuted}>
+            {" r "}
           </span>
-          <span>{" tree  "}</span>
-          <span fg={theme.text} bg={theme.surfaceMuted}>
-            {" "}
-            r{" "}
+          <span>{" review "}</span>
+          <span fg={theme.accent} bg={theme.surfaceMuted}>
+            {" m "}
           </span>
-          <span>{" reviewed  "}</span>
-          <span fg={theme.text} bg={theme.surfaceMuted}>
-            {" "}
-            c{" "}
+          <span>{" review+next "}</span>
+          <span fg={theme.accent} bg={theme.surfaceMuted}>
+            {" c "}
           </span>
-          <span>{" collapse  "}</span>
-          <span fg={theme.text} bg={theme.surfaceMuted}>
-            {" "}
-            v{" "}
+          <span>{" collapse "}</span>
+          <span fg={theme.accent} bg={theme.surfaceMuted}>
+            {" v "}
           </span>
-          <span>{" view  "}</span>
-          <span fg={theme.text} bg={theme.surfaceMuted}>
-            {" "}
-            m{" "}
+          <span>{" view"}</span>
+          <span fg={theme.border}>{"  \u2502  "}</span>
+          <span fg={theme.accent} bg={theme.surfaceMuted}>
+            {" l "}
           </span>
-          <span>{" review+next  "}</span>
-          <span fg={theme.text} bg={theme.surfaceMuted}>
-            {" "}
-            l{" "}
+          <span>{" list "}</span>
+          <span fg={theme.accent} bg={theme.surfaceMuted}>
+            {" ? "}
           </span>
-          <span>{" list  "}</span>
-          <span fg={theme.text} bg={theme.surfaceMuted}>
-            {" "}
-            ?{" "}
+          <span>{" help "}</span>
+          <span fg={theme.accent} bg={theme.surfaceMuted}>
+            {" q "}
           </span>
-          <span>{" help"}</span>
+          <span>{" quit"}</span>
         </text>
       </box>
 
       {toastMessage != null ? (
         <box position="absolute" right={2} bottom={4} marginBottom={1} zIndex={40}>
           <box
-            backgroundColor={theme.modalBg}
+            backgroundColor={theme.surfaceMuted}
             border={["left"]}
             borderColor={theme.success}
-            padding={1}
+            paddingX={2}
+            paddingY={1}
           >
-            <text fg={theme.text} wrapMode="none">
-              {toastMessage}
+            <text fg={theme.success} wrapMode="none">
+              {"\u2713 "}
+              <span fg={theme.text}>{toastMessage}</span>
             </text>
           </box>
         </box>

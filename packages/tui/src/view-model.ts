@@ -171,7 +171,7 @@ export function formatCommitDelta(count: number, comparedTo: string): string {
 
 export function formatChangeSummary(summary: ChangeSummary): string {
   const fileLabel = summary.filesChanged === 1 ? "file" : "files";
-  return `${summary.filesChanged} ${fileLabel}  •  +${summary.additions}/-${summary.deletions}`;
+  return `${summary.filesChanged} ${fileLabel}  \u2502  +${summary.additions}/-${summary.deletions}`;
 }
 
 export function clampIndex(index: number, size: number): number {

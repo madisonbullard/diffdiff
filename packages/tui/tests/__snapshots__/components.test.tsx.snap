@@ -31,7 +31,7 @@ exports[`renders a branch modal snapshot 1`] = `
         width="100%"
       >
         <text
-          fg="#e6edf3"
+          fg="#9cdcfe"
           wrapMode="none"
         >
           List
@@ -42,7 +42,7 @@ exports[`renders a branch modal snapshot 1`] = `
         >
           <span
             bg="#152838"
-            fg="#e6edf3"
+            fg="#9cdcfe"
           >
              tab 
           </span>
@@ -51,7 +51,7 @@ exports[`renders a branch modal snapshot 1`] = `
           </span>
           <span
             bg="#152838"
-            fg="#e6edf3"
+            fg="#9cdcfe"
           >
              f 
           </span>
@@ -60,7 +60,7 @@ exports[`renders a branch modal snapshot 1`] = `
           </span>
           <span
             bg="#152838"
-            fg="#e6edf3"
+            fg="#9cdcfe"
           >
              esc 
           </span>
@@ -122,19 +122,35 @@ exports[`renders a branch modal snapshot 1`] = `
           >
             base
           </span>
-          <span>
-             origin/main
+          <span
+            fg="#8ea4b5"
+          >
+             ← 
           </span>
-          <span>
-              •  
+          <span
+            fg="#e6edf3"
+          >
+            origin/main
+          </span>
+          <span
+            fg="#29475c"
+          >
+              │  
           </span>
           <span
             fg="#9cdcfe"
           >
             head
           </span>
-          <span>
-             feature/tui
+          <span
+            fg="#8ea4b5"
+          >
+             → 
+          </span>
+          <span
+            fg="#e6edf3"
+          >
+            feature/tui
           </span>
         </text>
         <box
@@ -168,22 +184,37 @@ exports[`renders a branch modal snapshot 1`] = `
         wrapMode="none"
       >
         <span>
-          2 local
+          2
         </span>
         <span>
-            •  
+           local
+        </span>
+        <span
+          fg="#29475c"
+        >
+            │  
         </span>
         <span>
-          1 open PR
+          1
         </span>
         <span>
-            •  
+           open PR
+        </span>
+        <span
+          fg="#29475c"
+        >
+            │  
         </span>
         <span>
-          1 remote
+          1
         </span>
         <span>
-            •  filters 
+           remote
+        </span>
+        <span
+          fg="#29475c"
+        >
+            │  
         </span>
         <span
           bg="#9cdcfe"
@@ -273,7 +304,7 @@ exports[`renders a branch modal snapshot 1`] = `
           fg="#8ea4b5"
           wrapMode="none"
         >
-          4 files  •  +18/-6
+          4 files  │  +18/-6
         </text>
       </box>
       <box
@@ -346,7 +377,7 @@ exports[`renders a branch modal snapshot 1`] = `
           fg="#8ea4b5"
           wrapMode="none"
         >
-          Madison Bullard, Pierre Bot  •  3 commits vs origin/main  •  4 files  •  +18/-6
+          Madison Bullard, Pierre Bot  │  3 commits vs origin/main  │  4 files  │  +18/-6
         </text>
       </box>
       <box
@@ -410,7 +441,7 @@ exports[`renders a branch modal snapshot 1`] = `
           fg="#8ea4b5"
           wrapMode="none"
         >
-          Madison Bullard  •  0 commits vs origin/main  •  0 files  •  +0/-0
+          Madison Bullard  │  0 commits vs origin/main  │  0 files  │  +0/-0
         </text>
       </box>
       <box
@@ -470,7 +501,7 @@ exports[`renders a branch modal snapshot 1`] = `
           fg="#8ea4b5"
           wrapMode="none"
         >
-          Madison Bullard, Pierre Bot  •  3 commits vs origin/main  •  +18/-6
+          Madison Bullard, Pierre Bot  │  3 commits vs origin/main  │  +18/-6
         </text>
       </box>
     </box>
@@ -515,7 +546,7 @@ exports[`renders a branch modal snapshot 1`] = `
         fg="#8ea4b5"
         wrapMode="none"
       >
-        sha 1234567  •  diff vs origin/main  •  selected as head
+        sha 1234567  │  diff vs origin/main  │  selected as head
       </text>
       <text
         fg="#8ea4b5"
@@ -523,7 +554,7 @@ exports[`renders a branch modal snapshot 1`] = `
       >
         <span
           bg="#152838"
-          fg="#e6edf3"
+          fg="#9cdcfe"
         >
            enter 
         </span>
@@ -532,7 +563,7 @@ exports[`renders a branch modal snapshot 1`] = `
         </span>
         <span
           bg="#152838"
-          fg="#e6edf3"
+          fg="#9cdcfe"
         >
            b 
         </span>
@@ -541,7 +572,7 @@ exports[`renders a branch modal snapshot 1`] = `
         </span>
         <span
           bg="#152838"
-          fg="#e6edf3"
+          fg="#9cdcfe"
         >
            h 
         </span>
@@ -549,8 +580,13 @@ exports[`renders a branch modal snapshot 1`] = `
            set head  
         </span>
         <span
+          fg="#29475c"
+        >
+          │  
+        </span>
+        <span
           bg="#152838"
-          fg="#e6edf3"
+          fg="#9cdcfe"
         >
            w 
         </span>
@@ -559,7 +595,7 @@ exports[`renders a branch modal snapshot 1`] = `
         </span>
         <span
           bg="#152838"
-          fg="#e6edf3"
+          fg="#9cdcfe"
         >
            o 
         </span>
@@ -568,7 +604,7 @@ exports[`renders a branch modal snapshot 1`] = `
         </span>
         <span
           bg="#152838"
-          fg="#e6edf3"
+          fg="#9cdcfe"
         >
            f 
         </span>
@@ -612,7 +648,7 @@ exports[`renders a commit view snapshot 1`] = `
         width="100%"
       >
         <text
-          fg="#e6edf3"
+          fg="#9cdcfe"
           wrapMode="none"
         >
           List
@@ -623,7 +659,7 @@ exports[`renders a commit view snapshot 1`] = `
         >
           <span
             bg="#152838"
-            fg="#e6edf3"
+            fg="#9cdcfe"
           >
              tab 
           </span>
@@ -632,7 +668,7 @@ exports[`renders a commit view snapshot 1`] = `
           </span>
           <span
             bg="#152838"
-            fg="#e6edf3"
+            fg="#9cdcfe"
           >
              esc 
           </span>
@@ -694,19 +730,35 @@ exports[`renders a commit view snapshot 1`] = `
           >
             base
           </span>
-          <span>
-             origin/main
+          <span
+            fg="#8ea4b5"
+          >
+             ← 
           </span>
-          <span>
-              •  
+          <span
+            fg="#e6edf3"
+          >
+            origin/main
+          </span>
+          <span
+            fg="#29475c"
+          >
+              │  
           </span>
           <span
             fg="#9cdcfe"
           >
             head
           </span>
-          <span>
-             feature/tui
+          <span
+            fg="#8ea4b5"
+          >
+             → 
+          </span>
+          <span
+            fg="#e6edf3"
+          >
+            feature/tui
           </span>
         </text>
         <box
@@ -873,7 +925,7 @@ exports[`renders a commit view snapshot 1`] = `
       >
         <span
           bg="#152838"
-          fg="#e6edf3"
+          fg="#9cdcfe"
         >
            enter / h 
         </span>
@@ -882,7 +934,7 @@ exports[`renders a commit view snapshot 1`] = `
         </span>
         <span
           bg="#152838"
-          fg="#e6edf3"
+          fg="#9cdcfe"
         >
            b 
         </span>
@@ -890,8 +942,13 @@ exports[`renders a commit view snapshot 1`] = `
            set base  
         </span>
         <span
+          fg="#29475c"
+        >
+          │  
+        </span>
+        <span
           bg="#152838"
-          fg="#e6edf3"
+          fg="#9cdcfe"
         >
            j / k 
         </span>
@@ -900,7 +957,7 @@ exports[`renders a commit view snapshot 1`] = `
         </span>
         <span
           bg="#152838"
-          fg="#e6edf3"
+          fg="#9cdcfe"
         >
            tab 
         </span>
@@ -970,7 +1027,9 @@ exports[`renders a sticky file header for the active viewport file 1`] = `
       >
         +3
       </span>
-      <span>
+      <span
+        fg="#29475c"
+      >
          / 
       </span>
       <span
@@ -1040,7 +1099,9 @@ exports[`renders an expanded file card snapshot 1`] = `
       >
         +3
       </span>
-      <span>
+      <span
+        fg="#29475c"
+      >
          / 
       </span>
       <span
@@ -1060,8 +1121,10 @@ exports[`renders an expanded file card snapshot 1`] = `
     >
        CHANGED 
     </span>
-    <span>
-        
+    <span
+      fg="#29475c"
+    >
+        │  
     </span>
     <span>
       typescript unified diff
