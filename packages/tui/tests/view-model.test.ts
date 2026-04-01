@@ -3,10 +3,12 @@ import { expect, test } from "vite-plus/test";
 import {
   buildFileTreeNodes,
   buildBranchListItems,
+  buildCommitListItems,
   DEFAULT_BRANCH_LIST_FILTERS,
   FILE_TREE_SIDEBAR_MAX_WIDTH,
   FILE_TREE_SIDEBAR_MIN_WIDTH,
   clampIndex,
+  filterCommitListItems,
   formatCommitListEntry,
   formatAuthorList,
   formatChangeSummary,
@@ -250,4 +252,44 @@ test("top intersecting file stays pinned until the next file reaches the viewpor
   expect(getTopIntersectingFileIndex([1, 12, 20], 12)).toBe(1);
   expect(getTopIntersectingFileIndex([1, 12, 20], 19)).toBe(1);
   expect(getTopIntersectingFileIndex([1, 12, 20], 999)).toBe(2);
+});
+
+test("filterCommitListItems returns all items for an empty query", () => {
+  const items = buildCommitListItems([
+    { sha: "aaa", shortSha: "aaa", subject: "Add feature", author: "a" },
+    { sha: "bbb", shortSha: "bbb", subject: "Fix bug", author: "b" },
+  ]);
+
+  expect(filterCommitListItems(items, "")).toHaveLength(2);
+});
+
+test("filterCommitListItems fuzzy matches commit subjects", () => {
+  const items = buildCommitListItems([
+    { sha: "aaa", shortSha: "aaa", subject: "Add feature flag", author: "a" },
+    { sha: "bbb", shortSha: "bbb", subject: "Fix critical bug", author: "b" },
+    { sha: "ccc", shortSha: "ccc", subject: "Refactor auth module", author: "c" },
+  ]);
+
+  const result = filterCommitListItems(items, "feat");
+  expect(result.map((r) => r.commit.shortSha)).toEqual(["aaa"]);
+});
+
+test("filterCommitListItems is case-insensitive", () => {
+  const items = buildCommitListItems([
+    { sha: "aaa", shortSha: "aaa", subject: "Add Feature Flag", author: "a" },
+  ]);
+
+  expect(filterCommitListItems(items, "FEAT")).toHaveLength(1);
+  expect(filterCommitListItems(items, "feat")).toHaveLength(1);
+});
+
+test("filterCommitListItems supports non-contiguous fuzzy matching", () => {
+  const items = buildCommitListItems([
+    { sha: "aaa", shortSha: "aaa", subject: "Add dark mode toggle", author: "a" },
+    { sha: "bbb", shortSha: "bbb", subject: "Fix button style", author: "b" },
+  ]);
+
+  // "dmt" matches "d-ark m-ode t-oggle"
+  const result = filterCommitListItems(items, "dmt");
+  expect(result.map((r) => r.commit.shortSha)).toEqual(["aaa"]);
 });

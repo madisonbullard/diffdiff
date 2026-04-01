@@ -110,6 +110,35 @@ export function buildCommitListItems(commits: readonly ComparisonCommit[]): Comm
   }));
 }
 
+export function filterCommitListItems(
+  items: readonly CommitListItem[],
+  query: string,
+): CommitListItem[] {
+  if (query === "") {
+    return [...items];
+  }
+
+  return items.filter((item) => fuzzyMatch(query, item.commit.subject));
+}
+
+/**
+ * Case-insensitive fuzzy match: every character of `query` must appear
+ * in `target` in order, but not necessarily contiguously.
+ */
+function fuzzyMatch(query: string, target: string): boolean {
+  const lowerQuery = query.toLowerCase();
+  const lowerTarget = target.toLowerCase();
+  let qi = 0;
+
+  for (let ti = 0; ti < lowerTarget.length && qi < lowerQuery.length; ti++) {
+    if (lowerTarget[ti] === lowerQuery[qi]) {
+      qi++;
+    }
+  }
+
+  return qi === lowerQuery.length;
+}
+
 export function formatCommitListEntry(commit: ComparisonCommit): string {
   const decoration = commit.decoration == null ? "" : ` (${commit.decoration})`;
   const subject = commit.subject === "" ? "" : ` ${commit.subject}`;

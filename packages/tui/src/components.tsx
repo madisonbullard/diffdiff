@@ -599,6 +599,8 @@ export function BranchModal({
   branchIndex,
   commitItems,
   commitIndex,
+  commitSearchQuery,
+  commitSearchActive,
   comparisonMode,
   filters,
   head,
@@ -613,6 +615,8 @@ export function BranchModal({
   branchIndex: number;
   commitItems: readonly CommitListItem[];
   commitIndex: number;
+  commitSearchQuery: string;
+  commitSearchActive: boolean;
   comparisonMode: "range" | "working-tree";
   filters: BranchListFilters;
   head: string;
@@ -732,7 +736,13 @@ export function BranchModal({
           theme={theme}
         />
       ) : (
-        <CommitListView commitItems={commitItems} selectedIndex={commitIndex} theme={theme} />
+        <CommitListView
+          commitItems={commitItems}
+          searchQuery={commitSearchQuery}
+          searchActive={commitSearchActive}
+          selectedIndex={commitIndex}
+          theme={theme}
+        />
       )}
 
       <box
@@ -794,6 +804,8 @@ export function BranchModal({
               <KeyCap label="b" theme={theme} />
               <span>{" set base  "}</span>
               <span fg={theme.border}>{"\u2502  "}</span>
+              <KeyCap label="/" theme={theme} />
+              <span>{" search  "}</span>
               <KeyCap label="j / k" theme={theme} />
               <span>{" move  "}</span>
               <KeyCap label="tab" theme={theme} />
@@ -945,17 +957,59 @@ function BranchListView({
   );
 }
 
+const COMMIT_LIST_MAX_VISIBLE = 7;
+
+function getCommitListWindow(
+  items: readonly CommitListItem[],
+  selectedIndex: number,
+): { item: CommitListItem; index: number }[] {
+  if (items.length <= COMMIT_LIST_MAX_VISIBLE) {
+    return items.map((item, index) => ({ item, index }));
+  }
+
+  let start = selectedIndex - Math.floor(COMMIT_LIST_MAX_VISIBLE / 2);
+  start = Math.max(0, Math.min(start, items.length - COMMIT_LIST_MAX_VISIBLE));
+  const end = start + COMMIT_LIST_MAX_VISIBLE;
+
+  return items.slice(start, end).map((item, i) => ({ item, index: start + i }));
+}
+
 function CommitListView({
   commitItems,
+  searchQuery,
+  searchActive,
   selectedIndex,
   theme,
 }: {
   commitItems: readonly CommitListItem[];
+  searchQuery: string;
+  searchActive: boolean;
   selectedIndex: number;
   theme: UiTheme;
 }) {
   return (
     <box width="100%" flexDirection="column" gap={0}>
+      <box
+        width="100%"
+        border={["left"]}
+        customBorderChars={SPLIT_BORDER}
+        borderColor={searchActive ? theme.borderActive : theme.border}
+        backgroundColor={searchActive ? theme.surfaceMuted : theme.surface}
+        paddingLeft={2}
+        paddingRight={1}
+        paddingTop={0}
+        paddingBottom={0}
+        flexDirection="row"
+        gap={1}
+      >
+        <text fg={theme.textMuted} wrapMode="none">
+          <span fg={searchActive ? theme.accent : theme.textMuted}>/</span>
+          <span fg={searchQuery !== "" ? theme.text : theme.textMuted}>
+            {searchQuery !== "" ? searchQuery : searchActive ? "" : "search commits..."}
+          </span>
+          {searchActive ? <span fg={theme.accent}>_</span> : null}
+        </text>
+      </box>
       {commitItems.length === 0 ? (
         <box
           width="100%"
@@ -968,21 +1022,32 @@ function CommitListView({
           paddingTop={1}
           paddingBottom={1}
         >
-          <text fg={theme.textMuted}>No commits to show for the current comparison.</text>
+          <text fg={theme.textMuted}>
+            {searchQuery !== ""
+              ? "No commits match the current search."
+              : "No commits to show for the current comparison."}
+          </text>
         </box>
       ) : null}
-      {commitItems.map((item, index) => {
-        const isSelected = index === selectedIndex;
-        const textColor = isSelected ? theme.text : theme.textMuted;
+      <box width="100%" flexDirection="column" gap={0}>
+        {getCommitListWindow(commitItems, selectedIndex).map(({ item, index }) => {
+          const isSelected = index === selectedIndex;
+          const textColor = isSelected ? theme.text : theme.textMuted;
 
-        return (
-          <ListRow key={item.key} accentColor={theme.accent} isSelected={isSelected} theme={theme}>
-            <text fg={textColor} wrapMode="none">
-              {formatCommitListEntry(item.commit)}
-            </text>
-          </ListRow>
-        );
-      })}
+          return (
+            <ListRow
+              key={item.key}
+              accentColor={theme.accent}
+              isSelected={isSelected}
+              theme={theme}
+            >
+              <text fg={textColor} wrapMode="none">
+                {formatCommitListEntry(item.commit)}
+              </text>
+            </ListRow>
+          );
+        })}
+      </box>
     </box>
   );
 }
@@ -1370,6 +1435,8 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
           <span>{" remote toggle  "}</span>
           <KeyCap label="f" theme={theme} />
           <span>{" list filters  "}</span>
+          <KeyCap label="/" theme={theme} />
+          <span>{" search commits  "}</span>
           <KeyCap label="q" theme={theme} />
           <span>{" quit"}</span>
         </text>

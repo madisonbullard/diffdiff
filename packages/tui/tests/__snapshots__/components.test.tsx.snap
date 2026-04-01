@@ -816,13 +816,13 @@ exports[`renders a commit view snapshot 1`] = `
       width="100%"
     >
       <box
-        backgroundColor="#243a4a"
+        backgroundColor="#10202d"
         border={
           [
             "left",
           ]
         }
-        borderColor="#9cdcfe"
+        borderColor="#29475c"
         customBorderChars={
           {
             "bottomLeft": "",
@@ -840,7 +840,6 @@ exports[`renders a commit view snapshot 1`] = `
         }
         flexDirection="row"
         gap={1}
-        justifyContent="space-between"
         paddingBottom={0}
         paddingLeft={2}
         paddingRight={1}
@@ -851,47 +850,101 @@ exports[`renders a commit view snapshot 1`] = `
           fg="#8ea4b5"
           wrapMode="none"
         >
-          1234567 (HEAD -&gt; feature/tui, origin/feature/tui) Revamp the list modal
+          <span
+            fg="#8ea4b5"
+          >
+            /
+          </span>
+          <span
+            fg="#8ea4b5"
+          >
+            search commits...
+          </span>
         </text>
       </box>
       <box
-        backgroundColor="#324d5f"
-        border={
-          [
-            "left",
-          ]
-        }
-        borderColor="#67b7e1"
-        customBorderChars={
-          {
-            "bottomLeft": "",
-            "bottomRight": "",
-            "bottomT": "",
-            "cross": "",
-            "horizontal": " ",
-            "leftT": "",
-            "rightT": "",
-            "topLeft": "",
-            "topRight": "",
-            "topT": "",
-            "vertical": "┃",
-          }
-        }
-        flexDirection="row"
-        gap={1}
-        justifyContent="space-between"
-        paddingBottom={0}
-        paddingLeft={2}
-        paddingRight={1}
-        paddingTop={0}
+        flexDirection="column"
+        gap={0}
         width="100%"
       >
-        <text
-          fg="#e6edf3"
-          wrapMode="none"
+        <box
+          backgroundColor="#243a4a"
+          border={
+            [
+              "left",
+            ]
+          }
+          borderColor="#9cdcfe"
+          customBorderChars={
+            {
+              "bottomLeft": "",
+              "bottomRight": "",
+              "bottomT": "",
+              "cross": "",
+              "horizontal": " ",
+              "leftT": "",
+              "rightT": "",
+              "topLeft": "",
+              "topRight": "",
+              "topT": "",
+              "vertical": "┃",
+            }
+          }
+          flexDirection="row"
+          gap={1}
+          justifyContent="space-between"
+          paddingBottom={0}
+          paddingLeft={2}
+          paddingRight={1}
+          paddingTop={0}
+          width="100%"
         >
-          abcdef0 (origin/main) Polish branch categories
-        </text>
+          <text
+            fg="#8ea4b5"
+            wrapMode="none"
+          >
+            1234567 (HEAD -&gt; feature/tui, origin/feature/tui) Revamp the list modal
+          </text>
+        </box>
+        <box
+          backgroundColor="#324d5f"
+          border={
+            [
+              "left",
+            ]
+          }
+          borderColor="#67b7e1"
+          customBorderChars={
+            {
+              "bottomLeft": "",
+              "bottomRight": "",
+              "bottomT": "",
+              "cross": "",
+              "horizontal": " ",
+              "leftT": "",
+              "rightT": "",
+              "topLeft": "",
+              "topRight": "",
+              "topT": "",
+              "vertical": "┃",
+            }
+          }
+          flexDirection="row"
+          gap={1}
+          justifyContent="space-between"
+          paddingBottom={0}
+          paddingLeft={2}
+          paddingRight={1}
+          paddingTop={0}
+          width="100%"
+        >
+          <text
+            fg="#e6edf3"
+            wrapMode="none"
+          >
+            abcdef0 (origin/main) Polish branch categories
+          </text>
+        </box>
       </box>
     </box>
     <box
@@ -965,6 +1018,15 @@ exports[`renders a commit view snapshot 1`] = `
           fg="#29475c"
         >
           │  
+        </span>
+        <span
+          bg="#152838"
+          fg="#9cdcfe"
+        >
+           / 
+        </span>
+        <span>
+           search  
         </span>
         <span
           bg="#152838"

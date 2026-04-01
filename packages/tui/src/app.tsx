@@ -25,6 +25,7 @@ import {
   buildCommitListItems,
   clampIndex,
   DEFAULT_BRANCH_LIST_FILTERS,
+  filterCommitListItems,
   findInitialBranchListSelection,
   getDiffPaneWidth,
   getDiffViewLabel,
@@ -158,6 +159,8 @@ export function DiffdiffApp({
   });
   const [branchListIndex, setBranchListIndex] = useState(0);
   const [commitListIndex, setCommitListIndex] = useState(0);
+  const [commitSearchQuery, setCommitSearchQuery] = useState("");
+  const [commitSearchActive, setCommitSearchActive] = useState(false);
   const [filterIndex, setFilterIndex] = useState(0);
   const [isReloading, setIsReloading] = useState(false);
   const [diffViewPreference, setDiffViewPreference] = useState<DiffViewPreference>("unified");
@@ -207,9 +210,14 @@ export function DiffdiffApp({
     ],
   );
   const commitItems = useMemo(() => buildCommitListItems(session.commits), [session.commits]);
+  const filteredCommitItems = useMemo(
+    () => filterCommitListItems(commitItems, commitSearchQuery),
+    [commitItems, commitSearchQuery],
+  );
   const stickyFile = session.files[activeFileIndex];
   const selectedBranchItem = branchItems[clampIndex(branchListIndex, branchItems.length)];
-  const selectedCommitItem = commitItems[clampIndex(commitListIndex, commitItems.length)];
+  const selectedCommitItem =
+    filteredCommitItems[clampIndex(commitListIndex, filteredCommitItems.length)];
   const selectedTreeNode = fileTreeNodes.find((node) => node.path === selectedTreePath);
   const openPrCount = session.branches.remote.filter((branch) => branch.pullRequest != null).length;
   const remoteBranchCount = session.branches.remote.length - openPrCount;
@@ -810,8 +818,10 @@ export function DiffdiffApp({
           base={session.comparison.base}
           branchItems={branchItems}
           branchIndex={branchListIndex}
-          commitItems={commitItems}
+          commitItems={filteredCommitItems}
           commitIndex={commitListIndex}
+          commitSearchQuery={commitSearchQuery}
+          commitSearchActive={commitSearchActive}
           comparisonMode={session.comparison.mode}
           filters={branchListFilters}
           head={session.comparison.head}
@@ -1088,6 +1098,8 @@ export function DiffdiffApp({
       }),
     );
     setCommitListIndex(0);
+    setCommitSearchQuery("");
+    setCommitSearchActive(false);
     setActiveListView("branch");
     setShowListFilterModal(false);
     setShowBranchModal(true);
@@ -1095,15 +1107,61 @@ export function DiffdiffApp({
   }
 
   function handleBranchModalKey(key: KeyboardInput): void {
+    // When commit search is active, intercept typing keys first.
+    if (commitSearchActive && activeListView === "commit") {
+      if (key.name === "escape") {
+        setCommitSearchActive(false);
+        return;
+      }
+
+      if (key.name === "return") {
+        setCommitSearchActive(false);
+        return;
+      }
+
+      if (key.name === "backspace") {
+        setCommitSearchQuery((q) => q.slice(0, -1));
+        setCommitListIndex(0);
+        return;
+      }
+
+      // Navigation still works while searching.
+      if (key.name === "up") {
+        setCommitListIndex((currentIndex) =>
+          clampIndex(currentIndex - 1, filteredCommitItems.length),
+        );
+        return;
+      }
+
+      if (key.name === "down") {
+        setCommitListIndex((currentIndex) =>
+          clampIndex(currentIndex + 1, filteredCommitItems.length),
+        );
+        return;
+      }
+
+      // Printable character: append to search query.
+      if (key.sequence != null && key.sequence.length === 1 && key.sequence >= " ") {
+        setCommitSearchQuery((q) => q + key.sequence);
+        setCommitListIndex(0);
+        return;
+      }
+
+      return;
+    }
+
     if (key.name === "escape" || key.name === "q" || key.name === "l") {
       setShowBranchModal(false);
       setShowListFilterModal(false);
+      setCommitSearchQuery("");
+      setCommitSearchActive(false);
       setStatusMessage("Closed list modal.");
       return;
     }
 
     if (key.name === "tab" || key.name === "left" || key.name === "right") {
       setActiveListView((currentView) => (currentView === "branch" ? "commit" : "branch"));
+      setCommitSearchActive(false);
       return;
     }
 
@@ -1118,7 +1176,9 @@ export function DiffdiffApp({
       if (activeListView === "branch") {
         setBranchListIndex((currentIndex) => clampIndex(currentIndex + 1, branchItems.length));
       } else {
-        setCommitListIndex((currentIndex) => clampIndex(currentIndex + 1, commitItems.length));
+        setCommitListIndex((currentIndex) =>
+          clampIndex(currentIndex + 1, filteredCommitItems.length),
+        );
       }
       return;
     }
@@ -1127,7 +1187,9 @@ export function DiffdiffApp({
       if (activeListView === "branch") {
         setBranchListIndex((currentIndex) => clampIndex(currentIndex - 1, branchItems.length));
       } else {
-        setCommitListIndex((currentIndex) => clampIndex(currentIndex - 1, commitItems.length));
+        setCommitListIndex((currentIndex) =>
+          clampIndex(currentIndex - 1, filteredCommitItems.length),
+        );
       }
       return;
     }
@@ -1145,7 +1207,7 @@ export function DiffdiffApp({
       if (activeListView === "branch") {
         setBranchListIndex(Math.max(branchItems.length - 1, 0));
       } else {
-        setCommitListIndex(Math.max(commitItems.length - 1, 0));
+        setCommitListIndex(Math.max(filteredCommitItems.length - 1, 0));
       }
       return;
     }
@@ -1176,6 +1238,12 @@ export function DiffdiffApp({
         void applyWorkingTreeSelection();
       }
 
+      return;
+    }
+
+    // Commit view: activate search with '/'.
+    if (key.sequence === "/") {
+      setCommitSearchActive(true);
       return;
     }
 
