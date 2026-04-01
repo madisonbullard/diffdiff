@@ -53,6 +53,7 @@ interface KeyboardInput {
 }
 
 const LIST_FILTER_KEYS = ["workingTree", "localBranch", "openPr", "remoteBranch"] as const;
+const LOADING_INDICATOR_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
 
 function haveSamePaths(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
   if (left.size !== right.size) {
@@ -150,6 +151,7 @@ export function DiffdiffApp({
   );
   const [statusMessage, setStatusMessage] = useState<string>("Ready.");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [baseBranchLoadingMessage, setBaseBranchLoadingMessage] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [showListFilterModal, setShowListFilterModal] = useState(false);
@@ -168,6 +170,7 @@ export function DiffdiffApp({
   const [activePane, setActivePane] = useState<AppPane>("diff");
   const [collapsedDirectories, setCollapsedDirectories] = useState<Set<string>>(new Set());
   const [selectedTreePath, setSelectedTreePath] = useState(initialSession.files[0]?.path ?? "");
+  const [loadingIndicatorFrame, setLoadingIndicatorFrame] = useState(0);
   const treeScrollRef = useRef<ScrollBoxRenderable | null>(null);
   const treeRowRefs = useRef<(BoxRenderable | null)[]>([]);
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
@@ -253,6 +256,23 @@ export function DiffdiffApp({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (baseBranchLoadingMessage == null) {
+      setLoadingIndicatorFrame(0);
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setLoadingIndicatorFrame(
+        (currentFrame) => (currentFrame + 1) % LOADING_INDICATOR_FRAMES.length,
+      );
+    }, 80);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [baseBranchLoadingMessage]);
 
   useEffect(() => {
     setCollapsedPaths((currentPaths) => {
@@ -746,7 +766,7 @@ export function DiffdiffApp({
             )}
           </text>
           <text fg={isReloading ? theme.accent : theme.textMuted} wrapMode="none">
-            {isReloading ? <span fg={theme.accent}>Loading...</span> : <span>{statusMessage}</span>}
+            <span>{statusMessage}</span>
           </text>
         </box>
         <text fg={theme.textMuted} wrapMode="none">
@@ -795,20 +815,44 @@ export function DiffdiffApp({
         </text>
       </box>
 
-      {toastMessage != null ? (
-        <box position="absolute" right={2} bottom={4} marginBottom={1} zIndex={40}>
-          <box
-            backgroundColor={theme.surfaceMuted}
-            border={["left"]}
-            borderColor={theme.success}
-            paddingX={2}
-            paddingY={1}
-          >
-            <text fg={theme.success} wrapMode="none">
-              {"\u2713 "}
-              <span fg={theme.text}>{toastMessage}</span>
-            </text>
-          </box>
+      {baseBranchLoadingMessage != null || toastMessage != null ? (
+        <box
+          position="absolute"
+          right={2}
+          bottom={4}
+          marginBottom={1}
+          zIndex={40}
+          flexDirection="column"
+          gap={1}
+        >
+          {baseBranchLoadingMessage != null ? (
+            <box
+              backgroundColor={theme.surfaceMuted}
+              border={["left"]}
+              borderColor={theme.accent}
+              paddingX={2}
+              paddingY={1}
+            >
+              <text fg={theme.accent} wrapMode="none">
+                {`${LOADING_INDICATOR_FRAMES[loadingIndicatorFrame]} `}
+                <span fg={theme.text}>{baseBranchLoadingMessage}</span>
+              </text>
+            </box>
+          ) : null}
+          {toastMessage != null ? (
+            <box
+              backgroundColor={theme.surfaceMuted}
+              border={["left"]}
+              borderColor={theme.success}
+              paddingX={2}
+              paddingY={1}
+            >
+              <text fg={theme.success} wrapMode="none">
+                {"\u2713 "}
+                <span fg={theme.text}>{toastMessage}</span>
+              </text>
+            </box>
+          ) : null}
         </box>
       ) : null}
 
@@ -1346,9 +1390,13 @@ export function DiffdiffApp({
       ...startupOptions,
       [target]: branch.name,
     } satisfies StartupOptions;
+    const shouldShowEventLogLoading = target === "base";
 
     setIsReloading(true);
     setStatusMessage(`Updating ${target} to ${branch.name}...`);
+    if (shouldShowEventLogLoading) {
+      setBaseBranchLoadingMessage(`Updating base to ${branch.name}...`);
+    }
 
     try {
       const nextSession = await loadSession(nextOptions);
@@ -1362,6 +1410,9 @@ export function DiffdiffApp({
       const message = error instanceof Error ? error.message : `Unable to update ${target}.`;
       setStatusMessage(message);
     } finally {
+      if (shouldShowEventLogLoading) {
+        setBaseBranchLoadingMessage(null);
+      }
       setIsReloading(false);
     }
   }

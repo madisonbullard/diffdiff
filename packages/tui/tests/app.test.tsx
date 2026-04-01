@@ -192,6 +192,54 @@ test("starts commit browsing at the top of the commit list", () => {
   expect(getAppText(tree)).not.toContain("Bottom Author");
 });
 
+test("shows an animated event log entry while loading a new base branch", async () => {
+  vi.useFakeTimers();
+  const nextSession = createPreparedSession({
+    comparison: {
+      base: "main",
+      head: "feature/tui",
+      range: "main...feature/tui",
+      mode: "range",
+      usesMergeBase: true,
+    },
+  });
+  const deferredSession = createDeferred<PreparedReviewSession>();
+  const loadSession = vi.fn(() => deferredSession.promise);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession(),
+        loadSession,
+      })}
+    />,
+  );
+
+  emitKey({ name: "l" });
+  emitKey({ name: "j" });
+  emitKey({ name: "b" });
+
+  expect(loadSession).toHaveBeenCalledWith({
+    base: "main",
+    head: "feature/tui",
+  });
+  expect(getAppText(tree)).toContain("Updating base to main...");
+  expect(getAppText(tree)).not.toContain("Loading...");
+  expect(getAppText(tree)).toMatch(/⠋\s+Updating base to main\.\.\./);
+
+  act(() => {
+    vi.advanceTimersByTime(80);
+  });
+
+  expect(getAppText(tree)).toMatch(/⠙\s+Updating base to main\.\.\./);
+
+  deferredSession.resolve(nextSession);
+  await act(async () => {
+    await deferredSession.promise;
+  });
+
+  expect(getAppText(tree)).not.toContain("Updating base to main...");
+});
+
 function createAppProps(overrides: Partial<ReturnType<typeof createAppPropsBase>> = {}) {
   return {
     ...createAppPropsBase(),
@@ -351,6 +399,17 @@ function createPreparedFile(overrides: Partial<PreparedReviewFile> = {}): Prepar
     ],
     ...overrides,
   };
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+
+  return { promise, resolve, reject };
 }
 
 function emitKey(key: KeyboardInput): void {
