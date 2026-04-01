@@ -6,6 +6,7 @@ packages:
 catalog:
   "@types/node": ^24
   clipboardy: 4.0.0
+  octokit: ^5.0.5
   typescript: ^5
   vite: npm:@voidzero-dev/vite-plus-core@latest
   vite-plus: latest

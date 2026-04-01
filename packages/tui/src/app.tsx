@@ -1,4 +1,10 @@
-import type { BranchInfo, StartupOptions } from "@diffdiff/core";
+import type {
+  BranchInfo,
+  GitHubReviewLineAnchor,
+  GitHubReviewSession,
+  GitHubReviewSubmissionEvent,
+  StartupOptions,
+} from "@diffdiff/core";
 import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -10,6 +16,14 @@ import {
   ListFilterModal,
   StickyFileHeader,
 } from "./components.tsx";
+import {
+  getReviewSubmissionEvent,
+  PullRequestBanner,
+  PullRequestCommentsModal,
+  ReviewComposerModal,
+  SubmitReviewModal,
+} from "./github-review.tsx";
+import { getReviewAnchors } from "./review-anchors.ts";
 import type { UiTheme } from "./theme.ts";
 import type {
   AppPane,
@@ -38,10 +52,20 @@ import {
 import { copySelection } from "./selection-copy.ts";
 
 interface DiffdiffAppProps {
+  addReviewThread?: (
+    reviewSession: GitHubReviewSession,
+    anchor: GitHubReviewLineAnchor,
+    body: string,
+  ) => Promise<void>;
   initialSession: PreparedReviewSession;
   initialOptions: StartupOptions;
   loadSession: (options: StartupOptions) => Promise<PreparedReviewSession>;
   onExit: () => void;
+  submitPendingReview?: (
+    reviewSession: GitHubReviewSession,
+    event: GitHubReviewSubmissionEvent,
+    body?: string,
+  ) => Promise<void>;
   syntaxStyle: SyntaxStyle;
   theme: UiTheme;
 }
@@ -54,6 +78,8 @@ interface KeyboardInput {
 
 const LIST_FILTER_KEYS = ["workingTree", "localBranch", "openPr", "remoteBranch"] as const;
 const LOADING_INDICATOR_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
+const TERMINAL_FOCUS_EVENT = "focus";
+const TERMINAL_BLUR_EVENT = "blur";
 
 function haveSamePaths(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
   if (left.size !== right.size) {
@@ -135,10 +161,12 @@ function getBranchFilterLabel(key: keyof BranchListFilters): string {
 }
 
 export function DiffdiffApp({
+  addReviewThread,
   initialSession,
   initialOptions,
   loadSession,
   onExit,
+  submitPendingReview,
   syntaxStyle,
   theme,
 }: DiffdiffAppProps) {
@@ -154,7 +182,11 @@ export function DiffdiffApp({
   const [baseBranchLoadingMessage, setBaseBranchLoadingMessage] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
+  const [showCommentComposer, setShowCommentComposer] = useState(false);
+  const [showCommentsModal, setShowCommentsModal] = useState(false);
   const [showListFilterModal, setShowListFilterModal] = useState(false);
+  const [showOutdatedReviewThreads, setShowOutdatedReviewThreads] = useState(false);
+  const [showSubmitReviewModal, setShowSubmitReviewModal] = useState(false);
   const [activeListView, setActiveListView] = useState<ListModalView>("branch");
   const [branchListFilters, setBranchListFilters] = useState<BranchListFilters>({
     ...DEFAULT_BRANCH_LIST_FILTERS,
@@ -165,7 +197,12 @@ export function DiffdiffApp({
   const [commitSearchActive, setCommitSearchActive] = useState(false);
   const [filterIndex, setFilterIndex] = useState(0);
   const [isReloading, setIsReloading] = useState(false);
+  const [isSubmittingReviewAction, setIsSubmittingReviewAction] = useState(false);
   const [diffViewPreference, setDiffViewPreference] = useState<DiffViewPreference>("unified");
+  const [reviewComposerBody, setReviewComposerBody] = useState("");
+  const [reviewSubmissionBody, setReviewSubmissionBody] = useState("");
+  const [reviewSubmissionEventIndex, setReviewSubmissionEventIndex] = useState(0);
+  const [selectedReviewAnchorIndex, setSelectedReviewAnchorIndex] = useState(0);
   const [activeFileIndex, setActiveFileIndex] = useState(0);
   const [activePane, setActivePane] = useState<AppPane>("diff");
   const [collapsedDirectories, setCollapsedDirectories] = useState<Set<string>>(new Set());
@@ -176,6 +213,7 @@ export function DiffdiffApp({
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
   const fileCardRefs = useRef<(BoxRenderable | null)[]>([]);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shouldRefreshOnFocusRef = useRef(false);
   const renderer = useRenderer();
   const terminalDimensions = useTerminalDimensions();
   const sidebarWidth = useMemo(
@@ -222,16 +260,43 @@ export function DiffdiffApp({
   const selectedCommitItem =
     filteredCommitItems[clampIndex(commitListIndex, filteredCommitItems.length)];
   const selectedTreeNode = fileTreeNodes.find((node) => node.path === selectedTreePath);
+  const selectedReviewAnchors = useMemo(
+    () => getReviewAnchors(session.files[selectedFileIndex], diffView),
+    [diffView, selectedFileIndex, session.files],
+  );
+  const selectedReviewAnchor =
+    selectedReviewAnchors[clampIndex(selectedReviewAnchorIndex, selectedReviewAnchors.length)];
   const openPrCount = session.branches.remote.filter((branch) => branch.pullRequest != null).length;
   const remoteBranchCount = session.branches.remote.length - openPrCount;
   const activeOverlay = showHelp
     ? "help"
-    : showListFilterModal
-      ? "list-filter"
-      : showBranchModal
-        ? "branch"
-        : null;
+    : showCommentComposer
+      ? "comment-composer"
+      : showCommentsModal
+        ? "comments"
+        : showSubmitReviewModal
+          ? "submit-review"
+          : showListFilterModal
+            ? "list-filter"
+            : showBranchModal
+              ? "branch"
+              : null;
   const keyboardHandlerRef = useRef<(key: KeyboardInput) => void>(() => undefined);
+
+  useEffect(() => {
+    if (session.github == null) {
+      setShowCommentComposer(false);
+      setShowCommentsModal(false);
+      setShowOutdatedReviewThreads(false);
+      setShowSubmitReviewModal(false);
+    }
+  }, [session.github]);
+
+  useEffect(() => {
+    setSelectedReviewAnchorIndex((currentIndex) =>
+      clampIndex(currentIndex, selectedReviewAnchors.length),
+    );
+  }, [selectedReviewAnchors.length]);
 
   useEffect(() => {
     setSelectedFileIndex((currentIndex) => clampIndex(currentIndex, session.files.length));
@@ -420,11 +485,80 @@ export function DiffdiffApp({
     syncActiveFileIndex();
   }, [collapsedPaths, diffView, session.files, syncActiveFileIndex, terminalDimensions.width]);
 
+  const refreshGitState = useCallback(async () => {
+    if (isReloading) {
+      return;
+    }
+
+    const selectedFilePath = session.files[selectedFileIndex]?.path;
+
+    setIsReloading(true);
+    setStatusMessage("Refreshing git state...");
+
+    try {
+      const nextSession = await loadSession(startupOptions);
+      const nextSelectedFileIndex =
+        selectedFilePath == null
+          ? -1
+          : nextSession.files.findIndex((file) => file.path === selectedFilePath);
+
+      setSession(nextSession);
+      if (nextSelectedFileIndex >= 0) {
+        setSelectedFileIndex(nextSelectedFileIndex);
+      }
+      setStatusMessage("Refreshed git state.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to refresh git state.";
+      setStatusMessage(message);
+    } finally {
+      setIsReloading(false);
+    }
+  }, [isReloading, loadSession, selectedFileIndex, session.files, startupOptions]);
+
+  useEffect(() => {
+    const handleBlur = () => {
+      shouldRefreshOnFocusRef.current = true;
+    };
+    const handleFocus = () => {
+      if (!shouldRefreshOnFocusRef.current) {
+        return;
+      }
+
+      shouldRefreshOnFocusRef.current = false;
+      void refreshGitState();
+    };
+
+    renderer.on(TERMINAL_BLUR_EVENT, handleBlur);
+    renderer.on(TERMINAL_FOCUS_EVENT, handleFocus);
+
+    return () => {
+      renderer.off(TERMINAL_BLUR_EVENT, handleBlur);
+      renderer.off(TERMINAL_FOCUS_EVENT, handleFocus);
+    };
+  }, [refreshGitState, renderer]);
+
   keyboardHandlerRef.current = (key) => {
     if (activeOverlay === "help") {
       if (key.name === "escape" || key.name === "q" || key.sequence === "?") {
         setShowHelp(false);
       }
+      return;
+    }
+
+    if (activeOverlay === "comment-composer") {
+      handleCommentComposerKey(key);
+      return;
+    }
+
+    if (activeOverlay === "comments") {
+      if (key.name === "escape" || key.name === "q" || key.name === "t") {
+        setShowCommentsModal(false);
+      }
+      return;
+    }
+
+    if (activeOverlay === "submit-review") {
+      handleSubmitReviewModalKey(key);
       return;
     }
 
@@ -460,6 +594,43 @@ export function DiffdiffApp({
 
     if (key.name === "v") {
       toggleDiffView();
+      return;
+    }
+
+    if (session.github != null && key.name === "t") {
+      setShowCommentsModal(true);
+      setStatusMessage("Opened PR comments.");
+      return;
+    }
+
+    if (session.github != null && key.name === "u") {
+      setShowOutdatedReviewThreads((currentValue) => {
+        const nextValue = !currentValue;
+        setStatusMessage(
+          nextValue ? "Showing outdated PR threads." : "Hiding outdated PR threads.",
+        );
+        return nextValue;
+      });
+      return;
+    }
+
+    if (session.github != null && activePane === "diff" && key.sequence === "[") {
+      moveSelectedReviewAnchor(-1);
+      return;
+    }
+
+    if (session.github != null && activePane === "diff" && key.sequence === "]") {
+      moveSelectedReviewAnchor(1);
+      return;
+    }
+
+    if (session.github != null && activePane === "diff" && key.name === "a") {
+      openCommentComposer();
+      return;
+    }
+
+    if (session.github != null && key.name === "s") {
+      openSubmitReviewModal();
       return;
     }
 
@@ -597,6 +768,13 @@ export function DiffdiffApp({
             <span>{session.warnings[0].message}</span>
           </text>
         ) : null}
+        {session.github != null ? (
+          <PullRequestBanner
+            pullRequest={session.github.pullRequest}
+            showOutdatedThreads={showOutdatedReviewThreads}
+            theme={theme}
+          />
+        ) : null}
       </box>
 
       <box width="100%" flexGrow={1} flexDirection="row">
@@ -731,9 +909,16 @@ export function DiffdiffApp({
                     isCollapsed={isCollapsed}
                     isReviewed={isReviewed}
                     isSelected={isSelected}
+                    reviewThreads={session.github?.pullRequest.reviewThreads.filter(
+                      (thread) => thread.path === file.path,
+                    )}
                     rootRef={(node) => {
                       fileCardRefs.current[index] = node;
                     }}
+                    selectedReviewAnchor={
+                      isSelected && session.github != null ? selectedReviewAnchor : undefined
+                    }
+                    showOutdatedReviewThreads={showOutdatedReviewThreads}
                     syntaxStyle={syntaxStyle}
                     terminalWidth={diffPaneWidth}
                     theme={theme}
@@ -760,6 +945,12 @@ export function DiffdiffApp({
             {selectedFile != null ? (
               <>
                 <span fg={theme.text}>{selectedFile.path}</span>
+                {selectedReviewAnchor != null && session.github != null ? (
+                  <>
+                    <span fg={theme.border}>{"  │  "}</span>
+                    <span>{`${selectedReviewAnchor.side.toLowerCase()} ${selectedReviewAnchor.line}`}</span>
+                  </>
+                ) : null}
               </>
             ) : (
               <span>No file selected</span>
@@ -804,6 +995,31 @@ export function DiffdiffApp({
             {" l "}
           </span>
           <span>{" list "}</span>
+          {session.github != null ? (
+            <>
+              <span fg={theme.border}>{"  │  "}</span>
+              <span fg={theme.accent} bg={theme.surfaceMuted}>
+                {" [/] "}
+              </span>
+              <span>{" line "}</span>
+              <span fg={theme.accent} bg={theme.surfaceMuted}>
+                {" a "}
+              </span>
+              <span>{" comment "}</span>
+              <span fg={theme.accent} bg={theme.surfaceMuted}>
+                {" s "}
+              </span>
+              <span>{" submit "}</span>
+              <span fg={theme.accent} bg={theme.surfaceMuted}>
+                {" t "}
+              </span>
+              <span>{" comments "}</span>
+              <span fg={theme.accent} bg={theme.surfaceMuted}>
+                {" u "}
+              </span>
+              <span>{" outdated "}</span>
+            </>
+          ) : null}
           <span fg={theme.accent} bg={theme.surfaceMuted}>
             {" ? "}
           </span>
@@ -880,6 +1096,32 @@ export function DiffdiffApp({
         <ListFilterModal filters={branchListFilters} selectedIndex={filterIndex} theme={theme} />
       ) : null}
 
+      {showCommentComposer && selectedReviewAnchor != null ? (
+        <ReviewComposerModal
+          anchor={selectedReviewAnchor}
+          body={reviewComposerBody}
+          isSubmitting={isSubmittingReviewAction}
+          theme={theme}
+        />
+      ) : null}
+
+      {showCommentsModal && session.github != null ? (
+        <PullRequestCommentsModal
+          pullRequest={session.github.pullRequest}
+          showOutdatedThreads={showOutdatedReviewThreads}
+          theme={theme}
+        />
+      ) : null}
+
+      {showSubmitReviewModal ? (
+        <SubmitReviewModal
+          body={reviewSubmissionBody}
+          eventIndex={reviewSubmissionEventIndex}
+          isSubmitting={isSubmittingReviewAction}
+          theme={theme}
+        />
+      ) : null}
+
       {showHelp ? <HelpModal theme={theme} /> : null}
     </box>
   );
@@ -890,6 +1132,26 @@ export function DiffdiffApp({
       if (nextIndex !== currentIndex) {
         setStatusMessage(`Selected ${session.files[nextIndex]?.path ?? "file"}.`);
       }
+      return nextIndex;
+    });
+  }
+
+  function moveSelectedReviewAnchor(delta: number): void {
+    if (selectedReviewAnchors.length === 0) {
+      setStatusMessage("No commentable lines are available in the selected file.");
+      return;
+    }
+
+    setSelectedReviewAnchorIndex((currentIndex) => {
+      const nextIndex = clampIndex(currentIndex + delta, selectedReviewAnchors.length);
+      const nextAnchor = selectedReviewAnchors[nextIndex];
+
+      if (nextAnchor != null) {
+        setStatusMessage(
+          `Selected ${nextAnchor.path}:${nextAnchor.line} (${nextAnchor.side.toLowerCase()}).`,
+        );
+      }
+
       return nextIndex;
     });
   }
@@ -1263,7 +1525,11 @@ export function DiffdiffApp({
       }
 
       if (key.name === "return" || key.name === "b") {
-        if (selectedBranchItem?.kind === "working-tree") {
+        if (key.name === "return" && selectedBranchItem?.kind === "open-pr") {
+          if (selectedBranchItem.branch != null) {
+            void applyPullRequestSelection(selectedBranchItem.branch);
+          }
+        } else if (selectedBranchItem?.kind === "working-tree") {
           void applyWorkingTreeSelection();
         } else if (selectedBranchItem?.branch != null) {
           void applyBranchSelection("base", selectedBranchItem.branch);
@@ -1370,6 +1636,167 @@ export function DiffdiffApp({
     }
   }
 
+  function handleCommentComposerKey(key: KeyboardInput): void {
+    if (key.name === "escape") {
+      setShowCommentComposer(false);
+      setReviewComposerBody("");
+      setStatusMessage("Closed comment composer.");
+      return;
+    }
+
+    if (key.name === "backspace") {
+      setReviewComposerBody((currentBody) => currentBody.slice(0, -1));
+      return;
+    }
+
+    if (key.name === "return" && key.shift) {
+      setReviewComposerBody((currentBody) => `${currentBody}\n`);
+      return;
+    }
+
+    if (key.name === "return") {
+      void submitCommentComposer();
+      return;
+    }
+
+    if (key.sequence != null && key.sequence.length === 1 && key.sequence >= " ") {
+      setReviewComposerBody((currentBody) => currentBody + key.sequence);
+    }
+  }
+
+  function handleSubmitReviewModalKey(key: KeyboardInput): void {
+    if (key.name === "escape") {
+      setShowSubmitReviewModal(false);
+      setReviewSubmissionBody("");
+      setStatusMessage("Closed submit review modal.");
+      return;
+    }
+
+    if (key.name === "j" || key.name === "down") {
+      setReviewSubmissionEventIndex((currentIndex) => clampIndex(currentIndex + 1, 3));
+      return;
+    }
+
+    if (key.name === "k" || key.name === "up") {
+      setReviewSubmissionEventIndex((currentIndex) => clampIndex(currentIndex - 1, 3));
+      return;
+    }
+
+    if (key.name === "backspace") {
+      setReviewSubmissionBody((currentBody) => currentBody.slice(0, -1));
+      return;
+    }
+
+    if (key.name === "return" && key.shift) {
+      setReviewSubmissionBody((currentBody) => `${currentBody}\n`);
+      return;
+    }
+
+    if (key.name === "return") {
+      void submitReviewFromModal();
+      return;
+    }
+
+    if (key.sequence != null && key.sequence.length === 1 && key.sequence >= " ") {
+      setReviewSubmissionBody((currentBody) => currentBody + key.sequence);
+    }
+  }
+
+  function openCommentComposer(): void {
+    if (session.github == null) {
+      setStatusMessage("Open a GitHub pull request first.");
+      return;
+    }
+
+    if (!session.github.auth.isAuthenticated) {
+      setStatusMessage("GitHub auth is required. Run `diffdiff auth login --token-stdin` first.");
+      return;
+    }
+
+    if (selectedReviewAnchor == null) {
+      setStatusMessage("No commentable line is selected.");
+      return;
+    }
+
+    setReviewComposerBody("");
+    setShowCommentComposer(true);
+    setStatusMessage(`Commenting on ${selectedReviewAnchor.path}:${selectedReviewAnchor.line}.`);
+  }
+
+  function openSubmitReviewModal(): void {
+    if (session.github == null) {
+      setStatusMessage("Open a GitHub pull request first.");
+      return;
+    }
+
+    if (!session.github.auth.isAuthenticated) {
+      setStatusMessage("GitHub auth is required. Run `diffdiff auth login --token-stdin` first.");
+      return;
+    }
+
+    setReviewSubmissionBody(session.github.pullRequest.pendingReview?.body ?? "");
+    setReviewSubmissionEventIndex(0);
+    setShowSubmitReviewModal(true);
+    setStatusMessage("Preparing review submission.");
+  }
+
+  async function submitCommentComposer(): Promise<void> {
+    if (
+      session.github == null ||
+      addReviewThread == null ||
+      selectedReviewAnchor == null ||
+      reviewComposerBody.trim() === ""
+    ) {
+      return;
+    }
+
+    setIsSubmittingReviewAction(true);
+    setStatusMessage(
+      `Adding a pending review thread on ${selectedReviewAnchor.path}:${selectedReviewAnchor.line}...`,
+    );
+
+    try {
+      await addReviewThread(session.github, selectedReviewAnchor, reviewComposerBody.trim());
+      const nextSession = await loadSession(startupOptions);
+      setSession(nextSession);
+      setShowCommentComposer(false);
+      setReviewComposerBody("");
+      setStatusMessage("Added the comment to the pending review.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to add the review comment.";
+      setStatusMessage(message);
+    } finally {
+      setIsSubmittingReviewAction(false);
+    }
+  }
+
+  async function submitReviewFromModal(): Promise<void> {
+    if (session.github == null || submitPendingReview == null) {
+      return;
+    }
+
+    setIsSubmittingReviewAction(true);
+    setStatusMessage("Submitting pending review...");
+
+    try {
+      await submitPendingReview(
+        session.github,
+        getReviewSubmissionEvent(reviewSubmissionEventIndex),
+        reviewSubmissionBody.trim() === "" ? undefined : reviewSubmissionBody.trim(),
+      );
+      const nextSession = await loadSession(startupOptions);
+      setSession(nextSession);
+      setShowSubmitReviewModal(false);
+      setReviewSubmissionBody("");
+      setStatusMessage("Submitted the pending review.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to submit the review.";
+      setStatusMessage(message);
+    } finally {
+      setIsSubmittingReviewAction(false);
+    }
+  }
+
   function toggleBranchFilter(key: keyof BranchListFilters): void {
     setBranchListFilters((currentFilters) => {
       const nextFilters = {
@@ -1403,7 +1830,10 @@ export function DiffdiffApp({
       setSession(nextSession);
       setStartupOptions(nextOptions);
       setShowBranchModal(false);
+      setShowCommentComposer(false);
+      setShowCommentsModal(false);
       setShowListFilterModal(false);
+      setShowSubmitReviewModal(false);
       setSelectedFileIndex(0);
       setStatusMessage(`Updated ${target} to ${branch.name}.`);
     } catch (error) {
@@ -1435,7 +1865,10 @@ export function DiffdiffApp({
       setSession(nextSession);
       setStartupOptions(nextOptions);
       setShowBranchModal(false);
+      setShowCommentComposer(false);
+      setShowCommentsModal(false);
       setShowListFilterModal(false);
+      setShowSubmitReviewModal(false);
       setSelectedFileIndex(0);
       setStatusMessage(`Updated ${target} to commit ${shortSha}.`);
     } catch (error) {
@@ -1458,12 +1891,57 @@ export function DiffdiffApp({
       setSession(nextSession);
       setStartupOptions(nextOptions);
       setShowBranchModal(false);
+      setShowCommentComposer(false);
+      setShowCommentsModal(false);
       setShowListFilterModal(false);
+      setShowSubmitReviewModal(false);
       setSelectedFileIndex(0);
       setStatusMessage("Showing working tree changes against HEAD.");
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unable to review working tree changes.";
+      setStatusMessage(message);
+    } finally {
+      setIsReloading(false);
+    }
+  }
+
+  async function applyPullRequestSelection(branch: BranchInfo): Promise<void> {
+    if (branch.pullRequest == null) {
+      return;
+    }
+
+    const baseRemoteBranch = session.branches.remote.find(
+      (candidateBranch) =>
+        candidateBranch.remoteName === branch.remoteName &&
+        candidateBranch.name.endsWith(`/${branch.pullRequest!.baseRefName}`),
+    );
+    const baseLocalBranch = session.branches.local.find(
+      (candidateBranch) => candidateBranch.name === branch.pullRequest?.baseRefName,
+    );
+    const nextOptions = {
+      ...startupOptions,
+      base: baseRemoteBranch?.name ?? baseLocalBranch?.name ?? branch.pullRequest.baseRefName,
+      head: branch.name,
+    } satisfies StartupOptions;
+
+    setIsReloading(true);
+    setStatusMessage(`Opening PR #${branch.pullRequest.number}...`);
+
+    try {
+      const nextSession = await loadSession(nextOptions);
+      setSession(nextSession);
+      setStartupOptions(nextOptions);
+      setShowBranchModal(false);
+      setShowCommentComposer(false);
+      setShowCommentsModal(false);
+      setShowListFilterModal(false);
+      setShowSubmitReviewModal(false);
+      setSelectedFileIndex(0);
+      setStatusMessage(`Opened PR #${branch.pullRequest.number}.`);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to open the selected pull request.";
       setStatusMessage(message);
     } finally {
       setIsReloading(false);

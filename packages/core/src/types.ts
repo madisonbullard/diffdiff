@@ -15,6 +15,7 @@ export interface ReviewSession {
   files: ChangedFile[];
   branches: BranchCollection;
   commits: ComparisonCommit[];
+  github?: GitHubReviewSession;
   workingTreeSummary: ChangeSummary;
   warnings: ReviewWarning[];
 }
@@ -98,6 +99,128 @@ export interface PullRequestInfo {
   baseRefName: string;
 }
 
+export interface GitHubActor {
+  login: string;
+  url?: string;
+}
+
+export type GitHubTokenSource = "env" | "keychain" | "config";
+
+export interface GitHubAuthSession {
+  host: string;
+  token: string;
+  tokenSource: GitHubTokenSource;
+  configFilePath?: string;
+}
+
+export interface GitHubAuthStatus {
+  host: string;
+  isAuthenticated: boolean;
+  tokenSource?: GitHubTokenSource;
+  configFilePath?: string;
+}
+
+export interface GitHubPendingReview {
+  id: number;
+  nodeId: string;
+  body?: string;
+  comments: GitHubPullRequestComment[];
+}
+
+export interface GitHubReviewLineAnchor {
+  path: string;
+  line: number;
+  side: "LEFT" | "RIGHT";
+  startLine?: number;
+  startSide?: "LEFT" | "RIGHT";
+}
+
+export type GitHubReviewSubmissionEvent = "COMMENT" | "APPROVE" | "REQUEST_CHANGES";
+
+export interface GitHubPullRequestComment {
+  id: number;
+  nodeId: string;
+  author: GitHubActor;
+  body: string;
+  commitId?: string;
+  createdAt: string;
+  diffHunk?: string;
+  isOutdated: boolean;
+  line?: number;
+  originalCommitId?: string;
+  originalLine?: number;
+  path: string;
+  replyToId?: number;
+  reviewId?: number;
+  side: "LEFT" | "RIGHT";
+  startLine?: number;
+  startSide?: "LEFT" | "RIGHT";
+  updatedAt: string;
+  url: string;
+}
+
+export interface GitHubPullRequestReviewThread {
+  id: string;
+  comments: GitHubPullRequestComment[];
+  isOutdated: boolean;
+  line?: number;
+  originalLine?: number;
+  path: string;
+  reviewId?: number;
+  side: "LEFT" | "RIGHT";
+  startLine?: number;
+  startSide?: "LEFT" | "RIGHT";
+}
+
+export interface GitHubPullRequestReviewGroup {
+  reviewId?: number;
+  reviewNodeId?: string;
+  author: GitHubActor;
+  body?: string;
+  comments: GitHubPullRequestComment[];
+  state: string;
+  submittedAt?: string;
+}
+
+export interface GitHubPullRequestChecksSummary {
+  state: "success" | "pending" | "failure" | "unknown";
+  total: number;
+  successful: number;
+  failed: number;
+  pending: number;
+}
+
+export interface GitHubPullRequestMergeState {
+  canMerge: boolean;
+  isDraft: boolean;
+  isMerged: boolean;
+  mergeable?: boolean;
+  mergeableState?: string;
+  mergedAt?: string;
+}
+
+export interface GitHubPullRequestDetail extends PullRequestInfo {
+  author: GitHubActor;
+  body?: string;
+  checks: GitHubPullRequestChecksSummary;
+  headSha: string;
+  isDraft: boolean;
+  isMerged: boolean;
+  merge: GitHubPullRequestMergeState;
+  nodeId: string;
+  pendingReview?: GitHubPendingReview;
+  reviewGroups: GitHubPullRequestReviewGroup[];
+  reviewThreads: GitHubPullRequestReviewThread[];
+  state: "open" | "closed";
+}
+
+export interface GitHubReviewSession {
+  auth: GitHubAuthStatus;
+  pullRequest: GitHubPullRequestDetail;
+  remoteName: string;
+  repository: ForgeRepository;
+}
+
 export interface GitRemote {
   name: string;
   fetchUrl: string;
@@ -114,6 +237,17 @@ export interface ForgeRepository {
 export interface ReviewWarning {
   code: string;
   message: string;
+}
+
+export interface GitHubApiClient {
+  auth?: GitHubAuthSession;
+  graphql<T = unknown>(query: string, parameters: Record<string, unknown>): Promise<T>;
+  paginate(route: string, parameters: Record<string, unknown>): Promise<unknown[]>;
+  request(route: string, parameters: Record<string, unknown>): Promise<unknown>;
+}
+
+export interface GitHubClientFactory {
+  create(repository: ForgeRepository): Promise<GitHubApiClient | null>;
 }
 
 export interface RepositoryProvider {

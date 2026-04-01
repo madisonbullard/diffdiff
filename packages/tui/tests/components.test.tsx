@@ -360,6 +360,51 @@ test("renders syntax-highlighted side-by-side rows", () => {
   expect(collectText(tree.toJSON())).toContain("side-by-side diff");
 });
 
+test("renders inline GitHub review threads under matching diff lines", () => {
+  const tree = render(
+    <FileCard
+      file={createPreparedFile()}
+      diffView="unified"
+      isCollapsed={false}
+      isReviewed={false}
+      isSelected={false}
+      reviewThreads={[
+        {
+          comments: [
+            {
+              author: { login: "octocat", url: "https://github.com/octocat" },
+              body: "Please rename this variable.",
+              createdAt: "2026-04-01T12:01:00Z",
+              id: 101,
+              isOutdated: false,
+              line: 1,
+              nodeId: "PRRC_101",
+              path: "src/app.ts",
+              reviewId: 700,
+              side: "RIGHT",
+              updatedAt: "2026-04-01T12:01:00Z",
+              url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r101",
+            },
+          ],
+          id: "101",
+          isOutdated: false,
+          line: 1,
+          path: "src/app.ts",
+          reviewId: 700,
+          side: "RIGHT",
+        },
+      ]}
+      showOutdatedReviewThreads={false}
+      syntaxStyle={syntaxStyle}
+      terminalWidth={160}
+      theme={theme}
+    />,
+  );
+
+  expect(collectText(tree.toJSON())).toContain("Please rename this variable.");
+  expect(collectText(tree.toJSON())).toContain("src/app.ts:1");
+});
+
 function createPreparedFile(overrides: Partial<PreparedReviewFile> = {}): PreparedReviewFile {
   return {
     additions: 3,

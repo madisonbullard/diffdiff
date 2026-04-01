@@ -18,6 +18,46 @@ const selectionCopyState = vi.hoisted(() => ({
   copySelection: vi.fn(),
 }));
 
+type MockRenderer = {
+  clearSelection: () => void;
+  getSelection: () => null;
+  on: (event: string, handler: (...args: unknown[]) => void) => MockRenderer;
+  off: (event: string, handler: (...args: unknown[]) => void) => MockRenderer;
+  emit: (event: string, ...args: unknown[]) => boolean;
+  removeAllListeners: () => MockRenderer;
+};
+
+const rendererState = vi.hoisted(() => {
+  const listeners = new Map<string, Set<(...args: unknown[]) => void>>();
+  const renderer: MockRenderer = {
+    clearSelection: () => undefined,
+    getSelection: () => null,
+    on(event, handler) {
+      const eventListeners = listeners.get(event) ?? new Set();
+      eventListeners.add(handler);
+      listeners.set(event, eventListeners);
+      return renderer;
+    },
+    off(event, handler) {
+      listeners.get(event)?.delete(handler);
+      return renderer;
+    },
+    emit(event, ...args) {
+      for (const handler of listeners.get(event) ?? []) {
+        handler(...args);
+      }
+
+      return (listeners.get(event)?.size ?? 0) > 0;
+    },
+    removeAllListeners() {
+      listeners.clear();
+      return renderer;
+    },
+  };
+
+  return { renderer };
+});
+
 const registeredKeyboardHandlers = new Set<(key: KeyboardInput) => void>();
 
 vi.mock("@opentui/react", () => {
@@ -26,14 +66,7 @@ vi.mock("@opentui/react", () => {
       registeredKeyboardHandlers.add(handler);
     },
     useRenderer() {
-      return {
-        clearSelection() {
-          return undefined;
-        },
-        getSelection() {
-          return null;
-        },
-      };
+      return rendererState.renderer;
     },
     useTerminalDimensions() {
       return { width: 160, height: 40 };
@@ -53,6 +86,7 @@ beforeEach(() => {
     globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
   ).IS_REACT_ACT_ENVIRONMENT = true;
   registeredKeyboardHandlers.clear();
+  rendererState.renderer.removeAllListeners();
   selectionCopyState.copySelection.mockReset().mockReturnValue(false);
   vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
@@ -240,6 +274,205 @@ test("shows an animated event log entry while loading a new base branch", async 
   expect(getAppText(tree)).not.toContain("Updating base to main...");
 });
 
+test("refreshes git state when the terminal regains focus", async () => {
+  const nextSession = createPreparedSession({
+    repository: {
+      kind: "git",
+      rootPath: "/tmp/diffdiff",
+      name: "diffdiff",
+      remotes: [{ name: "origin", fetchUrl: "git@github.com:diffdiff/diffdiff.git" }],
+      currentBranch: "feature/fresh",
+      defaultBranch: "main",
+    },
+    branches: {
+      local: [
+        {
+          kind: "local",
+          name: "feature/fresh",
+          ref: "refs/heads/feature/fresh",
+          sha: "1234abc",
+          isCurrent: true,
+          isDefault: false,
+        },
+        {
+          kind: "local",
+          name: "main",
+          ref: "refs/heads/main",
+          sha: "7654321",
+          isCurrent: false,
+          isDefault: true,
+        },
+      ],
+      remote: [
+        {
+          kind: "remote",
+          name: "origin/feature/fresh",
+          ref: "refs/remotes/origin/feature/fresh",
+          sha: "fedcba9",
+          remoteName: "origin",
+          isCurrent: false,
+          isDefault: false,
+        },
+        {
+          kind: "remote",
+          name: "origin/main",
+          ref: "refs/remotes/origin/main",
+          sha: "fedcba0",
+          remoteName: "origin",
+          isCurrent: false,
+          isDefault: true,
+        },
+      ],
+    },
+  });
+  const loadSession = vi.fn(async () => nextSession);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        loadSession,
+      })}
+    />,
+  );
+
+  await act(async () => {
+    rendererState.renderer.emit("blur");
+    rendererState.renderer.emit("focus");
+  });
+
+  expect(loadSession).toHaveBeenCalledWith({
+    base: "origin/main",
+    head: "feature/tui",
+  });
+  expect(getAppText(tree)).toContain("feature/fresh");
+
+  emitKey({ name: "l" });
+
+  expect(getAppText(tree)).toContain("feature/fresh");
+});
+
+test("opens PR review mode from the list modal", () => {
+  const loadSession = vi.fn(async () =>
+    createPreparedSession({ github: createGitHubReviewSession() }),
+  );
+  render(
+    <DiffdiffApp
+      {...createAppProps({
+        loadSession,
+      })}
+    />,
+  );
+
+  emitKey({ name: "l" });
+  emitKey({ name: "j" });
+  emitKey({ name: "j" });
+  emitKey({ name: "return" });
+
+  expect(loadSession).toHaveBeenCalledWith({
+    base: "origin/main",
+    head: "origin/feature/tui",
+  });
+});
+
+test("shows PR review context and can toggle outdated threads", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+      })}
+    />,
+  );
+
+  expect(getAppText(tree)).toContain("PR #42");
+  expect(getAppText(tree)).toContain("Build TUI reviewer");
+  expect(getAppText(tree)).toContain("Please rename this variable.");
+  expect(getAppText(tree)).not.toContain("This thread is outdated.");
+
+  emitKey({ name: "u" });
+
+  expect(getAppText(tree)).toContain("This thread is outdated.");
+});
+
+test("opens the PR comments modal from review mode", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+      })}
+    />,
+  );
+
+  expect(getAppText(tree)).not.toContain("Looks ready to merge.");
+
+  emitKey({ name: "t" });
+
+  expect(getAppText(tree)).toContain("Comments");
+  expect(getAppText(tree)).toContain("Looks ready to merge.");
+});
+
+test("opens the comment composer and submits a pending review thread", async () => {
+  const addReviewThread = vi.fn(async () => undefined);
+  const nextSession = createPreparedSession({ github: createGitHubReviewSession() });
+  const loadSession = vi.fn(async () => nextSession);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        addReviewThread,
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        loadSession,
+      })}
+    />,
+  );
+
+  emitKey({ name: "a" });
+
+  expect(getAppText(tree)).toContain("Add Comment");
+  expect(getAppText(tree)).toContain("const count = 0");
+
+  emitText("Looks good");
+  await emitAsyncKey({ name: "return" });
+
+  expect(addReviewThread).toHaveBeenCalledWith(
+    expect.objectContaining({ pullRequest: expect.objectContaining({ number: 42 }) }),
+    expect.objectContaining({ line: 1, path: "src/app.ts", side: "LEFT" }),
+    "Looks good",
+  );
+  expect(loadSession).toHaveBeenLastCalledWith({
+    base: "origin/main",
+    head: "feature/tui",
+  });
+});
+
+test("opens the submit review modal and submits the pending review", async () => {
+  const submitPendingReview = vi.fn(async () => undefined);
+  const loadSession = vi.fn(async () =>
+    createPreparedSession({ github: createGitHubReviewSession() }),
+  );
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        loadSession,
+        submitPendingReview,
+      })}
+    />,
+  );
+
+  emitKey({ name: "s" });
+
+  expect(getAppText(tree)).toContain("Submit Review");
+  expect(getAppText(tree)).toContain("Comment");
+
+  emitKey({ name: "j" });
+  emitText("Ship it");
+  await emitAsyncKey({ name: "return" });
+
+  expect(submitPendingReview).toHaveBeenCalledWith(
+    expect.objectContaining({ pullRequest: expect.objectContaining({ number: 42 }) }),
+    "APPROVE",
+    "Ship it",
+  );
+});
+
 function createAppProps(overrides: Partial<ReturnType<typeof createAppPropsBase>> = {}) {
   return {
     ...createAppPropsBase(),
@@ -256,10 +489,12 @@ function createAppPropsBase() {
   const initialSession = createPreparedSession();
 
   return {
+    addReviewThread: vi.fn(async () => undefined),
     initialOptions,
     initialSession,
     loadSession: vi.fn(async () => initialSession),
     onExit: vi.fn(),
+    submitPendingReview: vi.fn(async () => undefined),
     syntaxStyle,
     theme,
   };
@@ -351,6 +586,148 @@ function createPreparedSession(
   };
 }
 
+function createGitHubReviewSession(): PreparedReviewSession["github"] {
+  return {
+    auth: {
+      host: "github.com",
+      isAuthenticated: true,
+      tokenSource: "config",
+    },
+    pullRequest: {
+      author: {
+        login: "madison",
+        url: "https://github.com/madison",
+      },
+      baseRefName: "main",
+      body: "Adds PR review mode.",
+      checks: {
+        failed: 0,
+        pending: 0,
+        state: "success",
+        successful: 1,
+        total: 1,
+      },
+      headRefName: "feature/tui",
+      headSha: "headsha",
+      isDraft: false,
+      isMerged: false,
+      merge: {
+        canMerge: true,
+        isDraft: false,
+        isMerged: false,
+        mergeable: true,
+        mergeableState: "clean",
+      },
+      nodeId: "PR_node_42",
+      number: 42,
+      pendingReview: {
+        body: "",
+        comments: [],
+        id: 9010,
+        nodeId: "PRR_pending_9010",
+      },
+      reviewGroups: [
+        {
+          author: {
+            login: "octocat",
+            url: "https://github.com/octocat",
+          },
+          body: "Looks ready to merge.",
+          comments: [
+            {
+              author: {
+                login: "octocat",
+                url: "https://github.com/octocat",
+              },
+              body: "Please rename this variable.",
+              createdAt: "2026-04-01T12:01:00Z",
+              id: 101,
+              isOutdated: false,
+              line: 1,
+              nodeId: "PRRC_101",
+              path: "src/app.ts",
+              reviewId: 700,
+              side: "RIGHT",
+              updatedAt: "2026-04-01T12:01:00Z",
+              url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r101",
+            },
+          ],
+          reviewId: 700,
+          reviewNodeId: "PRR_700",
+          state: "APPROVED",
+          submittedAt: "2026-04-01T12:00:00Z",
+        },
+      ],
+      reviewThreads: [
+        {
+          comments: [
+            {
+              author: {
+                login: "octocat",
+                url: "https://github.com/octocat",
+              },
+              body: "Please rename this variable.",
+              createdAt: "2026-04-01T12:01:00Z",
+              id: 101,
+              isOutdated: false,
+              line: 1,
+              nodeId: "PRRC_101",
+              path: "src/app.ts",
+              reviewId: 700,
+              side: "RIGHT",
+              updatedAt: "2026-04-01T12:01:00Z",
+              url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r101",
+            },
+          ],
+          id: "101",
+          isOutdated: false,
+          line: 1,
+          path: "src/app.ts",
+          reviewId: 700,
+          side: "RIGHT",
+        },
+        {
+          comments: [
+            {
+              author: {
+                login: "review-bot",
+                url: "https://github.com/review-bot",
+              },
+              body: "This thread is outdated.",
+              createdAt: "2026-04-01T12:03:00Z",
+              id: 102,
+              isOutdated: true,
+              nodeId: "PRRC_102",
+              originalLine: 1,
+              path: "src/app.ts",
+              reviewId: 701,
+              side: "RIGHT",
+              updatedAt: "2026-04-01T12:03:00Z",
+              url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r102",
+            },
+          ],
+          id: "102",
+          isOutdated: true,
+          originalLine: 1,
+          path: "src/app.ts",
+          reviewId: 701,
+          side: "RIGHT",
+        },
+      ],
+      state: "open",
+      title: "Build TUI reviewer",
+      url: "https://github.com/diffdiff/diffdiff/pull/42",
+    },
+    remoteName: "origin",
+    repository: {
+      forge: "github",
+      host: "github.com",
+      owner: "diffdiff",
+      repo: "diffdiff",
+    },
+  };
+}
+
 function createPreparedFile(overrides: Partial<PreparedReviewFile> = {}): PreparedReviewFile {
   return {
     additions: 3,
@@ -418,6 +795,20 @@ function emitKey(key: KeyboardInput): void {
       handler(key);
     }
   });
+}
+
+async function emitAsyncKey(key: KeyboardInput): Promise<void> {
+  await act(async () => {
+    for (const handler of Array.from(registeredKeyboardHandlers)) {
+      handler(key);
+    }
+  });
+}
+
+function emitText(value: string): void {
+  for (const character of value) {
+    emitKey({ name: character, sequence: character });
+  }
 }
 
 function getTreeScrollbox(tree: ReactTestRenderer) {

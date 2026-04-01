@@ -8,6 +8,14 @@ export {
   splitPatchIntoFiles,
 } from "./git.ts";
 export { GitHubMetadataProvider, parseGitHubRemote, prioritizeRemoteBranches } from "./github.ts";
+export {
+  clearGitHubToken,
+  getGitHubAuthConfigPaths,
+  GitHubPullRequestService,
+  OctokitGitHubClientFactory,
+  resolveGitHubAuth,
+  storeGitHubToken,
+} from "./github.ts";
 export { formatHelpText, parseStartupOptions } from "./startup-options.ts";
 export type {
   BranchCollection,
@@ -24,6 +32,22 @@ export type {
   ForgeMetadataProvider,
   ForgeRepository,
   GitRemote,
+  GitHubActor,
+  GitHubApiClient,
+  GitHubAuthSession,
+  GitHubAuthStatus,
+  GitHubClientFactory,
+  GitHubPendingReview,
+  GitHubPullRequestChecksSummary,
+  GitHubPullRequestComment,
+  GitHubPullRequestDetail,
+  GitHubPullRequestMergeState,
+  GitHubPullRequestReviewGroup,
+  GitHubPullRequestReviewThread,
+  GitHubReviewLineAnchor,
+  GitHubReviewSession,
+  GitHubReviewSubmissionEvent,
+  GitHubTokenSource,
   ParsedStartupOptions,
   PullRequestInfo,
   RepositoryHandle,

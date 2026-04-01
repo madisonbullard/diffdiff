@@ -50,6 +50,7 @@ export function parseStartupOptions(
 export function formatHelpText(): string {
   return [
     "diffdiff [tui]",
+    "diffdiff auth login --token-stdin",
     "",
     "A git-backed terminal code review tool.",
     "Defaults to reviewing staged, unstaged, and untracked changes against HEAD.",
@@ -65,5 +66,6 @@ export function formatHelpText(): string {
     "  DIFFDIFF_REPO",
     "  DIFFDIFF_BASE",
     "  DIFFDIFF_HEAD",
+    "  DIFFDIFF_GITHUB_TOKEN",
   ].join("\n");
 }

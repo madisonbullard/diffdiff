@@ -1,4 +1,3 @@
-import { runCommand } from "./command.ts";
 import type {
   BranchInfo,
   ForgeBranchMetadataRequest,
@@ -6,18 +5,22 @@ import type {
   ForgeMetadataProvider,
   ForgeRepository,
   GitRemote,
+  PullRequestInfo,
 } from "./types.ts";
-
-interface GitHubPullRequest {
-  number: number;
-  title: string;
-  url: string;
-  headRefName: string;
-  baseRefName: string;
-}
+import { clearGitHubToken, resolveGitHubAuth, storeGitHubToken } from "./github/auth.ts";
+import { OctokitGitHubClientFactory } from "./github/client.ts";
+import { getGitHubAuthConfigPaths } from "./github/config.ts";
+import { GitHubPullRequestService } from "./github/pull-requests.ts";
 
 export class GitHubMetadataProvider implements ForgeMetadataProvider {
   readonly kind = "github";
+
+  constructor(
+    private readonly pullRequestService: Pick<
+      GitHubPullRequestService,
+      "listOpenPullRequests"
+    > = new GitHubPullRequestService(),
+  ) {}
 
   supports(remote: GitRemote): boolean {
     return remote.forge?.forge === this.kind;
@@ -28,7 +31,7 @@ export class GitHubMetadataProvider implements ForgeMetadataProvider {
       return { branches: input.branches, warnings: [] };
     }
 
-    const pullRequests = await this.loadOpenPullRequests(input.repositoryRoot, input.remote.forge);
+    const pullRequests = await this.loadOpenPullRequests(input.remote.forge);
     if (pullRequests == null) {
       return {
         branches: input.branches,
@@ -54,32 +57,8 @@ export class GitHubMetadataProvider implements ForgeMetadataProvider {
     return { branches, warnings: [] };
   }
 
-  private async loadOpenPullRequests(
-    repositoryRoot: string,
-    repo: ForgeRepository,
-  ): Promise<GitHubPullRequest[] | null> {
-    try {
-      const stdout = await runCommand(
-        "gh",
-        [
-          "pr",
-          "list",
-          "--repo",
-          `${repo.owner}/${repo.repo}`,
-          "--state",
-          "open",
-          "--limit",
-          "200",
-          "--json",
-          "number,title,url,headRefName,baseRefName",
-        ],
-        { cwd: repositoryRoot },
-      );
-
-      return JSON.parse(stdout) as GitHubPullRequest[];
-    } catch {
-      return null;
-    }
+  private async loadOpenPullRequests(repo: ForgeRepository): Promise<PullRequestInfo[] | null> {
+    return this.pullRequestService.listOpenPullRequests(repo);
   }
 }
 
@@ -124,3 +103,12 @@ export function prioritizeRemoteBranches(branches: BranchInfo[]): BranchInfo[] {
     return left.name.localeCompare(right.name);
   });
 }
+
+export {
+  clearGitHubToken,
+  getGitHubAuthConfigPaths,
+  GitHubPullRequestService,
+  OctokitGitHubClientFactory,
+  resolveGitHubAuth,
+  storeGitHubToken,
+};

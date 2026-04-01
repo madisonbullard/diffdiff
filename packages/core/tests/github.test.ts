@@ -1,0 +1,443 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
+import { GitHubMetadataProvider } from "../src/github.ts";
+import { resolveGitHubAuth, storeGitHubToken } from "../src/github/auth.ts";
+import { getGitHubAuthConfigPaths } from "../src/github/config.ts";
+import { GitHubPullRequestService } from "../src/github/pull-requests.ts";
+import type { GitHubApiClient, GitHubClientFactory, ReviewSession } from "../src/types.ts";
+
+const temporaryDirectories: string[] = [];
+
+afterEach(async () => {
+  await Promise.all(
+    temporaryDirectories.splice(0).map((directory) =>
+      rm(directory, {
+        force: true,
+        recursive: true,
+      }),
+    ),
+  );
+});
+
+describe("GitHub auth", () => {
+  test("stores and resolves a fallback config token", async () => {
+    const homePath = await mkdtemp(join(tmpdir(), "diffdiff-github-auth-"));
+    temporaryDirectories.push(homePath);
+
+    const storedAuth = await storeGitHubToken("config-token", {
+      env: {},
+      homePath,
+      platform: "linux",
+    });
+    const resolvedAuth = await resolveGitHubAuth({
+      env: {},
+      homePath,
+      platform: "linux",
+    });
+
+    expect(storedAuth.tokenSource).toBe("config");
+    expect(resolvedAuth).toMatchObject({
+      host: "github.com",
+      token: "config-token",
+      tokenSource: "config",
+    });
+    expect(resolvedAuth?.configFilePath).toBe(
+      getGitHubAuthConfigPaths({}, "linux", homePath).primaryFilePath,
+    );
+  });
+
+  test("prefers an environment token over config storage", async () => {
+    const homePath = await mkdtemp(join(tmpdir(), "diffdiff-github-auth-"));
+    temporaryDirectories.push(homePath);
+
+    await storeGitHubToken("config-token", {
+      env: {},
+      homePath,
+      platform: "linux",
+    });
+
+    const resolvedAuth = await resolveGitHubAuth({
+      env: { DIFFDIFF_GITHUB_TOKEN: "env-token" },
+      homePath,
+      platform: "linux",
+    });
+
+    expect(resolvedAuth).toMatchObject({
+      token: "env-token",
+      tokenSource: "env",
+    });
+  });
+});
+
+describe("GitHubMetadataProvider", () => {
+  test("enriches remote branches with Octokit-backed pull requests", async () => {
+    const provider = new GitHubMetadataProvider({
+      listOpenPullRequests: vi.fn(async () => [
+        {
+          baseRefName: "main",
+          headRefName: "feature/ui",
+          number: 42,
+          title: "UI polish",
+          url: "https://github.com/diffdiff/diffdiff/pull/42",
+        },
+      ]),
+    });
+
+    const result = await provider.enrichBranches({
+      branches: [
+        {
+          isCurrent: false,
+          isDefault: false,
+          kind: "remote",
+          name: "origin/feature/ui",
+          ref: "refs/remotes/origin/feature/ui",
+          remoteName: "origin",
+          sha: "abc123",
+        },
+      ],
+      remote: {
+        fetchUrl: "git@github.com:diffdiff/diffdiff.git",
+        forge: {
+          forge: "github",
+          host: "github.com",
+          owner: "diffdiff",
+          repo: "diffdiff",
+        },
+        name: "origin",
+      },
+      repositoryRoot: "/tmp/repo",
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.branches[0]?.pullRequest).toMatchObject({
+      number: 42,
+      title: "UI polish",
+    });
+  });
+});
+
+describe("GitHubPullRequestService", () => {
+  test("attaches active pull request review data to a review session", async () => {
+    const clientFactory: GitHubClientFactory = {
+      create: vi.fn(async () => createGitHubApiClient()),
+    };
+    const service = new GitHubPullRequestService(clientFactory);
+
+    const session = await service.attachReviewSession(createReviewSession());
+
+    expect(session.github?.pullRequest.title).toBe("UI polish");
+    expect(session.github?.pullRequest.checks.state).toBe("success");
+    expect(session.github?.pullRequest.reviewGroups).toHaveLength(2);
+    expect(session.github?.pullRequest.reviewThreads).toHaveLength(1);
+    expect(session.github?.pullRequest.reviewThreads[0]?.comments).toHaveLength(2);
+    expect(session.github?.pullRequest.pendingReview).toMatchObject({ id: 9010 });
+    expect(session.warnings).toEqual([]);
+  });
+
+  test("warns when inline threads cannot be anchored to the local comparison", async () => {
+    const clientFactory: GitHubClientFactory = {
+      create: vi.fn(async () => createGitHubApiClient({ commentPath: "docs/guide.md" })),
+    };
+    const service = new GitHubPullRequestService(clientFactory);
+
+    const session = await service.attachReviewSession(createReviewSession());
+
+    expect(session.warnings.map((warning) => warning.code)).toContain(
+      "github-inline-thread-unavailable",
+    );
+  });
+
+  test("creates a pending review thread with GraphQL when adding an inline comment", async () => {
+    const client = createGitHubApiClient();
+    const clientFactory: GitHubClientFactory = {
+      create: vi.fn(async () => client),
+    };
+    const service = new GitHubPullRequestService(clientFactory);
+    const session = await service.attachReviewSession(createReviewSession());
+    const githubSession = {
+      ...session.github!,
+      pullRequest: {
+        ...session.github!.pullRequest,
+        pendingReview: undefined,
+      },
+    };
+    const { graphqlMock, requestMock } = client;
+
+    await service.addPendingReviewThread(
+      githubSession,
+      {
+        line: 1,
+        path: "src/app.ts",
+        side: "RIGHT",
+      },
+      "Please rename this variable.",
+    );
+
+    expect(requestMock).toHaveBeenCalledWith(
+      "POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews",
+      expect.objectContaining({
+        owner: "diffdiff",
+        pull_number: 42,
+        repo: "diffdiff",
+      }),
+    );
+    expect(graphqlMock).toHaveBeenCalledWith(
+      expect.stringContaining("mutation AddPullRequestReviewThread"),
+      expect.objectContaining({
+        input: expect.objectContaining({
+          body: "Please rename this variable.",
+          line: 1,
+          path: "src/app.ts",
+          pullRequestId: "PR_node_42",
+        }),
+      }),
+    );
+  });
+
+  test("submits a pending review through the REST review events endpoint", async () => {
+    const client = createGitHubApiClient();
+    const clientFactory: GitHubClientFactory = {
+      create: vi.fn(async () => client),
+    };
+    const service = new GitHubPullRequestService(clientFactory);
+    const session = await service.attachReviewSession(createReviewSession());
+    const { requestMock } = client;
+
+    await service.submitPendingReview(session.github!, "APPROVE", "Looks good to me.");
+
+    expect(requestMock).toHaveBeenCalledWith(
+      "POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/events",
+      {
+        body: "Looks good to me.",
+        event: "APPROVE",
+        owner: "diffdiff",
+        pull_number: 42,
+        repo: "diffdiff",
+        review_id: 9010,
+      },
+    );
+  });
+});
+
+function createGitHubApiClient(options: { commentPath?: string } = {}): GitHubApiClient & {
+  graphqlMock: ReturnType<typeof vi.fn>;
+  requestMock: ReturnType<typeof vi.fn>;
+} {
+  const commentPath = options.commentPath ?? "src/app.ts";
+  const graphql = vi.fn(async () => ({ addPullRequestReviewThread: { thread: { id: "PRRT_1" } } }));
+  const request = vi.fn(async (route) => {
+    if (route === "GET /repos/{owner}/{repo}/pulls/{pull_number}") {
+      return {
+        base: { ref: "main" },
+        body: "Adds the review UI.",
+        draft: false,
+        head: { ref: "feature/ui", sha: "headsha" },
+        html_url: "https://github.com/diffdiff/diffdiff/pull/42",
+        mergeable: true,
+        mergeable_state: "clean",
+        merged: false,
+        merged_at: null,
+        node_id: "PR_node_42",
+        number: 42,
+        state: "open",
+        title: "UI polish",
+        user: { html_url: "https://github.com/madison", login: "madison" },
+      };
+    }
+
+    if (route === "GET /repos/{owner}/{repo}/commits/{ref}/check-runs") {
+      return {
+        check_runs: [{ conclusion: "success", status: "completed" }],
+      };
+    }
+
+    if (route === "GET /repos/{owner}/{repo}/commits/{ref}/status") {
+      return { state: "success" };
+    }
+
+    if (route === "POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews") {
+      return {
+        body: null,
+        id: 9010,
+        node_id: "PRR_pending_9010",
+      };
+    }
+
+    return undefined;
+  });
+
+  return {
+    auth: {
+      host: "github.com",
+      token: "test-token",
+      tokenSource: "config",
+    },
+    graphql: graphql as unknown as GitHubApiClient["graphql"],
+    graphqlMock: graphql,
+    paginate: vi.fn(async (route) => {
+      if (route === "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews") {
+        return [
+          {
+            body: "Looks good.",
+            id: 9001,
+            node_id: "PRR_9001",
+            state: "APPROVED",
+            submitted_at: "2026-04-01T12:00:00Z",
+            user: { html_url: "https://github.com/octocat", login: "octocat" },
+          },
+          {
+            body: null,
+            id: 9010,
+            node_id: "PRR_pending_9010",
+            state: "PENDING",
+            submitted_at: null,
+            user: { html_url: "https://github.com/madison", login: "madison" },
+          },
+        ];
+      }
+
+      if (route === "GET /repos/{owner}/{repo}/pulls/{pull_number}/comments") {
+        return [
+          {
+            body: "Please rename this variable.",
+            commit_id: "headsha",
+            created_at: "2026-04-01T12:01:00Z",
+            diff_hunk: "@@ -1 +1 @@",
+            html_url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r1",
+            id: 101,
+            in_reply_to_id: null,
+            line: 1,
+            node_id: "PRRC_101",
+            original_commit_id: "basesha",
+            original_line: 1,
+            path: commentPath,
+            pull_request_review_id: 9001,
+            side: "RIGHT",
+            start_line: null,
+            original_start_line: null,
+            start_side: null,
+            updated_at: "2026-04-01T12:01:00Z",
+            user: { html_url: "https://github.com/octocat", login: "octocat" },
+          },
+          {
+            body: "Fixed.",
+            commit_id: "headsha",
+            created_at: "2026-04-01T12:02:00Z",
+            diff_hunk: "@@ -1 +1 @@",
+            html_url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r2",
+            id: 102,
+            in_reply_to_id: 101,
+            line: 1,
+            node_id: "PRRC_102",
+            original_commit_id: "basesha",
+            original_line: 1,
+            path: commentPath,
+            pull_request_review_id: 9001,
+            side: "RIGHT",
+            start_line: null,
+            original_start_line: null,
+            start_side: null,
+            updated_at: "2026-04-01T12:02:00Z",
+            user: { html_url: "https://github.com/diffdiff-bot", login: "diffdiff-bot" },
+          },
+        ];
+      }
+
+      if (route === "GET /repos/{owner}/{repo}/pulls") {
+        return [];
+      }
+
+      return [];
+    }),
+    request,
+    requestMock: request,
+  };
+}
+
+function createReviewSession(): ReviewSession {
+  return {
+    branches: {
+      local: [
+        {
+          isCurrent: true,
+          isDefault: false,
+          kind: "local",
+          name: "feature/ui",
+          ref: "refs/heads/feature/ui",
+          sha: "headsha",
+        },
+      ],
+      remote: [
+        {
+          isCurrent: false,
+          isDefault: false,
+          kind: "remote",
+          name: "origin/feature/ui",
+          pullRequest: {
+            baseRefName: "main",
+            headRefName: "feature/ui",
+            number: 42,
+            title: "UI polish",
+            url: "https://github.com/diffdiff/diffdiff/pull/42",
+          },
+          ref: "refs/remotes/origin/feature/ui",
+          remoteName: "origin",
+          sha: "headsha",
+        },
+        {
+          isCurrent: false,
+          isDefault: true,
+          kind: "remote",
+          name: "origin/main",
+          ref: "refs/remotes/origin/main",
+          remoteName: "origin",
+          sha: "basesha",
+        },
+      ],
+    },
+    commits: [],
+    comparison: {
+      base: "origin/main",
+      head: "origin/feature/ui",
+      mode: "range",
+      range: "origin/main...origin/feature/ui",
+      usesMergeBase: true,
+    },
+    files: [
+      {
+        additions: 1,
+        deletions: 0,
+        isBinary: false,
+        patch: "diff --git a/src/app.ts b/src/app.ts",
+        path: "src/app.ts",
+        status: "modified",
+      },
+    ],
+    repository: {
+      currentBranch: "feature/ui",
+      kind: "git",
+      name: "diffdiff",
+      remotes: [
+        {
+          fetchUrl: "git@github.com:diffdiff/diffdiff.git",
+          forge: {
+            forge: "github",
+            host: "github.com",
+            owner: "diffdiff",
+            repo: "diffdiff",
+          },
+          name: "origin",
+        },
+      ],
+      rootPath: "/tmp/diffdiff",
+    },
+    warnings: [],
+    workingTreeSummary: {
+      additions: 0,
+      deletions: 0,
+      filesChanged: 0,
+    },
+  };
+}

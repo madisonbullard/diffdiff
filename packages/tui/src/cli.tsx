@@ -2,7 +2,13 @@
 
 import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
-import { formatHelpText, parseStartupOptions } from "@diffdiff/core";
+import {
+  clearGitHubToken,
+  formatHelpText,
+  GitHubPullRequestService,
+  parseStartupOptions,
+  storeGitHubToken,
+} from "@diffdiff/core";
 import type { StartupOptions } from "@diffdiff/core";
 import packageJson from "../package.json";
 
@@ -37,6 +43,10 @@ function StartupScreen({
 }
 
 async function main(): Promise<void> {
+  if (await handleAuthCommand(process.argv.slice(2))) {
+    return;
+  }
+
   const options = parseStartupOptions();
 
   if (options.help) {
@@ -112,10 +122,16 @@ async function main(): Promise<void> {
       loadPreparedReviewSession(nextOptions, themeName, theme, syntaxPalette, {
         deferSyntaxRendering: true,
       });
+    const gitHubPullRequestService = new GitHubPullRequestService();
     const initialSession = await loadSession(options);
 
     root.render(
       <DiffdiffApp
+        addReviewThread={(reviewSession, anchor, body) =>
+          gitHubPullRequestService
+            .addPendingReviewThread(reviewSession, anchor, body)
+            .then(() => undefined)
+        }
         initialOptions={options}
         initialSession={initialSession}
         loadSession={loadSession}
@@ -123,6 +139,9 @@ async function main(): Promise<void> {
           renderer.destroy();
           process.exit(0);
         }}
+        submitPendingReview={(reviewSession, event, body) =>
+          gitHubPullRequestService.submitPendingReview(reviewSession, event, body)
+        }
         syntaxStyle={syntaxStyle}
         theme={theme}
       />,
@@ -133,6 +152,66 @@ async function main(): Promise<void> {
     process.stderr.write(`diffdiff: ${message}\n`);
     process.exitCode = 1;
   }
+}
+
+async function handleAuthCommand(argv: readonly string[]): Promise<boolean> {
+  if (argv[0] !== "auth") {
+    return false;
+  }
+
+  if (argv[1] === "login") {
+    const token = await resolveAuthToken(argv);
+    if (token == null) {
+      throw new Error("No GitHub token provided. Pass --token-stdin or set DIFFDIFF_GITHUB_TOKEN.");
+    }
+
+    const auth = await storeGitHubToken(token);
+    process.stdout.write(
+      auth.tokenSource === "keychain"
+        ? "Stored GitHub token in the macOS Keychain.\n"
+        : `Stored GitHub token in ${auth.configFilePath}.\n`,
+    );
+    return true;
+  }
+
+  if (argv[1] === "logout") {
+    await clearGitHubToken();
+    process.stdout.write("Cleared stored GitHub auth.\n");
+    return true;
+  }
+
+  throw new Error(`Unknown auth command: ${argv.slice(1).join(" ") || "auth"}`);
+}
+
+async function resolveAuthToken(argv: readonly string[]): Promise<string | undefined> {
+  const tokenFlagIndex = argv.indexOf("--token");
+  if (tokenFlagIndex >= 0) {
+    return argv[tokenFlagIndex + 1]?.trim() || undefined;
+  }
+
+  if (argv.includes("--token-stdin")) {
+    const stdin = await readStandardInput();
+    const token = stdin.trim();
+    return token === "" ? undefined : token;
+  }
+
+  const token =
+    process.env.DIFFDIFF_GITHUB_TOKEN ?? process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+  return token?.trim() === "" ? undefined : token?.trim();
+}
+
+async function readStandardInput(): Promise<string> {
+  if (process.stdin.isTTY) {
+    return "";
+  }
+
+  const chunks: Uint8Array[] = [];
+
+  for await (const chunk of process.stdin) {
+    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+  }
+
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 void main();

@@ -1,6 +1,13 @@
-import type { BranchInfo } from "@diffdiff/core";
+import type { BranchInfo, GitHubPullRequestReviewThread } from "@diffdiff/core";
 import type { BoxRenderable, ColorInput, SyntaxStyle } from "@opentui/core";
 import type { ReactNode, Ref } from "react";
+import {
+  getThreadsForSideBySideRow,
+  getThreadsForUnifiedLine,
+  getUnanchoredSideBySideThreads,
+  getUnanchoredUnifiedThreads,
+  ReviewThreadList,
+} from "./github-review.tsx";
 import { getDiffFiletype } from "./language.ts";
 import type { UiTheme } from "./theme.ts";
 import type {
@@ -17,6 +24,11 @@ import type {
   TextSegment,
   UnifiedDiffLine,
 } from "./types.ts";
+import {
+  matchesSideBySideAnchor,
+  matchesUnifiedAnchor,
+  type SelectedReviewAnchor,
+} from "./review-anchors.ts";
 import {
   formatCommitListEntry,
   formatAuthorList,
@@ -48,7 +60,10 @@ export interface FileCardProps {
   isCollapsed: boolean;
   isReviewed: boolean;
   isSelected: boolean;
+  reviewThreads?: readonly GitHubPullRequestReviewThread[];
   rootRef?: Ref<BoxRenderable>;
+  selectedReviewAnchor?: SelectedReviewAnchor;
+  showOutdatedReviewThreads?: boolean;
   syntaxStyle: SyntaxStyle;
   terminalWidth: number;
   theme: UiTheme;
@@ -73,7 +88,10 @@ export function FileCard({
   isCollapsed,
   isReviewed,
   isSelected,
+  reviewThreads = [],
   rootRef,
+  selectedReviewAnchor,
+  showOutdatedReviewThreads = false,
   syntaxStyle,
   terminalWidth,
   theme,
@@ -160,29 +178,50 @@ export function FileCard({
           {!file.isBinary && file.renderError == null && file.patch.trim() !== "" ? (
             <box paddingLeft={1}>
               {diffView === "unified" && file.unifiedLines.length > 0 ? (
-                <UnifiedDiffPreview file={file} theme={theme} />
-              ) : diffView === "split" && file.sideBySideRows.length > 0 ? (
-                <SideBySideDiffPreview file={file} terminalWidth={terminalWidth} theme={theme} />
-              ) : (
-                <diff
-                  diff={file.patch}
-                  view={diffView}
-                  filetype={filetype}
-                  showLineNumbers={true}
-                  syntaxStyle={syntaxStyle}
-                  width="100%"
-                  wrapMode="word"
-                  fg={theme.text}
-                  addedBg={theme.additionBg}
-                  removedBg={theme.deletionBg}
-                  contextBg={theme.contextBg}
-                  addedSignColor={theme.success}
-                  removedSignColor={theme.danger}
-                  lineNumberFg={theme.textMuted}
-                  lineNumberBg={theme.contextBg}
-                  addedLineNumberBg={theme.additionLineNumberBg}
-                  removedLineNumberBg={theme.deletionLineNumberBg}
+                <UnifiedDiffPreview
+                  file={file}
+                  reviewThreads={reviewThreads}
+                  selectedReviewAnchor={selectedReviewAnchor}
+                  showOutdatedReviewThreads={showOutdatedReviewThreads}
+                  theme={theme}
                 />
+              ) : diffView === "split" && file.sideBySideRows.length > 0 ? (
+                <SideBySideDiffPreview
+                  file={file}
+                  reviewThreads={reviewThreads}
+                  selectedReviewAnchor={selectedReviewAnchor}
+                  showOutdatedReviewThreads={showOutdatedReviewThreads}
+                  terminalWidth={terminalWidth}
+                  theme={theme}
+                />
+              ) : (
+                <box width="100%" flexDirection="column" gap={1}>
+                  <diff
+                    diff={file.patch}
+                    view={diffView}
+                    filetype={filetype}
+                    showLineNumbers={true}
+                    syntaxStyle={syntaxStyle}
+                    width="100%"
+                    wrapMode="word"
+                    fg={theme.text}
+                    addedBg={theme.additionBg}
+                    removedBg={theme.deletionBg}
+                    contextBg={theme.contextBg}
+                    addedSignColor={theme.success}
+                    removedSignColor={theme.danger}
+                    lineNumberFg={theme.textMuted}
+                    lineNumberBg={theme.contextBg}
+                    addedLineNumberBg={theme.additionLineNumberBg}
+                    removedLineNumberBg={theme.deletionLineNumberBg}
+                  />
+                  <ReviewThreadList
+                    threads={reviewThreads.filter(
+                      (thread) => showOutdatedReviewThreads || !thread.isOutdated,
+                    )}
+                    theme={theme}
+                  />
+                </box>
               )}
             </box>
           ) : null}
@@ -383,57 +422,106 @@ function getFileTreeStatusGlyph(status: PreparedReviewFile["status"]): string {
   }
 }
 
-function UnifiedDiffPreview({ file, theme }: { file: PreparedReviewFile; theme: UiTheme }) {
+function UnifiedDiffPreview({
+  file,
+  reviewThreads,
+  selectedReviewAnchor,
+  showOutdatedReviewThreads,
+  theme,
+}: {
+  file: PreparedReviewFile;
+  reviewThreads: readonly GitHubPullRequestReviewThread[];
+  selectedReviewAnchor?: SelectedReviewAnchor;
+  showOutdatedReviewThreads: boolean;
+  theme: UiTheme;
+}) {
+  const visibleThreads = reviewThreads.filter(
+    (thread) => showOutdatedReviewThreads || !thread.isOutdated,
+  );
+
   return (
     <box width="100%" flexDirection="column">
-      {file.unifiedLines.map((line, index) => (
-        <UnifiedDiffRow
-          key={`${line.kind}-${index}`}
-          line={line}
-          lineNumberWidth={file.lineNumberWidth}
-          theme={theme}
-        />
-      ))}
+      {file.unifiedLines.map((line, index) => {
+        const lineThreads = getThreadsForUnifiedLine(visibleThreads, line);
+
+        return (
+          <box key={`${line.kind}-${index}`} width="100%" flexDirection="column">
+            <UnifiedDiffRow
+              isSelected={matchesUnifiedAnchor(line, selectedReviewAnchor)}
+              line={line}
+              lineNumberWidth={file.lineNumberWidth}
+              theme={theme}
+            />
+            <ReviewThreadList threads={lineThreads} theme={theme} />
+          </box>
+        );
+      })}
+      <ReviewThreadList
+        threads={getUnanchoredUnifiedThreads(visibleThreads, file.unifiedLines)}
+        theme={theme}
+      />
     </box>
   );
 }
 
 function SideBySideDiffPreview({
   file,
+  reviewThreads,
+  selectedReviewAnchor,
+  showOutdatedReviewThreads,
   terminalWidth,
   theme,
 }: {
   file: PreparedReviewFile;
+  reviewThreads: readonly GitHubPullRequestReviewThread[];
+  selectedReviewAnchor?: SelectedReviewAnchor;
+  showOutdatedReviewThreads: boolean;
   terminalWidth: number;
   theme: UiTheme;
 }) {
   const paneWidth = Math.max(Math.floor((Math.max(terminalWidth - 12, 40) - 1) / 2), 12);
   const contentWidth = Math.max(paneWidth - (file.lineNumberWidth + 3), 1);
+  const visibleThreads = reviewThreads.filter(
+    (thread) => showOutdatedReviewThreads || !thread.isOutdated,
+  );
 
   return (
     <box width="100%" flexDirection="column">
-      {file.sideBySideRows.map((row, index) => (
-        <SideBySideDiffRowView
-          key={`${row.kind}-${index}`}
-          contentWidth={contentWidth}
-          lineNumberWidth={file.lineNumberWidth}
-          paneWidth={paneWidth}
-          row={row}
-          theme={theme}
-        />
-      ))}
+      {file.sideBySideRows.map((row, index) => {
+        const rowThreads = getThreadsForSideBySideRow(visibleThreads, row);
+
+        return (
+          <box key={`${row.kind}-${index}`} width="100%" flexDirection="column">
+            <SideBySideDiffRowView
+              contentWidth={contentWidth}
+              isSelected={matchesSideBySideAnchor(row, selectedReviewAnchor)}
+              lineNumberWidth={file.lineNumberWidth}
+              paneWidth={paneWidth}
+              row={row}
+              theme={theme}
+            />
+            <ReviewThreadList threads={rowThreads} theme={theme} />
+          </box>
+        );
+      })}
+      <ReviewThreadList
+        threads={getUnanchoredSideBySideThreads(visibleThreads, file.sideBySideRows)}
+        theme={theme}
+      />
     </box>
   );
 }
 
 function SideBySideDiffRowView({
   contentWidth,
+  isSelected,
   lineNumberWidth,
   paneWidth,
   row,
   theme,
 }: {
   contentWidth: number;
+  isSelected: boolean;
   lineNumberWidth: number;
   paneWidth: number;
   row: SideBySideDiffRow;
@@ -449,11 +537,14 @@ function SideBySideDiffRowView({
     );
   }
 
+  const rowBackground = isSelected ? tintHex(theme.surfaceMuted, theme.accent, 0.2) : undefined;
+
   return (
-    <box width="100%" flexDirection="row">
+    <box width="100%" flexDirection="row" backgroundColor={rowBackground}>
       <SideBySideDiffCellView
         cell={row.left ?? { kind: "empty", segments: [] }}
         contentWidth={contentWidth}
+        isSelected={isSelected}
         lineNumberWidth={lineNumberWidth}
         paneWidth={paneWidth}
         theme={theme}
@@ -464,6 +555,7 @@ function SideBySideDiffRowView({
       <SideBySideDiffCellView
         cell={row.right ?? { kind: "empty", segments: [] }}
         contentWidth={contentWidth}
+        isSelected={isSelected}
         lineNumberWidth={lineNumberWidth}
         paneWidth={paneWidth}
         theme={theme}
@@ -475,28 +567,34 @@ function SideBySideDiffRowView({
 function SideBySideDiffCellView({
   cell,
   contentWidth,
+  isSelected,
   lineNumberWidth,
   paneWidth,
   theme,
 }: {
   cell: SideBySideDiffCell;
   contentWidth: number;
+  isSelected: boolean;
   lineNumberWidth: number;
   paneWidth: number;
   theme: UiTheme;
 }) {
-  const lineNumberBg =
+  const baseLineNumberBg =
     cell.kind === "addition"
       ? theme.additionLineNumberBg
       : cell.kind === "deletion"
         ? theme.deletionLineNumberBg
         : theme.contextBg;
-  const contentBg =
+  const baseContentBg =
     cell.kind === "addition"
       ? theme.additionBg
       : cell.kind === "deletion"
         ? theme.deletionBg
         : theme.contextBg;
+  const lineNumberBg = isSelected
+    ? tintHex(baseLineNumberBg, theme.accent, 0.24)
+    : baseLineNumberBg;
+  const contentBg = isSelected ? tintHex(baseContentBg, theme.accent, 0.18) : baseContentBg;
   const sign = cell.kind === "addition" ? "+" : cell.kind === "deletion" ? "-" : " ";
   const signColor =
     cell.kind === "addition"
@@ -525,10 +623,12 @@ function SideBySideDiffCellView({
 }
 
 function UnifiedDiffRow({
+  isSelected,
   line,
   lineNumberWidth,
   theme,
 }: {
+  isSelected: boolean;
   line: UnifiedDiffLine;
   lineNumberWidth: number;
   theme: UiTheme;
@@ -546,18 +646,22 @@ function UnifiedDiffRow({
 
   const lineNumber = line.newLineNumber ?? line.oldLineNumber;
   const sign = line.kind === "addition" ? "+" : line.kind === "deletion" ? "-" : " ";
-  const lineNumberBg =
+  const baseLineNumberBg =
     line.kind === "addition"
       ? theme.additionLineNumberBg
       : line.kind === "deletion"
         ? theme.deletionLineNumberBg
         : theme.contextBg;
-  const contentBg =
+  const baseContentBg =
     line.kind === "addition"
       ? theme.additionBg
       : line.kind === "deletion"
         ? theme.deletionBg
         : theme.contextBg;
+  const lineNumberBg = isSelected
+    ? tintHex(baseLineNumberBg, theme.accent, 0.24)
+    : baseLineNumberBg;
+  const contentBg = isSelected ? tintHex(baseContentBg, theme.accent, 0.18) : baseContentBg;
   const signColor =
     line.kind === "addition"
       ? theme.success
@@ -776,7 +880,7 @@ export function BranchModal({
             )}
             <text fg={theme.textMuted} wrapMode="none">
               <KeyCap label="enter" theme={theme} />
-              <span>{" select  "}</span>
+              <span>{selectedBranchItem?.kind === "open-pr" ? " open PR  " : " select  "}</span>
               <KeyCap label="b" theme={theme} />
               <span>{" set base  "}</span>
               <KeyCap label="h" theme={theme} />
@@ -1404,6 +1508,12 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
           <span>{" collapse file  "}</span>
           <KeyCap label="v" theme={theme} />
           <span>{" toggle diff view"}</span>
+        </text>
+        <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="t" theme={theme} />
+          <span>{" PR comments  "}</span>
+          <KeyCap label="u" theme={theme} />
+          <span>{" outdated threads"}</span>
         </text>
       </box>
       <box
