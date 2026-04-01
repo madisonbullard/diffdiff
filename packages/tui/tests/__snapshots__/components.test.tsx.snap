@@ -174,7 +174,7 @@ exports[`renders a branch modal snapshot 1`] = `
               bg="#152838"
               fg="#8ea4b5"
             >
-               Commits 
+               Commits  
             </span>
           </text>
         </box>
@@ -253,7 +253,7 @@ exports[`renders a branch modal snapshot 1`] = `
     </box>
     <box
       flexDirection="column"
-      gap={1}
+      gap={0}
       width="100%"
     >
       <box
@@ -279,33 +279,34 @@ exports[`renders a branch modal snapshot 1`] = `
             "vertical": "┃",
           }
         }
-        flexDirection="column"
-        gap={0}
+        flexDirection="row"
+        gap={1}
+        justifyContent="space-between"
         paddingBottom={0}
         paddingLeft={2}
         paddingRight={1}
         paddingTop={0}
         width="100%"
       >
-        <box
-          flexDirection="row"
-          gap={1}
-          justifyContent="space-between"
-          width="100%"
-        >
-          <text
-            fg="#e6edf3"
-            wrapMode="none"
-          >
-            Working tree
-          </text>
-        </box>
         <text
-          fg="#8ea4b5"
+          fg="#e6edf3"
           wrapMode="none"
         >
-          4 files  │  +18/-6
+          Working tree
+          <span
+            fg="#8ea4b5"
+          >
+              │  
+          </span>
+          <span
+            fg="#8ea4b5"
+          >
+            4 files  │  +18/-6
+          </span>
         </text>
+        <text
+          wrapMode="none"
+        />
       </box>
       <box
         backgroundColor="#324d5f"
@@ -330,54 +331,56 @@ exports[`renders a branch modal snapshot 1`] = `
             "vertical": "┃",
           }
         }
-        flexDirection="column"
-        gap={0}
+        flexDirection="row"
+        gap={1}
+        justifyContent="space-between"
         paddingBottom={0}
         paddingLeft={2}
         paddingRight={1}
         paddingTop={0}
         width="100%"
       >
-        <box
-          flexDirection="row"
-          gap={1}
-          justifyContent="space-between"
-          width="100%"
-        >
-          <text
-            fg="#e6edf3"
-            wrapMode="none"
-          >
-            <span
-              fg="#e6edf3"
-            >
-              feature/tui
-            </span>
-            <span>
-               
-            </span>
-            <span
-              bg="#9cdcfe"
-              fg="#0b1b26"
-            >
-               HEAD 
-            </span>
-            <span>
-               
-            </span>
-            <span
-              bg="#0d2634"
-              fg="#e6edf3"
-            >
-               CURRENT 
-            </span>
-          </text>
-        </box>
         <text
-          fg="#8ea4b5"
+          fg="#e6edf3"
           wrapMode="none"
         >
-          Madison Bullard, Pierre Bot  │  3 commits vs origin/main  │  4 files  │  +18/-6
+          <span
+            fg="#e6edf3"
+          >
+            feature/tui
+          </span>
+          <span
+            fg="#8ea4b5"
+          >
+              │  
+          </span>
+          <span
+            fg="#8ea4b5"
+          >
+            Madison Bullard, Pierre Bot  │  3 commits vs origin/main  │  4 files  │  +18/-6
+          </span>
+        </text>
+        <text
+          wrapMode="none"
+        >
+          <span>
+             
+          </span>
+          <span
+            bg="#9cdcfe"
+            fg="#0b1b26"
+          >
+             HEAD    
+          </span>
+          <span>
+             
+          </span>
+          <span
+            bg="#0d2634"
+            fg="#e6edf3"
+          >
+             CURRENT 
+          </span>
         </text>
       </box>
       <box
@@ -403,45 +406,47 @@ exports[`renders a branch modal snapshot 1`] = `
             "vertical": "┃",
           }
         }
-        flexDirection="column"
-        gap={0}
+        flexDirection="row"
+        gap={1}
+        justifyContent="space-between"
         paddingBottom={0}
         paddingLeft={2}
         paddingRight={1}
         paddingTop={0}
         width="100%"
       >
-        <box
-          flexDirection="row"
-          gap={1}
-          justifyContent="space-between"
-          width="100%"
-        >
-          <text
-            fg="#e6edf3"
-            wrapMode="none"
-          >
-            <span
-              fg="#e6edf3"
-            >
-              main
-            </span>
-            <span>
-               
-            </span>
-            <span
-              bg="#152838"
-              fg="#e6edf3"
-            >
-               DEFAULT 
-            </span>
-          </text>
-        </box>
         <text
-          fg="#8ea4b5"
+          fg="#e6edf3"
           wrapMode="none"
         >
-          Madison Bullard  │  0 commits vs origin/main  │  0 files  │  +0/-0
+          <span
+            fg="#e6edf3"
+          >
+            main
+          </span>
+          <span
+            fg="#8ea4b5"
+          >
+              │  
+          </span>
+          <span
+            fg="#8ea4b5"
+          >
+            Madison Bullard  │  0 commits vs origin/main  │  0 files  │  +0/-0
+          </span>
+        </text>
+        <text
+          wrapMode="none"
+        >
+          <span>
+             
+          </span>
+          <span
+            bg="#152838"
+            fg="#e6edf3"
+          >
+             DEFAULT 
+          </span>
         </text>
       </box>
       <box
@@ -467,41 +472,52 @@ exports[`renders a branch modal snapshot 1`] = `
             "vertical": "┃",
           }
         }
-        flexDirection="column"
-        gap={0}
+        flexDirection="row"
+        gap={1}
+        justifyContent="space-between"
         paddingBottom={0}
         paddingLeft={2}
         paddingRight={1}
         paddingTop={0}
         width="100%"
       >
-        <box
-          flexDirection="row"
-          gap={1}
-          justifyContent="space-between"
-          width="100%"
-        >
-          <text
-            fg="#e6edf3"
-            wrapMode="none"
-          >
-            <span
-              fg="#3fb950"
-            >
-              Build TUI reviewer
-            </span>
-            <span
-              fg="#8ea4b5"
-            >
-               (#42)
-            </span>
-          </text>
-        </box>
         <text
-          fg="#8ea4b5"
+          fg="#e6edf3"
           wrapMode="none"
         >
-          Madison Bullard, Pierre Bot  │  3 commits vs origin/main  │  +18/-6
+          <span
+            fg="#3fb950"
+          >
+            Build TUI reviewer
+          </span>
+          <span
+            fg="#8ea4b5"
+          >
+             (#42)
+          </span>
+          <span
+            fg="#8ea4b5"
+          >
+              │  
+          </span>
+          <span
+            fg="#8ea4b5"
+          >
+            Madison Bullard, Pierre Bot  │  3 commits vs origin/main  │  +18/-6
+          </span>
+        </text>
+        <text
+          wrapMode="none"
+        >
+          <span>
+             
+          </span>
+          <span
+            bg="#3fb950"
+            fg="#0b1b26"
+          >
+             PR #42 
+          </span>
         </text>
       </box>
     </box>
@@ -782,7 +798,7 @@ exports[`renders a commit view snapshot 1`] = `
               bg="#9cdcfe"
               fg="#0b1b26"
             >
-               Commits 
+               Commits  
             </span>
           </text>
         </box>
@@ -823,6 +839,8 @@ exports[`renders a commit view snapshot 1`] = `
           }
         }
         flexDirection="row"
+        gap={1}
+        justifyContent="space-between"
         paddingBottom={0}
         paddingLeft={2}
         paddingRight={1}
@@ -860,6 +878,8 @@ exports[`renders a commit view snapshot 1`] = `
           }
         }
         flexDirection="row"
+        gap={1}
+        justifyContent="space-between"
         paddingBottom={0}
         paddingLeft={2}
         paddingRight={1}

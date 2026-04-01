@@ -673,12 +673,23 @@ export function BranchModal({
             <span fg={theme.text}>{head}</span>
           </text>
           <box flexDirection="row" gap={1}>
-            <text wrapMode="none">
-              <ListViewTab label="Branches" isActive={activeView === "branch"} theme={theme} />
-            </text>
-            <text wrapMode="none">
-              <ListViewTab label="Commits" isActive={activeView === "commit"} theme={theme} />
-            </text>
+            {(() => {
+              const tabs = [
+                { label: "Branches", isActive: activeView === "branch" },
+                { label: "Commits", isActive: activeView === "commit" },
+              ];
+              const maxLen = Math.max(...tabs.map((t) => t.label.length));
+              return tabs.map((tab) => (
+                <text key={tab.label} wrapMode="none">
+                  <ListViewTab
+                    label={tab.label}
+                    isActive={tab.isActive}
+                    width={maxLen}
+                    theme={theme}
+                  />
+                </text>
+              ));
+            })()}
           </box>
         </box>
         {activeView === "branch" ? (
@@ -903,7 +914,7 @@ function BranchListView({
   theme: UiTheme;
 }) {
   return (
-    <box width="100%" flexDirection="column" gap={1}>
+    <box width="100%" flexDirection="column" gap={0}>
       {branchItems.length === 0 ? (
         <box
           width="100%"
@@ -962,32 +973,53 @@ function CommitListView({
       ) : null}
       {commitItems.map((item, index) => {
         const isSelected = index === selectedIndex;
-        const borderColor = isSelected ? theme.borderActive : theme.accent;
-        const backgroundColor = isSelected
-          ? tintHex(theme.surface, theme.accent, 0.24)
-          : tintHex(theme.surface, theme.accent, 0.14);
         const textColor = isSelected ? theme.text : theme.textMuted;
 
         return (
-          <box
-            key={item.key}
-            width="100%"
-            border={["left"]}
-            customBorderChars={SPLIT_BORDER}
-            borderColor={borderColor}
-            backgroundColor={backgroundColor}
-            paddingLeft={2}
-            paddingRight={1}
-            paddingTop={0}
-            paddingBottom={0}
-            flexDirection="row"
-          >
+          <ListRow key={item.key} accentColor={theme.accent} isSelected={isSelected} theme={theme}>
             <text fg={textColor} wrapMode="none">
               {formatCommitListEntry(item.commit)}
             </text>
-          </box>
+          </ListRow>
         );
       })}
+    </box>
+  );
+}
+
+function ListRow({
+  accentColor,
+  isSelected,
+  children,
+  tags,
+  theme,
+}: {
+  accentColor: string;
+  isSelected: boolean;
+  children: ReactNode;
+  tags?: ReactNode;
+  theme: UiTheme;
+}) {
+  const borderColor = isSelected ? theme.borderActive : accentColor;
+  const backgroundColor = tintHex(theme.surface, accentColor, isSelected ? 0.24 : 0.14);
+
+  return (
+    <box
+      width="100%"
+      border={["left"]}
+      customBorderChars={SPLIT_BORDER}
+      borderColor={borderColor}
+      backgroundColor={backgroundColor}
+      paddingLeft={2}
+      paddingRight={1}
+      paddingTop={0}
+      paddingBottom={0}
+      flexDirection="row"
+      justifyContent="space-between"
+      gap={1}
+    >
+      {children}
+      {tags != null ? <text wrapMode="none">{tags}</text> : null}
     </box>
   );
 }
@@ -1008,55 +1040,120 @@ function BranchListCard({
   theme: UiTheme;
 }) {
   const accent = getBranchListAccent(item, theme);
-  const borderColor = isSelected ? theme.borderActive : accent;
-  const backgroundColor = tintHex(theme.surface, accent, isSelected ? 0.24 : 0.14);
 
   return (
-    <box
-      width="100%"
-      border={["left"]}
-      customBorderChars={SPLIT_BORDER}
-      borderColor={borderColor}
-      backgroundColor={backgroundColor}
-      paddingLeft={2}
-      paddingRight={1}
-      paddingTop={0}
-      paddingBottom={0}
-      flexDirection="column"
-      gap={0}
+    <ListRow
+      accentColor={accent}
+      isSelected={isSelected}
+      tags={
+        <BranchListItemTags
+          item={item}
+          isActiveComparison={isActiveComparison}
+          accentColor={accent}
+          base={base}
+          head={head}
+          theme={theme}
+        />
+      }
+      theme={theme}
     >
-      <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
-        <text fg={theme.text} wrapMode="none">
-          {renderBranchListItemTitle(item, base, head, theme)}
-        </text>
-        {isActiveComparison ? (
-          <text wrapMode="none">
-            <Tag label="ACTIVE" fg={theme.inverseText} bg={accent} />
-          </text>
-        ) : null}
-      </box>
-      <text fg={theme.textMuted} wrapMode="none">
-        {renderBranchListItemSummary(item)}
+      <text fg={theme.text} wrapMode="none">
+        {renderBranchListItemTitle(item, theme)}
+        <span fg={theme.textMuted}>{"  \u2502  "}</span>
+        <span fg={theme.textMuted}>{renderBranchListItemSummary(item)}</span>
       </text>
-    </box>
+    </ListRow>
+  );
+}
+
+function BranchListItemTags({
+  item,
+  isActiveComparison,
+  accentColor,
+  base,
+  head,
+  theme,
+}: {
+  item: BranchListItem;
+  isActiveComparison: boolean;
+  accentColor: string;
+  base: string;
+  head: string;
+  theme: UiTheme;
+}) {
+  const branch = item.branch;
+  const tagWidth = Math.max(
+    "ACTIVE".length,
+    "BASE".length,
+    "HEAD".length,
+    "CURRENT".length,
+    "DEFAULT".length,
+  );
+
+  return (
+    <>
+      {isActiveComparison ? (
+        <>
+          <span> </span>
+          <Tag label="ACTIVE" fg={theme.inverseText} bg={accentColor} width={tagWidth} />
+        </>
+      ) : null}
+      {branch?.pullRequest != null ? (
+        <>
+          <span> </span>
+          <Tag
+            label={`PR #${branch.pullRequest.number}`}
+            fg={theme.inverseText}
+            bg={theme.success}
+          />
+        </>
+      ) : null}
+      {branch?.name === base ? (
+        <>
+          <span> </span>
+          <Tag label="BASE" fg={theme.inverseText} bg={theme.warning} width={tagWidth} />
+        </>
+      ) : null}
+      {branch?.name === head ? (
+        <>
+          <span> </span>
+          <Tag label="HEAD" fg={theme.inverseText} bg={theme.accent} width={tagWidth} />
+        </>
+      ) : null}
+      {branch?.isCurrent === true ? (
+        <>
+          <span> </span>
+          <Tag label="CURRENT" fg={theme.text} bg={theme.reviewedBg} width={tagWidth} />
+        </>
+      ) : null}
+      {branch?.isDefault === true ? (
+        <>
+          <span> </span>
+          <Tag label="DEFAULT" fg={theme.text} bg={theme.surfaceMuted} width={tagWidth} />
+        </>
+      ) : null}
+    </>
   );
 }
 
 function ListViewTab({
   label,
   isActive,
+  width,
   theme,
 }: {
   label: string;
   isActive: boolean;
+  width: number;
   theme: UiTheme;
 }) {
+  const padded = label.padEnd(width);
   return (
     <span
       fg={isActive ? theme.inverseText : theme.textMuted}
       bg={isActive ? theme.accent : theme.surfaceMuted}
     >
-      {` ${label} `}
+      {` ${padded} `}
     </span>
   );
 }
@@ -1080,12 +1177,7 @@ function CategoryPill({
   );
 }
 
-function renderBranchListItemTitle(
-  item: BranchListItem,
-  base: string,
-  head: string,
-  theme: UiTheme,
-): ReactNode {
+function renderBranchListItemTitle(item: BranchListItem, theme: UiTheme): ReactNode {
   if (item.kind === "working-tree") {
     return <>Working tree</>;
   }
@@ -1095,24 +1187,11 @@ function renderBranchListItemTitle(
       <>
         <span fg={theme.success}>{item.branch.pullRequest.title}</span>
         <span fg={theme.textMuted}>{` (#${item.branch.pullRequest.number})`}</span>
-        <BranchBadges
-          branch={item.branch}
-          base={base}
-          head={head}
-          theme={theme}
-          compact
-          hidePullRequest
-        />
       </>
     );
   }
 
-  return (
-    <>
-      <BranchName branch={item.branch!} fg={theme.text} theme={theme} />
-      <BranchBadges branch={item.branch!} base={base} head={head} theme={theme} compact />
-    </>
-  );
+  return <BranchName branch={item.branch!} fg={theme.text} theme={theme} />;
 }
 
 function renderBranchListItemSummary(item: BranchListItem): ReactNode {
@@ -1370,63 +1449,6 @@ function BranchName({ branch, fg, theme }: { branch: BranchInfo; fg: ColorInput;
   return <span fg={fg}>{branch.name}</span>;
 }
 
-function BranchBadges({
-  branch,
-  base,
-  head,
-  theme,
-  compact = false,
-  hidePullRequest = false,
-}: {
-  branch: BranchInfo;
-  base: string;
-  head: string;
-  theme: UiTheme;
-  compact?: boolean;
-  hidePullRequest?: boolean;
-}) {
-  return (
-    <>
-      {branch.pullRequest != null && !hidePullRequest ? (
-        <>
-          <span> </span>
-          <Tag
-            label={
-              compact ? `PR #${branch.pullRequest.number}` : `OPEN PR #${branch.pullRequest.number}`
-            }
-            fg={theme.inverseText}
-            bg={theme.success}
-          />
-        </>
-      ) : null}
-      {branch.name === base ? (
-        <>
-          <span> </span>
-          <Tag label="BASE" fg={theme.inverseText} bg={theme.warning} />
-        </>
-      ) : null}
-      {branch.name === head ? (
-        <>
-          <span> </span>
-          <Tag label="HEAD" fg={theme.inverseText} bg={theme.accent} />
-        </>
-      ) : null}
-      {branch.isCurrent ? (
-        <>
-          <span> </span>
-          <Tag label="CURRENT" fg={theme.text} bg={theme.reviewedBg} />
-        </>
-      ) : null}
-      {branch.isDefault ? (
-        <>
-          <span> </span>
-          <Tag label="DEFAULT" fg={theme.text} bg={theme.surfaceMuted} />
-        </>
-      ) : null}
-    </>
-  );
-}
-
 function KeyCap({ label, theme }: { label: string; theme: UiTheme }) {
   return (
     <span fg={theme.accent} bg={theme.surfaceMuted}>
@@ -1435,10 +1457,21 @@ function KeyCap({ label, theme }: { label: string; theme: UiTheme }) {
   );
 }
 
-function Tag({ label, fg, bg }: { label: string; fg: ColorInput; bg: ColorInput }) {
+function Tag({
+  label,
+  fg,
+  bg,
+  width,
+}: {
+  label: string;
+  fg: ColorInput;
+  bg: ColorInput;
+  width?: number;
+}) {
+  const padded = width != null ? label.padEnd(width) : label;
   return (
     <span fg={fg} bg={bg}>
-      {` ${label} `}
+      {` ${padded} `}
     </span>
   );
 }
