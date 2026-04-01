@@ -1,7 +1,10 @@
+import { runCommand } from "../command.ts";
 import type {
   ForgeRepository,
   GitHubApiClient,
   GitHubClientFactory,
+  GitHubPullRequestMergeRequest,
+  GitHubPullRequestMergeResult,
   GitHubPendingReview,
   GitHubPullRequestChecksSummary,
   GitHubPullRequestComment,
@@ -9,6 +12,7 @@ import type {
   GitHubPullRequestMergeState,
   GitHubPullRequestReviewGroup,
   GitHubPullRequestReviewThread,
+  GitHubRefCleanupCandidate,
   GitHubReviewLineAnchor,
   GitHubReviewSession,
   GitHubReviewSubmissionEvent,
@@ -99,12 +103,23 @@ interface GitHubCreateReviewResponse {
   node_id: string;
 }
 
+interface GitHubMergeResponse {
+  message: string;
+  merged: boolean;
+  sha?: string;
+}
+
 interface GitHubGraphqlAddPullRequestReviewThreadResponse {
   addPullRequestReviewThread?: {
     thread?: {
       id?: string;
     };
   };
+}
+
+interface DeletedRemoteRef {
+  branchName: string;
+  remoteRef: string;
 }
 
 export class GitHubPullRequestService {
@@ -177,6 +192,7 @@ export class GitHubPullRequestService {
         pullRequest,
         remoteName: candidate.remoteName,
         repository: candidate.repository,
+        repositoryRootPath: session.repository.rootPath,
       };
 
       return {
@@ -289,6 +305,67 @@ export class GitHubPullRequestService {
         review_id: pendingReview.id,
       },
     );
+  }
+
+  async mergePullRequest(
+    reviewSession: GitHubReviewSession,
+    input: GitHubPullRequestMergeRequest,
+  ): Promise<GitHubPullRequestMergeResult> {
+    const client = await this.requireClient(reviewSession);
+    const response = (await client.request("PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge", {
+      commit_message: input.commitMessage,
+      commit_title: input.commitTitle,
+      merge_method: input.method,
+      owner: reviewSession.repository.owner,
+      pull_number: reviewSession.pullRequest.number,
+      repo: reviewSession.repository.repo,
+    })) as GitHubMergeResponse;
+
+    if (!response.merged) {
+      throw new DiffdiffError(
+        response.message || `GitHub did not merge PR #${reviewSession.pullRequest.number}.`,
+      );
+    }
+
+    const deletedRemoteRefs = await this.refreshPostMergeRefs(reviewSession);
+    const cleanupCandidates = await this.buildCleanupCandidates(
+      reviewSession.repositoryRootPath,
+      input.comparison,
+      deletedRemoteRefs,
+    );
+
+    logDiffdiffInfo("github", "pull_request_merged", {
+      cleanupCandidateCount: cleanupCandidates.length,
+      deletedRemoteRefs: deletedRemoteRefs.map((ref) => ref.remoteRef),
+      mergeMethod: input.method,
+      pullRequestNumber: reviewSession.pullRequest.number,
+      sha: response.sha,
+    });
+
+    return {
+      cleanupCandidates,
+      deletedRemoteRefs: deletedRemoteRefs.map((ref) => ref.remoteRef),
+      message: response.message,
+      sha: response.sha,
+    };
+  }
+
+  async removeCleanupRefs(
+    repositoryRootPath: string,
+    refs: readonly GitHubRefCleanupCandidate[],
+  ): Promise<void> {
+    for (const ref of dedupeCleanupCandidates(refs)) {
+      if (ref.kind === "local-branch") {
+        await runCommand("git", ["branch", "-D", ref.ref], {
+          cwd: repositoryRootPath,
+        });
+        continue;
+      }
+
+      await runCommand("git", ["branch", "-dr", ref.ref], {
+        cwd: repositoryRootPath,
+      });
+    }
   }
 
   private async loadPullRequestDetail(
@@ -432,6 +509,129 @@ export class GitHubPullRequestService {
     }
   }
 
+  private async refreshPostMergeRefs(
+    reviewSession: GitHubReviewSession,
+  ): Promise<DeletedRemoteRef[]> {
+    const refsToRefresh = dedupeDeletedRemoteRefs([
+      {
+        branchName: reviewSession.pullRequest.baseRefName,
+        remoteRef: `${reviewSession.remoteName}/${reviewSession.pullRequest.baseRefName}`,
+      },
+      {
+        branchName: reviewSession.pullRequest.headRefName,
+        remoteRef: `${reviewSession.remoteName}/${reviewSession.pullRequest.headRefName}`,
+      },
+    ]);
+    const deletedRemoteRefs: DeletedRemoteRef[] = [];
+
+    for (const ref of refsToRefresh) {
+      const existedLocally = await this.hasRef(
+        reviewSession.repositoryRootPath,
+        `refs/remotes/${ref.remoteRef}`,
+      );
+      const existsOnRemote = await this.remoteBranchExists(
+        reviewSession.repositoryRootPath,
+        reviewSession.remoteName,
+        ref.branchName,
+      );
+
+      if (existsOnRemote) {
+        await this.fetchRemoteBranch(
+          reviewSession.repositoryRootPath,
+          reviewSession.remoteName,
+          ref.branchName,
+        );
+        continue;
+      }
+
+      if (existedLocally) {
+        deletedRemoteRefs.push(ref);
+      }
+    }
+
+    return deletedRemoteRefs;
+  }
+
+  private async buildCleanupCandidates(
+    repositoryRootPath: string,
+    comparison: GitHubPullRequestMergeRequest["comparison"],
+    deletedRemoteRefs: readonly DeletedRemoteRef[],
+  ): Promise<GitHubRefCleanupCandidate[]> {
+    const cleanupCandidates: GitHubRefCleanupCandidate[] = [];
+
+    for (const ref of deletedRemoteRefs) {
+      if (!matchesDeletedRemoteRef(comparison, ref.remoteRef, ref.branchName)) {
+        continue;
+      }
+
+      if (await this.hasRef(repositoryRootPath, `refs/heads/${ref.branchName}`)) {
+        cleanupCandidates.push({
+          branchName: ref.branchName,
+          kind: "local-branch",
+          ref: ref.branchName,
+        });
+      }
+
+      if (await this.hasRef(repositoryRootPath, `refs/remotes/${ref.remoteRef}`)) {
+        cleanupCandidates.push({
+          branchName: ref.branchName,
+          kind: "remote-tracking",
+          ref: ref.remoteRef,
+        });
+      }
+    }
+
+    return dedupeCleanupCandidates(cleanupCandidates).sort((left, right) => {
+      if (left.kind !== right.kind) {
+        return left.kind === "local-branch" ? -1 : 1;
+      }
+
+      return left.ref.localeCompare(right.ref);
+    });
+  }
+
+  private async hasRef(repositoryRootPath: string, ref: string): Promise<boolean> {
+    try {
+      await runCommand("git", ["rev-parse", "--verify", ref], {
+        cwd: repositoryRootPath,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async remoteBranchExists(
+    repositoryRootPath: string,
+    remoteName: string,
+    branchName: string,
+  ): Promise<boolean> {
+    const stdout = await runCommand(
+      "git",
+      ["ls-remote", "--heads", remoteName, `refs/heads/${branchName}`],
+      {
+        allowedExitCodes: [2],
+        cwd: repositoryRootPath,
+      },
+    );
+
+    return stdout.trim() !== "";
+  }
+
+  private async fetchRemoteBranch(
+    repositoryRootPath: string,
+    remoteName: string,
+    branchName: string,
+  ): Promise<void> {
+    await runCommand(
+      "git",
+      ["fetch", remoteName, `refs/heads/${branchName}:refs/remotes/${remoteName}/${branchName}`],
+      {
+        cwd: repositoryRootPath,
+      },
+    );
+  }
+
   private async requireClient(reviewSession: GitHubReviewSession): Promise<GitHubApiClient> {
     const client = await this.clientFactory.create(reviewSession.repository);
 
@@ -443,6 +643,45 @@ export class GitHubPullRequestService {
 
     return client;
   }
+}
+
+function matchesDeletedRemoteRef(
+  comparison: GitHubPullRequestMergeRequest["comparison"],
+  remoteRef: string,
+  branchName: string,
+): boolean {
+  return [comparison.base, comparison.head].some(
+    (comparisonRef) => comparisonRef === remoteRef || comparisonRef === branchName,
+  );
+}
+
+function dedupeDeletedRemoteRefs(refs: readonly DeletedRemoteRef[]): DeletedRemoteRef[] {
+  const seenRefs = new Set<string>();
+
+  return refs.filter((ref) => {
+    if (seenRefs.has(ref.remoteRef)) {
+      return false;
+    }
+
+    seenRefs.add(ref.remoteRef);
+    return true;
+  });
+}
+
+function dedupeCleanupCandidates(
+  refs: readonly GitHubRefCleanupCandidate[],
+): GitHubRefCleanupCandidate[] {
+  const seenRefs = new Set<string>();
+
+  return refs.filter((ref) => {
+    const key = `${ref.kind}:${ref.ref}`;
+    if (seenRefs.has(key)) {
+      return false;
+    }
+
+    seenRefs.add(key);
+    return true;
+  });
 }
 
 function buildReviewThreads(

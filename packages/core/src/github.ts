@@ -11,6 +11,13 @@ import { clearGitHubToken, resolveGitHubAuth, storeGitHubToken } from "./github/
 import { OctokitGitHubClientFactory } from "./github/client.ts";
 import { getGitHubAuthConfigPaths } from "./github/config.ts";
 import { GitHubPullRequestService } from "./github/pull-requests.ts";
+import {
+  getDefaultDiffdiffPreferences,
+  getDefaultGitHubPreferences,
+  getDiffdiffPreferencesFilePath,
+  loadDiffdiffPreferences,
+  saveDiffdiffPreferences,
+} from "./preferences.ts";
 
 export class GitHubMetadataProvider implements ForgeMetadataProvider {
   readonly kind = "github";
@@ -110,5 +117,10 @@ export {
   GitHubPullRequestService,
   OctokitGitHubClientFactory,
   resolveGitHubAuth,
+  getDefaultDiffdiffPreferences,
+  getDefaultGitHubPreferences,
+  getDiffdiffPreferencesFilePath,
+  loadDiffdiffPreferences,
+  saveDiffdiffPreferences,
   storeGitHubToken,
 };

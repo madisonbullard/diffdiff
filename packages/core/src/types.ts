@@ -127,6 +127,22 @@ export interface GitHubPendingReview {
   comments: GitHubPullRequestComment[];
 }
 
+export type GitHubMergeMethod = "merge" | "squash";
+
+export interface GitHubCleanupPreferences {
+  removeLocal: boolean;
+  removeRemote: boolean;
+}
+
+export interface GitHubUserPreferences {
+  cleanup: GitHubCleanupPreferences;
+  defaultMergeMethod?: GitHubMergeMethod;
+}
+
+export interface DiffdiffPreferences {
+  github: GitHubUserPreferences;
+}
+
 export interface GitHubReviewLineAnchor {
   path: string;
   line: number;
@@ -199,6 +215,26 @@ export interface GitHubPullRequestMergeState {
   mergedAt?: string;
 }
 
+export interface GitHubRefCleanupCandidate {
+  branchName: string;
+  kind: "local-branch" | "remote-tracking";
+  ref: string;
+}
+
+export interface GitHubPullRequestMergeRequest {
+  commitMessage?: string;
+  commitTitle?: string;
+  comparison: ComparisonInfo;
+  method: GitHubMergeMethod;
+}
+
+export interface GitHubPullRequestMergeResult {
+  cleanupCandidates: GitHubRefCleanupCandidate[];
+  deletedRemoteRefs: string[];
+  message: string;
+  sha?: string;
+}
+
 export interface GitHubPullRequestDetail extends PullRequestInfo {
   author: GitHubActor;
   body?: string;
@@ -219,6 +255,7 @@ export interface GitHubReviewSession {
   pullRequest: GitHubPullRequestDetail;
   remoteName: string;
   repository: ForgeRepository;
+  repositoryRootPath: string;
 }
 
 export interface GitRemote {

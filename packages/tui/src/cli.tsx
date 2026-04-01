@@ -6,6 +6,7 @@ import {
   clearGitHubToken,
   flushDiffdiffLogs,
   GitHubPullRequestService,
+  loadDiffdiffPreferences,
   listDiffdiffSessions,
   loadReviewCache,
   logDiffdiffError,
@@ -231,6 +232,7 @@ async function launchTui(options: StartupOptions): Promise<void> {
       });
     const gitHubPullRequestService = new GitHubPullRequestService();
     const initialSession = await loadSession(options);
+    const initialPreferences = await loadDiffdiffPreferences();
 
     const initialReviewCache =
       initialSession.github == null
@@ -248,11 +250,15 @@ async function launchTui(options: StartupOptions): Promise<void> {
             .addPendingReviewThread(reviewSession, anchor, body)
             .then(() => undefined)
         }
+        initialGitHubPreferences={initialPreferences.github}
         initialReviewCache={initialReviewCache}
         initialOptions={options}
         initialSession={initialSession}
         loadSession={loadSession}
         logFilePath={logSession?.logFilePath}
+        mergePullRequest={(reviewSession, input) =>
+          gitHubPullRequestService.mergePullRequest(reviewSession, input)
+        }
         onExit={() => {
           logDiffdiffInfo("cli", "tui_exit_requested", {
             logFilePath: logSession?.logFilePath,
@@ -264,6 +270,9 @@ async function launchTui(options: StartupOptions): Promise<void> {
             });
           });
         }}
+        removeCleanupRefs={(repositoryRootPath, refs) =>
+          gitHubPullRequestService.removeCleanupRefs(repositoryRootPath, refs)
+        }
         submitPendingReview={(reviewSession, event, body) =>
           gitHubPullRequestService.submitPendingReview(reviewSession, event, body)
         }

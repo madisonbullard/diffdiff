@@ -30,6 +30,13 @@ export {
   storeGitHubToken,
 } from "./github.ts";
 export { loadReviewCache, saveReviewCache } from "./review-cache.ts";
+export {
+  getDefaultDiffdiffPreferences,
+  getDefaultGitHubPreferences,
+  getDiffdiffPreferencesFilePath,
+  loadDiffdiffPreferences,
+  saveDiffdiffPreferences,
+} from "./preferences.ts";
 export { formatHelpText, parseStartupOptions, resolveStartupOptions } from "./startup-options.ts";
 export type { ReviewCacheKey, ReviewCacheState } from "./review-cache.ts";
 export type {
@@ -47,22 +54,29 @@ export type {
   ForgeMetadataProvider,
   ForgeRepository,
   GitRemote,
+  GitHubCleanupPreferences,
   GitHubActor,
   GitHubApiClient,
   GitHubAuthSession,
   GitHubAuthStatus,
   GitHubClientFactory,
+  GitHubMergeMethod,
   GitHubPendingReview,
   GitHubPullRequestChecksSummary,
   GitHubPullRequestComment,
   GitHubPullRequestDetail,
+  GitHubPullRequestMergeRequest,
+  GitHubPullRequestMergeResult,
   GitHubPullRequestMergeState,
   GitHubPullRequestReviewGroup,
   GitHubPullRequestReviewThread,
+  GitHubRefCleanupCandidate,
   GitHubReviewLineAnchor,
   GitHubReviewSession,
   GitHubReviewSubmissionEvent,
   GitHubTokenSource,
+  GitHubUserPreferences,
+  DiffdiffPreferences,
   ParsedStartupOptions,
   PullRequestInfo,
   RepositoryHandle,

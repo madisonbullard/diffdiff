@@ -2,6 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
+import * as commandModule from "../src/command.ts";
 import { GitHubMetadataProvider } from "../src/github.ts";
 import { resolveGitHubAuth, storeGitHubToken } from "../src/github/auth.ts";
 import { getGitHubAuthConfigPaths } from "../src/github/config.ts";
@@ -219,6 +220,105 @@ describe("GitHubPullRequestService", () => {
       },
     );
   });
+
+  test("merges a pull request, refreshes refs, and suggests cleanup for deleted branch refs", async () => {
+    const client = createGitHubApiClient();
+    const clientFactory: GitHubClientFactory = {
+      create: vi.fn(async () => client),
+    };
+    const runCommandSpy = vi
+      .spyOn(commandModule, "runCommand")
+      .mockImplementation(async (_command, args) => {
+        if (args[0] === "rev-parse" && args[2] === "refs/remotes/origin/main") {
+          return "basesha\n";
+        }
+
+        if (args[0] === "rev-parse" && args[2] === "refs/remotes/origin/feature/ui") {
+          return "headsha\n";
+        }
+
+        if (args[0] === "rev-parse" && args[2] === "refs/heads/feature/ui") {
+          return "headsha\n";
+        }
+
+        if (args[0] === "ls-remote" && args[3] === "refs/heads/main") {
+          return "basesha\trefs/heads/main\n";
+        }
+
+        if (args[0] === "ls-remote" && args[3] === "refs/heads/feature/ui") {
+          return "";
+        }
+
+        return "";
+      });
+    const service = new GitHubPullRequestService(clientFactory);
+    const session = await service.attachReviewSession(createReviewSession());
+    const { requestMock } = client;
+
+    const result = await service.mergePullRequest(session.github!, {
+      commitMessage: "Ship it",
+      commitTitle: "Merge UI polish",
+      comparison: session.comparison,
+      method: "merge",
+    });
+
+    expect(requestMock).toHaveBeenCalledWith(
+      "PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge",
+      {
+        commit_message: "Ship it",
+        commit_title: "Merge UI polish",
+        merge_method: "merge",
+        owner: "diffdiff",
+        pull_number: 42,
+        repo: "diffdiff",
+      },
+    );
+    expect(runCommandSpy).toHaveBeenCalledWith(
+      "git",
+      ["fetch", "origin", "refs/heads/main:refs/remotes/origin/main"],
+      { cwd: "/tmp/diffdiff" },
+    );
+    expect(result.cleanupCandidates).toEqual([
+      {
+        branchName: "feature/ui",
+        kind: "local-branch",
+        ref: "feature/ui",
+      },
+      {
+        branchName: "feature/ui",
+        kind: "remote-tracking",
+        ref: "origin/feature/ui",
+      },
+    ]);
+  });
+
+  test("removes selected cleanup refs from the local clone", async () => {
+    const clientFactory: GitHubClientFactory = {
+      create: vi.fn(async () => createGitHubApiClient()),
+    };
+    const runCommandSpy = vi.spyOn(commandModule, "runCommand").mockResolvedValue("");
+    const service = new GitHubPullRequestService(clientFactory);
+
+    await service.removeCleanupRefs("/tmp/diffdiff", [
+      {
+        branchName: "feature/ui",
+        kind: "local-branch",
+        ref: "feature/ui",
+      },
+      {
+        branchName: "feature/ui",
+        kind: "remote-tracking",
+        ref: "origin/feature/ui",
+      },
+    ]);
+
+    expect(runCommandSpy).toHaveBeenCalledWith("git", ["branch", "-D", "feature/ui"], {
+      cwd: "/tmp/diffdiff",
+    });
+    expect(runCommandSpy).toHaveBeenCalledWith("git", ["branch", "-dr", "origin/feature/ui"], {
+      cwd: "/tmp/diffdiff",
+    });
+  });
 });
 
 function createGitHubApiClient(options: { commentPath?: string } = {}): GitHubApiClient & {
@@ -262,6 +362,14 @@ function createGitHubApiClient(options: { commentPath?: string } = {}): GitHubAp
         body: null,
         id: 9010,
         node_id: "PRR_pending_9010",
+      };
+    }
+
+    if (route === "PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge") {
+      return {
+        message: "Pull Request successfully merged",
+        merged: true,
+        sha: "mergedsha",
       };
     }
 

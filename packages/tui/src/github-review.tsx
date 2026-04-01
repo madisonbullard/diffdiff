@@ -1,8 +1,11 @@
 import type {
+  GitHubCleanupPreferences,
+  GitHubMergeMethod,
   GitHubPullRequestComment,
   GitHubPullRequestDetail,
   GitHubPullRequestReviewGroup,
   GitHubPullRequestReviewThread,
+  GitHubRefCleanupCandidate,
   GitHubReviewSubmissionEvent,
 } from "@diffdiff/core";
 import type { SelectedReviewAnchor } from "./review-anchors.ts";
@@ -280,6 +283,8 @@ const REVIEW_SUBMISSION_EVENTS: readonly GitHubReviewSubmissionEvent[] = [
   "REQUEST_CHANGES",
 ];
 
+const MERGE_METHODS: readonly GitHubMergeMethod[] = ["merge", "squash"];
+
 export function SubmitReviewModal({
   body,
   eventIndex,
@@ -387,6 +392,290 @@ export function SubmitReviewModal({
           {isSubmitting
             ? "Submitting review..."
             : "Optional review summary. Use shift+enter for a newline."}
+        </text>
+      </box>
+    </box>
+  );
+}
+
+export function MergePullRequestModal({
+  body,
+  canSubmit,
+  field,
+  isSubmitting,
+  method,
+  pullRequest,
+  theme,
+  title,
+}: {
+  body: string;
+  canSubmit: boolean;
+  field: "method" | "title" | "body";
+  isSubmitting: boolean;
+  method?: GitHubMergeMethod;
+  pullRequest: GitHubPullRequestDetail;
+  theme: UiTheme;
+  title: string;
+}) {
+  const mergeBlockedReason = getMergeBlockedReason(pullRequest);
+
+  return (
+    <box
+      position="absolute"
+      top={0}
+      right={0}
+      bottom={0}
+      left={0}
+      alignItems="center"
+      justifyContent="center"
+      zIndex={55}
+      backgroundColor={MODAL_OVERLAY}
+    >
+      <box
+        width="92%"
+        maxWidth={108}
+        backgroundColor={theme.modalBg}
+        padding={1}
+        flexDirection="column"
+        gap={1}
+      >
+        <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
+          <box flexDirection="column">
+            <text fg={theme.accent} wrapMode="none">
+              Merge Pull Request
+            </text>
+            <text fg={theme.textMuted} wrapMode="none">
+              {`PR #${pullRequest.number} • ${pullRequest.title}`}
+            </text>
+          </box>
+          <text fg={theme.textMuted} wrapMode="none">
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" tab "}
+            </span>
+            <span>{" next field  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" enter "}
+            </span>
+            <span>{" merge  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" shift+enter "}
+            </span>
+            <span>{" newline  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" esc "}
+            </span>
+            <span>{" close"}</span>
+          </text>
+        </box>
+        <box width="100%" flexDirection="column" gap={0}>
+          {MERGE_METHODS.map((mergeMethod) => {
+            const isFocused = field === "method" && mergeMethod === (method ?? MERGE_METHODS[0]);
+            const isSelected = mergeMethod === method;
+            const accent = mergeMethod === "merge" ? theme.accent : theme.success;
+
+            return (
+              <box
+                key={mergeMethod}
+                width="100%"
+                border={["left"]}
+                customBorderChars={REVIEW_BORDER}
+                borderColor={isFocused ? accent : theme.border}
+                backgroundColor={isFocused ? theme.surfaceMuted : theme.surface}
+                paddingLeft={2}
+                paddingRight={1}
+                paddingTop={0}
+                paddingBottom={0}
+              >
+                <text fg={isFocused ? theme.text : theme.textMuted} wrapMode="none">
+                  <span fg={accent}>{isFocused ? "> " : "  "}</span>
+                  <span>{formatMergeMethod(mergeMethod)}</span>
+                  <span fg={theme.border}>{"  │  "}</span>
+                  <span fg={isSelected ? accent : theme.textMuted}>
+                    {isSelected ? "default selection" : "available"}
+                  </span>
+                </text>
+              </box>
+            );
+          })}
+        </box>
+        <box
+          width="100%"
+          border={["left"]}
+          customBorderChars={REVIEW_BORDER}
+          borderColor={field === "title" ? theme.borderActive : theme.border}
+          backgroundColor={field === "title" ? theme.surfaceMuted : theme.surface}
+          paddingLeft={2}
+          paddingRight={1}
+          paddingTop={1}
+          paddingBottom={1}
+        >
+          <text fg={theme.text} wrapMode="word">
+            <span fg={theme.textMuted}>{"Title: "}</span>
+            {title !== "" ? title : ""}
+            {field === "title" ? <span fg={theme.accent}>_</span> : null}
+          </text>
+        </box>
+        <box
+          width="100%"
+          border={["left"]}
+          customBorderChars={REVIEW_BORDER}
+          borderColor={field === "body" ? theme.borderActive : theme.border}
+          backgroundColor={field === "body" ? theme.surfaceMuted : theme.surface}
+          paddingLeft={2}
+          paddingRight={1}
+          paddingTop={1}
+          paddingBottom={1}
+          minHeight={6}
+        >
+          <text fg={theme.text} wrapMode="word">
+            <span fg={theme.textMuted}>{"Body: "}</span>
+            {body !== "" ? body : ""}
+            {field === "body" ? <span fg={theme.accent}>_</span> : null}
+          </text>
+        </box>
+        <text fg={canSubmit ? theme.textMuted : theme.warning} wrapMode="word">
+          {isSubmitting
+            ? "Merging pull request and refreshing local refs..."
+            : canSubmit
+              ? "Edit the merge title/body, then press enter to merge."
+              : mergeBlockedReason}
+        </text>
+      </box>
+    </box>
+  );
+}
+
+export function PostMergeCleanupModal({
+  canApply,
+  candidates,
+  isSubmitting,
+  selectedIndex,
+  selection,
+  theme,
+}: {
+  canApply: boolean;
+  candidates: readonly GitHubRefCleanupCandidate[];
+  isSubmitting: boolean;
+  selectedIndex: number;
+  selection: GitHubCleanupPreferences;
+  theme: UiTheme;
+}) {
+  const localCandidate = candidates.find((candidate) => candidate.kind === "local-branch");
+  const remoteCandidate = candidates.find((candidate) => candidate.kind === "remote-tracking");
+  const entries = [
+    {
+      description:
+        localCandidate == null
+          ? "No matching local branch is available."
+          : `Delete local branch ${localCandidate.ref} with a force delete if needed.`,
+      isAvailable: localCandidate != null,
+      isEnabled: selection.removeLocal,
+      key: "removeLocal" as const,
+      label:
+        localCandidate == null ? "Local branch unavailable" : `Local branch ${localCandidate.ref}`,
+    },
+    {
+      description:
+        remoteCandidate == null
+          ? "No matching remote-tracking ref is available."
+          : `Delete remote-tracking ref ${remoteCandidate.ref} from this clone only.`,
+      isAvailable: remoteCandidate != null,
+      isEnabled: selection.removeRemote,
+      key: "removeRemote" as const,
+      label:
+        remoteCandidate == null
+          ? "Remote-tracking ref unavailable"
+          : `Remote-tracking ref ${remoteCandidate.ref}`,
+    },
+  ];
+
+  return (
+    <box
+      position="absolute"
+      top={0}
+      right={0}
+      bottom={0}
+      left={0}
+      alignItems="center"
+      justifyContent="center"
+      zIndex={56}
+      backgroundColor={MODAL_OVERLAY}
+    >
+      <box
+        width="92%"
+        maxWidth={104}
+        backgroundColor={theme.modalBg}
+        padding={1}
+        flexDirection="column"
+        gap={1}
+      >
+        <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
+          <box flexDirection="column">
+            <text fg={theme.accent} wrapMode="none">
+              Post-Merge Cleanup
+            </text>
+            <text fg={theme.textMuted} wrapMode="word">
+              The remote branch layout changed after the merge. Choose which stale refs to remove
+              from this clone.
+            </text>
+          </box>
+          <text fg={theme.textMuted} wrapMode="none">
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" j/k "}
+            </span>
+            <span>{" move  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" space "}
+            </span>
+            <span>{" toggle  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" enter "}
+            </span>
+            <span>{" apply  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" esc "}
+            </span>
+            <span>{" skip"}</span>
+          </text>
+        </box>
+        <box width="100%" flexDirection="column" gap={0}>
+          {entries.map((entry, index) => {
+            const isSelected = index === selectedIndex;
+            return (
+              <box
+                key={entry.key}
+                width="100%"
+                border={["left"]}
+                customBorderChars={REVIEW_BORDER}
+                borderColor={isSelected ? theme.accent : theme.border}
+                backgroundColor={isSelected ? theme.surfaceMuted : theme.surface}
+                paddingLeft={2}
+                paddingRight={1}
+                paddingTop={1}
+                paddingBottom={1}
+                flexDirection="column"
+                gap={0}
+              >
+                <text fg={entry.isAvailable ? theme.text : theme.textMuted} wrapMode="none">
+                  <span fg={isSelected ? theme.accent : theme.border}>
+                    {isSelected ? "> " : "  "}
+                  </span>
+                  <span>{entry.isEnabled ? "[x] " : "[ ] "}</span>
+                  <span>{entry.label}</span>
+                </text>
+                <text fg={theme.textMuted} wrapMode="word">
+                  {entry.description}
+                </text>
+              </box>
+            );
+          })}
+        </box>
+        <text fg={canApply ? theme.textMuted : theme.warning} wrapMode="word">
+          {isSubmitting
+            ? "Removing selected refs..."
+            : canApply
+              ? "Enter applies the selected cleanup. Force-delete warnings apply to local branches."
+              : "Choose at least one available ref to remove, or press esc to keep the current refs."}
         </text>
       </box>
     </box>
@@ -637,6 +926,14 @@ export function getReviewSubmissionEvent(index: number): GitHubReviewSubmissionE
   ]!;
 }
 
+export function getMergeMethod(index: number): GitHubMergeMethod {
+  return MERGE_METHODS[Math.max(0, Math.min(index, MERGE_METHODS.length - 1))]!;
+}
+
+export function getMergeMethodIndex(method?: GitHubMergeMethod): number {
+  return method == null ? 0 : Math.max(MERGE_METHODS.indexOf(method), 0);
+}
+
 function formatReviewEvent(event: GitHubReviewSubmissionEvent): string {
   switch (event) {
     case "APPROVE":
@@ -646,4 +943,28 @@ function formatReviewEvent(event: GitHubReviewSubmissionEvent): string {
     case "REQUEST_CHANGES":
       return "Request changes";
   }
+}
+
+function formatMergeMethod(method: GitHubMergeMethod): string {
+  return method === "merge" ? "Merge commit" : "Squash merge";
+}
+
+function getMergeBlockedReason(pullRequest: GitHubPullRequestDetail): string {
+  if (pullRequest.isMerged) {
+    return "This pull request is already merged.";
+  }
+
+  if (pullRequest.state !== "open") {
+    return "This pull request is closed, so merge is disabled.";
+  }
+
+  if (pullRequest.isDraft) {
+    return "GitHub currently marks this PR as a draft, so merge is disabled.";
+  }
+
+  if (pullRequest.merge.mergeableState != null) {
+    return `GitHub currently reports ${pullRequest.merge.mergeableState}; merge is disabled until that changes.`;
+  }
+
+  return "GitHub has not reported a mergeable state yet, so merge is disabled for now.";
 }

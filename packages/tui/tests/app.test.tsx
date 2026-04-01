@@ -1,5 +1,5 @@
-import type { StartupOptions } from "@diffdiff/core";
-import type { ReactNode } from "react";
+import type { GitHubUserPreferences, StartupOptions } from "@diffdiff/core";
+import type { ComponentProps, ReactNode } from "react";
 import type { ReactTestRenderer } from "react-test-renderer";
 import { act, create } from "react-test-renderer";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
@@ -564,14 +564,152 @@ test("opens the submit review modal and submits the pending review", async () =>
   );
 });
 
-function createAppProps(overrides: Partial<ReturnType<typeof createAppPropsBase>> = {}) {
+test("opens the merge modal and merges with the selected method", async () => {
+  const mergePullRequestSpy = vi.fn();
+  const mergePullRequest: NonNullable<DiffdiffAppProps["mergePullRequest"]> = async (
+    reviewSession,
+    input,
+  ) => {
+    mergePullRequestSpy(reviewSession, input);
+    return {
+      cleanupCandidates: [],
+      deletedRemoteRefs: [],
+      message: "Pull Request successfully merged",
+      sha: "mergedsha",
+    };
+  };
+  const nextSession = createPreparedSession({
+    github: createGitHubReviewSession({
+      pullRequest: {
+        ...createGitHubReviewSession()!.pullRequest,
+        isMerged: true,
+        merge: {
+          ...createGitHubReviewSession()!.pullRequest.merge,
+          canMerge: false,
+          isMerged: true,
+          mergedAt: "2026-04-01T13:00:00Z",
+        },
+      },
+    }),
+  });
+  const loadSession = vi.fn(async () => nextSession);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        loadSession,
+        mergePullRequest,
+      })}
+    />,
+  );
+
+  emitKey({ name: "m" });
+
+  expect(getAppText(tree)).toContain("Merge Pull Request");
+  expect(getAppText(tree)).toContain("Adds PR review mode.");
+
+  emitKey({ name: "j" });
+  await emitAsyncKey({ name: "return" });
+
+  expect(mergePullRequestSpy).toHaveBeenCalledWith(
+    expect.objectContaining({ pullRequest: expect.objectContaining({ number: 42 }) }),
+    expect.objectContaining({
+      commitMessage: "Adds PR review mode.",
+      commitTitle: "Build TUI reviewer",
+      method: "squash",
+    }),
+  );
+  expect(loadSession).toHaveBeenLastCalledWith({
+    base: "origin/main",
+    head: "feature/tui",
+  });
+});
+
+test("opens cleanup automatically after merge and removes the selected refs", async () => {
+  const mergePullRequestSpy = vi.fn();
+  const mergePullRequest: NonNullable<DiffdiffAppProps["mergePullRequest"]> = async (
+    reviewSession,
+    input,
+  ) => {
+    mergePullRequestSpy(reviewSession, input);
+    return {
+      cleanupCandidates: [
+        { branchName: "feature/tui", kind: "local-branch", ref: "feature/tui" },
+        { branchName: "feature/tui", kind: "remote-tracking", ref: "origin/feature/tui" },
+      ],
+      deletedRemoteRefs: ["origin/feature/tui"],
+      message: "Pull Request successfully merged",
+      sha: "mergedsha",
+    };
+  };
+  const removeCleanupRefsSpy = vi.fn();
+  const removeCleanupRefs: NonNullable<DiffdiffAppProps["removeCleanupRefs"]> = async (
+    repositoryRootPath,
+    refs,
+  ) => {
+    removeCleanupRefsSpy(repositoryRootPath, refs);
+  };
+  const loadSession = vi.fn(async () =>
+    createPreparedSession({
+      github: createGitHubReviewSession({
+        pullRequest: {
+          ...createGitHubReviewSession()!.pullRequest,
+          isMerged: true,
+          merge: {
+            ...createGitHubReviewSession()!.pullRequest.merge,
+            canMerge: false,
+            isMerged: true,
+            mergedAt: "2026-04-01T13:00:00Z",
+          },
+        },
+      }),
+    }),
+  );
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        initialGitHubPreferences: createGitHubPreferences({
+          cleanup: {
+            removeLocal: true,
+            removeRemote: false,
+          },
+          defaultMergeMethod: "merge",
+        }),
+        loadSession,
+        mergePullRequest,
+        removeCleanupRefs,
+      })}
+    />,
+  );
+
+  emitKey({ name: "m" });
+  await emitAsyncKey({ name: "return" });
+
+  expect(getAppText(tree)).toContain("Post-Merge Cleanup");
+  expect(getAppText(tree)).toContain("Local branch feature/tui");
+  expect(getAppText(tree)).toContain("Remote-tracking ref origin/feature/tui");
+
+  emitKey({ name: "j" });
+  emitKey({ name: "space" });
+  await emitAsyncKey({ name: "return" });
+
+  expect(removeCleanupRefsSpy).toHaveBeenCalledWith("/tmp/diffdiff", [
+    { branchName: "feature/tui", kind: "local-branch", ref: "feature/tui" },
+    { branchName: "feature/tui", kind: "remote-tracking", ref: "origin/feature/tui" },
+  ]);
+});
+
+type DiffdiffAppProps = ComponentProps<typeof DiffdiffApp>;
+
+function createAppProps(overrides: Partial<DiffdiffAppProps> = {}): DiffdiffAppProps {
   return {
     ...createAppPropsBase(),
     ...overrides,
   };
 }
 
-function createAppPropsBase() {
+function createAppPropsBase(): DiffdiffAppProps {
   const initialOptions = {
     base: "origin/main",
     head: "feature/tui",
@@ -581,14 +719,35 @@ function createAppPropsBase() {
 
   return {
     addReviewThread: vi.fn(async () => undefined),
+    initialGitHubPreferences: createGitHubPreferences(),
     initialOptions,
     initialSession,
     loadSession: vi.fn(async () => initialSession),
     logFilePath: "/Users/test/.diffdiff/logs/log-test.jsonl",
+    mergePullRequest: async () => ({
+      cleanupCandidates: [],
+      deletedRemoteRefs: [],
+      message: "Pull Request successfully merged",
+      sha: "mergedsha",
+    }),
     onExit: vi.fn(),
+    removeCleanupRefs: async () => undefined,
     submitPendingReview: vi.fn(async () => undefined),
     syntaxStyle,
     theme,
+  };
+}
+
+function createGitHubPreferences(
+  overrides: Partial<GitHubUserPreferences> = {},
+): GitHubUserPreferences {
+  return {
+    cleanup: {
+      removeLocal: true,
+      removeRemote: false,
+      ...overrides.cleanup,
+    },
+    defaultMergeMethod: overrides.defaultMergeMethod,
   };
 }
 
@@ -678,7 +837,9 @@ function createPreparedSession(
   };
 }
 
-function createGitHubReviewSession(): PreparedReviewSession["github"] {
+function createGitHubReviewSession(
+  overrides: Partial<NonNullable<PreparedReviewSession["github"]>> = {},
+): PreparedReviewSession["github"] {
   return {
     auth: {
       host: "github.com",
@@ -817,6 +978,8 @@ function createGitHubReviewSession(): PreparedReviewSession["github"] {
       owner: "diffdiff",
       repo: "diffdiff",
     },
+    repositoryRootPath: "/tmp/diffdiff",
+    ...overrides,
   };
 }
 

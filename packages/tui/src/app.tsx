@@ -1,18 +1,26 @@
 import type {
   BranchInfo,
+  GitHubCleanupPreferences,
+  GitHubMergeMethod,
   GitHubReviewLineAnchor,
+  GitHubRefCleanupCandidate,
+  GitHubPullRequestMergeRequest,
+  GitHubPullRequestMergeResult,
   GitHubReviewSession,
   GitHubReviewSubmissionEvent,
+  GitHubUserPreferences,
   ReviewCacheKey,
   ReviewCacheState,
   StartupOptions,
 } from "@diffdiff/core";
 import {
+  getDefaultGitHubPreferences,
   getDiffdiffLogSession,
   logDiffdiffError,
   logDiffdiffInfo,
   logDiffdiffWarn,
   saveReviewCache,
+  saveDiffdiffPreferences,
   updateDiffdiffSessionActivity,
 } from "@diffdiff/core";
 import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
@@ -27,6 +35,10 @@ import {
   StickyFileHeader,
 } from "./components.tsx";
 import {
+  getMergeMethod,
+  getMergeMethodIndex,
+  MergePullRequestModal,
+  PostMergeCleanupModal,
   getReviewSubmissionEvent,
   PullRequestBanner,
   PullRequestCommentsModal,
@@ -68,12 +80,21 @@ interface DiffdiffAppProps {
     anchor: GitHubReviewLineAnchor,
     body: string,
   ) => Promise<void>;
+  initialGitHubPreferences?: GitHubUserPreferences;
   initialReviewCache?: ReviewCacheState;
   initialSession: PreparedReviewSession;
   initialOptions: StartupOptions;
   loadSession: (options: StartupOptions) => Promise<PreparedReviewSession>;
   logFilePath?: string;
+  mergePullRequest?: (
+    reviewSession: GitHubReviewSession,
+    input: GitHubPullRequestMergeRequest,
+  ) => Promise<GitHubPullRequestMergeResult>;
   onExit: () => void;
+  removeCleanupRefs?: (
+    repositoryRootPath: string,
+    refs: readonly GitHubRefCleanupCandidate[],
+  ) => Promise<void>;
   submitPendingReview?: (
     reviewSession: GitHubReviewSession,
     event: GitHubReviewSubmissionEvent,
@@ -88,6 +109,8 @@ interface KeyboardInput {
   sequence?: string;
   shift?: boolean;
 }
+
+type MergeModalField = "method" | "title" | "body";
 
 const LIST_FILTER_KEYS = ["workingTree", "localBranch", "openPr", "remoteBranch"] as const;
 const LOADING_INDICATOR_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
@@ -175,12 +198,15 @@ function getBranchFilterLabel(key: keyof BranchListFilters): string {
 
 export function DiffdiffApp({
   addReviewThread,
+  initialGitHubPreferences,
   initialReviewCache,
   initialSession,
   initialOptions,
   loadSession,
   logFilePath,
+  mergePullRequest,
   onExit,
+  removeCleanupRefs,
   submitPendingReview,
   syntaxStyle,
   theme,
@@ -221,11 +247,24 @@ export function DiffdiffApp({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [errorToastMessage, setErrorToastMessage] = useState<string | null>(null);
   const [baseBranchLoadingMessage, setBaseBranchLoadingMessage] = useState<string | null>(null);
+  const [cleanupCandidateIndex, setCleanupCandidateIndex] = useState(0);
+  const [cleanupCandidates, setCleanupCandidates] = useState<GitHubRefCleanupCandidate[]>([]);
+  const [cleanupSelection, setCleanupSelection] = useState<GitHubCleanupPreferences>(
+    () => initialGitHubPreferences?.cleanup ?? getDefaultGitHubPreferences().cleanup,
+  );
+  const [gitHubPreferences, setGitHubPreferences] = useState<GitHubUserPreferences>(
+    () => initialGitHubPreferences ?? getDefaultGitHubPreferences(),
+  );
+  const gitHubPreferencesRef = useRef<GitHubUserPreferences>(
+    initialGitHubPreferences ?? getDefaultGitHubPreferences(),
+  );
   const [showHelp, setShowHelp] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
+  const [showCleanupModal, setShowCleanupModal] = useState(false);
   const [showCommentComposer, setShowCommentComposer] = useState(false);
   const [showCommentsModal, setShowCommentsModal] = useState(false);
   const [showListFilterModal, setShowListFilterModal] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
   const [showOutdatedReviewThreads, setShowOutdatedReviewThreads] = useState(false);
   const [showSubmitReviewModal, setShowSubmitReviewModal] = useState(false);
   const [activeListView, setActiveListView] = useState<ListModalView>("branch");
@@ -240,6 +279,14 @@ export function DiffdiffApp({
   const [isReloading, setIsReloading] = useState(false);
   const [isSubmittingReviewAction, setIsSubmittingReviewAction] = useState(false);
   const [diffViewPreference, setDiffViewPreference] = useState<DiffViewPreference>("unified");
+  const [mergeCommitMessage, setMergeCommitMessage] = useState("");
+  const [mergeCommitTitle, setMergeCommitTitle] = useState("");
+  const [mergeMethod, setMergeMethod] = useState<GitHubMergeMethod | undefined>(
+    initialGitHubPreferences?.defaultMergeMethod,
+  );
+  const [mergeModalField, setMergeModalField] = useState<MergeModalField>(
+    initialGitHubPreferences?.defaultMergeMethod == null ? "method" : "title",
+  );
   const [reviewComposerBody, setReviewComposerBody] = useState("");
   const [reviewSubmissionBody, setReviewSubmissionBody] = useState("");
   const [reviewSubmissionEventIndex, setReviewSubmissionEventIndex] = useState(0);
@@ -318,6 +365,11 @@ export function DiffdiffApp({
     selectedReviewAnchors[clampIndex(selectedReviewAnchorIndex, selectedReviewAnchors.length)];
   const openPrCount = session.branches.remote.filter((branch) => branch.pullRequest != null).length;
   const remoteBranchCount = session.branches.remote.length - openPrCount;
+  const canApplyCleanup =
+    (cleanupCandidates.some((candidate) => candidate.kind === "local-branch") &&
+      cleanupSelection.removeLocal) ||
+    (cleanupCandidates.some((candidate) => candidate.kind === "remote-tracking") &&
+      cleanupSelection.removeRemote);
   const activeOverlay = showHelp
     ? "help"
     : showCommentComposer
@@ -326,11 +378,15 @@ export function DiffdiffApp({
         ? "comments"
         : showSubmitReviewModal
           ? "submit-review"
-          : showListFilterModal
-            ? "list-filter"
-            : showBranchModal
-              ? "branch"
-              : null;
+          : showMergeModal
+            ? "merge"
+            : showCleanupModal
+              ? "cleanup"
+              : showListFilterModal
+                ? "list-filter"
+                : showBranchModal
+                  ? "branch"
+                  : null;
   const keyboardHandlerRef = useRef<(key: KeyboardInput) => void>(() => undefined);
   const resolvedLogFilePath =
     logFilePath ?? getDiffdiffLogSession()?.logFilePath ?? "~/.diffdiff/logs/log-unknown.jsonl";
@@ -393,10 +449,46 @@ export function DiffdiffApp({
     [resolvedLogFilePath, showErrorToast],
   );
 
+  const persistGitHubPreferences = useCallback(
+    async (nextPreferences: GitHubUserPreferences) => {
+      setGitHubPreferences(nextPreferences);
+      try {
+        await saveDiffdiffPreferences({ github: nextPreferences });
+      } catch (error) {
+        handleAppError(error, "Unable to save diffdiff preferences.", {
+          action: "save-preferences",
+          preferences: nextPreferences,
+        });
+      }
+    },
+    [handleAppError],
+  );
+
+  const updateCleanupSelection = useCallback(
+    (updater: (currentSelection: GitHubCleanupPreferences) => GitHubCleanupPreferences) => {
+      setCleanupSelection((currentSelection) => {
+        const nextSelection = updater(currentSelection);
+        void persistGitHubPreferences({
+          ...gitHubPreferencesRef.current,
+          cleanup: nextSelection,
+        });
+        return nextSelection;
+      });
+    },
+    [persistGitHubPreferences],
+  );
+
+  useEffect(() => {
+    gitHubPreferencesRef.current = gitHubPreferences;
+  }, [gitHubPreferences]);
+
   useEffect(() => {
     if (session.github == null) {
+      setCleanupCandidates([]);
+      setShowCleanupModal(false);
       setShowCommentComposer(false);
       setShowCommentsModal(false);
+      setShowMergeModal(false);
       setShowOutdatedReviewThreads(false);
       setShowSubmitReviewModal(false);
     }
@@ -690,6 +782,16 @@ export function DiffdiffApp({
       return;
     }
 
+    if (activeOverlay === "merge") {
+      handleMergeModalKey(key);
+      return;
+    }
+
+    if (activeOverlay === "cleanup") {
+      handleCleanupModalKey(key);
+      return;
+    }
+
     if (activeOverlay === "list-filter") {
       handleListFilterModalKey(key);
       return;
@@ -764,6 +866,11 @@ export function DiffdiffApp({
 
     if (session.github != null && key.name === "s") {
       openSubmitReviewModal();
+      return;
+    }
+
+    if (session.github != null && key.name === "m") {
+      openMergeModal();
       return;
     }
 
@@ -1232,10 +1339,6 @@ export function DiffdiffApp({
           </span>
           <span>{" review "}</span>
           <span fg={theme.accent} bg={theme.surfaceMuted}>
-            {" m "}
-          </span>
-          <span>{" next "}</span>
-          <span fg={theme.accent} bg={theme.surfaceMuted}>
             {" c "}
           </span>
           <span>{" collapse "}</span>
@@ -1282,7 +1385,11 @@ export function DiffdiffApp({
             <span fg={theme.accent} bg={theme.surfaceMuted}>
               {" y "}
             </span>
-            <span>{" PR URL"}</span>
+            <span>{" PR URL  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" m "}
+            </span>
+            <span>{" merge"}</span>
           </text>
         ) : null}
       </box>
@@ -1396,6 +1503,30 @@ export function DiffdiffApp({
           body={reviewSubmissionBody}
           eventIndex={reviewSubmissionEventIndex}
           isSubmitting={isSubmittingReviewAction}
+          theme={theme}
+        />
+      ) : null}
+
+      {showMergeModal && session.github != null ? (
+        <MergePullRequestModal
+          body={mergeCommitMessage}
+          canSubmit={session.github.pullRequest.merge.canMerge && mergeMethod != null}
+          field={mergeModalField}
+          isSubmitting={isSubmittingReviewAction}
+          method={mergeMethod}
+          pullRequest={session.github.pullRequest}
+          theme={theme}
+          title={mergeCommitTitle}
+        />
+      ) : null}
+
+      {showCleanupModal ? (
+        <PostMergeCleanupModal
+          canApply={canApplyCleanup}
+          candidates={cleanupCandidates}
+          isSubmitting={isSubmittingReviewAction}
+          selectedIndex={cleanupCandidateIndex}
+          selection={cleanupSelection}
           theme={theme}
         />
       ) : null}
@@ -1992,6 +2123,125 @@ export function DiffdiffApp({
     }
   }
 
+  function handleMergeModalKey(key: KeyboardInput): void {
+    if (key.name === "escape") {
+      setShowMergeModal(false);
+      setStatusMessage("Closed merge modal.");
+      return;
+    }
+
+    if (key.name === "tab") {
+      setMergeModalField((currentField) => {
+        switch (currentField) {
+          case "method":
+            return "title";
+          case "title":
+            return "body";
+          case "body":
+            return "method";
+        }
+      });
+      return;
+    }
+
+    if (mergeModalField === "method") {
+      if (key.name === "j" || key.name === "down" || key.name === "k" || key.name === "up") {
+        const delta = key.name === "j" || key.name === "down" ? 1 : -1;
+        const nextMethod = getMergeMethod(getMergeMethodIndex(mergeMethod) + delta);
+        setMergeMethod(nextMethod);
+        void persistGitHubPreferences({
+          ...gitHubPreferencesRef.current,
+          defaultMergeMethod: nextMethod,
+        });
+        setStatusMessage(`Default merge method set to ${nextMethod}.`);
+      }
+      if (key.name === "return") {
+        void submitMergeFromModal();
+      }
+      return;
+    }
+
+    if (mergeModalField === "title") {
+      if (key.name === "backspace") {
+        setMergeCommitTitle((currentTitle) => currentTitle.slice(0, -1));
+        return;
+      }
+
+      if (key.name === "return") {
+        void submitMergeFromModal();
+        return;
+      }
+
+      if (key.sequence != null && key.sequence.length === 1 && key.sequence >= " ") {
+        setMergeCommitTitle((currentTitle) => currentTitle + key.sequence);
+      }
+      return;
+    }
+
+    if (key.name === "backspace") {
+      setMergeCommitMessage((currentBody) => currentBody.slice(0, -1));
+      return;
+    }
+
+    if (key.name === "return" && key.shift) {
+      setMergeCommitMessage((currentBody) => `${currentBody}\n`);
+      return;
+    }
+
+    if (key.name === "return") {
+      void submitMergeFromModal();
+      return;
+    }
+
+    if (key.sequence != null && key.sequence.length === 1 && key.sequence >= " ") {
+      setMergeCommitMessage((currentBody) => currentBody + key.sequence);
+    }
+  }
+
+  function handleCleanupModalKey(key: KeyboardInput): void {
+    const entryCount = 2;
+
+    if (key.name === "escape") {
+      setShowCleanupModal(false);
+      setCleanupCandidates([]);
+      setStatusMessage("Skipped post-merge cleanup.");
+      return;
+    }
+
+    if (key.name === "j" || key.name === "down") {
+      setCleanupCandidateIndex((currentIndex) => clampIndex(currentIndex + 1, entryCount));
+      return;
+    }
+
+    if (key.name === "k" || key.name === "up") {
+      setCleanupCandidateIndex((currentIndex) => clampIndex(currentIndex - 1, entryCount));
+      return;
+    }
+
+    if (key.name === "space") {
+      const nextKey = cleanupCandidateIndex === 0 ? "removeLocal" : "removeRemote";
+      const hasCandidate = cleanupCandidates.some((candidate) =>
+        nextKey === "removeLocal"
+          ? candidate.kind === "local-branch"
+          : candidate.kind === "remote-tracking",
+      );
+
+      if (!hasCandidate) {
+        return;
+      }
+
+      updateCleanupSelection((currentSelection) => ({
+        ...currentSelection,
+        [nextKey]: !currentSelection[nextKey],
+      }));
+      return;
+    }
+
+    if (key.name === "return") {
+      void applyCleanupSelection();
+    }
+  }
+
   function openCommentComposer(): void {
     if (session.github == null) {
       setStatusMessage("Open a GitHub pull request first.");
@@ -2028,6 +2278,27 @@ export function DiffdiffApp({
     setReviewSubmissionEventIndex(0);
     setShowSubmitReviewModal(true);
     setStatusMessage("Preparing review submission.");
+  }
+
+  function openMergeModal(): void {
+    if (session.github == null) {
+      setStatusMessage("Open a GitHub pull request first.");
+      return;
+    }
+
+    if (!session.github.auth.isAuthenticated) {
+      setStatusMessage("GitHub auth is required. Run `diffdiff auth login --token-stdin` first.");
+      return;
+    }
+
+    setMergeCommitTitle(session.github.pullRequest.title);
+    setMergeCommitMessage(session.github.pullRequest.body ?? "");
+    setMergeMethod(gitHubPreferencesRef.current.defaultMergeMethod);
+    setMergeModalField(
+      gitHubPreferencesRef.current.defaultMergeMethod == null ? "method" : "title",
+    );
+    setShowMergeModal(true);
+    setStatusMessage("Preparing merge modal.");
   }
 
   async function submitCommentComposer(): Promise<void> {
@@ -2091,6 +2362,78 @@ export function DiffdiffApp({
     }
   }
 
+  async function submitMergeFromModal(): Promise<void> {
+    if (session.github == null || mergePullRequest == null || mergeMethod == null) {
+      return;
+    }
+
+    setIsSubmittingReviewAction(true);
+    setStatusMessage(`Merging pull request with ${mergeMethod}...`);
+
+    try {
+      const mergeResult = await mergePullRequest(session.github, {
+        commitMessage: mergeCommitMessage.trim() === "" ? undefined : mergeCommitMessage.trim(),
+        commitTitle: mergeCommitTitle.trim() === "" ? undefined : mergeCommitTitle.trim(),
+        comparison: session.comparison,
+        method: mergeMethod,
+      });
+      const nextSession = await loadSession(startupOptions);
+      setSession(nextSession);
+      setShowMergeModal(false);
+      setStatusMessage("Merged the pull request and refreshed local refs.");
+
+      if (mergeResult.cleanupCandidates.length > 0) {
+        setCleanupCandidateIndex(0);
+        setCleanupCandidates(mergeResult.cleanupCandidates);
+        setCleanupSelection(gitHubPreferencesRef.current.cleanup);
+        setShowCleanupModal(true);
+        setStatusMessage("Merged the pull request. Choose any stale refs to remove.");
+      }
+    } catch (error) {
+      handleAppError(error, "Unable to merge the pull request.", {
+        action: "merge-pull-request",
+        mergeMethod,
+        pullRequestNumber: session.github.pullRequest.number,
+      });
+    } finally {
+      setIsSubmittingReviewAction(false);
+    }
+  }
+
+  async function applyCleanupSelection(): Promise<void> {
+    if (session.github == null || removeCleanupRefs == null) {
+      return;
+    }
+
+    const refsToRemove = cleanupCandidates.filter((candidate) =>
+      candidate.kind === "local-branch"
+        ? cleanupSelection.removeLocal
+        : cleanupSelection.removeRemote,
+    );
+    if (refsToRemove.length === 0) {
+      return;
+    }
+
+    setIsSubmittingReviewAction(true);
+    setStatusMessage("Removing selected refs...");
+
+    try {
+      await removeCleanupRefs(session.repository.rootPath, refsToRemove);
+      const nextSession = await loadSession(startupOptions);
+      setSession(nextSession);
+      setCleanupCandidates([]);
+      setShowCleanupModal(false);
+      setStatusMessage("Removed selected refs and reloaded the current session.");
+    } catch (error) {
+      handleAppError(error, "Unable to remove the selected refs.", {
+        action: "remove-cleanup-refs",
+        refsToRemove,
+      });
+    } finally {
+      setIsSubmittingReviewAction(false);
+    }
+  }
+
   function toggleBranchFilter(key: keyof BranchListFilters): void {
     setBranchListFilters((currentFilters) => {
       const nextFilters = {
@@ -2127,7 +2470,9 @@ export function DiffdiffApp({
       setShowCommentComposer(false);
       setShowCommentsModal(false);
       setShowListFilterModal(false);
+      setShowMergeModal(false);
       setShowSubmitReviewModal(false);
+      setShowCleanupModal(false);
       setSelectedFileIndex(0);
       setStatusMessage(`Updated ${target} to ${branch.name}.`);
     } catch (error) {
@@ -2165,7 +2510,9 @@ export function DiffdiffApp({
       setShowCommentComposer(false);
       setShowCommentsModal(false);
       setShowListFilterModal(false);
+      setShowMergeModal(false);
       setShowSubmitReviewModal(false);
+      setShowCleanupModal(false);
       setSelectedFileIndex(0);
       setStatusMessage(`Updated ${target} to commit ${shortSha}.`);
     } catch (error) {

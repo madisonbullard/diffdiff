@@ -1546,6 +1546,14 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
           <KeyCap label="y" theme={theme} />
           <span>{" copy PR URL"}</span>
         </text>
+        <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="a" theme={theme} />
+          <span>{" add comment  "}</span>
+          <KeyCap label="s" theme={theme} />
+          <span>{" submit review  "}</span>
+          <KeyCap label="m" theme={theme} />
+          <span>{" merge PR"}</span>
+        </text>
       </box>
       <box
         width="100%"
