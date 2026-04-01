@@ -361,6 +361,12 @@ function parseReviewFile(file: ChangedFile, pierreDiffs: PierreDiffsModule): Pre
   try {
     const diff = pierreDiffs.parsePatchFiles(file.patch)[0]?.files?.[0];
 
+    if (diff == null) {
+      logDiffdiffWarn("render", "diff_parse_returned_null", {
+        path: file.path,
+      });
+    }
+
     return {
       ...file,
       diff,

@@ -20,6 +20,53 @@ describe("splitPatchIntoFiles", () => {
 
     expect(splitPatchIntoFiles(patch)).toHaveLength(2);
   });
+
+  test("preserves trailing blank context lines in hunk output", () => {
+    // A context line for a blank line in the source file appears as a single space in unified
+    // diff output.  An overly aggressive trim could strip that space and break strict parsers
+    // that validate hunk line counts against the @@ header.
+    const patch = [
+      "diff --git a/src/app.ts b/src/app.ts",
+      "--- a/src/app.ts",
+      "+++ b/src/app.ts",
+      "@@ -1,4 +1,4 @@",
+      "-old",
+      "+new",
+      " a",
+      " ",
+    ].join("\n");
+
+    const sections = splitPatchIntoFiles(patch);
+    expect(sections).toHaveLength(1);
+
+    const lines = sections[0].split("\n");
+    expect(lines.at(-1)).toBe(" ");
+  });
+
+  test("preserves trailing blank context lines when splitting multi-file patches", () => {
+    const patch = [
+      "diff --git a/first.ts b/first.ts",
+      "--- a/first.ts",
+      "+++ b/first.ts",
+      "@@ -1,3 +1,3 @@",
+      "-old",
+      "+new",
+      " trailing context",
+      " ",
+      "diff --git a/second.ts b/second.ts",
+      "--- a/second.ts",
+      "+++ b/second.ts",
+      "@@ -1 +1 @@",
+      "-a",
+      "+b",
+    ].join("\n");
+
+    const sections = splitPatchIntoFiles(patch);
+    expect(sections).toHaveLength(2);
+
+    const firstLines = sections[0].split("\n");
+    expect(firstLines.at(-1)).toBe(" ");
+  });
 });
 
 describe("parseChangedFilePatch", () => {

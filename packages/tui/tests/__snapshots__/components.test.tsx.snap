@@ -1085,44 +1085,49 @@ exports[`renders a sticky file header for the active viewport file 1`] = `
   zIndex={10}
 >
   <box
-    flexDirection="row"
-    gap={1}
-    justifyContent="space-between"
+    paddingRight={1}
     width="100%"
   >
-    <text
-      fg="#e6edf3"
-      wrapMode="none"
-    >
-      <span
-        fg="#e6edf3"
-      >
-        src/app.ts
-      </span>
-    </text>
     <box
-      paddingRight={2}
+      flexDirection="row"
+      gap={1}
+      justifyContent="space-between"
+      width="100%"
     >
       <text
-        fg="#8ea4b5"
+        fg="#e6edf3"
         wrapMode="none"
       >
         <span
-          fg="#3fb950"
+          fg="#e6edf3"
         >
-          +3
-        </span>
-        <span
-          fg="#29475c"
-        >
-           / 
-        </span>
-        <span
-          fg="#ff7b72"
-        >
-          -1
+          src/app.ts
         </span>
       </text>
+      <box
+        paddingRight={2}
+      >
+        <text
+          fg="#8ea4b5"
+          wrapMode="none"
+        >
+          <span
+            fg="#3fb950"
+          >
+            +3
+          </span>
+          <span
+            fg="#29475c"
+          >
+             / 
+          </span>
+          <span
+            fg="#ff7b72"
+          >
+            -1
+          </span>
+        </text>
+      </box>
     </box>
   </box>
 </box>

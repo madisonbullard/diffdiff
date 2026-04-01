@@ -713,10 +713,25 @@ function splitPatchIntoFiles(patch: string): string[] {
     const start = matches[index].index ?? 0;
     const nextMatch = matches[index + 1];
     const end = nextMatch?.index ?? patch.length;
-    sections.push(patch.slice(start, end).trimEnd());
+    sections.push(trimPatchSection(patch.slice(start, end)));
   }
 
   return sections;
+}
+
+/**
+ * Trim trailing blank lines from a patch section without stripping meaningful diff content.
+ *
+ * `String.trimEnd()` is unsafe here because a context line representing a blank line in
+ * the source file appears as a single space (` `) in unified diff output.  Stripping that
+ * space makes the hunk line-count disagree with its header, which causes strict diff parsers
+ * (such as the `diff` npm package used by the `<diff>` fallback renderer) to reject the patch.
+ *
+ * Instead, we only remove trailing `\n` and `\r` characters so the last *content* line is
+ * always preserved intact.
+ */
+function trimPatchSection(section: string): string {
+  return section.replace(/[\r\n]+$/u, "");
 }
 
 function parseChangedFilePatch(patch: string): ChangedFile {

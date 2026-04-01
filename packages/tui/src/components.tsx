@@ -1,5 +1,7 @@
 import type { BranchInfo, GitHubPullRequestReviewThread } from "@diffdiff/core";
+import { logDiffdiffWarn } from "@diffdiff/core";
 import type { BoxRenderable, ColorInput, SyntaxStyle } from "@opentui/core";
+import { useEffect, useRef } from "react";
 import type { ReactNode, Ref } from "react";
 import {
   getThreadsForSideBySideRow,
@@ -110,6 +112,28 @@ export function FileCard({
     ? "binary change"
     : `${filetype ?? "text"} ${getDiffViewLabel(diffView)} diff`;
   const { borderColor, fileBackground } = getFileCardChrome(isSelected, isReviewed, theme);
+
+  const usesFallbackRenderer =
+    !file.isBinary &&
+    file.renderError == null &&
+    file.patch.trim() !== "" &&
+    ((diffView === "unified" && file.unifiedLines.length === 0) ||
+      (diffView === "split" && file.sideBySideRows.length === 0));
+  const loggedFallbackRef = useRef(false);
+
+  useEffect(() => {
+    if (usesFallbackRenderer && !loggedFallbackRef.current) {
+      loggedFallbackRef.current = true;
+      logDiffdiffWarn("render", "diff_fallback_renderer_used", {
+        diffView,
+        path: file.path,
+      });
+    }
+
+    if (!usesFallbackRenderer) {
+      loggedFallbackRef.current = false;
+    }
+  }, [diffView, file.path, usesFallbackRenderer]);
 
   return (
     <box
@@ -258,7 +282,9 @@ export function StickyFileHeader({
       paddingBottom={1}
       zIndex={10}
     >
-      <FileCardTitleRow file={file} isSelected={isSelected} theme={theme} />
+      <box width="100%" paddingRight={1}>
+        <FileCardTitleRow file={file} isSelected={isSelected} theme={theme} />
+      </box>
     </box>
   );
 }

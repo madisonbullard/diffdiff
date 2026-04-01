@@ -235,6 +235,17 @@ export function DiffdiffApp({
     [sidebarWidth, terminalDimensions.width],
   );
   const fileTreeNodes = useMemo(() => buildFileTreeNodes(session.files), [session.files]);
+  const totalDiff = useMemo(
+    () =>
+      session.files.reduce(
+        (sum, file) => ({
+          additions: sum.additions + file.additions,
+          deletions: sum.deletions + file.deletions,
+        }),
+        { additions: 0, deletions: 0 },
+      ),
+    [session.files],
+  );
   const visibleTreeNodes = useMemo(
     () => getVisibleFileTreeNodes(fileTreeNodes, collapsedDirectories),
     [collapsedDirectories, fileTreeNodes],
@@ -915,11 +926,6 @@ export function DiffdiffApp({
           <text fg={theme.textMuted} wrapMode="none">
             <span fg={theme.text}>{session.files.length}</span>
             <span>{" files"}</span>
-            <span fg={theme.border}>{"  \u2502  "}</span>
-            <span fg={reviewedPaths.size > 0 ? theme.success : theme.textMuted}>
-              {reviewedPaths.size}
-            </span>
-            <span>{` / ${session.files.length} reviewed`}</span>
           </text>
         </box>
         <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
@@ -971,30 +977,28 @@ export function DiffdiffApp({
             backgroundColor={activePane === "tree" ? theme.surfaceMuted : theme.surface}
             paddingLeft={2}
             paddingRight={1}
-            paddingTop={1}
-            paddingBottom={1}
+            paddingY={1}
             flexDirection="column"
             gap={0}
           >
             <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
               <text fg={activePane === "tree" ? theme.accent : theme.textMuted} wrapMode="none">
-                Files
+                {`${session.files.length} ${session.files.length === 1 ? "file" : "files"}`}
               </text>
               <text fg={theme.textMuted} wrapMode="none">
-                {`${session.files.length}`}
+                <span fg={theme.success}>{`+${totalDiff.additions}`}</span>
+                <span fg={theme.border}>{" / "}</span>
+                <span fg={theme.danger}>{`-${totalDiff.deletions}`}</span>
               </text>
             </box>
-            <text fg={theme.textMuted} wrapMode="none">
-              <span
-                fg={activePane === "tree" ? theme.inverseText : theme.textMuted}
-                bg={activePane === "tree" ? theme.accent : theme.surface}
-              >{` ${activePane === "tree" ? "tree" : "diff"} `}</span>
-              <span>{"  "}</span>
-              <span fg={theme.accent} bg={theme.surfaceMuted}>
-                {" tab "}
-              </span>
-              <span>{" pane"}</span>
-            </text>
+            <box width="100%" flexDirection="row" justifyContent="flex-end">
+              <text fg={theme.textMuted} wrapMode="none">
+                <span fg={reviewedPaths.size > 0 ? theme.success : theme.textMuted}>
+                  {reviewedPaths.size}
+                </span>
+                <span>{` / ${session.files.length} reviewed`}</span>
+              </text>
+            </box>
           </box>
 
           <scrollbox
@@ -1064,7 +1068,7 @@ export function DiffdiffApp({
                   borderColor={theme.border}
                   backgroundColor={theme.surface}
                   paddingLeft={2}
-                  paddingRight={1}
+                  paddingRight={0}
                   paddingTop={1}
                   paddingBottom={1}
                 >

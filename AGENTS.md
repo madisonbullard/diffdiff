@@ -20,3 +20,12 @@
 - Use `diffdiff session remove <session-id>` to delete one session's metadata and log file.
 - Use `diffdiff session remove-all` to clear every recorded local session and its logs.
 - Prefer the session commands over guessing the current log file path from the filesystem.
+
+## Running Diffdiff Locally
+
+To run the TUI locally after making changes:
+
+1. Build the packages: `vp run build -r`
+2. Launch the TUI: `bun packages/tui/dist/cli.mjs tui`
+
+When you need to visually inspect the TUI (e.g. to verify layout changes), use `interactive-terminal` to spawn a bash session, build, and launch the TUI. Note that the terminal output will contain raw ANSI escape sequences — parse cursor position codes (`[row;colH`) and color codes (`[48;2;r;g;bm` for background) to determine element positions and boundaries.
