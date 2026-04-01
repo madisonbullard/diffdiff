@@ -377,7 +377,7 @@ export function getFileTreeSidebarWidth(terminalWidth: number): number {
 }
 
 export function getDiffPaneWidth(terminalWidth: number, sidebarWidth: number): number {
-  return Math.max(terminalWidth - sidebarWidth - 6, 0);
+  return Math.max(terminalWidth - sidebarWidth - 4, 0);
 }
 
 export function resolveDiffView(preference: DiffViewPreference, terminalWidth: number): DiffView {

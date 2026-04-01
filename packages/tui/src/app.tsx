@@ -1033,7 +1033,7 @@ export function DiffdiffApp({
               flexShrink={0}
               width="100%"
               paddingLeft={1}
-              paddingRight={2}
+              paddingRight={0}
               backgroundColor={theme.appBackground}
             >
               <StickyFileHeader
@@ -1058,7 +1058,7 @@ export function DiffdiffApp({
               width="100%"
               flexDirection="column"
               paddingLeft={1}
-              paddingRight={2}
+              paddingRight={0}
               paddingY={1}
               gap={1}
             >

@@ -121,7 +121,7 @@ export function FileCard({
       backgroundColor={fileBackground}
       flexDirection="column"
       paddingLeft={2}
-      paddingRight={1}
+      paddingRight={0}
       paddingTop={1}
       paddingBottom={isCollapsed ? 0 : 1}
       gap={1}
@@ -253,7 +253,7 @@ export function StickyFileHeader({
       backgroundColor={fileBackground}
       flexDirection="column"
       paddingLeft={2}
-      paddingRight={1}
+      paddingRight={0}
       paddingTop={1}
       paddingBottom={1}
       zIndex={10}
