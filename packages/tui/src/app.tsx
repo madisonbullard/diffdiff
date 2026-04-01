@@ -296,6 +296,7 @@ export function DiffdiffApp({
   const [collapsedDirectories, setCollapsedDirectories] = useState<Set<string>>(new Set());
   const [selectedTreePath, setSelectedTreePath] = useState(initialSession.files[0]?.path ?? "");
   const [loadingIndicatorFrame, setLoadingIndicatorFrame] = useState(0);
+  const [treeScrollbarVisible, setTreeScrollbarVisible] = useState(false);
   const treeScrollRef = useRef<ScrollBoxRenderable | null>(null);
   const treeRowRefs = useRef<(BoxRenderable | null)[]>([]);
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
@@ -515,6 +516,16 @@ export function DiffdiffApp({
   useEffect(() => {
     treeRowRefs.current.length = visibleTreeNodes.length;
   }, [visibleTreeNodes.length]);
+
+  useEffect(() => {
+    // OpenTUI reserves one column for a visible scrollbar outside the viewport.
+    // Mirror that gutter in the summary card so the header and tree rows stay aligned.
+    const nextVisible = treeScrollRef.current?.verticalScrollBar.visible === true;
+
+    setTreeScrollbarVisible((currentVisible) =>
+      currentVisible === nextVisible ? currentVisible : nextVisible,
+    );
+  });
 
   useEffect(() => {
     return () => {
@@ -1154,29 +1165,31 @@ export function DiffdiffApp({
           flexDirection="column"
           gap={1}
         >
-          <box
-            width="100%"
-            border={["left"]}
-            borderColor={activePane === "tree" ? theme.borderActive : theme.border}
-            backgroundColor={activePane === "tree" ? theme.surfaceMuted : theme.surface}
-            paddingLeft={2}
-            paddingRight={1}
-            paddingY={1}
-            flexDirection="column"
-            gap={0}
-          >
-            <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
-              <text fg={theme.textMuted} wrapMode="none">
-                <span fg={reviewedPaths.size > 0 ? theme.success : theme.textMuted}>
-                  {reviewedPaths.size}
-                </span>
-                <span>{` / ${session.files.length} reviewed`}</span>
-              </text>
-              <text fg={theme.textMuted} wrapMode="none">
-                <span fg={theme.success}>{`+${totalDiff.additions}`}</span>
-                <span fg={theme.border}>{" / "}</span>
-                <span fg={theme.danger}>{`-${totalDiff.deletions}`}</span>
-              </text>
+          <box width="100%" paddingRight={treeScrollbarVisible ? 1 : 0}>
+            <box
+              width="100%"
+              border={["left"]}
+              borderColor={activePane === "tree" ? theme.borderActive : theme.border}
+              backgroundColor={activePane === "tree" ? theme.surfaceMuted : theme.surface}
+              paddingLeft={2}
+              paddingRight={1}
+              paddingY={1}
+              flexDirection="column"
+              gap={0}
+            >
+              <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
+                <text fg={theme.textMuted} wrapMode="none">
+                  <span fg={reviewedPaths.size > 0 ? theme.success : theme.textMuted}>
+                    {reviewedPaths.size}
+                  </span>
+                  <span>{` / ${session.files.length} reviewed`}</span>
+                </text>
+                <text fg={theme.textMuted} wrapMode="none">
+                  <span fg={theme.success}>{`+${totalDiff.additions}`}</span>
+                  <span fg={theme.border}>{" / "}</span>
+                  <span fg={theme.danger}>{`-${totalDiff.deletions}`}</span>
+                </text>
+              </box>
             </box>
           </box>
 

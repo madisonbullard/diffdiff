@@ -1,6 +1,10 @@
 import type { GitHubUserPreferences, StartupOptions } from "@diffdiff/core";
 import type { ComponentProps, ReactNode } from "react";
-import type { ReactTestRenderer } from "react-test-renderer";
+import type {
+  ReactTestInstance,
+  ReactTestRenderer,
+  TestRendererOptions,
+} from "react-test-renderer";
 import { act, create } from "react-test-renderer";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 import { DiffdiffApp } from "../src/app.tsx";
@@ -135,6 +139,35 @@ test("tab switches to the file tree and tree navigation opens files", () => {
   emitKey({ name: "right" });
   expect(getTreeScrollbox(tree).props.focused).toBe(false);
   expect(getDiffScrollbox(tree).props.focused).toBe(true);
+});
+
+test("shrinks the file tree header when the tree scrollbar is visible", () => {
+  let scrollboxIndex = 0;
+  const tree = render(<DiffdiffApp {...createAppProps()} />, {
+    createNodeMock(element) {
+      if (element.type === "scrollbox") {
+        scrollboxIndex += 1;
+
+        return createMockScrollbox(scrollboxIndex === 1);
+      }
+
+      if (element.type === "box") {
+        return { y: 0 };
+      }
+
+      return null;
+    },
+  });
+
+  const reviewSummaryCard = tree.root.find(
+    (node) =>
+      String(node.type) === "box" &&
+      Array.isArray(node.props.border) &&
+      node.props.border.includes("left") &&
+      collectInstanceText(node).includes("reviewed"),
+  );
+
+  expect(reviewSummaryCard.parent?.props.paddingRight).toBe(1);
 });
 
 test("keeps background file selection stable when modal handlers rerender", () => {
@@ -1086,14 +1119,34 @@ function getAppText(tree: ReactTestRenderer): string {
   return collectText(tree.toJSON());
 }
 
-function render(node: ReactNode): ReactTestRenderer {
+function render(node: ReactNode, options: Partial<TestRendererOptions> = {}): ReactTestRenderer {
   let tree: ReactTestRenderer | undefined;
+  const rendererOptions: TestRendererOptions | undefined =
+    options.createNodeMock == null ? undefined : { createNodeMock: options.createNodeMock };
 
   act(() => {
-    tree = create(node as never);
+    tree = create(node as never, rendererOptions);
   });
 
   return tree!;
+}
+
+function createMockScrollbox(visible: boolean) {
+  return {
+    content: { y: 0 },
+    scrollTo: vi.fn(),
+    verticalScrollBar: {
+      visible,
+      on: vi.fn(),
+      off: vi.fn(),
+    },
+  };
+}
+
+function collectInstanceText(node: ReactTestInstance): string {
+  return node.children
+    .map((child) => (typeof child === "string" ? child : collectInstanceText(child)))
+    .join(" ");
 }
 
 function collectText(node: unknown): string {
