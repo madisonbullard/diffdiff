@@ -7,6 +7,7 @@ import {
   flushDiffdiffLogs,
   GitHubPullRequestService,
   listDiffdiffSessions,
+  loadReviewCache,
   logDiffdiffError,
   logDiffdiffInfo,
   markDiffdiffSessionEnded,
@@ -231,6 +232,15 @@ async function launchTui(options: StartupOptions): Promise<void> {
     const gitHubPullRequestService = new GitHubPullRequestService();
     const initialSession = await loadSession(options);
 
+    const initialReviewCache =
+      initialSession.github == null
+        ? await loadReviewCache({
+            repositoryRootPath: initialSession.repository.rootPath,
+            base: initialSession.comparison.base,
+            head: initialSession.comparison.head,
+          })
+        : undefined;
+
     root.render(
       <DiffdiffApp
         addReviewThread={(reviewSession, anchor, body) =>
@@ -238,6 +248,7 @@ async function launchTui(options: StartupOptions): Promise<void> {
             .addPendingReviewThread(reviewSession, anchor, body)
             .then(() => undefined)
         }
+        initialReviewCache={initialReviewCache}
         initialOptions={options}
         initialSession={initialSession}
         loadSession={loadSession}

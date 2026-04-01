@@ -3,6 +3,8 @@ import type {
   GitHubReviewLineAnchor,
   GitHubReviewSession,
   GitHubReviewSubmissionEvent,
+  ReviewCacheKey,
+  ReviewCacheState,
   StartupOptions,
 } from "@diffdiff/core";
 import {
@@ -10,6 +12,7 @@ import {
   logDiffdiffError,
   logDiffdiffInfo,
   logDiffdiffWarn,
+  saveReviewCache,
   updateDiffdiffSessionActivity,
 } from "@diffdiff/core";
 import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
@@ -64,6 +67,7 @@ interface DiffdiffAppProps {
     anchor: GitHubReviewLineAnchor,
     body: string,
   ) => Promise<void>;
+  initialReviewCache?: ReviewCacheState;
   initialSession: PreparedReviewSession;
   initialOptions: StartupOptions;
   loadSession: (options: StartupOptions) => Promise<PreparedReviewSession>;
@@ -170,6 +174,7 @@ function getBranchFilterLabel(key: keyof BranchListFilters): string {
 
 export function DiffdiffApp({
   addReviewThread,
+  initialReviewCache,
   initialSession,
   initialOptions,
   loadSession,
@@ -181,11 +186,36 @@ export function DiffdiffApp({
 }: DiffdiffAppProps) {
   const [session, setSession] = useState(initialSession);
   const [startupOptions, setStartupOptions] = useState<StartupOptions>({ ...initialOptions });
-  const [selectedFileIndex, setSelectedFileIndex] = useState(0);
-  const [reviewedPaths, setReviewedPaths] = useState<Set<string>>(new Set());
-  const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() =>
-    reconcileCollapsedPaths(new Set<string>(), initialSession.files),
-  );
+  const [selectedFileIndex, setSelectedFileIndex] = useState(() => {
+    if (initialReviewCache?.selectedFilePath != null) {
+      const cachedIndex = initialSession.files.findIndex(
+        (file) => file.path === initialReviewCache.selectedFilePath,
+      );
+      if (cachedIndex >= 0) {
+        return cachedIndex;
+      }
+    }
+    return 0;
+  });
+  const [reviewedPaths, setReviewedPaths] = useState<Set<string>>(() => {
+    if (initialReviewCache != null) {
+      const availablePaths = new Set(initialSession.files.map((file) => file.path));
+      return new Set(initialReviewCache.reviewedPaths.filter((path) => availablePaths.has(path)));
+    }
+    return new Set();
+  });
+  const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() => {
+    const baseline = reconcileCollapsedPaths(new Set<string>(), initialSession.files);
+    if (initialReviewCache != null) {
+      const availablePaths = new Set(initialSession.files.map((file) => file.path));
+      for (const path of initialReviewCache.collapsedPaths) {
+        if (availablePaths.has(path)) {
+          baseline.add(path);
+        }
+      }
+    }
+    return baseline;
+  });
   const [statusMessage, setStatusMessage] = useState<string>("Ready.");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [errorToastMessage, setErrorToastMessage] = useState<string | null>(null);
@@ -858,6 +888,34 @@ export function DiffdiffApp({
   }, [activeFileIndex, activePane, diffView, selectedFileIndex, session.files]);
 
   useEffect(() => {
+    if (session.github != null) {
+      return;
+    }
+
+    const cacheKey: ReviewCacheKey = {
+      repositoryRootPath: session.repository.rootPath,
+      base: session.comparison.base,
+      head: session.comparison.head,
+    };
+    const cacheState: ReviewCacheState = {
+      reviewedPaths: [...reviewedPaths],
+      collapsedPaths: [...collapsedPaths],
+      selectedFilePath: session.files[selectedFileIndex]?.path,
+    };
+
+    void saveReviewCache(cacheKey, cacheState);
+  }, [
+    collapsedPaths,
+    reviewedPaths,
+    selectedFileIndex,
+    session.comparison.base,
+    session.comparison.head,
+    session.files,
+    session.github,
+    session.repository.rootPath,
+  ]);
+
+  useEffect(() => {
     logDiffdiffInfo("app", "overlay_updated", {
       activeOverlay,
     });
@@ -923,10 +981,6 @@ export function DiffdiffApp({
             <span>{"  "}</span>
             <span fg={theme.inverseText} bg={theme.accent}>{` ${currentBranchLabel} `}</span>
           </text>
-          <text fg={theme.textMuted} wrapMode="none">
-            <span fg={theme.text}>{session.files.length}</span>
-            <span>{" files"}</span>
-          </text>
         </box>
         <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
           <text fg={theme.textMuted} wrapMode="none">
@@ -982,21 +1036,16 @@ export function DiffdiffApp({
             gap={0}
           >
             <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
-              <text fg={activePane === "tree" ? theme.accent : theme.textMuted} wrapMode="none">
-                {`${session.files.length} ${session.files.length === 1 ? "file" : "files"}`}
-              </text>
-              <text fg={theme.textMuted} wrapMode="none">
-                <span fg={theme.success}>{`+${totalDiff.additions}`}</span>
-                <span fg={theme.border}>{" / "}</span>
-                <span fg={theme.danger}>{`-${totalDiff.deletions}`}</span>
-              </text>
-            </box>
-            <box width="100%" flexDirection="row" justifyContent="flex-end">
               <text fg={theme.textMuted} wrapMode="none">
                 <span fg={reviewedPaths.size > 0 ? theme.success : theme.textMuted}>
                   {reviewedPaths.size}
                 </span>
                 <span>{` / ${session.files.length} reviewed`}</span>
+              </text>
+              <text fg={theme.textMuted} wrapMode="none">
+                <span fg={theme.success}>{`+${totalDiff.additions}`}</span>
+                <span fg={theme.border}>{" / "}</span>
+                <span fg={theme.danger}>{`-${totalDiff.deletions}`}</span>
               </text>
             </box>
           </box>

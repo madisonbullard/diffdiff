@@ -29,7 +29,9 @@ export {
   resolveGitHubAuth,
   storeGitHubToken,
 } from "./github.ts";
+export { loadReviewCache, saveReviewCache } from "./review-cache.ts";
 export { formatHelpText, parseStartupOptions, resolveStartupOptions } from "./startup-options.ts";
+export type { ReviewCacheKey, ReviewCacheState } from "./review-cache.ts";
 export type {
   BranchCollection,
   BranchInfo,
