@@ -442,6 +442,37 @@ test("opens the comment composer and submits a pending review thread", async () 
   });
 });
 
+test("opens the comment composer when only the raw patch is available", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({
+          files: [
+            createPreparedFile({
+              patch: [
+                "diff --git a/src/app.ts b/src/app.ts",
+                "--- a/src/app.ts",
+                "+++ b/src/app.ts",
+                "@@ -1 +1 @@",
+                "-const count = 0",
+                "+const count = 1",
+              ].join("\n"),
+              sideBySideRows: [],
+              unifiedLines: [],
+            }),
+          ],
+          github: createGitHubReviewSession(),
+        }),
+      })}
+    />,
+  );
+
+  emitKey({ name: "a" });
+
+  expect(getAppText(tree)).toContain("Add Comment");
+  expect(getAppText(tree)).toContain("const count = 0");
+});
+
 test("opens the submit review modal and submits the pending review", async () => {
   const submitPendingReview = vi.fn(async () => undefined);
   const loadSession = vi.fn(async () =>

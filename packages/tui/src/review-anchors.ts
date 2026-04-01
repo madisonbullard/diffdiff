@@ -14,6 +14,10 @@ export function getReviewAnchors(
     return [];
   }
 
+  if (file.unifiedLines.length === 0 && file.sideBySideRows.length === 0) {
+    return getPatchAnchors(file.path, file.patch);
+  }
+
   return diffView === "split"
     ? file.sideBySideRows.flatMap((row) => getRowAnchors(file.path, row))
     : file.unifiedLines.flatMap((line) => getUnifiedAnchors(file.path, line));
@@ -104,6 +108,63 @@ function createAnchor(
       startSide,
     },
   ];
+}
+
+function getPatchAnchors(path: string, patch: string): SelectedReviewAnchor[] {
+  const anchors: SelectedReviewAnchor[] = [];
+  const lines = patch.split(/\r?\n/u);
+  let oldLineNumber = 0;
+  let newLineNumber = 0;
+  let insideHunk = false;
+
+  for (const line of lines) {
+    const hunkMatch = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/u.exec(line);
+    if (hunkMatch != null) {
+      oldLineNumber = Number.parseInt(hunkMatch[1]!, 10);
+      newLineNumber = Number.parseInt(hunkMatch[2]!, 10);
+      insideHunk = true;
+      continue;
+    }
+
+    if (!insideHunk || line === "\\ No newline at end of file") {
+      continue;
+    }
+
+    if (line.startsWith("+") && !line.startsWith("+++")) {
+      anchors.push(
+        ...createAnchor(path, newLineNumber, "RIGHT", undefined, undefined, [
+          { text: line.slice(1) },
+        ]),
+      );
+      newLineNumber += 1;
+      continue;
+    }
+
+    if (line.startsWith("-") && !line.startsWith("---")) {
+      anchors.push(
+        ...createAnchor(path, oldLineNumber, "LEFT", undefined, undefined, [
+          { text: line.slice(1) },
+        ]),
+      );
+      oldLineNumber += 1;
+      continue;
+    }
+
+    if (line.startsWith(" ")) {
+      anchors.push(
+        ...createAnchor(path, newLineNumber, "RIGHT", undefined, undefined, [
+          { text: line.slice(1) },
+        ]),
+      );
+      oldLineNumber += 1;
+      newLineNumber += 1;
+      continue;
+    }
+
+    insideHunk = false;
+  }
+
+  return anchors;
 }
 
 function segmentsToText(segments: readonly { text: string }[] | undefined): string {
