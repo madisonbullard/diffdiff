@@ -243,8 +243,6 @@ export function DiffdiffApp({
     () => resolveDiffView(diffViewPreference, diffPaneWidth),
     [diffPaneWidth, diffViewPreference],
   );
-  const diffViewLabel = useMemo(() => getDiffViewLabel(diffView), [diffView]);
-
   const branchItems = useMemo(
     () =>
       buildBranchListItems({
@@ -917,8 +915,6 @@ export function DiffdiffApp({
           <text fg={theme.textMuted} wrapMode="none">
             <span fg={theme.text}>{session.files.length}</span>
             <span>{" files"}</span>
-            <span fg={theme.border}>{"  \u2502  "}</span>
-            <span>{diffViewLabel}</span>
             <span fg={theme.border}>{"  \u2502  "}</span>
             <span fg={reviewedPaths.size > 0 ? theme.success : theme.textMuted}>
               {reviewedPaths.size}

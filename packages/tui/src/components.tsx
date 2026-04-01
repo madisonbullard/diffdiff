@@ -393,11 +393,13 @@ function FileCardTitleRow({
       <text fg={theme.text} wrapMode="none">
         <span fg={isSelected ? theme.accent : theme.text}>{file.path}</span>
       </text>
-      <text fg={theme.textMuted} wrapMode="none">
-        <span fg={theme.success}>{`+${file.additions}`}</span>
-        <span fg={theme.border}>{" / "}</span>
-        <span fg={theme.danger}>{`-${file.deletions}`}</span>
-      </text>
+      <box paddingRight={2}>
+        <text fg={theme.textMuted} wrapMode="none">
+          <span fg={theme.success}>{`+${file.additions}`}</span>
+          <span fg={theme.border}>{" / "}</span>
+          <span fg={theme.danger}>{`-${file.deletions}`}</span>
+        </text>
+      </box>
     </box>
   );
 }

@@ -1100,26 +1100,30 @@ exports[`renders a sticky file header for the active viewport file 1`] = `
         src/app.ts
       </span>
     </text>
-    <text
-      fg="#8ea4b5"
-      wrapMode="none"
+    <box
+      paddingRight={2}
     >
-      <span
-        fg="#3fb950"
+      <text
+        fg="#8ea4b5"
+        wrapMode="none"
       >
-        +3
-      </span>
-      <span
-        fg="#29475c"
-      >
-         / 
-      </span>
-      <span
-        fg="#ff7b72"
-      >
-        -1
-      </span>
-    </text>
+        <span
+          fg="#3fb950"
+        >
+          +3
+        </span>
+        <span
+          fg="#29475c"
+        >
+           / 
+        </span>
+        <span
+          fg="#ff7b72"
+        >
+          -1
+        </span>
+      </text>
+    </box>
   </box>
 </box>
 `;
@@ -1172,26 +1176,30 @@ exports[`renders an expanded file card snapshot 1`] = `
         src/app.ts
       </span>
     </text>
-    <text
-      fg="#8ea4b5"
-      wrapMode="none"
+    <box
+      paddingRight={2}
     >
-      <span
-        fg="#3fb950"
+      <text
+        fg="#8ea4b5"
+        wrapMode="none"
       >
-        +3
-      </span>
-      <span
-        fg="#29475c"
-      >
-         / 
-      </span>
-      <span
-        fg="#ff7b72"
-      >
-        -1
-      </span>
-    </text>
+        <span
+          fg="#3fb950"
+        >
+          +3
+        </span>
+        <span
+          fg="#29475c"
+        >
+           / 
+        </span>
+        <span
+          fg="#ff7b72"
+        >
+          -1
+        </span>
+      </text>
+    </box>
   </box>
   <text
     fg="#8ea4b5"
