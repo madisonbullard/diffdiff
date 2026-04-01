@@ -4,10 +4,15 @@ export { DiffdiffError, CommandError } from "./errors.ts";
 export {
   flushDiffdiffLogs,
   getDiffdiffLogSession,
+  listDiffdiffSessions,
   logDiffdiffError,
   logDiffdiffInfo,
   logDiffdiffWarn,
+  markDiffdiffSessionEnded,
+  removeAllDiffdiffSessions,
+  removeDiffdiffSession,
   startDiffdiffLogging,
+  updateDiffdiffSessionActivity,
 } from "./logging.ts";
 export {
   GitRepositoryProvider,
@@ -24,7 +29,7 @@ export {
   resolveGitHubAuth,
   storeGitHubToken,
 } from "./github.ts";
-export { formatHelpText, parseStartupOptions } from "./startup-options.ts";
+export { formatHelpText, parseStartupOptions, resolveStartupOptions } from "./startup-options.ts";
 export type {
   BranchCollection,
   BranchInfo,

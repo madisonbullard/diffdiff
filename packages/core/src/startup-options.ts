@@ -1,5 +1,26 @@
 import { parseArgs } from "node:util";
-import type { ParsedStartupOptions } from "./types.ts";
+import type { ParsedStartupOptions, StartupOptions } from "./types.ts";
+
+export interface StartupOptionValues {
+  repo?: string;
+  base?: string;
+  head?: string;
+}
+
+export function resolveStartupOptions(
+  values: StartupOptionValues = {},
+  env: NodeJS.ProcessEnv = process.env,
+): StartupOptions {
+  const repoPath = typeof values.repo === "string" ? values.repo : env.DIFFDIFF_REPO;
+  const base = typeof values.base === "string" ? values.base : env.DIFFDIFF_BASE;
+  const head = typeof values.head === "string" ? values.head : env.DIFFDIFF_HEAD;
+
+  return {
+    repoPath,
+    base,
+    head,
+  };
+}
 
 export function parseStartupOptions(
   argv: readonly string[] = process.argv.slice(2),
@@ -21,7 +42,7 @@ export function parseStartupOptions(
       },
       head: {
         type: "string",
-        short: "h",
+        short: "H",
       },
       help: {
         type: "boolean",
@@ -32,16 +53,18 @@ export function parseStartupOptions(
     },
   });
 
-  const repoPath = typeof values.repo === "string" ? values.repo : env.DIFFDIFF_REPO;
-  const base = typeof values.base === "string" ? values.base : env.DIFFDIFF_BASE;
-  const head = typeof values.head === "string" ? values.head : env.DIFFDIFF_HEAD;
   const help = values.help === true;
   const version = values.version === true;
 
   return {
-    repoPath,
-    base,
-    head,
+    ...resolveStartupOptions(
+      {
+        base: typeof values.base === "string" ? values.base : undefined,
+        head: typeof values.head === "string" ? values.head : undefined,
+        repo: typeof values.repo === "string" ? values.repo : undefined,
+      },
+      env,
+    ),
     help,
     version,
   };
@@ -51,6 +74,9 @@ export function formatHelpText(): string {
   return [
     "diffdiff [tui]",
     "diffdiff auth login --token-stdin",
+    "diffdiff session list [--json]",
+    "diffdiff session remove <session-id>",
+    "diffdiff session remove-all",
     "",
     "A git-backed terminal code review tool.",
     "Defaults to reviewing staged, unstaged, and untracked changes against HEAD.",
@@ -58,7 +84,7 @@ export function formatHelpText(): string {
     "Options:",
     "  --repo, -r   Path inside the repository to review",
     "  --base, -b   Base branch or commit to compare from",
-    "  --head, -h   Head branch or commit to compare to",
+    "  --head, -H   Head branch or commit to compare to",
     "  --help       Show this help text",
     "  --version    Show the current package version",
     "",

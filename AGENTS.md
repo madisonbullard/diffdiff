@@ -86,3 +86,12 @@ For GitHub Actions, consider using [`voidzero-dev/setup-vp`](https://github.com/
 - [ ] Run `vp install` after pulling remote changes and before getting started.
 - [ ] Run `vp check` and `vp test` to validate changes.
 <!--VITE PLUS END-->
+
+## Diffdiff Sessions
+
+- `diffdiff` writes per-session JSONL logs to `~/.diffdiff/logs/log-<session-id>.jsonl`.
+- Use `diffdiff session list --json` when you need machine-readable access to the current local sessions, their ids, current activity, selected file, comparison, and log file path.
+- Use `diffdiff session list` for a human-readable summary of active and stale sessions.
+- Use `diffdiff session remove <session-id>` to delete one session's metadata and log file.
+- Use `diffdiff session remove-all` to clear every recorded local session and its logs.
+- Prefer the session commands over guessing the current log file path from the filesystem.

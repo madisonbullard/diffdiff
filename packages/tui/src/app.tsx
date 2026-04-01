@@ -10,6 +10,7 @@ import {
   logDiffdiffError,
   logDiffdiffInfo,
   logDiffdiffWarn,
+  updateDiffdiffSessionActivity,
 } from "@diffdiff/core";
 import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react";
@@ -325,6 +326,10 @@ export function DiffdiffApp({
         logFilePath: resolvedLogFilePath,
         message,
       });
+      void updateDiffdiffSessionActivity({
+        lastErrorMessage: message,
+        statusMessage: message,
+      });
       setStatusMessage(message);
       showErrorToast();
     },
@@ -337,6 +342,10 @@ export function DiffdiffApp({
         ...context,
         logFilePath: resolvedLogFilePath,
         message,
+      });
+      void updateDiffdiffSessionActivity({
+        lastErrorMessage: message,
+        statusMessage: message,
       });
       setStatusMessage(message);
       showErrorToast();
@@ -817,6 +826,13 @@ export function DiffdiffApp({
       hasGitHubReview: session.github != null,
       warningCount: session.warnings.length,
     });
+    void updateDiffdiffSessionActivity({
+      comparison: session.comparison,
+      currentBranch: session.repository.currentBranch,
+      repoPath: startupOptions.repoPath ?? session.repository.rootPath,
+      repositoryName: session.repository.name,
+      repositoryRootPath: session.repository.rootPath,
+    });
   }, [session]);
 
   useEffect(() => {
@@ -827,17 +843,26 @@ export function DiffdiffApp({
       selectedFileIndex,
       selectedFilePath: session.files[selectedFileIndex]?.path,
     });
+    void updateDiffdiffSessionActivity({
+      selectedFilePath: session.files[selectedFileIndex]?.path,
+    });
   }, [activeFileIndex, activePane, diffView, selectedFileIndex, session.files]);
 
   useEffect(() => {
     logDiffdiffInfo("app", "overlay_updated", {
       activeOverlay,
     });
+    void updateDiffdiffSessionActivity({
+      activeOverlay: activeOverlay ?? undefined,
+    });
   }, [activeOverlay]);
 
   useEffect(() => {
     logDiffdiffInfo("app", "status_message_updated", {
       message: statusMessage,
+    });
+    void updateDiffdiffSessionActivity({
+      statusMessage,
     });
   }, [statusMessage]);
 
