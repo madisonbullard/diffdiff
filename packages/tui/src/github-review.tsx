@@ -587,7 +587,7 @@ function formatThreadAnchor(thread: GitHubPullRequestReviewThread): string {
 
 function formatChecksSummary(pullRequest: GitHubPullRequestDetail): string {
   if (pullRequest.checks.total === 0) {
-    return "checks unknown";
+    return "no checks";
   }
 
   return `${pullRequest.checks.successful}/${pullRequest.checks.total} checks ${pullRequest.checks.state}`;

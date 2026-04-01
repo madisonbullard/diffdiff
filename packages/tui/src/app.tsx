@@ -972,8 +972,8 @@ export function DiffdiffApp({
           <span fg={theme.accent} bg={theme.surfaceMuted}>
             {" tab "}
           </span>
-          <span>{" pane"}</span>
-          <span fg={theme.border}>{"  \u2502  "}</span>
+          <span>{" pane "}</span>
+          <span fg={theme.border}>{"│ "}</span>
           <span fg={theme.accent} bg={theme.surfaceMuted}>
             {" r "}
           </span>
@@ -981,7 +981,7 @@ export function DiffdiffApp({
           <span fg={theme.accent} bg={theme.surfaceMuted}>
             {" m "}
           </span>
-          <span>{" review+next "}</span>
+          <span>{" next "}</span>
           <span fg={theme.accent} bg={theme.surfaceMuted}>
             {" c "}
           </span>
@@ -989,37 +989,12 @@ export function DiffdiffApp({
           <span fg={theme.accent} bg={theme.surfaceMuted}>
             {" v "}
           </span>
-          <span>{" view"}</span>
-          <span fg={theme.border}>{"  \u2502  "}</span>
+          <span>{" view "}</span>
+          <span fg={theme.border}>{"│ "}</span>
           <span fg={theme.accent} bg={theme.surfaceMuted}>
             {" l "}
           </span>
           <span>{" list "}</span>
-          {session.github != null ? (
-            <>
-              <span fg={theme.border}>{"  │  "}</span>
-              <span fg={theme.accent} bg={theme.surfaceMuted}>
-                {" [/] "}
-              </span>
-              <span>{" line "}</span>
-              <span fg={theme.accent} bg={theme.surfaceMuted}>
-                {" a "}
-              </span>
-              <span>{" comment "}</span>
-              <span fg={theme.accent} bg={theme.surfaceMuted}>
-                {" s "}
-              </span>
-              <span>{" submit "}</span>
-              <span fg={theme.accent} bg={theme.surfaceMuted}>
-                {" t "}
-              </span>
-              <span>{" comments "}</span>
-              <span fg={theme.accent} bg={theme.surfaceMuted}>
-                {" u "}
-              </span>
-              <span>{" outdated "}</span>
-            </>
-          ) : null}
           <span fg={theme.accent} bg={theme.surfaceMuted}>
             {" ? "}
           </span>
@@ -1029,6 +1004,30 @@ export function DiffdiffApp({
           </span>
           <span>{" quit"}</span>
         </text>
+        {session.github != null ? (
+          <text fg={theme.textMuted} wrapMode="none">
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" [/] "}
+            </span>
+            <span>{" line "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" a "}
+            </span>
+            <span>{" comment "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" s "}
+            </span>
+            <span>{" submit review "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" t "}
+            </span>
+            <span>{" comments "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" u "}
+            </span>
+            <span>{" outdated"}</span>
+          </text>
+        ) : null}
       </box>
 
       {baseBranchLoadingMessage != null || toastMessage != null ? (
