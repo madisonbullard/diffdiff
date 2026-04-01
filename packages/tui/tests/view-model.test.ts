@@ -21,6 +21,7 @@ import {
   getVisibleRemoteBranches,
   MIN_SIDE_BY_SIDE_DIFF_WIDTH,
   resolveDiffView,
+  sortFilesInTreeOrder,
   truncateSegments,
 } from "../src/view-model.ts";
 
@@ -292,4 +293,65 @@ test("filterCommitListItems supports non-contiguous fuzzy matching", () => {
   // "dmt" matches "d-ark m-ode t-oggle"
   const result = filterCommitListItems(items, "dmt");
   expect(result.map((r) => r.commit.shortSha)).toEqual(["aaa"]);
+});
+
+test("sortFilesInTreeOrder sorts files to match tree sidebar order", () => {
+  const files = [
+    { path: "README.md" },
+    { path: "src/app.ts" },
+    { path: "docs/guide.md" },
+    { path: "src/lib/math.ts" },
+    { path: "package.json" },
+    { path: "docs/api.md" },
+    { path: "src/index.ts" },
+  ];
+
+  const sorted = sortFilesInTreeOrder(files);
+
+  // Directories first (alphabetical), then files (alphabetical) at each level.
+  // docs/ comes before src/ alphabetically. Root files come after all directories.
+  expect(sorted.map((f) => f.path)).toEqual([
+    "docs/api.md",
+    "docs/guide.md",
+    "src/lib/math.ts",
+    "src/app.ts",
+    "src/index.ts",
+    "package.json",
+    "README.md",
+  ]);
+});
+
+test("sortFilesInTreeOrder matches the order produced by buildFileTreeNodes", () => {
+  const files = [
+    {
+      path: "src/app.ts",
+      status: "modified" as const,
+      additions: 4,
+      deletions: 1,
+      isBinary: false,
+      patch: "",
+    },
+    {
+      path: "src/lib/math.ts",
+      status: "added" as const,
+      additions: 10,
+      deletions: 0,
+      isBinary: false,
+      patch: "",
+    },
+    {
+      path: "README.md",
+      status: "modified" as const,
+      additions: 1,
+      deletions: 1,
+      isBinary: false,
+      patch: "",
+    },
+  ];
+
+  const sorted = sortFilesInTreeOrder(files);
+  const treeNodes = buildFileTreeNodes(sorted);
+  const treeFilePaths = treeNodes.filter((n) => n.kind === "file").map((n) => n.path);
+
+  expect(sorted.map((f) => f.path)).toEqual(treeFilePaths);
 });

@@ -6,6 +6,7 @@ import {
   logDiffdiffInfo,
   logDiffdiffWarn,
 } from "@diffdiff/core";
+import { sortFilesInTreeOrder } from "./view-model.ts";
 import type {
   PierreThemeName,
   PreparedReviewFile,
@@ -108,12 +109,16 @@ export async function prepareReviewSession(
   syntaxPalette: SyntaxPalette = getSyntaxPalette(themeName),
   prepareOptions: PrepareReviewSessionOptions = {},
 ): Promise<PreparedReviewSession> {
+  // Sort files so the diff pane order matches the file tree sidebar (directories first,
+  // alphabetical at each level).
+  const sortedSession = { ...session, files: sortFilesInTreeOrder(session.files) };
+
   // Startup is noticeably faster when we skip eager syntax tokenization, but we still parse the
   // patch structure so the first screen can render stable diff rows without relying on the fallback
   // widget's parser.
   if (prepareOptions.deferSyntaxRendering) {
     const pierreDiffs = await loadPierreDiffs();
-    const files = session.files.map((file) => createDeferredPreparedFile(file, pierreDiffs));
+    const files = sortedSession.files.map((file) => createDeferredPreparedFile(file, pierreDiffs));
     const deferredPreviewFiles = files.filter(
       (file): file is PreparedReviewFile & { diff: FileDiffMetadata } =>
         file.diff != null && requiresPlainDeferredPreview(file.patch),
@@ -121,7 +126,7 @@ export async function prepareReviewSession(
 
     if (deferredPreviewFiles.length === 0) {
       return {
-        ...session,
+        ...sortedSession,
         files,
         themeName,
       };
@@ -160,7 +165,7 @@ export async function prepareReviewSession(
         themeName,
       });
       return {
-        ...session,
+        ...sortedSession,
         files: files.map((file) => {
           if (file.diff == null || !requiresPlainDeferredPreview(file.patch)) {
             return file;
@@ -179,7 +184,7 @@ export async function prepareReviewSession(
     const resolveSegmentColor = createPierreSegmentColorResolver(themeName, theme, syntaxPalette);
 
     return {
-      ...session,
+      ...sortedSession,
       files: files.map((file) => {
         if (file.diff == null || !requiresPlainDeferredPreview(file.patch)) {
           return file;
@@ -228,7 +233,7 @@ export async function prepareReviewSession(
   }
 
   const pierreDiffs = await loadPierreDiffs();
-  const parsedFiles = session.files.map((file) => parseReviewFile(file, pierreDiffs));
+  const parsedFiles = sortedSession.files.map((file) => parseReviewFile(file, pierreDiffs));
 
   const languages = new Set<string>();
 
@@ -301,7 +306,7 @@ export async function prepareReviewSession(
   });
 
   return {
-    ...session,
+    ...sortedSession,
     files,
     themeName,
   };

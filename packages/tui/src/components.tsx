@@ -36,7 +36,6 @@ import {
   formatAuthorList,
   formatChangeSummary,
   formatCommitDelta,
-  getDiffViewLabel,
   truncateSegments,
 } from "./view-model.ts";
 
@@ -108,9 +107,6 @@ export function FileCard({
         : file.status === "renamed"
           ? theme.warning
           : theme.accent;
-  const modeLabel = file.isBinary
-    ? "binary change"
-    : `${filetype ?? "text"} ${getDiffViewLabel(diffView)} diff`;
   const { borderColor, fileBackground } = getFileCardChrome(isSelected, isReviewed, theme);
 
   const usesFallbackRenderer =
@@ -150,7 +146,12 @@ export function FileCard({
       paddingBottom={isCollapsed ? 0 : 1}
       gap={1}
     >
-      <FileCardTitleRow file={file} isSelected={isSelected} theme={theme} />
+      <FileCardTitleRow
+        file={file}
+        isCollapsed={isCollapsed}
+        isSelected={isSelected}
+        theme={theme}
+      />
 
       <text fg={theme.textMuted} wrapMode="none">
         <Tag label={statusLabel.toUpperCase()} fg={theme.inverseText} bg={statusColor} />
@@ -160,14 +161,6 @@ export function FileCard({
             <Tag label="REVIEWED" fg={theme.success} bg={theme.reviewedBg} />
           </>
         ) : null}
-        {isCollapsed ? (
-          <>
-            <span> </span>
-            <Tag label="COLLAPSED" fg={theme.textMuted} bg={theme.surface} />
-          </>
-        ) : null}
-        <span fg={theme.border}>{"  \u2502  "}</span>
-        <span>{modeLabel}</span>
       </text>
 
       {file.previousPath != null ? (
@@ -283,7 +276,7 @@ export function StickyFileHeader({
       zIndex={10}
     >
       <box width="100%" paddingRight={1}>
-        <FileCardTitleRow file={file} isSelected={isSelected} theme={theme} />
+        <FileCardTitleRow file={file} isCollapsed={false} isSelected={isSelected} theme={theme} />
       </box>
     </box>
   );
@@ -407,16 +400,19 @@ export function FileTreeSidebar({
 
 function FileCardTitleRow({
   file,
+  isCollapsed,
   isSelected,
   theme,
 }: {
   file: PreparedReviewFile;
+  isCollapsed: boolean;
   isSelected: boolean;
   theme: UiTheme;
 }) {
   return (
     <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
       <text fg={theme.text} wrapMode="none">
+        <span fg={theme.textMuted}>{isCollapsed ? "\u25B6 " : "\u25BC "}</span>
         <span fg={isSelected ? theme.accent : theme.text}>{file.path}</span>
       </text>
       <box paddingRight={2}>
@@ -1530,8 +1526,6 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
         <text fg={theme.textMuted} wrapMode="none">
           <KeyCap label="r" theme={theme} />
           <span>{" toggle reviewed  "}</span>
-          <KeyCap label="m" theme={theme} />
-          <span>{" review and advance  "}</span>
           <KeyCap label="c / enter" theme={theme} />
           <span>{" collapse file  "}</span>
           <KeyCap label="v" theme={theme} />

@@ -797,10 +797,6 @@ export function DiffdiffApp({
       toggleReviewed(selectedFileIndex);
       return;
     }
-
-    if (key.name === "m") {
-      reviewCollapseAndAdvance(selectedFileIndex);
-    }
   };
 
   useKeyboard(
@@ -979,11 +975,6 @@ export function DiffdiffApp({
             <span fg={theme.border}>{" / "}</span>
             <span>{session.repository.name}</span>
             <span>{"  "}</span>
-            <span fg={theme.inverseText} bg={theme.accent}>{` ${currentBranchLabel} `}</span>
-          </text>
-        </box>
-        <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
-          <text fg={theme.textMuted} wrapMode="none">
             <span fg={theme.inverseText} bg={theme.border}>{` ${comparisonModeLabel} `}</span>
             <span>{"  "}</span>
             <span fg={theme.warning}>base</span>
@@ -995,7 +986,9 @@ export function DiffdiffApp({
             <span fg={theme.text}>{session.comparison.head}</span>
           </text>
           <text fg={theme.textMuted} wrapMode="none">
-            {session.repository.rootPath}
+            <span>{session.repository.rootPath}</span>
+            <span>{"  "}</span>
+            <span fg={theme.inverseText} bg={theme.accent}>{` ${currentBranchLabel} `}</span>
           </text>
         </box>
         {session.warnings[0] != null ? (
@@ -1412,17 +1405,41 @@ export function DiffdiffApp({
       return;
     }
 
-    setReviewedPaths((currentPaths) => {
-      const nextPaths = new Set(currentPaths);
-      if (nextPaths.has(file.path)) {
+    const wasReviewed = reviewedPaths.has(file.path);
+
+    if (wasReviewed) {
+      setReviewedPaths((currentPaths) => {
+        const nextPaths = new Set(currentPaths);
         nextPaths.delete(file.path);
-        setStatusMessage(`Marked ${file.path} as not reviewed.`);
-      } else {
-        nextPaths.add(file.path);
-        setStatusMessage(`Marked ${file.path} as reviewed.`);
+        return nextPaths;
+      });
+      setStatusMessage(`Marked ${file.path} as not reviewed.`);
+    } else {
+      setReviewedPaths((currentPaths) => new Set(currentPaths).add(file.path));
+      setCollapsedPaths((currentPaths) => new Set(currentPaths).add(file.path));
+
+      // Move focus to the next unreviewed file, searching forward then wrapping around.
+      const files = session.files;
+      let nextIndex: number | null = null;
+
+      for (let i = 1; i < files.length; i++) {
+        const candidateIndex = (fileIndex + i) % files.length;
+        const candidatePath = files[candidateIndex]?.path;
+        if (candidatePath != null && !reviewedPaths.has(candidatePath)) {
+          nextIndex = candidateIndex;
+          break;
+        }
       }
-      return nextPaths;
-    });
+
+      if (nextIndex != null) {
+        setSelectedFileIndex(nextIndex);
+        setStatusMessage(
+          `Reviewed ${file.path}. Jumped to ${files[nextIndex]?.path ?? "next file"}.`,
+        );
+      } else {
+        setStatusMessage(`Reviewed ${file.path}. All files reviewed!`);
+      }
+    }
   }
 
   function toggleCollapsed(fileIndex: number): void {
@@ -1459,18 +1476,6 @@ export function DiffdiffApp({
 
       return nextPreference;
     });
-  }
-
-  function reviewCollapseAndAdvance(fileIndex: number): void {
-    const file = session.files[fileIndex];
-    if (file == null) {
-      return;
-    }
-
-    setReviewedPaths((currentPaths) => new Set(currentPaths).add(file.path));
-    setCollapsedPaths((currentPaths) => new Set(currentPaths).add(file.path));
-    setSelectedFileIndex((currentIndex) => clampIndex(currentIndex + 1, session.files.length));
-    setStatusMessage(`Reviewed ${file.path} and moved on.`);
   }
 
   function toggleActivePane(): void {

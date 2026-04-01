@@ -232,6 +232,62 @@ export function getTopIntersectingFileIndex(
   return activeIndex;
 }
 
+/**
+ * Sort files into the order they appear in the file tree: directories first
+ * (alphabetical), then files (alphabetical), recursively at each level.
+ * The diff pane should use this sorted array so its top-to-bottom order
+ * matches the tree sidebar.
+ */
+export function sortFilesInTreeOrder<T extends { path: string }>(files: readonly T[]): T[] {
+  interface DirectoryBucket {
+    name: string;
+    directories: Map<string, DirectoryBucket>;
+    files: T[];
+  }
+
+  const root: DirectoryBucket = { name: "", directories: new Map(), files: [] };
+
+  for (const file of files) {
+    const parts = file.path.split("/").filter(Boolean);
+    const fileName = parts.pop();
+    if (fileName == null) {
+      continue;
+    }
+
+    let bucket = root;
+    for (const part of parts) {
+      let next = bucket.directories.get(part);
+      if (next == null) {
+        next = { name: part, directories: new Map(), files: [] };
+        bucket.directories.set(part, next);
+      }
+      bucket = next;
+    }
+
+    bucket.files.push(file);
+  }
+
+  const sorted: T[] = [];
+
+  function collect(bucket: DirectoryBucket): void {
+    const childDirs = Array.from(bucket.directories.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+    const childFiles = [...bucket.files].sort((a, b) => a.path.localeCompare(b.path));
+
+    for (const dir of childDirs) {
+      collect(dir);
+    }
+
+    for (const file of childFiles) {
+      sorted.push(file);
+    }
+  }
+
+  collect(root);
+  return sorted;
+}
+
 export function buildFileTreeNodes(files: readonly ChangedFile[]): FileTreeNode[] {
   interface DirectoryBuilder {
     path: string;

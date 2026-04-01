@@ -188,6 +188,7 @@ test("shows binary, reviewed, and collapsed states clearly", () => {
     "Binary file changed. Content preview is not available yet.",
   );
   expect(collectText(tree.toJSON())).toContain("REVIEWED");
+  expect(collectText(tree.toJSON())).toContain("\u25BC");
 
   act(() => {
     tree.update(
@@ -206,7 +207,8 @@ test("shows binary, reviewed, and collapsed states clearly", () => {
     );
   });
 
-  expect(collectText(tree.toJSON())).toContain("COLLAPSED");
+  expect(collectText(tree.toJSON())).toContain("\u25B6");
+  expect(collectText(tree.toJSON())).not.toContain("COLLAPSED");
 });
 
 test("renders a sticky file header for the active viewport file", () => {
@@ -357,7 +359,6 @@ test("renders syntax-highlighted side-by-side rows", () => {
 
   expect(tree.root.findAll((node) => String(node.type) === "diff")).toHaveLength(0);
   expect(tree.root.findAll((node) => node.props?.fg === "#3fb950")).not.toHaveLength(0);
-  expect(collectText(tree.toJSON())).toContain("side-by-side diff");
 });
 
 test("renders inline GitHub review threads under matching diff lines", () => {

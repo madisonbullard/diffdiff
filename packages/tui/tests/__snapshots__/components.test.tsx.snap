@@ -1099,6 +1099,11 @@ exports[`renders a sticky file header for the active viewport file 1`] = `
         wrapMode="none"
       >
         <span
+          fg="#8ea4b5"
+        >
+          ▼ 
+        </span>
+        <span
           fg="#e6edf3"
         >
           src/app.ts
@@ -1176,6 +1181,11 @@ exports[`renders an expanded file card snapshot 1`] = `
       wrapMode="none"
     >
       <span
+        fg="#8ea4b5"
+      >
+        ▼ 
+      </span>
+      <span
         fg="#9cdcfe"
       >
         src/app.ts
@@ -1215,14 +1225,6 @@ exports[`renders an expanded file card snapshot 1`] = `
       fg="#0b1b26"
     >
        CHANGED 
-    </span>
-    <span
-      fg="#29475c"
-    >
-        │  
-    </span>
-    <span>
-      typescript unified diff
     </span>
   </text>
   <box
