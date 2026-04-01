@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import clipboardy from "clipboardy";
+import { logDiffdiffError, logDiffdiffInfo, logDiffdiffWarn } from "@diffdiff/core";
 
 interface ClipboardCommand {
   command: string;
@@ -35,12 +36,19 @@ export async function copyTextToClipboard(
   options: ClipboardCopyOptions = {},
 ): Promise<boolean> {
   if (text.length === 0) {
+    logDiffdiffWarn("clipboard", "clipboard_copy_skipped", {
+      reason: "empty-text",
+    });
     return false;
   }
 
   writeOsc52(text, options.stdout ?? process.stdout, options.env ?? process.env);
 
   if (await copyTextWithNativeClipboard(text, options)) {
+    logDiffdiffInfo("clipboard", "clipboard_copy_completed", {
+      method: "native-command",
+      textLength: text.length,
+    });
     return true;
   }
 
@@ -48,8 +56,16 @@ export async function copyTextToClipboard(
 
   try {
     await clipboardWrite(text);
+    logDiffdiffInfo("clipboard", "clipboard_copy_completed", {
+      method: "clipboardy",
+      textLength: text.length,
+    });
     return true;
-  } catch {
+  } catch (error) {
+    logDiffdiffError("clipboard", "clipboard_copy_failed", error, {
+      method: "clipboardy",
+      textLength: text.length,
+    });
     return false;
   }
 }
@@ -144,22 +160,43 @@ async function runClipboardCommand({ command, args, input }: ClipboardCommand): 
       };
 
       child.once("error", () => {
+        logDiffdiffWarn("clipboard", "clipboard_command_failed", {
+          args,
+          command,
+          reason: "spawn-error",
+        });
         settle(false);
       });
 
       child.once("close", (code) => {
+        logDiffdiffInfo("clipboard", "clipboard_command_completed", {
+          args,
+          command,
+          exitCode: code,
+          succeeded: code === 0,
+        });
         settle(code === 0);
       });
 
       if (input != null) {
         if (child.stdin == null) {
+          logDiffdiffWarn("clipboard", "clipboard_command_failed", {
+            args,
+            command,
+            reason: "stdin-unavailable",
+          });
           settle(false);
           return;
         }
 
         child.stdin.end(input);
       }
-    } catch {
+    } catch (error) {
+      logDiffdiffError("clipboard", "clipboard_command_failed", error, {
+        args,
+        command,
+        reason: "spawn-throw",
+      });
       resolve(false);
     }
   });

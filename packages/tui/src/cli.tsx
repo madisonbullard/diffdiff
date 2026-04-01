@@ -4,9 +4,13 @@ import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 import {
   clearGitHubToken,
+  flushDiffdiffLogs,
   formatHelpText,
   GitHubPullRequestService,
+  logDiffdiffError,
+  logDiffdiffInfo,
   parseStartupOptions,
+  startDiffdiffLogging,
   storeGitHubToken,
 } from "@diffdiff/core";
 import type { StartupOptions } from "@diffdiff/core";
@@ -43,7 +47,13 @@ function StartupScreen({
 }
 
 async function main(): Promise<void> {
+  const logSession = await startDiffdiffLogging({
+    command: process.argv,
+    cwd: process.cwd(),
+  });
+
   if (await handleAuthCommand(process.argv.slice(2))) {
+    await flushDiffdiffLogs();
     return;
   }
 
@@ -51,13 +61,20 @@ async function main(): Promise<void> {
 
   if (options.help) {
     process.stdout.write(`${formatHelpText()}\n`);
+    await flushDiffdiffLogs();
     return;
   }
 
   if (options.version) {
     process.stdout.write(`${packageJson.version}\n`);
+    await flushDiffdiffLogs();
     return;
   }
+
+  logDiffdiffInfo("cli", "tui_launch_started", {
+    logFilePath: logSession?.logFilePath,
+    options,
+  });
 
   // Keep the initial module graph light so `--help` and `--version` stay instant, then overlap the
   // background-color probe with the heavier TUI/runtime imports for the real app launch.
@@ -135,9 +152,15 @@ async function main(): Promise<void> {
         initialOptions={options}
         initialSession={initialSession}
         loadSession={loadSession}
+        logFilePath={logSession?.logFilePath}
         onExit={() => {
-          renderer.destroy();
-          process.exit(0);
+          logDiffdiffInfo("cli", "tui_exit_requested", {
+            logFilePath: logSession?.logFilePath,
+          });
+          void flushDiffdiffLogs().finally(() => {
+            renderer.destroy();
+            process.exit(0);
+          });
         }}
         submitPendingReview={(reviewSession, event, body) =>
           gitHubPullRequestService.submitPendingReview(reviewSession, event, body)
@@ -147,6 +170,11 @@ async function main(): Promise<void> {
       />,
     );
   } catch (error) {
+    logDiffdiffError("cli", "tui_launch_failed", error, {
+      logFilePath: logSession?.logFilePath,
+      options,
+    });
+    await flushDiffdiffLogs();
     renderer.destroy();
     const message = error instanceof Error ? error.message : "Unknown error";
     process.stderr.write(`diffdiff: ${message}\n`);
@@ -166,6 +194,10 @@ async function handleAuthCommand(argv: readonly string[]): Promise<boolean> {
     }
 
     const auth = await storeGitHubToken(token);
+    logDiffdiffInfo("cli", "auth_login_completed", {
+      host: auth.host,
+      tokenSource: auth.tokenSource,
+    });
     process.stdout.write(
       auth.tokenSource === "keychain"
         ? "Stored GitHub token in the macOS Keychain.\n"
@@ -176,6 +208,7 @@ async function handleAuthCommand(argv: readonly string[]): Promise<boolean> {
 
   if (argv[1] === "logout") {
     await clearGitHubToken();
+    logDiffdiffInfo("cli", "auth_logout_completed");
     process.stdout.write("Cleared stored GitHub auth.\n");
     return true;
   }
@@ -214,4 +247,10 @@ async function readStandardInput(): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-void main();
+void main().catch(async (error) => {
+  logDiffdiffError("cli", "fatal_error", error);
+  await flushDiffdiffLogs();
+  const message = error instanceof Error ? error.message : "Unknown error";
+  process.stderr.write(`diffdiff: ${message}\n`);
+  process.exitCode = 1;
+});

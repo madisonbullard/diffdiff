@@ -5,6 +5,12 @@ import type {
   GitHubReviewSubmissionEvent,
   StartupOptions,
 } from "@diffdiff/core";
+import {
+  getDiffdiffLogSession,
+  logDiffdiffError,
+  logDiffdiffInfo,
+  logDiffdiffWarn,
+} from "@diffdiff/core";
 import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -60,6 +66,7 @@ interface DiffdiffAppProps {
   initialSession: PreparedReviewSession;
   initialOptions: StartupOptions;
   loadSession: (options: StartupOptions) => Promise<PreparedReviewSession>;
+  logFilePath?: string;
   onExit: () => void;
   submitPendingReview?: (
     reviewSession: GitHubReviewSession,
@@ -165,6 +172,7 @@ export function DiffdiffApp({
   initialSession,
   initialOptions,
   loadSession,
+  logFilePath,
   onExit,
   submitPendingReview,
   syntaxStyle,
@@ -179,6 +187,7 @@ export function DiffdiffApp({
   );
   const [statusMessage, setStatusMessage] = useState<string>("Ready.");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [errorToastMessage, setErrorToastMessage] = useState<string | null>(null);
   const [baseBranchLoadingMessage, setBaseBranchLoadingMessage] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
@@ -282,6 +291,58 @@ export function DiffdiffApp({
               ? "branch"
               : null;
   const keyboardHandlerRef = useRef<(key: KeyboardInput) => void>(() => undefined);
+  const resolvedLogFilePath =
+    logFilePath ?? getDiffdiffLogSession()?.logFilePath ?? "~/.diffdiff/logs/log-unknown.jsonl";
+
+  const dismissErrorToast = useCallback(() => {
+    setErrorToastMessage((currentMessage) => {
+      if (currentMessage != null) {
+        logDiffdiffInfo("app", "error_toast_dismissed", {
+          logFilePath: resolvedLogFilePath,
+          message: currentMessage,
+        });
+      }
+
+      return null;
+    });
+  }, [resolvedLogFilePath]);
+
+  const showErrorToast = useCallback(() => {
+    const message = `View error logs at ${resolvedLogFilePath}`;
+    setErrorToastMessage(message);
+    logDiffdiffWarn("app", "error_toast_shown", {
+      logFilePath: resolvedLogFilePath,
+      message,
+    });
+  }, [resolvedLogFilePath]);
+
+  const handleAppError = useCallback(
+    (error: unknown, fallbackMessage: string, context: Record<string, unknown>) => {
+      const message = error instanceof Error ? error.message : fallbackMessage;
+      logDiffdiffError("app", "ui_action_failed", error, {
+        ...context,
+        fallbackMessage,
+        logFilePath: resolvedLogFilePath,
+        message,
+      });
+      setStatusMessage(message);
+      showErrorToast();
+    },
+    [resolvedLogFilePath, showErrorToast],
+  );
+
+  const handleAppFailure = useCallback(
+    (message: string, context: Record<string, unknown>) => {
+      logDiffdiffWarn("app", "ui_action_failed_without_exception", {
+        ...context,
+        logFilePath: resolvedLogFilePath,
+        message,
+      });
+      setStatusMessage(message);
+      showErrorToast();
+    },
+    [resolvedLogFilePath, showErrorToast],
+  );
 
   useEffect(() => {
     if (session.github == null) {
@@ -508,12 +569,14 @@ export function DiffdiffApp({
       }
       setStatusMessage("Refreshed git state.");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to refresh git state.";
-      setStatusMessage(message);
+      handleAppError(error, "Unable to refresh git state.", {
+        action: "refresh-git-state",
+        startupOptions,
+      });
     } finally {
       setIsReloading(false);
     }
-  }, [isReloading, loadSession, selectedFileIndex, session.files, startupOptions]);
+  }, [handleAppError, isReloading, loadSession, selectedFileIndex, session.files, startupOptions]);
 
   useEffect(() => {
     const handleBlur = () => {
@@ -538,6 +601,22 @@ export function DiffdiffApp({
   }, [refreshGitState, renderer]);
 
   keyboardHandlerRef.current = (key) => {
+    logDiffdiffInfo("app", "key_pressed", {
+      activeOverlay,
+      errorToastVisible: errorToastMessage != null,
+      key,
+      selectedFilePath: session.files[selectedFileIndex]?.path,
+    });
+
+    if (
+      activeOverlay == null &&
+      errorToastMessage != null &&
+      (key.name === "escape" || key.name === "x")
+    ) {
+      dismissErrorToast();
+      return;
+    }
+
     if (activeOverlay === "help") {
       if (key.name === "escape" || key.name === "q" || key.sequence === "?") {
         setShowHelp(false);
@@ -686,6 +765,7 @@ export function DiffdiffApp({
   const comparisonModeLabel =
     session.comparison.mode === "working-tree" ? "working tree" : "branch range";
   const currentBranchLabel = session.repository.currentBranch ?? "detached";
+
   const showToast = useCallback((message: string) => {
     if (toastTimeoutRef.current != null) {
       clearTimeout(toastTimeoutRef.current);
@@ -700,13 +780,88 @@ export function DiffdiffApp({
   const handleMouseUp = useCallback(() => {
     copySelection(renderer, {
       onSuccess: () => {
+        logDiffdiffInfo("app", "selection_copied", {
+          selectedFilePath: selectedFile?.path,
+        });
         showToast("Copied to clipboard");
       },
       onError: () => {
-        setStatusMessage("Unable to copy selection.");
+        handleAppFailure("Unable to copy selection.", {
+          action: "copy-selection",
+          selectedFilePath: selectedFile?.path,
+        });
       },
     });
-  }, [renderer, showToast]);
+  }, [handleAppFailure, renderer, selectedFile?.path, showToast]);
+
+  useEffect(() => {
+    logDiffdiffInfo("app", "app_loaded", {
+      comparison: session.comparison,
+      logFilePath: resolvedLogFilePath,
+      repository: {
+        name: session.repository.name,
+        rootPath: session.repository.rootPath,
+      },
+    });
+  }, [
+    resolvedLogFilePath,
+    session.comparison,
+    session.repository.name,
+    session.repository.rootPath,
+  ]);
+
+  useEffect(() => {
+    logDiffdiffInfo("app", "session_updated", {
+      comparison: session.comparison,
+      fileCount: session.files.length,
+      hasGitHubReview: session.github != null,
+      warningCount: session.warnings.length,
+    });
+  }, [session]);
+
+  useEffect(() => {
+    logDiffdiffInfo("app", "selection_updated", {
+      activeFileIndex,
+      activePane,
+      diffView,
+      selectedFileIndex,
+      selectedFilePath: session.files[selectedFileIndex]?.path,
+    });
+  }, [activeFileIndex, activePane, diffView, selectedFileIndex, session.files]);
+
+  useEffect(() => {
+    logDiffdiffInfo("app", "overlay_updated", {
+      activeOverlay,
+    });
+  }, [activeOverlay]);
+
+  useEffect(() => {
+    logDiffdiffInfo("app", "status_message_updated", {
+      message: statusMessage,
+    });
+  }, [statusMessage]);
+
+  useEffect(() => {
+    if (toastMessage == null) {
+      return;
+    }
+
+    logDiffdiffInfo("app", "toast_shown", {
+      kind: "success",
+      message: toastMessage,
+    });
+  }, [toastMessage]);
+
+  useEffect(() => {
+    if (errorToastMessage == null) {
+      return;
+    }
+
+    logDiffdiffWarn("app", "toast_shown", {
+      kind: "error",
+      message: errorToastMessage,
+    });
+  }, [errorToastMessage]);
 
   return (
     <box
@@ -1030,7 +1185,7 @@ export function DiffdiffApp({
         ) : null}
       </box>
 
-      {baseBranchLoadingMessage != null || toastMessage != null ? (
+      {baseBranchLoadingMessage != null || toastMessage != null || errorToastMessage != null ? (
         <box
           position="absolute"
           right={2}
@@ -1066,6 +1221,28 @@ export function DiffdiffApp({
                 {"\u2713 "}
                 <span fg={theme.text}>{toastMessage}</span>
               </text>
+            </box>
+          ) : null}
+          {errorToastMessage != null ? (
+            <box
+              backgroundColor={theme.surfaceMuted}
+              border={["left"]}
+              borderColor={theme.danger}
+              paddingX={2}
+              paddingY={1}
+            >
+              <box width="100%" flexDirection="column" gap={0}>
+                <text fg={theme.danger} wrapMode="none">
+                  {"! "}
+                  <span fg={theme.text}>{errorToastMessage}</span>
+                </text>
+                <text fg={theme.textMuted} wrapMode="none">
+                  <span fg={theme.inverseText} bg={theme.surface}>
+                    {" x "}
+                  </span>
+                  <span>{" dismiss"}</span>
+                </text>
+              </box>
             </box>
           ) : null}
         </box>
@@ -1762,8 +1939,10 @@ export function DiffdiffApp({
       setReviewComposerBody("");
       setStatusMessage("Added the comment to the pending review.");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to add the review comment.";
-      setStatusMessage(message);
+      handleAppError(error, "Unable to add the review comment.", {
+        action: "add-review-thread",
+        anchor: selectedReviewAnchor,
+      });
     } finally {
       setIsSubmittingReviewAction(false);
     }
@@ -1789,8 +1968,10 @@ export function DiffdiffApp({
       setReviewSubmissionBody("");
       setStatusMessage("Submitted the pending review.");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to submit the review.";
-      setStatusMessage(message);
+      handleAppError(error, "Unable to submit the review.", {
+        action: "submit-review",
+        event: getReviewSubmissionEvent(reviewSubmissionEventIndex),
+      });
     } finally {
       setIsSubmittingReviewAction(false);
     }
@@ -1836,8 +2017,11 @@ export function DiffdiffApp({
       setSelectedFileIndex(0);
       setStatusMessage(`Updated ${target} to ${branch.name}.`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : `Unable to update ${target}.`;
-      setStatusMessage(message);
+      handleAppError(error, `Unable to update ${target}.`, {
+        action: "apply-branch-selection",
+        branch: branch.name,
+        target,
+      });
     } finally {
       if (shouldShowEventLogLoading) {
         setBaseBranchLoadingMessage(null);
@@ -1871,8 +2055,12 @@ export function DiffdiffApp({
       setSelectedFileIndex(0);
       setStatusMessage(`Updated ${target} to commit ${shortSha}.`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : `Unable to update ${target}.`;
-      setStatusMessage(message);
+      handleAppError(error, `Unable to update ${target}.`, {
+        action: "apply-commit-selection",
+        sha,
+        shortSha,
+        target,
+      });
     } finally {
       setIsReloading(false);
     }
@@ -1897,9 +2085,9 @@ export function DiffdiffApp({
       setSelectedFileIndex(0);
       setStatusMessage("Showing working tree changes against HEAD.");
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unable to review working tree changes.";
-      setStatusMessage(message);
+      handleAppError(error, "Unable to review working tree changes.", {
+        action: "apply-working-tree-selection",
+      });
     } finally {
       setIsReloading(false);
     }
@@ -1939,9 +2127,10 @@ export function DiffdiffApp({
       setSelectedFileIndex(0);
       setStatusMessage(`Opened PR #${branch.pullRequest.number}.`);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unable to open the selected pull request.";
-      setStatusMessage(message);
+      handleAppError(error, "Unable to open the selected pull request.", {
+        action: "apply-pull-request-selection",
+        pullRequestNumber: branch.pullRequest.number,
+      });
     } finally {
       setIsReloading(false);
     }

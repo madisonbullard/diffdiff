@@ -194,6 +194,37 @@ test("shows a copy toast for five seconds after a successful copy", () => {
   expect(getAppText(tree)).not.toContain("Copied to clipboard");
 });
 
+test("shows a persistent error log toast until dismissed", async () => {
+  const logFilePath = "/Users/test/.diffdiff/logs/log-test.jsonl";
+  const loadSession = vi.fn(async () => {
+    throw new Error("Unable to refresh git state.");
+  });
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        loadSession,
+        logFilePath,
+      })}
+    />,
+  );
+
+  await act(async () => {
+    rendererState.renderer.emit("blur");
+    rendererState.renderer.emit("focus");
+  });
+
+  expect(getAppText(tree)).toContain("Unable to refresh git state.");
+  expect(getAppText(tree)).toContain(`View error logs at ${logFilePath}`);
+
+  emitKey({ name: "j" });
+
+  expect(getAppText(tree)).toContain(`View error logs at ${logFilePath}`);
+
+  emitKey({ name: "x", sequence: "x" });
+
+  expect(getAppText(tree)).not.toContain(`View error logs at ${logFilePath}`);
+});
+
 test("starts commit browsing at the top of the commit list", () => {
   const tree = render(
     <DiffdiffApp
@@ -524,6 +555,7 @@ function createAppPropsBase() {
     initialOptions,
     initialSession,
     loadSession: vi.fn(async () => initialSession),
+    logFilePath: "/Users/test/.diffdiff/logs/log-test.jsonl",
     onExit: vi.fn(),
     submitPendingReview: vi.fn(async () => undefined),
     syntaxStyle,

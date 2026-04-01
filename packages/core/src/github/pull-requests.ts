@@ -17,6 +17,7 @@ import type {
   ReviewWarning,
 } from "../types.ts";
 import { DiffdiffError } from "../errors.ts";
+import { logDiffdiffError, logDiffdiffInfo, logDiffdiffWarn } from "../logging.ts";
 import { OctokitGitHubClientFactory } from "./client.ts";
 
 interface GitHubUserResponse {
@@ -114,6 +115,9 @@ export class GitHubPullRequestService {
   async listOpenPullRequests(repository: ForgeRepository): Promise<PullRequestInfo[] | null> {
     const client = await this.clientFactory.create(repository);
     if (client == null) {
+      logDiffdiffWarn("github", "list_open_pull_requests_skipped", {
+        repository,
+      });
       return null;
     }
 
@@ -125,8 +129,16 @@ export class GitHubPullRequestService {
         per_page: 100,
       })) as GitHubPullRequestListResponse[];
 
+      logDiffdiffInfo("github", "list_open_pull_requests_completed", {
+        count: pullRequests.length,
+        repository,
+      });
+
       return pullRequests.map(mapPullRequestSummary);
-    } catch {
+    } catch (error) {
+      logDiffdiffError("github", "list_open_pull_requests_failed", error, {
+        repository,
+      });
       return null;
     }
   }
@@ -134,11 +146,18 @@ export class GitHubPullRequestService {
   async attachReviewSession(session: ReviewSession): Promise<ReviewSession> {
     const candidate = findActivePullRequestCandidate(session);
     if (candidate == null) {
+      logDiffdiffInfo("github", "attach_review_session_skipped", {
+        reason: "no-active-pull-request-candidate",
+      });
       return session;
     }
 
     const client = await this.clientFactory.create(candidate.repository);
     if (client == null) {
+      logDiffdiffWarn("github", "attach_review_session_skipped", {
+        repository: candidate.repository,
+        reason: "github-client-unavailable",
+      });
       return session;
     }
 
@@ -168,7 +187,11 @@ export class GitHubPullRequestService {
           ...buildPullRequestWarnings(session, pullRequest),
         ]),
       };
-    } catch {
+    } catch (error) {
+      logDiffdiffError("github", "attach_review_session_failed", error, {
+        pullRequestNumber: candidate.pullRequest.number,
+        repository: candidate.repository,
+      });
       return {
         ...session,
         warnings: dedupeWarnings([
@@ -188,6 +211,10 @@ export class GitHubPullRequestService {
     const client = await this.requireClient(reviewSession);
 
     if (reviewSession.pullRequest.pendingReview != null) {
+      logDiffdiffInfo("github", "pending_review_reused", {
+        pullRequestNumber: reviewSession.pullRequest.number,
+        reviewId: reviewSession.pullRequest.pendingReview.id,
+      });
       return reviewSession.pullRequest.pendingReview;
     }
 
@@ -390,7 +417,11 @@ export class GitHubPullRequestService {
         successful,
         total: checkRuns.length,
       };
-    } catch {
+    } catch (error) {
+      logDiffdiffError("github", "load_checks_summary_failed", error, {
+        pullRequestNumber,
+        repository,
+      });
       return {
         failed: 0,
         pending: 0,

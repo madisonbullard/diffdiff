@@ -1,6 +1,11 @@
 import type { FileDiffMetadata } from "@pierre/diffs";
 import type { ChangedFile, ReviewSession, StartupOptions } from "@diffdiff/core";
-import { loadReviewSession } from "@diffdiff/core";
+import {
+  loadReviewSession,
+  logDiffdiffError,
+  logDiffdiffInfo,
+  logDiffdiffWarn,
+} from "@diffdiff/core";
 import type {
   PierreThemeName,
   PreparedReviewFile,
@@ -75,8 +80,25 @@ export async function loadPreparedReviewSession(
   syntaxPalette: SyntaxPalette = getSyntaxPalette(themeName),
   prepareOptions: PrepareReviewSessionOptions = {},
 ): Promise<PreparedReviewSession> {
+  logDiffdiffInfo("render", "prepared_review_session_load_started", {
+    options,
+    prepareOptions,
+    themeName,
+  });
   const session = await loadReviewSession(options);
-  return prepareReviewSession(session, themeName, theme, syntaxPalette, prepareOptions);
+  const preparedSession = await prepareReviewSession(
+    session,
+    themeName,
+    theme,
+    syntaxPalette,
+    prepareOptions,
+  );
+  logDiffdiffInfo("render", "prepared_review_session_load_completed", {
+    deferredSyntaxRendering: prepareOptions.deferSyntaxRendering === true,
+    fileCount: preparedSession.files.length,
+    themeName,
+  });
+  return preparedSession;
 }
 
 export async function prepareReviewSession(
@@ -130,7 +152,13 @@ export async function prepareReviewSession(
         themes: [themeName],
         langs: [...languages],
       });
-    } catch {
+    } catch (error) {
+      logDiffdiffWarn("render", "shared_highlighter_unavailable", {
+        deferredSyntaxRendering: true,
+        error,
+        languages: [...languages],
+        themeName,
+      });
       return {
         ...session,
         files: files.map((file) => {
@@ -182,7 +210,12 @@ export async function prepareReviewSession(
               resolveSegmentColor,
             ),
           };
-        } catch {
+        } catch (error) {
+          logDiffdiffWarn("render", "deferred_diff_render_fallback", {
+            error,
+            path: file.path,
+            themeName,
+          });
           return {
             ...file,
             sideBySideRows: buildPlainSideBySideRows(file.diff),
@@ -256,6 +289,10 @@ export async function prepareReviewSession(
         lineNumberWidth: getLineNumberWidth(file.diff),
       };
     } catch (error) {
+      logDiffdiffError("render", "diff_render_failed", error, {
+        path: file.path,
+        themeName,
+      });
       return {
         ...file,
         renderError: error instanceof Error ? error.message : "Unable to render diff.",
@@ -295,7 +332,11 @@ function createDeferredPreparedFile(
       lineNumberWidth: diff == null ? 3 : getLineNumberWidth(diff),
       renderError: undefined,
     };
-  } catch {
+  } catch (error) {
+    logDiffdiffWarn("render", "deferred_diff_parse_failed", {
+      error,
+      path: file.path,
+    });
     return {
       ...file,
       diff: undefined,
@@ -329,6 +370,9 @@ function parseReviewFile(file: ChangedFile, pierreDiffs: PierreDiffsModule): Pre
       renderError: diff == null ? "Unable to parse the git patch for this file." : undefined,
     };
   } catch (error) {
+    logDiffdiffError("render", "diff_parse_failed", error, {
+      path: file.path,
+    });
     return {
       ...file,
       sideBySideRows: [],
