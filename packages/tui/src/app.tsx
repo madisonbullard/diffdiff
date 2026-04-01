@@ -59,6 +59,7 @@ import {
   MIN_SIDE_BY_SIDE_DIFF_WIDTH,
   resolveDiffView,
 } from "./view-model.ts";
+import { copyTextToClipboard } from "./clipboard.ts";
 import { copySelection } from "./selection-copy.ts";
 
 interface DiffdiffAppProps {
@@ -741,6 +742,11 @@ export function DiffdiffApp({
       return;
     }
 
+    if (session.github != null && key.name === "y") {
+      void copyPullRequestUrl();
+      return;
+    }
+
     if (session.github != null && activePane === "diff" && key.sequence === "[") {
       moveSelectedReviewAnchor(-1);
       return;
@@ -821,6 +827,30 @@ export function DiffdiffApp({
       setToastMessage(null);
     }, 5000);
   }, []);
+  const copyPullRequestUrl = useCallback(async () => {
+    if (session.github == null) {
+      setStatusMessage("Open a GitHub pull request first.");
+      return;
+    }
+
+    const { number, url } = session.github.pullRequest;
+    const copied = await copyTextToClipboard(url);
+
+    if (copied) {
+      logDiffdiffInfo("app", "pull_request_url_copied", {
+        pullRequestNumber: number,
+        url,
+      });
+      showToast("Copied PR URL to clipboard");
+      return;
+    }
+
+    handleAppFailure("Unable to copy the PR URL.", {
+      action: "copy-pr-url",
+      pullRequestNumber: number,
+      url,
+    });
+  }, [handleAppFailure, session.github, showToast]);
   const handleMouseUp = useCallback(() => {
     copySelection(renderer, {
       onSuccess: () => {
@@ -1080,6 +1110,7 @@ export function DiffdiffApp({
             >
               <StickyFileHeader
                 file={stickyFile}
+                isCollapsed={collapsedPaths.has(stickyFile.path)}
                 isReviewed={reviewedPaths.has(stickyFile.path)}
                 isSelected={activePane === "diff" && activeFileIndex === selectedFileIndex}
                 theme={theme}
@@ -1247,7 +1278,11 @@ export function DiffdiffApp({
             <span fg={theme.accent} bg={theme.surfaceMuted}>
               {" u "}
             </span>
-            <span>{" outdated"}</span>
+            <span>{" outdated "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" y "}
+            </span>
+            <span>{" PR URL"}</span>
           </text>
         ) : null}
       </box>

@@ -250,11 +250,13 @@ export function FileCard({
 
 export function StickyFileHeader({
   file,
+  isCollapsed,
   isReviewed,
   isSelected,
   theme,
 }: {
   file: PreparedReviewFile;
+  isCollapsed: boolean;
   isReviewed: boolean;
   isSelected: boolean;
   theme: UiTheme;
@@ -276,7 +278,12 @@ export function StickyFileHeader({
       zIndex={10}
     >
       <box width="100%" paddingRight={1}>
-        <FileCardTitleRow file={file} isCollapsed={false} isSelected={isSelected} theme={theme} />
+        <FileCardTitleRow
+          file={file}
+          isCollapsed={isCollapsed}
+          isSelected={isSelected}
+          theme={theme}
+        />
       </box>
     </box>
   );
@@ -1535,7 +1542,9 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
           <KeyCap label="t" theme={theme} />
           <span>{" PR comments  "}</span>
           <KeyCap label="u" theme={theme} />
-          <span>{" outdated threads"}</span>
+          <span>{" outdated threads  "}</span>
+          <KeyCap label="y" theme={theme} />
+          <span>{" copy PR URL"}</span>
         </text>
       </box>
       <box

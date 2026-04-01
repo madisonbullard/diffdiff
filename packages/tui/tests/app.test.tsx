@@ -18,6 +18,10 @@ const selectionCopyState = vi.hoisted(() => ({
   copySelection: vi.fn(),
 }));
 
+const clipboardState = vi.hoisted(() => ({
+  copyTextToClipboard: vi.fn(async () => true),
+}));
+
 type MockRenderer = {
   clearSelection: () => void;
   getSelection: () => null;
@@ -78,6 +82,10 @@ vi.mock("../src/selection-copy.ts", () => ({
   copySelection: selectionCopyState.copySelection,
 }));
 
+vi.mock("../src/clipboard.ts", () => ({
+  copyTextToClipboard: clipboardState.copyTextToClipboard,
+}));
+
 const theme = getUiTheme("pierre-dark");
 const syntaxStyle = { kind: "syntax-style" } as unknown as import("@opentui/core").SyntaxStyle;
 
@@ -88,6 +96,7 @@ beforeEach(() => {
   registeredKeyboardHandlers.clear();
   rendererState.renderer.removeAllListeners();
   selectionCopyState.copySelection.mockReset().mockReturnValue(false);
+  clipboardState.copyTextToClipboard.mockReset().mockResolvedValue(true);
   vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 
@@ -438,6 +447,26 @@ test("opens the PR comments modal from review mode", () => {
 
   expect(getAppText(tree)).toContain("Comments");
   expect(getAppText(tree)).toContain("Looks ready to merge.");
+});
+
+test("copies the PR URL from review mode", async () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+      })}
+    />,
+  );
+
+  emitKey({ name: "y", sequence: "y" });
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(clipboardState.copyTextToClipboard).toHaveBeenCalledWith(
+    "https://github.com/diffdiff/diffdiff/pull/42",
+  );
+  expect(getAppText(tree)).toContain("Copied PR URL to clipboard");
 });
 
 test("opens the comment composer and submits a pending review thread", async () => {

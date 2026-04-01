@@ -215,6 +215,7 @@ test("renders a sticky file header for the active viewport file", () => {
   const tree = render(
     <StickyFileHeader
       file={createPreparedFile()}
+      isCollapsed={false}
       isReviewed={true}
       isSelected={false}
       theme={theme}
@@ -302,6 +303,7 @@ test("renders empty branch columns and help copy", () => {
   expect(collectText(helpModal.toJSON())).toContain("list modal");
   expect(collectText(helpModal.toJSON())).toContain("working tree");
   expect(collectText(helpModal.toJSON())).toContain("switch tree/diff pane");
+  expect(collectText(helpModal.toJSON())).toContain("copy PR URL");
 });
 
 test("uses the native diff renderer when Pierre segments are unavailable", () => {
