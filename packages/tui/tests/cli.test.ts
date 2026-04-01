@@ -1,5 +1,7 @@
 import { execFile } from "node:child_process";
-import { dirname, resolve } from "node:path";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vite-plus/test";
@@ -61,13 +63,73 @@ describe("diffdiff CLI help", () => {
 
     expect(removeAllHelp.stdout).toContain("Usage: diffdiff session remove-all");
   });
+
+  test("outputs JSON for the session list subcommand", async () => {
+    const homeDirectory = await mkdtemp(join(tmpdir(), "diffdiff-cli-home-"));
+
+    try {
+      const sessionDirectory = join(homeDirectory, ".diffdiff", "sessions");
+      const logFilePath = join(homeDirectory, ".diffdiff", "logs", "log-session-a.jsonl");
+      const sessionFilePath = join(sessionDirectory, "session-session-a.json");
+      await mkdir(sessionDirectory, { recursive: true });
+      await writeFile(
+        sessionFilePath,
+        `${JSON.stringify(
+          {
+            command: ["diffdiff"],
+            comparison: {
+              base: "HEAD",
+              head: "working tree",
+              mode: "working-tree",
+              range: "HEAD...working tree",
+            },
+            cwd: "/tmp/diffdiff",
+            currentBranch: "main",
+            endedAt: "2026-04-01T00:00:01.000Z",
+            logFilePath,
+            pid: 123,
+            repoPath: "/tmp/diffdiff",
+            repositoryName: "diffdiff",
+            repositoryRootPath: "/tmp/diffdiff",
+            sessionFilePath,
+            sessionId: "session-a",
+            startedAt: "2026-04-01T00:00:00.000Z",
+            statusMessage: "Exited diffdiff.",
+            updatedAt: "2026-04-01T00:00:01.000Z",
+          },
+          null,
+          2,
+        )}\n`,
+      );
+
+      const { stdout } = await runCli(["session", "list", "--json"], {
+        HOME: homeDirectory,
+      });
+
+      expect(JSON.parse(stdout)).toMatchObject([
+        {
+          comparison: {
+            base: "HEAD",
+            head: "working tree",
+          },
+          currentBranch: "main",
+          repositoryName: "diffdiff",
+          sessionId: "session-a",
+          state: "ended",
+        },
+      ]);
+    } finally {
+      await rm(homeDirectory, { force: true, recursive: true });
+    }
+  });
 });
 
-async function runCli(args: readonly string[]) {
+async function runCli(args: readonly string[], envOverrides: NodeJS.ProcessEnv = {}) {
   return await execFileAsync("bun", [cliPath, ...args], {
     cwd: repositoryRoot,
     env: {
       ...process.env,
+      ...envOverrides,
       NO_COLOR: "1",
     },
   });

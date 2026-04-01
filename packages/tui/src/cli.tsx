@@ -115,15 +115,15 @@ function createProgram(): Command {
     .command("session")
     .description("Inspect and clean up local diffdiff session logs and metadata.")
     .option("--json", "Output machine-readable JSON when listing sessions.");
-  sessionCommand.action(async (options: SessionListCommandOptions) => {
-    await printSessionList(options);
+  sessionCommand.action(async (_options: SessionListCommandOptions, command: Command) => {
+    await printSessionList(command.optsWithGlobals());
   });
   sessionCommand
     .command("list")
     .description("List active and historical local diffdiff sessions.")
     .option("--json", "Output machine-readable JSON.")
-    .action(async (options: SessionListCommandOptions) => {
-      await printSessionList(options);
+    .action(async (_options: SessionListCommandOptions, command: Command) => {
+      await printSessionList(command.optsWithGlobals());
     });
   sessionCommand
     .command("remove")

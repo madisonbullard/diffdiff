@@ -89,7 +89,9 @@ For GitHub Actions, consider using [`voidzero-dev/setup-vp`](https://github.com/
 
 ## Diffdiff Sessions
 
+- Use `diffdiff -h` to see the CLI surface area before guessing commands.
 - `diffdiff` writes per-session JSONL logs to `~/.diffdiff/logs/log-<session-id>.jsonl`.
+- When you need to inspect logs, first run `diffdiff session list --json` to get the right session id and log file path, then read that specific JSONL file.
 - Use `diffdiff session list --json` when you need machine-readable access to the current local sessions, their ids, current activity, selected file, comparison, and log file path.
 - Use `diffdiff session list` for a human-readable summary of active and stale sessions.
 - Use `diffdiff session remove <session-id>` to delete one session's metadata and log file.
