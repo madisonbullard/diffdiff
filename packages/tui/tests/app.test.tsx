@@ -466,10 +466,71 @@ test("shows PR review context and can toggle outdated threads", () => {
 });
 
 test("opens the PR comments modal from review mode", () => {
+  const pendingComment = "This pending review note should stay hidden.";
   const tree = render(
     <DiffdiffApp
       {...createAppProps({
-        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        initialSession: createPreparedSession({
+          github: createGitHubReviewSession({
+            pullRequest: {
+              ...createGitHubReviewSession()!.pullRequest,
+              pendingReview: {
+                body: pendingComment,
+                comments: [
+                  {
+                    author: {
+                      login: "madisonbullard",
+                      url: "https://github.com/madisonbullard",
+                    },
+                    body: pendingComment,
+                    createdAt: "2026-04-01T12:02:00Z",
+                    id: 102,
+                    isOutdated: false,
+                    nodeId: "PRRC_102",
+                    path: "src/app.ts",
+                    reviewId: 9010,
+                    side: "RIGHT",
+                    updatedAt: "2026-04-01T12:02:00Z",
+                    url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r102",
+                  },
+                ],
+                id: 9010,
+                nodeId: "PRR_pending_9010",
+              },
+              reviewGroups: [
+                ...createGitHubReviewSession()!.pullRequest.reviewGroups,
+                {
+                  author: {
+                    login: "madisonbullard",
+                    url: "https://github.com/madisonbullard",
+                  },
+                  body: pendingComment,
+                  comments: [
+                    {
+                      author: {
+                        login: "madisonbullard",
+                        url: "https://github.com/madisonbullard",
+                      },
+                      body: pendingComment,
+                      createdAt: "2026-04-01T12:02:00Z",
+                      id: 102,
+                      isOutdated: false,
+                      nodeId: "PRRC_102",
+                      path: "src/app.ts",
+                      reviewId: 9010,
+                      side: "RIGHT",
+                      updatedAt: "2026-04-01T12:02:00Z",
+                      url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r102",
+                    },
+                  ],
+                  reviewId: 9010,
+                  reviewNodeId: "PRR_pending_9010",
+                  state: "PENDING",
+                },
+              ],
+            },
+          }),
+        }),
       })}
     />,
   );
@@ -480,6 +541,9 @@ test("opens the PR comments modal from review mode", () => {
 
   expect(getAppText(tree)).toContain("Comments");
   expect(getAppText(tree)).toContain("Looks ready to merge.");
+  expect(getAppText(tree)).not.toContain("Grouped by GitHub review");
+  expect(getAppText(tree)).not.toContain(pendingComment);
+  expect(getAppText(tree)).not.toContain("pending");
 });
 
 test("copies the PR URL from review mode", async () => {
@@ -656,6 +720,38 @@ test("opens the merge modal and merges with the selected method", async () => {
     base: "origin/main",
     head: "feature/tui",
   });
+});
+
+test("caps the merge body input height and scrolls to the cursor", () => {
+  const scrollboxes: ReturnType<typeof createMockScrollbox>[] = [];
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+      })}
+    />,
+    {
+      createNodeMock(element) {
+        if (element.type === "scrollbox") {
+          const scrollbox = createMockScrollbox(false);
+          scrollboxes.push(scrollbox);
+          return scrollbox;
+        }
+
+        return null;
+      },
+    },
+  );
+
+  emitKey({ name: "m" });
+  emitKey({ name: "tab", sequence: "\t" });
+  emitKey({ name: "tab", sequence: "\t" });
+
+  const mergeBodyScrollbox = tree.root.findAll((node) => String(node.type) === "scrollbox")[2]!;
+
+  expect(mergeBodyScrollbox.props.height).toBe(8);
+  expect(mergeBodyScrollbox.props.focused).toBe(true);
+  expect(scrollboxes[2]?.scrollTo).toHaveBeenCalledWith({ x: 0, y: Number.MAX_SAFE_INTEGER });
 });
 
 test("opens cleanup automatically after merge and removes the selected refs", async () => {

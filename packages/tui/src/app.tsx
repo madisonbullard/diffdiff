@@ -299,6 +299,7 @@ export function DiffdiffApp({
   const [treeScrollbarVisible, setTreeScrollbarVisible] = useState(false);
   const treeScrollRef = useRef<ScrollBoxRenderable | null>(null);
   const treeRowRefs = useRef<(BoxRenderable | null)[]>([]);
+  const mergeBodyScrollRef = useRef<ScrollBoxRenderable | null>(null);
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
   const fileCardRefs = useRef<(BoxRenderable | null)[]>([]);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -667,6 +668,14 @@ export function DiffdiffApp({
 
     scrollBox.scrollTo({ x: 0, y: Math.max(offset - 2, 0) });
   }, [getTreeTopOffsets, selectedTreePath, visibleTreeNodes]);
+
+  useEffect(() => {
+    if (!showMergeModal || mergeModalField !== "body") {
+      return;
+    }
+
+    mergeBodyScrollRef.current?.scrollTo({ x: 0, y: Number.MAX_SAFE_INTEGER });
+  }, [mergeCommitMessage, mergeModalField, showMergeModal]);
 
   const syncActiveFileIndex = useCallback(() => {
     const scrollBox = scrollRef.current;
@@ -1523,6 +1532,7 @@ export function DiffdiffApp({
       {showMergeModal && session.github != null ? (
         <MergePullRequestModal
           body={mergeCommitMessage}
+          bodyScrollRef={mergeBodyScrollRef}
           canSubmit={session.github.pullRequest.merge.canMerge && mergeMethod != null}
           field={mergeModalField}
           isSubmitting={isSubmittingReviewAction}
@@ -2326,7 +2336,7 @@ export function DiffdiffApp({
 
     setIsSubmittingReviewAction(true);
     setStatusMessage(
-      `Adding a pending review thread on ${selectedReviewAnchor.path}:${selectedReviewAnchor.line}...`,
+      `Adding review comment on ${selectedReviewAnchor.path}:${selectedReviewAnchor.line}...`,
     );
 
     try {
@@ -2335,7 +2345,7 @@ export function DiffdiffApp({
       setSession(nextSession);
       setShowCommentComposer(false);
       setReviewComposerBody("");
-      setStatusMessage("Added the comment to the pending review.");
+      setStatusMessage("Added review comment.");
     } catch (error) {
       handleAppError(error, "Unable to add the review comment.", {
         action: "add-review-thread",
@@ -2352,7 +2362,7 @@ export function DiffdiffApp({
     }
 
     setIsSubmittingReviewAction(true);
-    setStatusMessage("Submitting pending review...");
+    setStatusMessage("Submitting review...");
 
     try {
       await submitPendingReview(
@@ -2364,7 +2374,7 @@ export function DiffdiffApp({
       setSession(nextSession);
       setShowSubmitReviewModal(false);
       setReviewSubmissionBody("");
-      setStatusMessage("Submitted the pending review.");
+      setStatusMessage("Submitted review.");
     } catch (error) {
       handleAppError(error, "Unable to submit the review.", {
         action: "submit-review",

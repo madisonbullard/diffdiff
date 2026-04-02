@@ -1,3 +1,5 @@
+import type { ScrollBoxRenderable } from "@opentui/core";
+
 import type {
   GitHubCleanupPreferences,
   GitHubMergeMethod,
@@ -84,12 +86,6 @@ export function PullRequestBanner({
             <span>{`${hiddenOutdatedCount} hidden`}</span>
           </>
         ) : null}
-        {pullRequest.pendingReview != null ? (
-          <>
-            <span fg={theme.border}>{"  │  "}</span>
-            <span fg={theme.accent}>{`${pullRequest.pendingReview.comments.length} pending`}</span>
-          </>
-        ) : null}
       </text>
     </box>
   );
@@ -109,6 +105,7 @@ export function PullRequestCommentsModal({
       ...group,
       comments: group.comments.filter((comment) => showOutdatedThreads || !comment.isOutdated),
     }))
+    .filter((group) => group.state !== "PENDING")
     .filter((group) => group.body != null || group.comments.length > 0);
 
   return (
@@ -135,9 +132,6 @@ export function PullRequestCommentsModal({
           <box flexDirection="column">
             <text fg={theme.accent} wrapMode="none">
               Comments
-            </text>
-            <text fg={theme.textMuted} wrapMode="none">
-              {`Grouped by GitHub review for PR #${pullRequest.number}.`}
             </text>
           </box>
           <text fg={theme.textMuted} wrapMode="none">
@@ -217,7 +211,7 @@ export function ReviewComposerModal({
               Add Comment
             </text>
             <text fg={theme.textMuted} wrapMode="none">
-              {`Pending review thread on ${anchor.path}:${anchor.line} (${anchor.side.toLowerCase()}).`}
+              {`Comment on ${anchor.path}:${anchor.line} (${anchor.side.toLowerCase()}).`}
             </text>
           </box>
           <text fg={theme.textMuted} wrapMode="none">
@@ -268,9 +262,7 @@ export function ReviewComposerModal({
           </text>
         </box>
         <text fg={isSubmitting ? theme.accent : theme.textMuted} wrapMode="none">
-          {isSubmitting
-            ? "Submitting comment to the pending review..."
-            : "Type your comment body. The pending review stays server-side on GitHub."}
+          {isSubmitting ? "Submitting review comment..." : "Type your comment body."}
         </text>
       </box>
     </box>
@@ -284,6 +276,7 @@ const REVIEW_SUBMISSION_EVENTS: readonly GitHubReviewSubmissionEvent[] = [
 ];
 
 const MERGE_METHODS: readonly GitHubMergeMethod[] = ["merge", "squash"];
+const MERGE_BODY_MAX_HEIGHT = 8;
 
 export function SubmitReviewModal({
   body,
@@ -322,7 +315,7 @@ export function SubmitReviewModal({
               Submit Review
             </text>
             <text fg={theme.textMuted} wrapMode="none">
-              Submit the current server-side pending review.
+              Submit the current review to GitHub.
             </text>
           </box>
           <text fg={theme.textMuted} wrapMode="none">
@@ -400,6 +393,7 @@ export function SubmitReviewModal({
 
 export function MergePullRequestModal({
   body,
+  bodyScrollRef,
   canSubmit,
   field,
   isSubmitting,
@@ -409,6 +403,7 @@ export function MergePullRequestModal({
   title,
 }: {
   body: string;
+  bodyScrollRef?: React.Ref<ScrollBoxRenderable | null>;
   canSubmit: boolean;
   field: "method" | "title" | "body";
   isSubmitting: boolean;
@@ -522,16 +517,34 @@ export function MergePullRequestModal({
           borderColor={field === "body" ? theme.borderActive : theme.border}
           backgroundColor={field === "body" ? theme.surfaceMuted : theme.surface}
           paddingLeft={2}
-          paddingRight={1}
+          paddingRight={0}
           paddingTop={1}
           paddingBottom={1}
           minHeight={6}
+          flexDirection="column"
+          gap={0}
         >
-          <text fg={theme.text} wrapMode="word">
-            <span fg={theme.textMuted}>{"Body: "}</span>
-            {body !== "" ? body : ""}
-            {field === "body" ? <span fg={theme.accent}>_</span> : null}
+          <text fg={theme.textMuted} wrapMode="none">
+            Body:
           </text>
+          <scrollbox
+            ref={bodyScrollRef}
+            width="100%"
+            height={MERGE_BODY_MAX_HEIGHT}
+            focused={field === "body"}
+            viewportOptions={{
+              backgroundColor: field === "body" ? theme.surfaceMuted : theme.surface,
+            }}
+            contentOptions={{
+              backgroundColor: field === "body" ? theme.surfaceMuted : theme.surface,
+            }}
+            verticalScrollbarOptions={{ trackOptions: { backgroundColor: theme.border } }}
+          >
+            <text fg={theme.text} wrapMode="word">
+              {body !== "" ? body : ""}
+              {field === "body" ? <span fg={theme.accent}>_</span> : null}
+            </text>
+          </scrollbox>
         </box>
         <text fg={canSubmit ? theme.textMuted : theme.warning} wrapMode="word">
           {isSubmitting
