@@ -13,6 +13,21 @@ export default defineConfig({
       typeAware: true,
       typeCheck: true,
     },
+    overrides: [
+      {
+        files: ["src/**/*.{ts,tsx}"],
+        rules: {
+          "max-lines": [
+            "error",
+            {
+              max: 500,
+              skipBlankLines: true,
+              skipComments: true,
+            },
+          ],
+        },
+      },
+    ],
   },
   fmt: {},
 });

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import * as commandModule from "../src/command.ts";
-import { GitHubMetadataProvider } from "../src/github.ts";
+import { GitHubMetadataProvider } from "../src/github/index.ts";
 import { resolveGitHubAuth, storeGitHubToken } from "../src/github/auth.ts";
 import { getGitHubAuthConfigPaths } from "../src/github/config.ts";
 import { GitHubPullRequestService } from "../src/github/pull-requests.ts";

@@ -20,7 +20,11 @@ export {
   parsePorcelainStatusEntries,
   splitPatchIntoFiles,
 } from "./git.ts";
-export { GitHubMetadataProvider, parseGitHubRemote, prioritizeRemoteBranches } from "./github.ts";
+export {
+  GitHubMetadataProvider,
+  parseGitHubRemote,
+  prioritizeRemoteBranches,
+} from "./github/index.ts";
 export {
   clearGitHubToken,
   getGitHubAuthConfigPaths,
@@ -28,7 +32,7 @@ export {
   OctokitGitHubClientFactory,
   resolveGitHubAuth,
   storeGitHubToken,
-} from "./github.ts";
+} from "./github/index.ts";
 export { loadReviewCache, saveReviewCache } from "./review-cache.ts";
 export {
   getDefaultDiffdiffPreferences,

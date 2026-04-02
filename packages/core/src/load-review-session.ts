@@ -1,5 +1,5 @@
 import { GitRepositoryProvider, getRepositorySearchPath } from "./git.ts";
-import { GitHubMetadataProvider, GitHubPullRequestService } from "./github.ts";
+import { GitHubMetadataProvider, GitHubPullRequestService } from "./github/index.ts";
 import { DiffdiffError } from "./errors.ts";
 import { logDiffdiffError, logDiffdiffInfo } from "./logging.ts";
 import type {

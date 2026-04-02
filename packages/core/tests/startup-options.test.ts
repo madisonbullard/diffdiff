@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { parseGitHubRemote } from "../src/github.ts";
+import { parseGitHubRemote } from "../src/github/index.ts";
 import {
   formatHelpText,
   parseStartupOptions,
