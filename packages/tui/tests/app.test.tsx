@@ -276,6 +276,36 @@ test("renders base and head as the header comparison tags", () => {
   expect(getAppText(tree)).not.toContain("branch range");
 });
 
+test("renders the current branch with the muted gray header badge", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: {
+          ...createPreparedSession(),
+          repository: {
+            kind: "git",
+            rootPath: "/tmp/diffdiff",
+            name: "diffdiff",
+            remotes: [{ name: "origin", fetchUrl: "git@github.com:diffdiff/diffdiff.git" }],
+            currentBranch: "feature/current-branch",
+            defaultBranch: "main",
+          },
+        },
+      })}
+    />,
+  );
+
+  const branchBadge = tree.root.find(
+    (node) =>
+      String(node.type) === "span" &&
+      collectInstanceText(node).includes("feature/current-branch") &&
+      node.props.bg != null,
+  );
+
+  expect(branchBadge.props.fg).toBe(theme.accent);
+  expect(branchBadge.props.bg).toBe(theme.surfaceMuted);
+});
+
 test("does not duplicate the working tree label in the header", () => {
   const tree = render(
     <DiffdiffApp
@@ -549,7 +579,7 @@ test("opens PR review mode from the list modal", () => {
   });
 });
 
-test("shows PR review context and can toggle outdated threads", () => {
+test("shows outdated PR threads collapsed by default and expands them on click", () => {
   const tree = render(
     <DiffdiffApp
       {...createAppProps({
@@ -560,17 +590,45 @@ test("shows PR review context and can toggle outdated threads", () => {
 
   expect(getAppText(tree)).toContain("#42");
   expect(getAppText(tree)).toContain("Build TUI reviewer");
-  expect(getAppText(tree)).toContain("1 outdated");
   expect(getAppText(tree)).not.toContain("threads");
-  expect(getAppText(tree)).not.toContain("hiding outdated");
-  expect(getAppText(tree)).toContain("show outdated");
   expect(getAppText(tree)).toContain("Please rename this variable.");
   expect(getAppText(tree)).not.toContain("This thread is outdated.");
+  expect(getAppText(tree)).toContain("outdated");
 
-  emitKey({ name: "u" });
+  const outdatedThreadHeader = tree.root.find(
+    (node) =>
+      String(node.type) === "box" &&
+      typeof node.props.onMouseUp === "function" &&
+      node.props.justifyContent === "space-between" &&
+      collectInstanceText(node).includes("src/app.ts:1") &&
+      collectInstanceText(node).includes("outdated"),
+  );
 
-  expect(getAppText(tree)).not.toContain("show outdated");
-  expect(getAppText(tree)).toContain("hide outdated");
+  act(() => {
+    outdatedThreadHeader.props.onMouseUp?.();
+  });
+
+  expect(getAppText(tree)).toContain("This thread is outdated.");
+});
+
+test("uses cached comment collapse state for PR review threads", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialReviewCache: {
+          reviewedPaths: [],
+          collapsedPaths: [],
+          commentCollapseStates: {
+            "thread:101": true,
+            "thread:102": false,
+          },
+        },
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+      })}
+    />,
+  );
+
+  expect(getAppText(tree)).not.toContain("Please rename this variable.");
   expect(getAppText(tree)).toContain("This thread is outdated.");
 });
 

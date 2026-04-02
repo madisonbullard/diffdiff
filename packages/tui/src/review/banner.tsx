@@ -15,9 +15,6 @@ export function PullRequestBanner({
   pullRequest: GitHubPullRequestDetail;
   theme: UiTheme;
 }) {
-  const outdatedThreadCount = pullRequest.reviewThreads.filter(
-    (thread) => thread.isOutdated,
-  ).length;
   const pullRequestTag = getPullRequestTag(pullRequest, theme);
   const mergeStatus = getMergeStatusLabel(pullRequest);
 
@@ -38,12 +35,6 @@ export function PullRequestBanner({
         <span fg={getChecksColor(pullRequest, theme)}>{formatChecksSummary(pullRequest)}</span>
         <span fg={theme.border}>{"  │  "}</span>
         <span fg={getMergeStatusColor(pullRequest, theme)}>{mergeStatus}</span>
-        {outdatedThreadCount > 0 ? (
-          <>
-            <span fg={theme.border}>{"  │  "}</span>
-            <span>{`${outdatedThreadCount} outdated`}</span>
-          </>
-        ) : null}
       </text>
     </box>
   );

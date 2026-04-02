@@ -1,7 +1,7 @@
 import type { GitHubPullRequestReviewThread } from "@diffdiff/core";
 import { logDiffdiffWarn } from "@diffdiff/core";
 import type { BoxRenderable, ColorInput, SyntaxStyle } from "@opentui/core";
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import type { Ref } from "react";
 import { getDiffFiletype } from "../language.ts";
 import type { UiTheme } from "../theme.ts";
@@ -10,7 +10,14 @@ import type { SelectedReviewAnchor } from "../review-anchors.ts";
 import { SideBySideDiffPreview, UnifiedDiffPreview } from "./diff-preview.tsx";
 import { SPLIT_BORDER, Tag, capitalize } from "./shared.tsx";
 
+export interface FileCardPreviewViewport {
+  bottom: number;
+  overscan: number;
+  top: number;
+}
+
 export interface FileCardProps {
+  collapsedCommentStates?: Readonly<Record<string, boolean>>;
   file: PreparedReviewFile;
   diffView: "unified" | "split";
   headerVariant?: "sticky-compact";
@@ -18,16 +25,22 @@ export interface FileCardProps {
   removeTopPadding?: boolean;
   isReviewed: boolean;
   isSelected: boolean;
+  onToggleReviewThreadCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
+  previewViewport?: FileCardPreviewViewport;
   reviewThreads?: readonly GitHubPullRequestReviewThread[];
   rootRef?: Ref<BoxRenderable>;
   selectedReviewAnchor?: SelectedReviewAnchor;
-  showOutdatedReviewThreads?: boolean;
   syntaxStyle: SyntaxStyle;
   terminalWidth: number;
   theme: UiTheme;
 }
 
-export function FileCard({
+export function FileCard(props: FileCardProps) {
+  return <MemoizedFileCard {...props} />;
+}
+
+const MemoizedFileCard = memo(function FileCard({
+  collapsedCommentStates,
   file,
   diffView,
   headerVariant,
@@ -35,15 +48,15 @@ export function FileCard({
   removeTopPadding = false,
   isReviewed,
   isSelected,
+  onToggleReviewThreadCollapsed,
+  previewViewport,
   reviewThreads = [],
   rootRef,
   selectedReviewAnchor,
-  showOutdatedReviewThreads = false,
   syntaxStyle,
   terminalWidth,
   theme,
 }: FileCardProps) {
-  const filetype = getDiffFiletype(file.path);
   const { statusColor, statusLabel } = getFileStatusChrome(file.status, theme);
   const { borderColor, fileBackground } = getFileCardChrome(isSelected, isReviewed, theme);
   const usesCompactHeader = headerVariant === "sticky-compact";
@@ -55,6 +68,15 @@ export function FileCard({
     ((diffView === "unified" && file.unifiedLines.length === 0) ||
       (diffView === "split" && file.sideBySideRows.length === 0));
   const loggedFallbackRef = useRef(false);
+  const bodyViewport =
+    previewViewport == null
+      ? undefined
+      : getFileCardBodyViewport({
+          file,
+          headerVariant,
+          previewViewport,
+          removeTopPadding,
+        });
 
   useEffect(() => {
     if (usesFallbackRenderer && !loggedFallbackRef.current) {
@@ -120,75 +142,134 @@ export function FileCard({
       ) : null}
 
       {!isCollapsed ? (
-        <box width="100%" flexDirection="column">
-          {file.isBinary ? (
-            <box paddingLeft={1}>
-              <text fg={theme.textMuted}>
-                Binary file changed. Content preview is not available yet.
-              </text>
+        <MemoizedFileCardBody
+          collapsedCommentStates={collapsedCommentStates}
+          diffView={diffView}
+          file={file}
+          onToggleReviewThreadCollapsed={onToggleReviewThreadCollapsed}
+          previewViewport={bodyViewport}
+          reviewThreads={reviewThreads}
+          selectedReviewAnchor={selectedReviewAnchor}
+          syntaxStyle={syntaxStyle}
+          terminalWidth={terminalWidth}
+          theme={theme}
+        />
+      ) : null}
+    </box>
+  );
+});
+
+const MemoizedFileCardBody = memo(function FileCardBody({
+  collapsedCommentStates,
+  diffView,
+  file,
+  onToggleReviewThreadCollapsed,
+  previewViewport,
+  reviewThreads,
+  selectedReviewAnchor,
+  syntaxStyle,
+  terminalWidth,
+  theme,
+}: {
+  collapsedCommentStates?: Readonly<Record<string, boolean>>;
+  diffView: "unified" | "split";
+  file: PreparedReviewFile;
+  onToggleReviewThreadCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
+  previewViewport?: FileCardPreviewViewport;
+  reviewThreads: readonly GitHubPullRequestReviewThread[];
+  selectedReviewAnchor?: SelectedReviewAnchor;
+  syntaxStyle: SyntaxStyle;
+  terminalWidth: number;
+  theme: UiTheme;
+}) {
+  const filetype = getDiffFiletype(file.path);
+
+  return (
+    <box width="100%" flexDirection="column">
+      {file.isBinary ? (
+        <box paddingLeft={1}>
+          <text fg={theme.textMuted}>
+            Binary file changed. Content preview is not available yet.
+          </text>
+        </box>
+      ) : null}
+      {!file.isBinary && file.renderError != null ? (
+        <box paddingLeft={1}>
+          <text fg={theme.warning}>{file.renderError}</text>
+        </box>
+      ) : null}
+      {!file.isBinary && file.renderError == null && file.patch.trim() === "" ? (
+        <box paddingLeft={1}>
+          <text fg={theme.textMuted}>No textual diff available for this file.</text>
+        </box>
+      ) : null}
+      {!file.isBinary && file.renderError == null && file.patch.trim() !== "" ? (
+        <box width="100%">
+          {diffView === "unified" && file.unifiedLines.length > 0 ? (
+            <UnifiedDiffPreview
+              collapsedCommentStates={collapsedCommentStates}
+              file={file}
+              onToggleReviewThreadCollapsed={onToggleReviewThreadCollapsed}
+              previewViewport={
+                reviewThreads.length === 0 && selectedReviewAnchor == null
+                  ? previewViewport
+                  : undefined
+              }
+              reviewThreads={reviewThreads}
+              selectedReviewAnchor={selectedReviewAnchor}
+              terminalWidth={terminalWidth}
+              theme={theme}
+            />
+          ) : diffView === "split" && file.sideBySideRows.length > 0 ? (
+            <SideBySideDiffPreview
+              collapsedCommentStates={collapsedCommentStates}
+              file={file}
+              onToggleReviewThreadCollapsed={onToggleReviewThreadCollapsed}
+              reviewThreads={reviewThreads}
+              selectedReviewAnchor={selectedReviewAnchor}
+              terminalWidth={terminalWidth}
+              theme={theme}
+            />
+          ) : (
+            <box width="100%" flexDirection="column" gap={1}>
+              <diff
+                diff={file.patch}
+                view={diffView}
+                filetype={filetype}
+                showLineNumbers={true}
+                syntaxStyle={syntaxStyle}
+                width="100%"
+                wrapMode="word"
+                fg={theme.text}
+                addedBg={theme.additionBg}
+                removedBg={theme.deletionBg}
+                contextBg={theme.contextBg}
+                addedSignColor={theme.success}
+                removedSignColor={theme.danger}
+                lineNumberFg={theme.textMuted}
+                lineNumberBg={theme.contextBg}
+                addedLineNumberBg={theme.additionLineNumberBg}
+                removedLineNumberBg={theme.deletionLineNumberBg}
+              />
             </box>
-          ) : null}
-          {!file.isBinary && file.renderError != null ? (
-            <box paddingLeft={1}>
-              <text fg={theme.warning}>{file.renderError}</text>
-            </box>
-          ) : null}
-          {!file.isBinary && file.renderError == null && file.patch.trim() === "" ? (
-            <box paddingLeft={1}>
-              <text fg={theme.textMuted}>No textual diff available for this file.</text>
-            </box>
-          ) : null}
-          {!file.isBinary && file.renderError == null && file.patch.trim() !== "" ? (
-            <box width="100%">
-              {diffView === "unified" && file.unifiedLines.length > 0 ? (
-                <UnifiedDiffPreview
-                  file={file}
-                  reviewThreads={reviewThreads}
-                  selectedReviewAnchor={selectedReviewAnchor}
-                  showOutdatedReviewThreads={showOutdatedReviewThreads}
-                  theme={theme}
-                />
-              ) : diffView === "split" && file.sideBySideRows.length > 0 ? (
-                <SideBySideDiffPreview
-                  file={file}
-                  reviewThreads={reviewThreads}
-                  selectedReviewAnchor={selectedReviewAnchor}
-                  showOutdatedReviewThreads={showOutdatedReviewThreads}
-                  terminalWidth={terminalWidth}
-                  theme={theme}
-                />
-              ) : (
-                <box width="100%" flexDirection="column" gap={1}>
-                  <diff
-                    diff={file.patch}
-                    view={diffView}
-                    filetype={filetype}
-                    showLineNumbers={true}
-                    syntaxStyle={syntaxStyle}
-                    width="100%"
-                    wrapMode="word"
-                    fg={theme.text}
-                    addedBg={theme.additionBg}
-                    removedBg={theme.deletionBg}
-                    contextBg={theme.contextBg}
-                    addedSignColor={theme.success}
-                    removedSignColor={theme.danger}
-                    lineNumberFg={theme.textMuted}
-                    lineNumberBg={theme.contextBg}
-                    addedLineNumberBg={theme.additionLineNumberBg}
-                    removedLineNumberBg={theme.deletionLineNumberBg}
-                  />
-                </box>
-              )}
-            </box>
-          ) : null}
+          )}
         </box>
       ) : null}
     </box>
   );
+});
+
+export function StickyFileHeader(props: {
+  file: PreparedReviewFile;
+  isCollapsed: boolean;
+  isReviewed: boolean;
+  isSelected: boolean;
+  theme: UiTheme;
+}) {
+  return <MemoizedStickyFileHeader {...props} />;
 }
 
-export function StickyFileHeader({
+const MemoizedStickyFileHeader = memo(function StickyFileHeader({
   file,
   isCollapsed,
   isReviewed,
@@ -227,7 +308,7 @@ export function StickyFileHeader({
       </box>
     </box>
   );
-}
+});
 
 function FileCardTitleRow({
   file,
@@ -308,6 +389,28 @@ function FileCardChangeCounts({ file, theme }: { file: PreparedReviewFile; theme
       </text>
     </box>
   );
+}
+
+function getFileCardBodyViewport({
+  file,
+  headerVariant,
+  previewViewport,
+  removeTopPadding,
+}: {
+  file: PreparedReviewFile;
+  headerVariant?: "sticky-compact";
+  previewViewport: FileCardPreviewViewport;
+  removeTopPadding: boolean;
+}): FileCardPreviewViewport {
+  const headerBlockCount = headerVariant === "sticky-compact" ? 1 : 2;
+  const blocksBeforeBody = headerBlockCount + (file.previousPath != null ? 1 : 0);
+  const bodyTopOffset = (removeTopPadding ? 0 : 1) + blocksBeforeBody + blocksBeforeBody;
+
+  return {
+    bottom: previewViewport.bottom - bodyTopOffset,
+    overscan: previewViewport.overscan,
+    top: previewViewport.top - bodyTopOffset,
+  };
 }
 
 function getFileCardChrome(isSelected: boolean, isReviewed: boolean, theme: UiTheme) {

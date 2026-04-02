@@ -9,6 +9,7 @@ const DEFAULT_CACHE_DIRECTORY = join(homedir(), ".diffdiff", "review-cache");
 export interface ReviewCacheState {
   reviewedPaths: string[];
   collapsedPaths: string[];
+  commentCollapseStates?: Record<string, boolean>;
   selectedFilePath?: string;
 }
 
@@ -62,6 +63,7 @@ export async function loadReviewCache(
     logDiffdiffInfo("review-cache", "cache_loaded", {
       base: key.base,
       collapsedPathCount: record.collapsedPaths.length,
+      commentCollapseStateCount: Object.keys(record.commentCollapseStates ?? {}).length,
       head: key.head,
       repositoryRootPath: key.repositoryRootPath,
       reviewedPathCount: record.reviewedPaths.length,
@@ -71,6 +73,7 @@ export async function loadReviewCache(
     return {
       reviewedPaths: record.reviewedPaths,
       collapsedPaths: record.collapsedPaths,
+      commentCollapseStates: record.commentCollapseStates,
       selectedFilePath: record.selectedFilePath,
     };
   } catch {
@@ -91,6 +94,7 @@ export async function saveReviewCache(
     head: key.head,
     reviewedPaths: state.reviewedPaths,
     collapsedPaths: state.collapsedPaths,
+    commentCollapseStates: state.commentCollapseStates,
     selectedFilePath: state.selectedFilePath,
     updatedAt: new Date().toISOString(),
   };
@@ -101,6 +105,7 @@ export async function saveReviewCache(
     logDiffdiffInfo("review-cache", "cache_saved", {
       base: key.base,
       collapsedPathCount: state.collapsedPaths.length,
+      commentCollapseStateCount: Object.keys(state.commentCollapseStates ?? {}).length,
       head: key.head,
       repositoryRootPath: key.repositoryRootPath,
       reviewedPathCount: state.reviewedPaths.length,

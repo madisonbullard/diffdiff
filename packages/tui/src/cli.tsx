@@ -238,14 +238,11 @@ async function launchTui(options: StartupOptions): Promise<void> {
     const initialSession = await loadSession(options);
     const initialPreferences = await loadDiffdiffPreferences();
 
-    const initialReviewCache =
-      initialSession.github == null
-        ? await loadReviewCache({
-            repositoryRootPath: initialSession.repository.rootPath,
-            base: initialSession.comparison.base,
-            head: initialSession.comparison.head,
-          })
-        : undefined;
+    const initialReviewCache = await loadReviewCache({
+      repositoryRootPath: initialSession.repository.rootPath,
+      base: initialSession.comparison.base,
+      head: initialSession.comparison.head,
+    });
 
     root.render(
       <DiffdiffApp

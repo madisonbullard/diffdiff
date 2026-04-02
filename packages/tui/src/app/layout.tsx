@@ -76,7 +76,6 @@ export function DiffdiffAppLayout(props: {
   showKeyLegend: boolean;
   showListFilterModal: boolean;
   showMergeModal: boolean;
-  showOutdatedReviewThreads: boolean;
   showSubmitReviewModal: boolean;
   sidebarWidth: number;
   statusMessage: string;
@@ -98,8 +97,15 @@ export function DiffdiffAppLayout(props: {
   isSubmittingReviewAction: boolean;
   collapsedDirectories: ReadonlySet<string>;
   collapsedPaths: ReadonlySet<string>;
+  commentCollapseStates?: Readonly<Record<string, boolean>>;
   onFileTreeMouseUp: (node: import("../types.ts").FileTreeNode) => void;
   onMouseUp: () => void;
+  onToggleReviewGroupCollapsed?: (
+    group: import("@diffdiff/core").GitHubPullRequestReviewGroup,
+  ) => void;
+  onToggleReviewThreadCollapsed?: (
+    thread: import("@diffdiff/core").GitHubPullRequestReviewThread,
+  ) => void;
   scrollRef: React.MutableRefObject<ScrollBoxRenderable | null>;
 }) {
   const {
@@ -152,7 +158,6 @@ export function DiffdiffAppLayout(props: {
     showHelp,
     showListFilterModal,
     showMergeModal,
-    showOutdatedReviewThreads,
     showSubmitReviewModal,
     sidebarWidth,
     stickyFile,
@@ -162,10 +167,13 @@ export function DiffdiffAppLayout(props: {
     treeScrollRef,
     treeSummaryLabels,
     visibleTreeNodes,
+    commentCollapseStates,
     collapsedDirectories,
     collapsedPaths,
     onFileTreeMouseUp,
     onMouseUp,
+    onToggleReviewGroupCollapsed,
+    onToggleReviewThreadCollapsed,
     scrollRef,
   } = props;
   const selectedFile = session.files[selectedFileIndex];
@@ -210,7 +218,7 @@ export function DiffdiffAppLayout(props: {
           <text fg={theme.textMuted} wrapMode="none">
             <span>{session.repository.rootPath}</span>
             <span>{"  "}</span>
-            <span fg={theme.inverseText} bg={theme.accent}>{` ${currentBranchLabel} `}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>{` ${currentBranchLabel} `}</span>
           </text>
         </box>
         {session.warnings[0] != null ? (
@@ -341,6 +349,7 @@ export function DiffdiffAppLayout(props: {
 
               {session.files.map((file, index) => (
                 <FileCard
+                  collapsedCommentStates={commentCollapseStates}
                   key={file.path}
                   file={file}
                   diffView={diffView}
@@ -349,6 +358,7 @@ export function DiffdiffAppLayout(props: {
                   removeTopPadding={index === 0}
                   isReviewed={reviewedPaths.has(file.path)}
                   isSelected={index === selectedFileIndex}
+                  onToggleReviewThreadCollapsed={onToggleReviewThreadCollapsed}
                   reviewThreads={session.github?.pullRequest.reviewThreads.filter(
                     (thread) => thread.path === file.path,
                   )}
@@ -360,7 +370,6 @@ export function DiffdiffAppLayout(props: {
                       ? selectedReviewAnchor
                       : undefined
                   }
-                  showOutdatedReviewThreads={showOutdatedReviewThreads}
                   syntaxStyle={syntaxStyle}
                   terminalWidth={diffPaneWidth}
                   theme={theme}
@@ -440,8 +449,9 @@ export function DiffdiffAppLayout(props: {
       ) : null}
       {showCommentsModal && session.github != null ? (
         <PullRequestCommentsModal
+          collapsedCommentStates={commentCollapseStates}
+          onToggleCollapsed={onToggleReviewGroupCollapsed}
           pullRequest={session.github.pullRequest}
-          showOutdatedThreads={showOutdatedReviewThreads}
           theme={theme}
         />
       ) : null}

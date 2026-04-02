@@ -4,19 +4,17 @@ import { MODAL_OVERLAY } from "./shared.tsx";
 import { ReviewGroupCard } from "./threads.tsx";
 
 export function PullRequestCommentsModal({
+  collapsedCommentStates,
+  onToggleCollapsed,
   pullRequest,
-  showOutdatedThreads,
   theme,
 }: {
+  collapsedCommentStates?: Readonly<Record<string, boolean>>;
+  onToggleCollapsed?: (group: import("@diffdiff/core").GitHubPullRequestReviewGroup) => void;
   pullRequest: GitHubPullRequestDetail;
-  showOutdatedThreads: boolean;
   theme: UiTheme;
 }) {
   const reviewGroups = pullRequest.reviewGroups
-    .map((group) => ({
-      ...group,
-      comments: group.comments.filter((comment) => showOutdatedThreads || !comment.isOutdated),
-    }))
     .filter((group) => group.state !== "PENDING")
     .filter((group) => group.body != null || group.comments.length > 0);
 
@@ -85,11 +83,17 @@ export function PullRequestCommentsModal({
                 paddingTop={1}
                 paddingBottom={1}
               >
-                <text fg={theme.textMuted}>No comments match the current outdated filter.</text>
+                <text fg={theme.textMuted}>No submitted review comments yet.</text>
               </box>
             ) : null}
             {reviewGroups.map((group, index) => (
-              <ReviewGroupCard key={`${group.reviewId ?? index}`} group={group} theme={theme} />
+              <ReviewGroupCard
+                key={`${group.reviewId ?? index}`}
+                collapsedCommentStates={collapsedCommentStates}
+                group={group}
+                onToggleCollapsed={onToggleCollapsed}
+                theme={theme}
+              />
             ))}
           </box>
         </scrollbox>

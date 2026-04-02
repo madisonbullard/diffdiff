@@ -49,6 +49,10 @@ describe("review cache", () => {
     const state: ReviewCacheState = {
       reviewedPaths: ["src/app.ts", "src/index.ts"],
       collapsedPaths: ["src/app.ts"],
+      commentCollapseStates: {
+        "group:PRR_700": true,
+        "thread:101": false,
+      },
       selectedFilePath: "src/index.ts",
     };
 

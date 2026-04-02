@@ -6,12 +6,22 @@ import type {
 import type { SideBySideDiffRow, UnifiedDiffLine } from "../types.ts";
 import type { UiTheme } from "../theme.ts";
 import { formatTimestamp, getReviewStateColor } from "./formatting.ts";
+import {
+  getReviewGroupCollapseKey,
+  getReviewGroupDefaultCollapsed,
+  getReviewThreadCollapseKey,
+  getReviewThreadDefaultCollapsed,
+} from "./collapse-state.ts";
 import { REVIEW_BORDER } from "./shared.tsx";
 
 export function ReviewThreadList({
+  collapsedCommentStates,
+  onToggleCollapsed,
   threads,
   theme,
 }: {
+  collapsedCommentStates?: Readonly<Record<string, boolean>>;
+  onToggleCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
   threads: readonly GitHubPullRequestReviewThread[];
   theme: UiTheme;
 }) {
@@ -22,19 +32,32 @@ export function ReviewThreadList({
   return (
     <box width="100%" flexDirection="column" gap={1} paddingTop={1}>
       {threads.map((thread) => (
-        <ReviewThreadCard key={thread.id} thread={thread} theme={theme} />
+        <ReviewThreadCard
+          key={thread.id}
+          collapsedCommentStates={collapsedCommentStates}
+          onToggleCollapsed={onToggleCollapsed}
+          thread={thread}
+          theme={theme}
+        />
       ))}
     </box>
   );
 }
 
 export function ReviewGroupCard({
+  collapsedCommentStates,
   group,
+  onToggleCollapsed,
   theme,
 }: {
+  collapsedCommentStates?: Readonly<Record<string, boolean>>;
   group: GitHubPullRequestReviewGroup;
+  onToggleCollapsed?: (group: GitHubPullRequestReviewGroup) => void;
   theme: UiTheme;
 }) {
+  const collapseKey = getReviewGroupCollapseKey(group);
+  const isCollapsed = collapsedCommentStates?.[collapseKey] ?? getReviewGroupDefaultCollapsed();
+
   return (
     <box
       width="100%"
@@ -47,26 +70,45 @@ export function ReviewGroupCard({
       paddingTop={1}
       paddingBottom={1}
       flexDirection="column"
-      gap={1}
+      gap={isCollapsed ? 0 : 1}
     >
-      <text fg={theme.textMuted} wrapMode="none">
-        <span fg={theme.text}>{group.author.login}</span>
-        <span fg={theme.border}>{"  │  "}</span>
-        <span fg={getReviewStateColor(group.state, theme)}>{group.state.toLowerCase()}</span>
-        {group.submittedAt != null ? (
-          <>
-            <span fg={theme.border}>{"  │  "}</span>
-            <span>{formatTimestamp(group.submittedAt)}</span>
-          </>
-        ) : null}
-      </text>
-      {group.body != null && group.body.trim() !== "" ? (
+      <box
+        width="100%"
+        flexDirection="row"
+        justifyContent="space-between"
+        gap={1}
+        onMouseUp={() => {
+          onToggleCollapsed?.(group);
+        }}
+      >
+        <text fg={theme.textMuted} wrapMode="none">
+          <span fg={theme.accent}>{isCollapsed ? ">" : "v"}</span>
+          <span> </span>
+          <span fg={theme.text}>{group.author.login}</span>
+          <span fg={theme.border}>{"  │  "}</span>
+          <span fg={getReviewStateColor(group.state, theme)}>{group.state.toLowerCase()}</span>
+          {group.submittedAt != null ? (
+            <>
+              <span fg={theme.border}>{"  │  "}</span>
+              <span>{formatTimestamp(group.submittedAt)}</span>
+            </>
+          ) : null}
+        </text>
+        <text fg={theme.textMuted} wrapMode="none">
+          <span>{formatCommentCount(group.comments.length)}</span>
+        </text>
+      </box>
+      {!isCollapsed && group.body != null && group.body.trim() !== "" ? (
         <text fg={theme.text} wrapMode="word">
           {group.body}
         </text>
       ) : null}
-      {group.comments.length > 0 ? (
-        <ReviewCommentList comments={group.comments} theme={theme} />
+      {!isCollapsed && group.comments.length > 0 ? (
+        <ReviewCommentList
+          comments={group.comments}
+          suppressFirstAuthorLogin={group.author.login}
+          theme={theme}
+        />
       ) : null}
     </box>
   );
@@ -116,12 +158,20 @@ export function getUnanchoredSideBySideThreads(
 }
 
 function ReviewThreadCard({
+  collapsedCommentStates,
+  onToggleCollapsed,
   thread,
   theme,
 }: {
+  collapsedCommentStates?: Readonly<Record<string, boolean>>;
+  onToggleCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
   thread: GitHubPullRequestReviewThread;
   theme: UiTheme;
 }) {
+  const collapseKey = getReviewThreadCollapseKey(thread);
+  const isCollapsed =
+    collapsedCommentStates?.[collapseKey] ?? getReviewThreadDefaultCollapsed(thread);
+
   return (
     <box
       width="100%"
@@ -134,40 +184,71 @@ function ReviewThreadCard({
       paddingTop={1}
       paddingBottom={1}
       flexDirection="column"
-      gap={1}
+      gap={isCollapsed ? 0 : 1}
     >
-      <text fg={theme.textMuted} wrapMode="none">
-        <span fg={theme.text}>{thread.comments[0]?.author.login ?? "unknown"}</span>
-        <span fg={theme.border}>{"  │  "}</span>
-        <span>{formatThreadAnchor(thread)}</span>
-        {thread.isOutdated ? (
-          <>
-            <span fg={theme.border}>{"  │  "}</span>
-            <span fg={theme.warning}>outdated</span>
-          </>
-        ) : null}
-      </text>
-      <ReviewCommentList comments={thread.comments} theme={theme} />
+      <box
+        width="100%"
+        flexDirection="row"
+        justifyContent="space-between"
+        gap={1}
+        onMouseUp={() => {
+          onToggleCollapsed?.(thread);
+        }}
+      >
+        <text fg={theme.textMuted} wrapMode="none">
+          <span fg={theme.accent}>{isCollapsed ? ">" : "v"}</span>
+          <span> </span>
+          <span fg={theme.text}>{thread.comments[0]?.author.login ?? "unknown"}</span>
+          <span fg={theme.border}>{"  │  "}</span>
+          <span>{formatThreadAnchor(thread)}</span>
+          {thread.isOutdated ? (
+            <>
+              <span fg={theme.border}>{"  │  "}</span>
+              <span fg={theme.warning}>outdated</span>
+            </>
+          ) : null}
+        </text>
+        <text fg={theme.textMuted} wrapMode="none">
+          <span>{formatCommentCount(thread.comments.length)}</span>
+        </text>
+      </box>
+      {!isCollapsed ? (
+        <ReviewCommentList
+          comments={thread.comments}
+          suppressFirstAuthorLogin={thread.comments[0]?.author.login}
+          theme={theme}
+        />
+      ) : null}
     </box>
   );
 }
 
 function ReviewCommentList({
   comments,
+  suppressFirstAuthorLogin,
   theme,
 }: {
   comments: readonly GitHubPullRequestComment[];
+  suppressFirstAuthorLogin?: string;
   theme: UiTheme;
 }) {
   return (
     <box width="100%" flexDirection="column" gap={1}>
-      {comments.map((comment) => (
-        <text key={comment.id} fg={theme.text} wrapMode="word">
-          <span fg={theme.accent}>{comment.author.login}</span>
-          <span fg={theme.border}>{": "}</span>
-          <span>{comment.body}</span>
-        </text>
-      ))}
+      {comments.map((comment, index) => {
+        const hideAuthor =
+          index === 0 &&
+          suppressFirstAuthorLogin != null &&
+          comment.author.login === suppressFirstAuthorLogin;
+
+        return (
+          <text key={comment.id} fg={theme.text} wrapMode="word">
+            {hideAuthor ? null : <span fg={theme.accent}>{comment.author.login}</span>}
+            {hideAuthor ? null : <span fg={theme.border}>{": "}</span>}
+            <span>{comment.body}</span>
+            {comment.isOutdated ? <span fg={theme.warning}>{"  [outdated]"}</span> : null}
+          </text>
+        );
+      })}
     </box>
   );
 }
@@ -187,7 +268,7 @@ function matchesUnifiedLine(thread: GitHubPullRequestReviewThread, line: Unified
     : line.newLineNumber === anchorLine;
 }
 
-function formatThreadAnchor(thread: GitHubPullRequestReviewThread): string {
+export function formatThreadAnchor(thread: GitHubPullRequestReviewThread): string {
   const anchorLine = thread.line ?? thread.originalLine;
   if (anchorLine == null) {
     return thread.path;
@@ -198,4 +279,8 @@ function formatThreadAnchor(thread: GitHubPullRequestReviewThread): string {
   }
 
   return `${thread.path}:${anchorLine}`;
+}
+
+function formatCommentCount(commentCount: number): string {
+  return `${commentCount} comment${commentCount === 1 ? "" : "s"}`;
 }

@@ -17,69 +17,116 @@ import {
   type SelectedReviewAnchor,
 } from "../review-anchors.ts";
 import { tintHex } from "./shared.tsx";
+import {
+  getUnifiedVirtualWindow,
+  shouldVirtualizeUnifiedPreview,
+  type PreviewViewport,
+} from "./unified-diff-virtualization.ts";
 
 const EMPTY_THREADS: readonly GitHubPullRequestReviewThread[] = [];
 
 export function UnifiedDiffPreview({
+  collapsedCommentStates,
   file,
+  onToggleReviewThreadCollapsed,
+  previewViewport,
   reviewThreads,
   selectedReviewAnchor,
-  showOutdatedReviewThreads,
+  terminalWidth,
   theme,
 }: {
+  collapsedCommentStates?: Readonly<Record<string, boolean>>;
   file: PreparedReviewFile;
+  onToggleReviewThreadCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
+  previewViewport?: PreviewViewport;
   reviewThreads: readonly GitHubPullRequestReviewThread[];
   selectedReviewAnchor?: SelectedReviewAnchor;
-  showOutdatedReviewThreads: boolean;
+  terminalWidth: number;
   theme: UiTheme;
 }) {
   const threadIndex = useMemo(
-    () => buildUnifiedThreadIndex(reviewThreads, file.unifiedLines, showOutdatedReviewThreads),
-    [file.unifiedLines, reviewThreads, showOutdatedReviewThreads],
+    () => buildUnifiedThreadIndex(reviewThreads, file.unifiedLines),
+    [file.unifiedLines, reviewThreads],
   );
+  const visibleWindow = useMemo(() => {
+    if (
+      !shouldVirtualizeUnifiedPreview({
+        hasSelectedReviewAnchor: selectedReviewAnchor != null,
+        previewViewport,
+        reviewThreadCount: reviewThreads.length,
+      })
+    ) {
+      return undefined;
+    }
+
+    return getUnifiedVirtualWindow({ file, previewViewport: previewViewport!, terminalWidth });
+  }, [file, previewViewport, reviewThreads.length, selectedReviewAnchor, terminalWidth]);
+  const visibleLines =
+    visibleWindow == null
+      ? file.unifiedLines
+      : file.unifiedLines.slice(visibleWindow.startIndex, visibleWindow.endIndex + 1);
 
   return (
     <box width="100%" flexDirection="column">
-      {file.unifiedLines.map((line, index) => {
+      {visibleWindow != null && visibleWindow.topSpacerHeight > 0 ? (
+        <box width="100%" height={visibleWindow.topSpacerHeight} />
+      ) : null}
+      {visibleLines.map((line, index) => {
+        const lineIndex = visibleWindow == null ? index : visibleWindow.startIndex + index;
         const lineThreads = getUnifiedLineThreads(threadIndex, line);
 
         return (
-          <box key={`${line.kind}-${index}`} width="100%" flexDirection="column">
+          <box key={`${line.kind}-${lineIndex}`} width="100%" flexDirection="column">
             <UnifiedDiffRow
               isSelected={matchesUnifiedAnchor(line, selectedReviewAnchor)}
               line={line}
               lineNumberWidth={file.lineNumberWidth}
               theme={theme}
             />
-            <ReviewThreadList threads={lineThreads} theme={theme} />
+            <ReviewThreadList
+              collapsedCommentStates={collapsedCommentStates}
+              onToggleCollapsed={onToggleReviewThreadCollapsed}
+              threads={lineThreads}
+              theme={theme}
+            />
           </box>
         );
       })}
-      <ReviewThreadList threads={threadIndex.unanchoredThreads} theme={theme} />
+      {visibleWindow != null && visibleWindow.bottomSpacerHeight > 0 ? (
+        <box width="100%" height={visibleWindow.bottomSpacerHeight} />
+      ) : null}
+      <ReviewThreadList
+        collapsedCommentStates={collapsedCommentStates}
+        onToggleCollapsed={onToggleReviewThreadCollapsed}
+        threads={threadIndex.unanchoredThreads}
+        theme={theme}
+      />
     </box>
   );
 }
 
 export function SideBySideDiffPreview({
+  collapsedCommentStates,
   file,
+  onToggleReviewThreadCollapsed,
   reviewThreads,
   selectedReviewAnchor,
-  showOutdatedReviewThreads,
   terminalWidth,
   theme,
 }: {
+  collapsedCommentStates?: Readonly<Record<string, boolean>>;
   file: PreparedReviewFile;
+  onToggleReviewThreadCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
   reviewThreads: readonly GitHubPullRequestReviewThread[];
   selectedReviewAnchor?: SelectedReviewAnchor;
-  showOutdatedReviewThreads: boolean;
   terminalWidth: number;
   theme: UiTheme;
 }) {
   const paneWidth = Math.max(Math.floor((Math.max(terminalWidth - 12, 40) - 1) / 2), 12);
   const contentWidth = Math.max(paneWidth - (file.lineNumberWidth + 3), 1);
   const threadIndex = useMemo(
-    () => buildSideBySideThreadIndex(reviewThreads, file.sideBySideRows, showOutdatedReviewThreads),
-    [file.sideBySideRows, reviewThreads, showOutdatedReviewThreads],
+    () => buildSideBySideThreadIndex(reviewThreads, file.sideBySideRows),
+    [file.sideBySideRows, reviewThreads],
   );
 
   return (
@@ -97,11 +144,21 @@ export function SideBySideDiffPreview({
               row={row}
               theme={theme}
             />
-            <ReviewThreadList threads={rowThreads} theme={theme} />
+            <ReviewThreadList
+              collapsedCommentStates={collapsedCommentStates}
+              onToggleCollapsed={onToggleReviewThreadCollapsed}
+              threads={rowThreads}
+              theme={theme}
+            />
           </box>
         );
       })}
-      <ReviewThreadList threads={threadIndex.unanchoredThreads} theme={theme} />
+      <ReviewThreadList
+        collapsedCommentStates={collapsedCommentStates}
+        onToggleCollapsed={onToggleReviewThreadCollapsed}
+        threads={threadIndex.unanchoredThreads}
+        theme={theme}
+      />
     </box>
   );
 }
@@ -109,7 +166,6 @@ export function SideBySideDiffPreview({
 function buildUnifiedThreadIndex(
   threads: readonly GitHubPullRequestReviewThread[],
   lines: readonly UnifiedDiffLine[],
-  showOutdatedReviewThreads: boolean,
 ) {
   const leftLineNumbers = new Set<number>();
   const rightLineNumbers = new Set<number>();
@@ -133,10 +189,6 @@ function buildUnifiedThreadIndex(
   const unanchoredThreads: GitHubPullRequestReviewThread[] = [];
 
   for (const thread of threads) {
-    if (!showOutdatedReviewThreads && thread.isOutdated) {
-      continue;
-    }
-
     const anchorLine = thread.line ?? thread.originalLine;
     if (anchorLine == null) {
       unanchoredThreads.push(thread);
@@ -211,7 +263,6 @@ function getUnifiedLineThreads(
 function buildSideBySideThreadIndex(
   threads: readonly GitHubPullRequestReviewThread[],
   rows: readonly SideBySideDiffRow[],
-  showOutdatedReviewThreads: boolean,
 ) {
   const leftLineNumbers = new Set<number>();
   const rightLineNumbers = new Set<number>();
@@ -235,10 +286,6 @@ function buildSideBySideThreadIndex(
   const unanchoredThreads: GitHubPullRequestReviewThread[] = [];
 
   for (const thread of threads) {
-    if (!showOutdatedReviewThreads && thread.isOutdated) {
-      continue;
-    }
-
     const anchorLine = thread.line ?? thread.originalLine;
     if (anchorLine == null) {
       unanchoredThreads.push(thread);

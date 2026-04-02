@@ -13,12 +13,10 @@ export function buildAppCommands({
   selectedFileIndex,
   sessionGitHub,
   showKeyLegend,
-  showOutdatedReviewThreads,
   toggleActivePane,
   toggleCollapsed,
   toggleDiffView,
   toggleKeyLegend,
-  toggleOutdatedReviewThreads,
   toggleReviewed,
   copyPullRequestUrl,
 }: {
@@ -31,12 +29,10 @@ export function buildAppCommands({
   selectedFileIndex: number;
   sessionGitHub?: GitHubReviewSession;
   showKeyLegend: boolean;
-  showOutdatedReviewThreads: boolean;
   toggleActivePane: () => void;
   toggleCollapsed: (fileIndex: number) => void;
   toggleDiffView: () => void;
   toggleKeyLegend: () => void;
-  toggleOutdatedReviewThreads: () => void;
   toggleReviewed: (fileIndex: number) => void;
   copyPullRequestUrl: () => Promise<void>;
 }): AppCommand[] {
@@ -130,15 +126,6 @@ export function buildAppCommands({
       value: "github.comments",
       run: () => openCommandModal(),
       hidden: true,
-    },
-    {
-      category: "GitHub",
-      description: "Show or hide outdated review threads in the diff.",
-      enabled: sessionGitHub != null,
-      keybind: "<leader>u,u",
-      title: showOutdatedReviewThreads ? "Hide outdated PR threads" : "Show outdated PR threads",
-      value: "github.outdated-threads",
-      run: () => toggleOutdatedReviewThreads(),
     },
     {
       category: "GitHub",

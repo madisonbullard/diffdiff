@@ -437,15 +437,17 @@ test("renders inline GitHub review threads under matching diff lines", () => {
           side: "RIGHT",
         },
       ]}
-      showOutdatedReviewThreads={false}
       syntaxStyle={syntaxStyle}
       terminalWidth={160}
       theme={theme}
     />,
   );
 
-  expect(collectText(tree.toJSON())).toContain("Please rename this variable.");
-  expect(collectText(tree.toJSON())).toContain("src/app.ts:1");
+  const text = collectText(tree.toJSON());
+
+  expect(text).toContain("Please rename this variable.");
+  expect(text).toContain("src/app.ts:1");
+  expect(text.match(/octocat/g)).toHaveLength(1);
 });
 
 function createPreparedFile(overrides: Partial<PreparedReviewFile> = {}): PreparedReviewFile {

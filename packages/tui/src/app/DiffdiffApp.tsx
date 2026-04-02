@@ -29,13 +29,29 @@ import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BranchModal } from "../components/branch-modal.tsx";
 import { CommandPaletteModal } from "../components/command-palette-modal.tsx";
-import { FileCard, StickyFileHeader } from "../components/file-card.tsx";
+import {
+  getUnifiedVirtualWindow,
+  shouldVirtualizeUnifiedPreview,
+} from "../components/unified-diff-virtualization.ts";
+import {
+  FileCard,
+  StickyFileHeader,
+  type FileCardPreviewViewport,
+} from "../components/file-card.tsx";
 import { FileTreeSidebar } from "../components/file-tree-sidebar.tsx";
 import { HelpModal } from "../components/help-modal.tsx";
 import { ListFilterModal } from "../components/list-filter-modal.tsx";
 import { Tag } from "../components/shared.tsx";
 import { PullRequestBanner } from "../review/banner.tsx";
 import { PullRequestCommentsModal } from "../review/comments-modal.tsx";
+import {
+  getCommentCollapsed,
+  getReviewGroupCollapseKey,
+  getReviewGroupDefaultCollapsed,
+  getReviewThreadCollapseKey,
+  getReviewThreadDefaultCollapsed,
+  toggleCommentCollapseState,
+} from "../review/collapse-state.ts";
 import {
   getMergeMethod,
   getMergeMethodIndex,
@@ -116,6 +132,34 @@ type MergeModalField = "method" | "title" | "body";
 type AppCommand = CommandDefinition & {
   run: () => void;
 };
+type SessionActivityUpdate = Parameters<typeof updateDiffdiffSessionActivity>[0];
+
+interface RenderSurfaceMetrics {
+  collapsedFileCount: number;
+  deferredPreviewCount: number;
+  expandedFileCount: number;
+  fileCount: number;
+  renderedPreviewFileCount: number;
+  renderedSplitRowCount: number;
+  renderedThreadCount: number;
+  renderedUnifiedLineCount: number;
+}
+
+interface DiffViewportMetrics {
+  height: number;
+  scrollTop: number;
+}
+
+interface PendingInteraction {
+  details?: Record<string, unknown>;
+  expectedDiffView?: "split" | "unified";
+  expectedPane?: AppPane;
+  expectedSelectedFilePath?: string;
+  expectedSelectedTreePath?: string;
+  kind: string;
+  startedAt: number;
+  token: number;
+}
 
 const LIST_FILTER_KEYS = ["workingTree", "localBranch", "openPr", "remoteBranch"] as const;
 const LOADING_INDICATOR_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
@@ -124,6 +168,11 @@ const TERMINAL_BLUR_EVENT = "blur";
 const LEADER_KEYBIND = "ctrl+x";
 const COMMAND_LIST_KEYBIND = "ctrl+p";
 const EMPTY_REVIEW_THREADS: readonly import("@diffdiff/core").GitHubPullRequestReviewThread[] = [];
+
+function getMonotonicNow(): number {
+  const now = globalThis.performance?.now?.();
+  return typeof now === "number" ? now : Date.now();
+}
 
 function haveSamePaths(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
   if (left.size !== right.size) {
@@ -338,10 +387,12 @@ export function DiffdiffApp({
   const [showCommentComposer, setShowCommentComposer] = useState(false);
   const [showCommandModal, setShowCommandModal] = useState(false);
   const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [commentCollapseStates, setCommentCollapseStates] = useState<Record<string, boolean>>(
+    () => initialReviewCache?.commentCollapseStates ?? {},
+  );
   const [showKeyLegend, setShowKeyLegend] = useState(true);
   const [showListFilterModal, setShowListFilterModal] = useState(false);
   const [showMergeModal, setShowMergeModal] = useState(false);
-  const [showOutdatedReviewThreads, setShowOutdatedReviewThreads] = useState(false);
   const [showSubmitReviewModal, setShowSubmitReviewModal] = useState(false);
   const [activeListView, setActiveListView] = useState<ListModalView>("branch");
   const [branchListFilters, setBranchListFilters] = useState<BranchListFilters>({
@@ -373,6 +424,10 @@ export function DiffdiffApp({
   const [activeFileIndex, setActiveFileIndex] = useState(0);
   const [activePane, setActivePane] = useState<AppPane>("diff");
   const [collapsedDirectories, setCollapsedDirectories] = useState<Set<string>>(new Set());
+  const [diffViewportMetrics, setDiffViewportMetrics] = useState<DiffViewportMetrics>({
+    height: 0,
+    scrollTop: 0,
+  });
   const [selectedTreePath, setSelectedTreePath] = useState(initialSession.files[0]?.path ?? "");
   const [loadingIndicatorFrame, setLoadingIndicatorFrame] = useState(0);
   const treeScrollRef = useRef<ScrollBoxRenderable | null>(null);
@@ -380,6 +435,14 @@ export function DiffdiffApp({
   const mergeBodyScrollRef = useRef<ScrollBoxRenderable | null>(null);
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
   const fileCardRefs = useRef<(BoxRenderable | null)[]>([]);
+  const pendingInteractionRef = useRef<PendingInteraction | null>(null);
+  const pendingReviewCacheRef = useRef<{ key: ReviewCacheKey; state: ReviewCacheState } | null>(
+    null,
+  );
+  const pendingSessionActivityRef = useRef<SessionActivityUpdate | null>(null);
+  const pendingInteractionTokenRef = useRef(0);
+  const reviewCacheTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionActivityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shouldRefreshOnFocusRef = useRef(false);
   const renderer = useRenderer();
@@ -435,6 +498,20 @@ export function DiffdiffApp({
 
     return threadsByPath;
   }, [session.github?.pullRequest.reviewThreads]);
+  const fileCardRootRefs = useMemo(
+    () =>
+      session.files.map((_, index) => (node: BoxRenderable | null) => {
+        fileCardRefs.current[index] = node;
+      }),
+    [session.files],
+  );
+  const treeRowRefCallbacks = useMemo(
+    () =>
+      visibleTreeNodes.map((_, index) => (node: BoxRenderable | null) => {
+        treeRowRefs.current[index] = node;
+      }),
+    [visibleTreeNodes],
+  );
   const treeSummaryLabels = useMemo(
     () =>
       getTreeSummaryLabels({
@@ -456,6 +533,109 @@ export function DiffdiffApp({
     () => resolveDiffView(diffViewPreference, diffPaneWidth),
     [diffPaneWidth, diffViewPreference],
   );
+  const selectedFileHasReviewAnchors = useMemo(
+    () => getReviewAnchors(session.files[selectedFileIndex], diffView).length > 0,
+    [diffView, selectedFileIndex, session.files],
+  );
+  const fileCardPreviewViewports = useMemo<(FileCardPreviewViewport | undefined)[]>(() => {
+    const scrollBox = scrollRef.current;
+    if (scrollBox == null || diffViewportMetrics.height <= 0) {
+      return session.files.map(() => undefined);
+    }
+
+    const contentTop = scrollBox.content.y;
+
+    return session.files.map((_, index) => {
+      const fileCard = fileCardRefs.current[index];
+      if (fileCard == null) {
+        return undefined;
+      }
+
+      const fileTop = fileCard.y - contentTop;
+
+      return {
+        bottom: diffViewportMetrics.scrollTop + diffViewportMetrics.height - fileTop,
+        overscan: 6,
+        top: diffViewportMetrics.scrollTop - fileTop,
+      };
+    });
+  }, [diffViewportMetrics.height, diffViewportMetrics.scrollTop, session.files]);
+  const diffRenderSurface = useMemo<RenderSurfaceMetrics>(() => {
+    let collapsedFileCount = 0;
+    let expandedFileCount = 0;
+    let renderedPreviewFileCount = 0;
+    let renderedUnifiedLineCount = 0;
+    let renderedSplitRowCount = 0;
+    let renderedThreadCount = 0;
+
+    for (const [index, file] of session.files.entries()) {
+      if (collapsedPaths.has(file.path)) {
+        collapsedFileCount += 1;
+        continue;
+      }
+
+      expandedFileCount += 1;
+      const reviewThreads = reviewThreadsByPath.get(file.path) ?? EMPTY_REVIEW_THREADS;
+      const previewViewport = fileCardPreviewViewports[index];
+      const hasSelectedReviewAnchor = index === selectedFileIndex && selectedFileHasReviewAnchors;
+
+      if (diffView === "split") {
+        renderedPreviewFileCount += 1;
+        renderedThreadCount += reviewThreads.length;
+        renderedSplitRowCount += file.sideBySideRows.length;
+        continue;
+      }
+
+      if (
+        shouldVirtualizeUnifiedPreview({
+          hasSelectedReviewAnchor,
+          previewViewport,
+          reviewThreadCount: reviewThreads.length,
+        })
+      ) {
+        const virtualWindow = getUnifiedVirtualWindow({
+          file,
+          previewViewport: previewViewport!,
+          terminalWidth: diffPaneWidth,
+        });
+        const renderedLineCount =
+          virtualWindow == null
+            ? file.unifiedLines.length
+            : Math.max(virtualWindow.endIndex - virtualWindow.startIndex + 1, 0);
+
+        if (renderedLineCount > 0) {
+          renderedPreviewFileCount += 1;
+        }
+
+        renderedUnifiedLineCount += renderedLineCount;
+        continue;
+      }
+
+      renderedPreviewFileCount += 1;
+      renderedThreadCount += reviewThreads.length;
+      renderedUnifiedLineCount += file.unifiedLines.length;
+    }
+
+    return {
+      collapsedFileCount,
+      deferredPreviewCount: 0,
+      expandedFileCount,
+      fileCount: session.files.length,
+      renderedPreviewFileCount,
+      renderedSplitRowCount,
+      renderedThreadCount,
+      renderedUnifiedLineCount,
+    };
+  }, [
+    collapsedPaths,
+    diffPaneWidth,
+    diffView,
+    fileCardPreviewViewports,
+    reviewThreadsByPath,
+    selectedFileHasReviewAnchors,
+    selectedFileIndex,
+    session.files,
+  ]);
   const branchItems = useMemo(
     () =>
       buildBranchListItems({
@@ -493,7 +673,6 @@ export function DiffdiffApp({
   const commandListLabel = formatCommandKeybind(COMMAND_LIST_KEYBIND, LEADER_KEYBIND) ?? "ctrl+p";
   const leaderKeyLabel = formatCommandKeybind(LEADER_KEYBIND, LEADER_KEYBIND) ?? "ctrl+x";
   const keyLegendToggleLabel = showKeyLegend ? "hide keys" : "show keys";
-  const outdatedThreadToggleLabel = showOutdatedReviewThreads ? "hide outdated" : "show outdated";
   const commands = useMemo<AppCommand[]>(
     () => [
       {
@@ -591,23 +770,6 @@ export function DiffdiffApp({
       },
       {
         category: "GitHub",
-        description: "Show or hide outdated review threads in the diff.",
-        enabled: session.github != null,
-        keybind: "<leader>u,u",
-        title: showOutdatedReviewThreads ? "Hide outdated PR threads" : "Show outdated PR threads",
-        value: "github.outdated-threads",
-        run: () => {
-          setShowOutdatedReviewThreads((currentValue) => {
-            const nextValue = !currentValue;
-            setStatusMessage(
-              nextValue ? "Showing outdated PR threads." : "Hiding outdated PR threads.",
-            );
-            return nextValue;
-          });
-        },
-      },
-      {
-        category: "GitHub",
         description: "Copy the current pull request URL to the clipboard.",
         enabled: session.github != null,
         keybind: "<leader>y,y",
@@ -659,7 +821,6 @@ export function DiffdiffApp({
       selectedFileIndex,
       session.github,
       showKeyLegend,
-      showOutdatedReviewThreads,
       toggleCollapsed,
       toggleActivePane,
       toggleDiffView,
@@ -749,6 +910,89 @@ export function DiffdiffApp({
   const resolvedLogFilePath =
     logFilePath ?? getDiffdiffLogSession()?.logFilePath ?? "~/.diffdiff/logs/log-unknown.jsonl";
 
+  const flushPendingSessionActivity = useCallback(() => {
+    const pendingActivity = pendingSessionActivityRef.current;
+    pendingSessionActivityRef.current = null;
+
+    if (pendingActivity == null) {
+      return Promise.resolve();
+    }
+
+    return updateDiffdiffSessionActivity(pendingActivity);
+  }, []);
+
+  const scheduleSessionActivity = useCallback(
+    (activity: SessionActivityUpdate, delayMs = 120) => {
+      pendingSessionActivityRef.current = {
+        ...pendingSessionActivityRef.current,
+        ...activity,
+      };
+
+      if (sessionActivityTimeoutRef.current != null) {
+        clearTimeout(sessionActivityTimeoutRef.current);
+      }
+
+      sessionActivityTimeoutRef.current = setTimeout(() => {
+        sessionActivityTimeoutRef.current = null;
+        void flushPendingSessionActivity();
+      }, delayMs);
+    },
+    [flushPendingSessionActivity],
+  );
+
+  const flushPendingReviewCache = useCallback(() => {
+    const pendingCache = pendingReviewCacheRef.current;
+    pendingReviewCacheRef.current = null;
+
+    if (pendingCache == null) {
+      return Promise.resolve();
+    }
+
+    return saveReviewCache(pendingCache.key, pendingCache.state);
+  }, []);
+
+  const scheduleReviewCacheSave = useCallback(
+    (key: ReviewCacheKey, state: ReviewCacheState, delayMs = 200) => {
+      pendingReviewCacheRef.current = { key, state };
+
+      if (reviewCacheTimeoutRef.current != null) {
+        clearTimeout(reviewCacheTimeoutRef.current);
+      }
+
+      reviewCacheTimeoutRef.current = setTimeout(() => {
+        reviewCacheTimeoutRef.current = null;
+        void flushPendingReviewCache();
+      }, delayMs);
+    },
+    [flushPendingReviewCache],
+  );
+
+  const startInteraction = useCallback(
+    (
+      kind: string,
+      options: {
+        details?: Record<string, unknown>;
+        expectedDiffView?: "split" | "unified";
+        expectedPane?: AppPane;
+        expectedSelectedFilePath?: string;
+        expectedSelectedTreePath?: string;
+      } = {},
+    ) => {
+      pendingInteractionTokenRef.current += 1;
+      pendingInteractionRef.current = {
+        details: options.details,
+        expectedDiffView: options.expectedDiffView,
+        expectedPane: options.expectedPane,
+        expectedSelectedFilePath: options.expectedSelectedFilePath,
+        expectedSelectedTreePath: options.expectedSelectedTreePath,
+        kind,
+        startedAt: getMonotonicNow(),
+        token: pendingInteractionTokenRef.current,
+      };
+    },
+    [],
+  );
+
   const dismissErrorToast = useCallback(() => {
     setErrorToastMessage((currentMessage) => {
       if (currentMessage != null) {
@@ -771,8 +1015,19 @@ export function DiffdiffApp({
       if (leaderTimeoutRef.current != null) {
         clearTimeout(leaderTimeoutRef.current);
       }
+
+      if (reviewCacheTimeoutRef.current != null) {
+        clearTimeout(reviewCacheTimeoutRef.current);
+      }
+
+      if (sessionActivityTimeoutRef.current != null) {
+        clearTimeout(sessionActivityTimeoutRef.current);
+      }
+
+      void flushPendingReviewCache();
+      void flushPendingSessionActivity();
     };
-  }, []);
+  }, [flushPendingReviewCache, flushPendingSessionActivity]);
 
   const showErrorToast = useCallback(
     (contextMessage?: string) => {
@@ -866,7 +1121,6 @@ export function DiffdiffApp({
       setShowCommentComposer(false);
       setShowCommentsModal(false);
       setShowMergeModal(false);
-      setShowOutdatedReviewThreads(false);
       setShowSubmitReviewModal(false);
     }
   }, [session.github]);
@@ -1047,8 +1301,14 @@ export function DiffdiffApp({
 
     const fileTopOffsets = getFileTopOffsets();
     const nextIndex = getTopIntersectingFileIndex(fileTopOffsets, scrollBox.scrollTop);
+    const viewportHeight = scrollBox.viewport?.height ?? scrollBox.height ?? 0;
 
     setActiveFileIndex((currentIndex) => (currentIndex === nextIndex ? currentIndex : nextIndex));
+    setDiffViewportMetrics((currentMetrics) =>
+      currentMetrics.scrollTop === scrollBox.scrollTop && currentMetrics.height === viewportHeight
+        ? currentMetrics
+        : { height: viewportHeight, scrollTop: scrollBox.scrollTop },
+    );
   }, [getFileTopOffsets]);
 
   useEffect(() => {
@@ -1263,13 +1523,38 @@ export function DiffdiffApp({
     }
 
     if (key.name === "g" && !key.shift) {
+      const firstFilePath = session.files[0]?.path;
+      if (firstFilePath != null) {
+        startInteraction("file_selection", {
+          details: {
+            fromFilePath: selectedFilePath,
+            toFilePath: firstFilePath,
+            trigger: "first-file",
+          },
+          expectedSelectedFilePath: firstFilePath,
+        });
+      }
+
       setSelectedFileIndex(0);
       setStatusMessage("Jumped to the first file.");
       return;
     }
 
     if (key.name === "g" && key.shift) {
-      setSelectedFileIndex(Math.max(session.files.length - 1, 0));
+      const lastFileIndex = Math.max(session.files.length - 1, 0);
+      const lastFilePath = session.files[lastFileIndex]?.path;
+      if (lastFilePath != null) {
+        startInteraction("file_selection", {
+          details: {
+            fromFilePath: selectedFilePath,
+            toFilePath: lastFilePath,
+            trigger: "last-file",
+          },
+          expectedSelectedFilePath: lastFilePath,
+        });
+      }
+
+      setSelectedFileIndex(lastFileIndex);
       setStatusMessage("Jumped to the last file.");
       return;
     }
@@ -1287,7 +1572,57 @@ export function DiffdiffApp({
   );
 
   const selectedFile = session.files[selectedFileIndex];
+  const selectedFilePath = selectedFile?.path;
   const currentBranchLabel = session.repository.currentBranch ?? "detached";
+
+  useEffect(() => {
+    const pendingInteraction = pendingInteractionRef.current;
+    if (pendingInteraction == null) {
+      return;
+    }
+
+    if (
+      (pendingInteraction.expectedPane != null && pendingInteraction.expectedPane !== activePane) ||
+      (pendingInteraction.expectedDiffView != null &&
+        pendingInteraction.expectedDiffView !== diffView) ||
+      (pendingInteraction.expectedSelectedFilePath != null &&
+        pendingInteraction.expectedSelectedFilePath !== selectedFilePath) ||
+      (pendingInteraction.expectedSelectedTreePath != null &&
+        pendingInteraction.expectedSelectedTreePath !== selectedTreePath)
+    ) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      if (pendingInteractionRef.current?.token !== pendingInteraction.token) {
+        return;
+      }
+
+      logDiffdiffInfo("perf", "interaction_completed", {
+        activePane,
+        diffView,
+        durationMs: Math.round((getMonotonicNow() - pendingInteraction.startedAt) * 100) / 100,
+        interaction: pendingInteraction.kind,
+        renderSurface: diffRenderSurface,
+        selectedFilePath,
+        selectedTreePath,
+        visibleTreeNodeCount: visibleTreeNodes.length,
+        ...pendingInteraction.details,
+      });
+      pendingInteractionRef.current = null;
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [
+    activePane,
+    diffRenderSurface,
+    diffView,
+    selectedFilePath,
+    selectedTreePath,
+    visibleTreeNodes,
+  ]);
 
   function showToast(message: string): void {
     if (toastTimeoutRef.current != null) {
@@ -1380,12 +1715,19 @@ export function DiffdiffApp({
       activePane,
       diffView,
       selectedFileIndex,
-      selectedFilePath: session.files[selectedFileIndex]?.path,
+      selectedFilePath,
     });
-    void updateDiffdiffSessionActivity({
-      selectedFilePath: session.files[selectedFileIndex]?.path,
+    scheduleSessionActivity({
+      selectedFilePath,
     });
-  }, [activeFileIndex, activePane, diffView, selectedFileIndex, session.files]);
+  }, [
+    activeFileIndex,
+    activePane,
+    diffView,
+    scheduleSessionActivity,
+    selectedFileIndex,
+    selectedFilePath,
+  ]);
 
   useEffect(() => {
     const selectedFile = session.files[selectedFileIndex];
@@ -1393,7 +1735,7 @@ export function DiffdiffApp({
       return;
     }
 
-    logDiffdiffInfo("app", "selected_file_profile", {
+    logDiffdiffVerbose("app", "selected_file_profile", {
       diffView,
       isCollapsed: collapsedPaths.has(selectedFile.path),
       patchBytes: Buffer.byteLength(selectedFile.patch, "utf8"),
@@ -1406,10 +1748,6 @@ export function DiffdiffApp({
   }, [collapsedPaths, diffView, reviewThreadsByPath, selectedFileIndex, session.files]);
 
   useEffect(() => {
-    if (session.github != null) {
-      return;
-    }
-
     const cacheKey: ReviewCacheKey = {
       repositoryRootPath: session.repository.rootPath,
       base: session.comparison.base,
@@ -1418,18 +1756,20 @@ export function DiffdiffApp({
     const cacheState: ReviewCacheState = {
       reviewedPaths: [...reviewedPaths],
       collapsedPaths: [...collapsedPaths],
+      commentCollapseStates,
       selectedFilePath: session.files[selectedFileIndex]?.path,
     };
 
-    void saveReviewCache(cacheKey, cacheState);
+    scheduleReviewCacheSave(cacheKey, cacheState);
   }, [
     collapsedPaths,
+    commentCollapseStates,
     reviewedPaths,
+    scheduleReviewCacheSave,
     selectedFileIndex,
     session.comparison.base,
     session.comparison.head,
     session.files,
-    session.github,
     session.repository.rootPath,
   ]);
 
@@ -1437,19 +1777,19 @@ export function DiffdiffApp({
     logDiffdiffVerbose("app", "overlay_updated", {
       activeOverlay,
     });
-    void updateDiffdiffSessionActivity({
+    scheduleSessionActivity({
       activeOverlay: activeOverlay ?? undefined,
     });
-  }, [activeOverlay]);
+  }, [activeOverlay, scheduleSessionActivity]);
 
   useEffect(() => {
     logDiffdiffVerbose("app", "status_message_updated", {
       message: statusMessage,
     });
-    void updateDiffdiffSessionActivity({
+    scheduleSessionActivity({
       statusMessage,
     });
-  }, [statusMessage]);
+  }, [scheduleSessionActivity, statusMessage]);
 
   useEffect(() => {
     if (toastMessage == null) {
@@ -1512,7 +1852,7 @@ export function DiffdiffApp({
           <text fg={theme.textMuted} wrapMode="none">
             <span>{session.repository.rootPath}</span>
             <span>{"  "}</span>
-            <span fg={theme.inverseText} bg={theme.accent}>{` ${currentBranchLabel} `}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>{` ${currentBranchLabel} `}</span>
           </text>
         </box>
         {session.warnings[0] != null ? (
@@ -1581,10 +1921,10 @@ export function DiffdiffApp({
               nodes={visibleTreeNodes}
               onNodeMouseUp={handleFileTreeMouseUp}
               onRowRef={(index, node) => {
-                treeRowRefs.current[index] = node;
+                treeRowRefCallbacks[index]?.(node);
               }}
               reviewedPaths={reviewedPaths}
-              selectedFilePath={selectedFile?.path}
+              selectedFilePath={selectedFilePath}
               selectedPath={selectedTreePath}
               theme={theme}
             />
@@ -1671,10 +2011,6 @@ export function DiffdiffApp({
                     </text>
                     <text fg={theme.textMuted} wrapMode="none">
                       <span fg={theme.accent} bg={theme.surfaceMuted}>
-                        {"  u  "}
-                      </span>
-                      <span>{` ${outdatedThreadToggleLabel}  `}</span>
-                      <span fg={theme.accent} bg={theme.surfaceMuted}>
                         {"  y  "}
                       </span>
                       <span>{" URL"}</span>
@@ -1749,6 +2085,7 @@ export function DiffdiffApp({
 
                 return (
                   <FileCard
+                    collapsedCommentStates={commentCollapseStates}
                     key={file.path}
                     file={file}
                     diffView={diffView}
@@ -1757,14 +2094,13 @@ export function DiffdiffApp({
                     removeTopPadding={index === 0}
                     isReviewed={isReviewed}
                     isSelected={isSelected}
+                    onToggleReviewThreadCollapsed={toggleReviewThreadCollapsed}
+                    previewViewport={fileCardPreviewViewports[index]}
                     reviewThreads={reviewThreadsByPath.get(file.path) ?? EMPTY_REVIEW_THREADS}
-                    rootRef={(node) => {
-                      fileCardRefs.current[index] = node;
-                    }}
+                    rootRef={fileCardRootRefs[index]}
                     selectedReviewAnchor={
                       isSelected && session.github != null ? selectedReviewAnchor : undefined
                     }
-                    showOutdatedReviewThreads={showOutdatedReviewThreads}
                     syntaxStyle={syntaxStyle}
                     terminalWidth={diffPaneWidth}
                     theme={theme}
@@ -1851,8 +2187,9 @@ export function DiffdiffApp({
 
       {showCommentsModal && session.github != null ? (
         <PullRequestCommentsModal
+          collapsedCommentStates={commentCollapseStates}
+          onToggleCollapsed={toggleReviewGroupCollapsed}
           pullRequest={session.github.pullRequest}
-          showOutdatedThreads={showOutdatedReviewThreads}
           theme={theme}
         />
       ) : null}
@@ -1896,13 +2233,26 @@ export function DiffdiffApp({
   );
 
   function moveSelectedFile(delta: number): void {
-    setSelectedFileIndex((currentIndex) => {
-      const nextIndex = clampIndex(currentIndex + delta, session.files.length);
-      if (nextIndex !== currentIndex) {
-        setStatusMessage(`Selected ${session.files[nextIndex]?.path ?? "file"}.`);
-      }
-      return nextIndex;
-    });
+    const nextIndex = clampIndex(selectedFileIndex + delta, session.files.length);
+    if (nextIndex === selectedFileIndex) {
+      return;
+    }
+
+    const nextFilePath = session.files[nextIndex]?.path;
+    if (nextFilePath != null) {
+      startInteraction("file_selection", {
+        details: {
+          delta,
+          fromFilePath: selectedFilePath,
+          toFilePath: nextFilePath,
+          trigger: "diff-navigation",
+        },
+        expectedSelectedFilePath: nextFilePath,
+      });
+    }
+
+    setSelectedFileIndex(nextIndex);
+    setStatusMessage(`Selected ${nextFilePath ?? "file"}.`);
   }
 
   function moveSelectedReviewAnchor(delta: number): void {
@@ -1958,6 +2308,18 @@ export function DiffdiffApp({
       }
 
       if (nextIndex != null) {
+        const nextFilePath = files[nextIndex]?.path;
+        if (nextFilePath != null) {
+          startInteraction("file_selection", {
+            details: {
+              fromFilePath: file.path,
+              toFilePath: nextFilePath,
+              trigger: "reviewed-next-file",
+            },
+            expectedSelectedFilePath: nextFilePath,
+          });
+        }
+
         setSelectedFileIndex(nextIndex);
         setStatusMessage(
           `Reviewed ${file.path}. Jumped to ${files[nextIndex]?.path ?? "next file"}.`,
@@ -1974,6 +2336,14 @@ export function DiffdiffApp({
       return;
     }
 
+    startInteraction("file_collapse_toggle", {
+      details: {
+        filePath: file.path,
+        isCollapsed: !collapsedPaths.has(file.path),
+      },
+      expectedSelectedFilePath: file.path,
+    });
+
     setCollapsedPaths((currentPaths) => {
       const nextPaths = new Set(currentPaths);
       if (nextPaths.has(file.path)) {
@@ -1987,21 +2357,62 @@ export function DiffdiffApp({
     });
   }
 
+  function toggleReviewThreadCollapsed(
+    thread: import("@diffdiff/core").GitHubPullRequestReviewThread,
+  ): void {
+    const collapseKey = getReviewThreadCollapseKey(thread);
+    const defaultCollapsed = getReviewThreadDefaultCollapsed(thread);
+    const nextCollapsed = !getCommentCollapsed(
+      commentCollapseStates,
+      collapseKey,
+      defaultCollapsed,
+    );
+
+    setCommentCollapseStates((currentStates) =>
+      toggleCommentCollapseState(currentStates, collapseKey, defaultCollapsed),
+    );
+    setStatusMessage(nextCollapsed ? "Collapsed comment thread." : "Expanded comment thread.");
+  }
+
+  function toggleReviewGroupCollapsed(
+    group: import("@diffdiff/core").GitHubPullRequestReviewGroup,
+  ): void {
+    const collapseKey = getReviewGroupCollapseKey(group);
+    const defaultCollapsed = getReviewGroupDefaultCollapsed();
+    const nextCollapsed = !getCommentCollapsed(
+      commentCollapseStates,
+      collapseKey,
+      defaultCollapsed,
+    );
+
+    setCommentCollapseStates((currentStates) =>
+      toggleCommentCollapseState(currentStates, collapseKey, defaultCollapsed),
+    );
+    setStatusMessage(nextCollapsed ? "Collapsed review comments." : "Expanded review comments.");
+  }
+
   function toggleDiffView(): void {
-    setDiffViewPreference((currentView) => {
-      const nextPreference = currentView === "unified" ? "side-by-side" : "unified";
-      const nextView = resolveDiffView(nextPreference, diffPaneWidth);
+    const nextPreference = diffViewPreference === "unified" ? "side-by-side" : "unified";
+    const nextView = resolveDiffView(nextPreference, diffPaneWidth);
 
-      if (nextPreference === "side-by-side" && nextView !== "split") {
-        setStatusMessage(
-          `Need at least ${MIN_SIDE_BY_SIDE_DIFF_WIDTH} columns in the diff pane for side-by-side diffs; showing unified.`,
-        );
-      } else {
-        setStatusMessage(`Showing ${getDiffViewLabel(nextView)} diffs.`);
-      }
-
-      return nextPreference;
+    startInteraction("diff_view_toggle", {
+      details: {
+        fromView: diffView,
+        preferredView: nextPreference,
+        toView: nextView,
+      },
+      expectedDiffView: nextView,
     });
+
+    setDiffViewPreference(nextPreference);
+
+    if (nextPreference === "side-by-side" && nextView !== "split") {
+      setStatusMessage(
+        `Need at least ${MIN_SIDE_BY_SIDE_DIFF_WIDTH} columns in the diff pane for side-by-side diffs; showing unified.`,
+      );
+    } else {
+      setStatusMessage(`Showing ${getDiffViewLabel(nextView)} diffs.`);
+    }
   }
 
   function clearLeaderMode(status?: string): void {
@@ -2063,15 +2474,16 @@ export function DiffdiffApp({
   }
 
   function toggleActivePane(): void {
-    setActivePane((currentPane) => {
-      const nextPane = currentPane === "diff" ? "tree" : "diff";
-      if (nextPane === "tree") {
-        setStatusMessage("File tree active.");
-      } else {
-        setStatusMessage("Diff view active.");
-      }
-      return nextPane;
+    const nextPane = activePane === "diff" ? "tree" : "diff";
+    startInteraction("pane_toggle", {
+      details: {
+        fromPane: activePane,
+        toPane: nextPane,
+      },
+      expectedPane: nextPane,
     });
+    setActivePane(nextPane);
+    setStatusMessage(nextPane === "tree" ? "File tree active." : "Diff view active.");
   }
 
   function expandFileTreeAncestors(path: string): void {
@@ -2113,6 +2525,23 @@ export function DiffdiffApp({
   }
 
   function selectTreeNode(node: FileTreeNode, options?: { openDiff?: boolean }): void {
+    startInteraction(node.kind === "directory" ? "tree_selection" : "file_selection", {
+      details:
+        node.kind === "directory"
+          ? {
+              path: node.path,
+              trigger: options?.openDiff ? "tree-open" : "tree-navigation",
+            }
+          : {
+              fromFilePath: selectedFilePath,
+              toFilePath: node.path,
+              trigger: options?.openDiff ? "tree-open" : "tree-selection",
+            },
+      expectedPane: node.kind === "file" && options?.openDiff ? "diff" : undefined,
+      expectedSelectedFilePath: node.kind === "file" ? node.path : undefined,
+      expectedSelectedTreePath: node.path,
+    });
+
     setSelectedTreePath(node.path);
 
     if (node.kind === "directory") {
