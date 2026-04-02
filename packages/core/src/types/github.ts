@@ -84,6 +84,19 @@ export interface GitHubPullRequestComment {
   url: string;
 }
 
+export interface GitHubPullRequestConversationItem {
+  id: string;
+  kind: "pull-request-comment" | "review";
+  author: GitHubActor;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+  url: string;
+  reviewId?: number;
+  reviewNodeId?: string;
+  reviewState?: string;
+}
+
 export interface GitHubPullRequestReviewThread {
   id: string;
   comments: GitHubPullRequestComment[];
@@ -148,6 +161,7 @@ export interface GitHubPullRequestDetail extends PullRequestInfo {
   author: GitHubActor;
   body?: string;
   checks: GitHubPullRequestChecksSummary;
+  conversationItems: GitHubPullRequestConversationItem[];
   headSha: string;
   isDraft: boolean;
   isMerged: boolean;

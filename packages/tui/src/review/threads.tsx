@@ -18,11 +18,15 @@ import { REVIEW_BORDER } from "./shared.tsx";
 export function ReviewThreadList({
   collapsedCommentStates,
   onToggleCollapsed,
+  selectedCommentId,
+  selectedThreadId,
   threads,
   theme,
 }: {
   collapsedCommentStates?: Readonly<Record<string, boolean>>;
   onToggleCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
+  selectedCommentId?: number;
+  selectedThreadId?: string;
   threads: readonly GitHubPullRequestReviewThread[];
   theme: UiTheme;
 }) {
@@ -37,6 +41,8 @@ export function ReviewThreadList({
           key={thread.id}
           collapsedCommentStates={collapsedCommentStates}
           onToggleCollapsed={onToggleCollapsed}
+          selectedCommentId={selectedCommentId}
+          selectedThreadId={selectedThreadId}
           thread={thread}
           theme={theme}
         />
@@ -161,25 +167,30 @@ export function getUnanchoredSideBySideThreads(
 function ReviewThreadCard({
   collapsedCommentStates,
   onToggleCollapsed,
+  selectedCommentId,
+  selectedThreadId,
   thread,
   theme,
 }: {
   collapsedCommentStates?: Readonly<Record<string, boolean>>;
   onToggleCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
+  selectedCommentId?: number;
+  selectedThreadId?: string;
   thread: GitHubPullRequestReviewThread;
   theme: UiTheme;
 }) {
   const collapseKey = getReviewThreadCollapseKey(thread);
   const isCollapsed =
     collapsedCommentStates?.[collapseKey] ?? getReviewThreadDefaultCollapsed(thread);
+  const isSelected = selectedThreadId === thread.id;
 
   return (
     <box
       width="100%"
       border={["left"]}
       customBorderChars={REVIEW_BORDER}
-      borderColor={thread.isOutdated ? theme.warning : theme.success}
-      backgroundColor={theme.surfaceMuted}
+      borderColor={isSelected ? theme.accent : thread.isOutdated ? theme.warning : theme.success}
+      backgroundColor={isSelected ? theme.surface : theme.surfaceMuted}
       paddingLeft={2}
       paddingRight={1}
       paddingTop={1}
@@ -216,6 +227,7 @@ function ReviewThreadCard({
       {!isCollapsed ? (
         <ReviewCommentList
           comments={thread.comments}
+          selectedCommentId={isSelected ? selectedCommentId : undefined}
           suppressFirstAuthorLogin={thread.comments[0]?.author.login}
           theme={theme}
         />
@@ -226,10 +238,12 @@ function ReviewThreadCard({
 
 function ReviewCommentList({
   comments,
+  selectedCommentId,
   suppressFirstAuthorLogin,
   theme,
 }: {
   comments: readonly GitHubPullRequestComment[];
+  selectedCommentId?: number;
   suppressFirstAuthorLogin?: string;
   theme: UiTheme;
 }) {
@@ -242,7 +256,12 @@ function ReviewCommentList({
           comment.author.login === suppressFirstAuthorLogin;
 
         return (
-          <text key={comment.id} fg={theme.text} wrapMode="word">
+          <text
+            key={comment.id}
+            fg={selectedCommentId === comment.id ? theme.accent : theme.text}
+            wrapMode="word"
+          >
+            {selectedCommentId === comment.id ? <span fg={theme.accent}>{"> "}</span> : null}
             {hideAuthor ? null : <span fg={theme.accent}>{comment.author.login}</span>}
             {hideAuthor ? null : <span fg={theme.border}>{": "}</span>}
             <span>{comment.body}</span>

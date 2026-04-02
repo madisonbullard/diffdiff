@@ -1,22 +1,18 @@
-import type { GitHubPullRequestDetail } from "@diffdiff/core";
+import type { GitHubPullRequestConversationItem, GitHubPullRequestDetail } from "@diffdiff/core";
 import type { UiTheme } from "../theme.ts";
 import { MODAL_OVERLAY } from "./shared.tsx";
-import { ReviewGroupCard } from "./threads.tsx";
+import { formatTimestamp, getReviewStateColor } from "./formatting.ts";
 
 export function PullRequestCommentsModal({
-  collapsedCommentStates,
-  onToggleCollapsed,
+  selectedItemId,
   pullRequest,
   theme,
 }: {
-  collapsedCommentStates?: Readonly<Record<string, boolean>>;
-  onToggleCollapsed?: (group: import("@diffdiff/core").GitHubPullRequestReviewGroup) => void;
+  selectedItemId?: string;
   pullRequest: GitHubPullRequestDetail;
   theme: UiTheme;
 }) {
-  const reviewGroups = pullRequest.reviewGroups
-    .filter((group) => group.state !== "PENDING")
-    .filter((group) => group.body != null || group.comments.length > 0);
+  const conversationItems = pullRequest.conversationItems;
 
   return (
     <box
@@ -41,10 +37,22 @@ export function PullRequestCommentsModal({
         <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
           <box flexDirection="column">
             <text fg={theme.accent} wrapMode="none">
-              Comments
+              PR Conversation
             </text>
           </box>
           <text fg={theme.textMuted} wrapMode="none">
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" j/k "}
+            </span>
+            <span>{" move  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" r "}
+            </span>
+            <span>{" reply  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" y "}
+            </span>
+            <span>{" copy link  "}</span>
             <span fg={theme.accent} bg={theme.surfaceMuted}>
               {" esc "}
             </span>
@@ -60,7 +68,7 @@ export function PullRequestCommentsModal({
           verticalScrollbarOptions={{ trackOptions: { backgroundColor: theme.border } }}
         >
           <box width="100%" flexDirection="column" gap={1}>
-            {reviewGroups.length === 0 ? (
+            {conversationItems.length === 0 ? (
               <box
                 border={["left"]}
                 customBorderChars={{
@@ -83,21 +91,64 @@ export function PullRequestCommentsModal({
                 paddingTop={1}
                 paddingBottom={1}
               >
-                <text fg={theme.textMuted}>No submitted review comments yet.</text>
+                <text fg={theme.textMuted}>No PR conversation items yet.</text>
               </box>
             ) : null}
-            {reviewGroups.map((group, index) => (
-              <ReviewGroupCard
-                key={`${group.reviewId ?? index}`}
-                collapsedCommentStates={collapsedCommentStates}
-                group={group}
-                onToggleCollapsed={onToggleCollapsed}
+            {conversationItems.map((item) => (
+              <ConversationItemCard
+                key={item.id}
+                isSelected={item.id === selectedItemId}
+                item={item}
                 theme={theme}
               />
             ))}
           </box>
         </scrollbox>
       </box>
+    </box>
+  );
+}
+
+function ConversationItemCard({
+  isSelected,
+  item,
+  theme,
+}: {
+  isSelected: boolean;
+  item: GitHubPullRequestConversationItem;
+  theme: UiTheme;
+}) {
+  const accentColor =
+    item.kind === "review" && item.reviewState != null
+      ? getReviewStateColor(item.reviewState, theme)
+      : theme.accent;
+
+  return (
+    <box
+      width="100%"
+      border={["left"]}
+      borderColor={isSelected ? theme.accent : accentColor}
+      backgroundColor={isSelected ? theme.surfaceMuted : theme.surface}
+      paddingLeft={2}
+      paddingRight={1}
+      paddingTop={1}
+      paddingBottom={1}
+      flexDirection="column"
+      gap={1}
+    >
+      <text fg={theme.textMuted} wrapMode="none">
+        <span fg={isSelected ? theme.accent : theme.border}>{isSelected ? "> " : "  "}</span>
+        <span fg={theme.text}>{item.author.login}</span>
+        <span fg={theme.border}>{"  │  "}</span>
+        <span fg={accentColor}>
+          {item.kind === "review" ? (item.reviewState ?? "review").toLowerCase() : "pr comment"}
+        </span>
+        <span fg={theme.border}>{"  │  "}</span>
+        <span>{formatTimestamp(item.createdAt)}</span>
+      </text>
+      <text fg={theme.text} wrapMode="word">
+        {item.body}
+      </text>
     </box>
   );
 }

@@ -246,6 +246,9 @@ async function launchTui(options: StartupOptions): Promise<void> {
 
     root.render(
       <DiffdiffApp
+        addPullRequestComment={(reviewSession, body) =>
+          gitHubPullRequestService.addPullRequestComment(reviewSession, body)
+        }
         addReviewThread={(reviewSession, anchor, body) =>
           gitHubPullRequestService
             .addPendingReviewThread(reviewSession, anchor, body)
@@ -271,6 +274,9 @@ async function launchTui(options: StartupOptions): Promise<void> {
             });
           });
         }}
+        replyToReviewComment={(reviewSession, commentId, body) =>
+          gitHubPullRequestService.replyToReviewComment(reviewSession, commentId, body)
+        }
         removeCleanupRefs={(repositoryRootPath, refs) =>
           gitHubPullRequestService.removeCleanupRefs(repositoryRootPath, refs)
         }

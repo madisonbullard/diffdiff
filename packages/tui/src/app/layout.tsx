@@ -172,7 +172,6 @@ export function DiffdiffAppLayout(props: {
     collapsedPaths,
     onFileTreeMouseUp,
     onMouseUp,
-    onToggleReviewGroupCollapsed,
     onToggleReviewThreadCollapsed,
     scrollRef,
   } = props;
@@ -441,17 +440,20 @@ export function DiffdiffAppLayout(props: {
       ) : null}
       {showCommentComposer && selectedReviewAnchor != null ? (
         <ReviewComposerModal
-          anchor={selectedReviewAnchor}
           body={reviewComposerBody}
+          context={{
+            snippet: selectedReviewAnchor.snippet,
+            subtitle: `Comment on ${selectedReviewAnchor.path}:${selectedReviewAnchor.line} (${selectedReviewAnchor.side.toLowerCase()}).`,
+            title: "Add Comment",
+          }}
           isSubmitting={props.isSubmittingReviewAction}
           theme={theme}
         />
       ) : null}
       {showCommentsModal && session.github != null ? (
         <PullRequestCommentsModal
-          collapsedCommentStates={commentCollapseStates}
-          onToggleCollapsed={onToggleReviewGroupCollapsed}
           pullRequest={session.github.pullRequest}
+          selectedItemId={session.github.pullRequest.conversationItems[0]?.id}
           theme={theme}
         />
       ) : null}

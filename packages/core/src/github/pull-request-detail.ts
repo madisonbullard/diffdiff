@@ -6,15 +6,18 @@ import type {
 } from "../types/github.ts";
 import type { GitHubApiClient } from "../types/providers.ts";
 import {
+  buildConversationItems,
   buildMergeState,
   buildReviewGroups,
   buildReviewThreads,
   mapActor,
+  mapIssueComment,
   mapPullRequestComment,
 } from "./pull-request-mappers.ts";
 import type {
   GitHubCheckRunsResponse,
   GitHubCommitStatusResponse,
+  GitHubIssueCommentResponse,
   GitHubPullRequestDetailResponse,
   GitHubReviewCommentResponse,
   GitHubReviewResponse,
@@ -25,32 +28,46 @@ export async function loadPullRequestDetail(
   repository: ForgeRepository,
   pullRequestNumber: number,
 ): Promise<GitHubPullRequestDetail> {
-  const [pullRequestResponse, reviewsResponse, commentsResponse, checksSummary] = await Promise.all(
-    [
-      client.request("GET /repos/{owner}/{repo}/pulls/{pull_number}", {
-        owner: repository.owner,
-        repo: repository.repo,
-        pull_number: pullRequestNumber,
-      }) as Promise<GitHubPullRequestDetailResponse>,
-      client.paginate("GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews", {
-        owner: repository.owner,
-        repo: repository.repo,
-        pull_number: pullRequestNumber,
-        per_page: 100,
-      }) as Promise<GitHubReviewResponse[]>,
-      client.paginate("GET /repos/{owner}/{repo}/pulls/{pull_number}/comments", {
-        owner: repository.owner,
-        repo: repository.repo,
-        pull_number: pullRequestNumber,
-        per_page: 100,
-      }) as Promise<GitHubReviewCommentResponse[]>,
-      loadChecksSummary(client, repository, pullRequestNumber),
-    ],
-  );
+  const [
+    pullRequestResponse,
+    reviewsResponse,
+    commentsResponse,
+    issueCommentsResponse,
+    checksSummary,
+  ] = await Promise.all([
+    client.request("GET /repos/{owner}/{repo}/pulls/{pull_number}", {
+      owner: repository.owner,
+      repo: repository.repo,
+      pull_number: pullRequestNumber,
+    }) as Promise<GitHubPullRequestDetailResponse>,
+    client.paginate("GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews", {
+      owner: repository.owner,
+      repo: repository.repo,
+      pull_number: pullRequestNumber,
+      per_page: 100,
+    }) as Promise<GitHubReviewResponse[]>,
+    client.paginate("GET /repos/{owner}/{repo}/pulls/{pull_number}/comments", {
+      owner: repository.owner,
+      repo: repository.repo,
+      pull_number: pullRequestNumber,
+      per_page: 100,
+    }) as Promise<GitHubReviewCommentResponse[]>,
+    client.paginate("GET /repos/{owner}/{repo}/issues/{issue_number}/comments", {
+      owner: repository.owner,
+      repo: repository.repo,
+      issue_number: pullRequestNumber,
+      per_page: 100,
+    }) as Promise<GitHubIssueCommentResponse[]>,
+    loadChecksSummary(client, repository, pullRequestNumber),
+  ]);
 
   const comments = commentsResponse
     .map(mapPullRequestComment)
     .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+  const conversationItems = buildConversationItems(
+    reviewsResponse,
+    issueCommentsResponse.map(mapIssueComment),
+  );
   const reviewGroups = buildReviewGroups(reviewsResponse, comments);
   const reviewThreads = buildReviewThreads(comments);
   const pendingReviewGroup = reviewGroups.find((group) => group.state === "PENDING");
@@ -61,6 +78,7 @@ export async function loadPullRequestDetail(
     baseRefName: pullRequestResponse.base.ref,
     body: pullRequestResponse.body ?? undefined,
     checks: checksSummary,
+    conversationItems,
     headRefName: pullRequestResponse.head.ref,
     headSha: pullRequestResponse.head.sha,
     isDraft: pullRequestResponse.draft,

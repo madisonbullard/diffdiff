@@ -2,6 +2,8 @@ import type {
   BranchInfo,
   GitHubCleanupPreferences,
   GitHubMergeMethod,
+  GitHubPullRequestComment,
+  GitHubPullRequestConversationItem,
   GitHubReviewLineAnchor,
   GitHubRefCleanupCandidate,
   GitHubPullRequestMergeRequest,
@@ -46,8 +48,6 @@ import { PullRequestBanner } from "../review/banner.tsx";
 import { PullRequestCommentsModal } from "../review/comments-modal.tsx";
 import {
   getCommentCollapsed,
-  getReviewGroupCollapseKey,
-  getReviewGroupDefaultCollapsed,
   getReviewThreadCollapseKey,
   getReviewThreadDefaultCollapsed,
   toggleCommentCollapseState,
@@ -61,6 +61,7 @@ import { MergePullRequestModal } from "../review/merge-pull-request-modal.tsx";
 import { PostMergeCleanupModal } from "../review/post-merge-cleanup-modal.tsx";
 import { ReviewComposerModal } from "../review/review-composer-modal.tsx";
 import { SubmitReviewModal } from "../review/submit-review-modal.tsx";
+import { formatThreadAnchor } from "../review/threads.tsx";
 import { getReviewAnchors } from "../review-anchors.ts";
 import type { UiTheme } from "../theme.ts";
 import type {
@@ -104,6 +105,7 @@ interface DiffdiffAppProps {
     anchor: GitHubReviewLineAnchor,
     body: string,
   ) => Promise<void>;
+  addPullRequestComment?: (reviewSession: GitHubReviewSession, body: string) => Promise<void>;
   initialGitHubPreferences?: GitHubUserPreferences;
   initialReviewCache?: ReviewCacheState;
   initialSession: PreparedReviewSession;
@@ -115,6 +117,11 @@ interface DiffdiffAppProps {
     input: GitHubPullRequestMergeRequest,
   ) => Promise<GitHubPullRequestMergeResult>;
   onExit: () => void;
+  replyToReviewComment?: (
+    reviewSession: GitHubReviewSession,
+    commentId: number,
+    body: string,
+  ) => Promise<void>;
   removeCleanupRefs?: (
     repositoryRootPath: string,
     refs: readonly GitHubRefCleanupCandidate[],
@@ -161,6 +168,23 @@ interface PendingInteraction {
   token: number;
 }
 
+type ReviewComposerTarget =
+  | {
+      kind: "pull-request-comment-reply";
+      item: GitHubPullRequestConversationItem;
+      quotedBody: string;
+    }
+  | {
+      anchor: import("../review-anchors.ts").SelectedReviewAnchor;
+      kind: "review-thread";
+    }
+  | {
+      comment: GitHubPullRequestComment;
+      kind: "review-thread-reply";
+      rootCommentId: number;
+      thread: import("@diffdiff/core").GitHubPullRequestReviewThread;
+    };
+
 const LIST_FILTER_KEYS = ["workingTree", "localBranch", "openPr", "remoteBranch"] as const;
 const LOADING_INDICATOR_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
 const TERMINAL_FOCUS_EVENT = "focus";
@@ -168,6 +192,7 @@ const TERMINAL_BLUR_EVENT = "blur";
 const LEADER_KEYBIND = "ctrl+x";
 const COMMAND_LIST_KEYBIND = "ctrl+p";
 const EMPTY_REVIEW_THREADS: readonly import("@diffdiff/core").GitHubPullRequestReviewThread[] = [];
+const EMPTY_CONVERSATION_ITEMS: readonly GitHubPullRequestConversationItem[] = [];
 const REVIEWED_NEXT_FILE_SCROLL_OFFSET = 3;
 
 function getMonotonicNow(): number {
@@ -320,6 +345,7 @@ function getTreeSummaryLabels({
 }
 
 export function DiffdiffApp({
+  addPullRequestComment,
   addReviewThread,
   initialGitHubPreferences,
   initialReviewCache,
@@ -329,6 +355,7 @@ export function DiffdiffApp({
   logFilePath,
   mergePullRequest,
   onExit,
+  replyToReviewComment,
   removeCleanupRefs,
   submitPendingReview,
   syntaxStyle,
@@ -418,7 +445,17 @@ export function DiffdiffApp({
   const [mergeModalField, setMergeModalField] = useState<MergeModalField>(
     initialGitHubPreferences?.defaultMergeMethod == null ? "method" : "title",
   );
+  const [reviewComposerTarget, setReviewComposerTarget] = useState<ReviewComposerTarget | null>(
+    null,
+  );
   const [reviewComposerBody, setReviewComposerBody] = useState("");
+  const [pullRequestConversationIndex, setPullRequestConversationIndex] = useState(0);
+  const [selectedReviewCommentIndexByThreadId, setSelectedReviewCommentIndexByThreadId] = useState<
+    Record<string, number>
+  >({});
+  const [selectedReviewThreadIndexByFilePath, setSelectedReviewThreadIndexByFilePath] = useState<
+    Record<string, number>
+  >({});
   const [reviewSubmissionBody, setReviewSubmissionBody] = useState("");
   const [reviewSubmissionEventIndex, setReviewSubmissionEventIndex] = useState(0);
   const [selectedReviewAnchorIndex, setSelectedReviewAnchorIndex] = useState(0);
@@ -500,6 +537,8 @@ export function DiffdiffApp({
 
     return threadsByPath;
   }, [session.github?.pullRequest.reviewThreads]);
+  const pullRequestConversationItems =
+    session.github?.pullRequest.conversationItems ?? EMPTY_CONVERSATION_ITEMS;
   const fileCardRootRefs = useMemo(
     () =>
       session.files.map((_, index) => (node: BoxRenderable | null) => {
@@ -664,12 +703,43 @@ export function DiffdiffApp({
     filteredCommitItems[clampIndex(commitListIndex, filteredCommitItems.length)];
   const selectedTreeNode =
     selectedTreePath === "" ? undefined : fileTreeNodeByPath.get(selectedTreePath);
+  const selectedFilePath = session.files[selectedFileIndex]?.path;
+  const selectedFileReviewThreads = useMemo(
+    () =>
+      selectedFilePath == null
+        ? EMPTY_REVIEW_THREADS
+        : (reviewThreadsByPath.get(selectedFilePath) ?? EMPTY_REVIEW_THREADS),
+    [reviewThreadsByPath, selectedFilePath],
+  );
+  const selectedReviewThreadIndex =
+    selectedFilePath == null
+      ? 0
+      : clampIndex(
+          selectedReviewThreadIndexByFilePath[selectedFilePath] ?? 0,
+          selectedFileReviewThreads.length,
+        );
+  const selectedReviewThread = selectedFileReviewThreads[selectedReviewThreadIndex];
+  const selectedReviewCommentIndex =
+    selectedReviewThread == null
+      ? 0
+      : clampIndex(
+          selectedReviewCommentIndexByThreadId[selectedReviewThread.id] ?? 0,
+          selectedReviewThread.comments.length,
+        );
+  const selectedReviewComment = selectedReviewThread?.comments[selectedReviewCommentIndex];
+  const selectedPullRequestConversationItem =
+    pullRequestConversationItems[
+      clampIndex(pullRequestConversationIndex, pullRequestConversationItems.length)
+    ];
+  const reviewComposerContext =
+    reviewComposerTarget == null ? null : getReviewComposerContext(reviewComposerTarget);
   const selectedReviewAnchors = useMemo(
     () => getReviewAnchors(session.files[selectedFileIndex], diffView),
     [diffView, selectedFileIndex, session.files],
   );
   const selectedReviewAnchor =
     selectedReviewAnchors[clampIndex(selectedReviewAnchorIndex, selectedReviewAnchors.length)];
+  const hasSelectedReviewThread = selectedReviewThread != null && selectedReviewComment != null;
   const openPrCount = session.branches.remote.filter((branch) => branch.pullRequest != null).length;
   const remoteBranchCount = session.branches.remote.length - openPrCount;
   const commandListLabel = formatCommandKeybind(COMMAND_LIST_KEYBIND, LEADER_KEYBIND) ?? "ctrl+p";
@@ -799,6 +869,35 @@ export function DiffdiffApp({
       },
       {
         category: "GitHub",
+        description: "Reply to the focused inline review thread.",
+        enabled: hasSelectedReviewThread,
+        keybind: "r",
+        title: "Reply to focused thread",
+        value: "github.reply-thread",
+        run: () => openFocusedReviewThreadReplyComposer(),
+      },
+      {
+        category: "GitHub",
+        description: "Collapse or expand the focused inline review thread.",
+        enabled: selectedReviewThread != null,
+        keybind: "c",
+        title: "Toggle focused thread",
+        value: "github.toggle-thread",
+        run: () => toggleFocusedReviewThreadCollapsed(),
+      },
+      {
+        category: "GitHub",
+        description: "Copy the URL for the focused inline review comment.",
+        enabled: hasSelectedReviewThread,
+        keybind: "y",
+        title: "Copy focused comment URL",
+        value: "github.copy-comment-url",
+        run: () => {
+          void copyFocusedReviewCommentUrl();
+        },
+      },
+      {
+        category: "GitHub",
         description: "Create a review comment on the selected diff line.",
         enabled: session.github != null,
         keybind: "<leader>a,a",
@@ -834,14 +933,19 @@ export function DiffdiffApp({
       openCommandModal,
       onExit,
       openCommentComposer,
+      hasSelectedReviewThread,
       openMergeModal,
+      openFocusedReviewThreadReplyComposer,
       openSubmitReviewModal,
       selectedFileIndex,
+      selectedReviewThread,
       session.github,
       showKeyLegend,
       clearReviewed,
+      copyFocusedReviewCommentUrl,
       markAllReviewed,
       toggleCollapsed,
+      toggleFocusedReviewThreadCollapsed,
       toggleActivePane,
       toggleDiffView,
       toggleKeyLegend,
@@ -1139,6 +1243,7 @@ export function DiffdiffApp({
       setCleanupCandidates([]);
       setShowCleanupModal(false);
       setShowCommentComposer(false);
+      setReviewComposerTarget(null);
       setShowCommentsModal(false);
       setShowMergeModal(false);
       setShowSubmitReviewModal(false);
@@ -1150,6 +1255,50 @@ export function DiffdiffApp({
       clampIndex(currentIndex, selectedReviewAnchors.length),
     );
   }, [selectedReviewAnchors.length]);
+
+  useEffect(() => {
+    if (selectedFilePath == null || selectedFileReviewThreads.length === 0) {
+      return;
+    }
+
+    setSelectedReviewThreadIndexByFilePath((currentIndexes) => {
+      const nextIndex = clampIndex(
+        currentIndexes[selectedFilePath] ?? 0,
+        selectedFileReviewThreads.length,
+      );
+      return currentIndexes[selectedFilePath] === nextIndex
+        ? currentIndexes
+        : {
+            ...currentIndexes,
+            [selectedFilePath]: nextIndex,
+          };
+    });
+  }, [selectedFilePath, selectedFileReviewThreads.length]);
+
+  useEffect(() => {
+    if (selectedReviewThread == null) {
+      return;
+    }
+
+    setSelectedReviewCommentIndexByThreadId((currentIndexes) => {
+      const nextIndex = clampIndex(
+        currentIndexes[selectedReviewThread.id] ?? 0,
+        selectedReviewThread.comments.length,
+      );
+      return currentIndexes[selectedReviewThread.id] === nextIndex
+        ? currentIndexes
+        : {
+            ...currentIndexes,
+            [selectedReviewThread.id]: nextIndex,
+          };
+    });
+  }, [selectedReviewThread]);
+
+  useEffect(() => {
+    setPullRequestConversationIndex((currentIndex) =>
+      clampIndex(currentIndex, pullRequestConversationItems.length),
+    );
+  }, [pullRequestConversationItems.length]);
 
   useEffect(() => {
     setSelectedFileIndex((currentIndex) => clampIndex(currentIndex, session.files.length));
@@ -1442,9 +1591,7 @@ export function DiffdiffApp({
     }
 
     if (activeOverlay === "comments") {
-      if (key.name === "escape" || key.name === "q" || key.name === "t") {
-        setShowCommentsModal(false);
-      }
+      handlePullRequestCommentsModalKey(key);
       return;
     }
 
@@ -1503,13 +1650,63 @@ export function DiffdiffApp({
       return;
     }
 
-    if (session.github != null && activePane === "diff" && key.sequence === "[") {
-      moveSelectedReviewAnchor(-1);
+    if (
+      session.github != null &&
+      activePane === "diff" &&
+      selectedReviewThread != null &&
+      key.sequence === "["
+    ) {
+      moveSelectedReviewComment(-1);
       return;
     }
 
-    if (session.github != null && activePane === "diff" && key.sequence === "]") {
-      moveSelectedReviewAnchor(1);
+    if (
+      session.github != null &&
+      activePane === "diff" &&
+      selectedReviewThread != null &&
+      key.sequence === "]"
+    ) {
+      moveSelectedReviewComment(1);
+      return;
+    }
+
+    if (session.github != null && activePane === "diff" && key.name === "i") {
+      moveSelectedReviewThread(-1);
+      return;
+    }
+
+    if (session.github != null && activePane === "diff" && key.name === "o") {
+      moveSelectedReviewThread(1);
+      return;
+    }
+
+    if (
+      session.github != null &&
+      activePane === "diff" &&
+      key.name === "r" &&
+      hasSelectedReviewThread
+    ) {
+      openFocusedReviewThreadReplyComposer();
+      return;
+    }
+
+    if (
+      session.github != null &&
+      activePane === "diff" &&
+      key.name === "c" &&
+      selectedReviewThread != null
+    ) {
+      toggleFocusedReviewThreadCollapsed();
+      return;
+    }
+
+    if (
+      session.github != null &&
+      activePane === "diff" &&
+      key.name === "y" &&
+      hasSelectedReviewThread
+    ) {
+      void copyFocusedReviewCommentUrl();
       return;
     }
 
@@ -1594,7 +1791,6 @@ export function DiffdiffApp({
   );
 
   const selectedFile = session.files[selectedFileIndex];
-  const selectedFilePath = selectedFile?.path;
   const currentBranchLabel = session.repository.currentBranch ?? "detached";
 
   useEffect(() => {
@@ -2013,29 +2209,33 @@ export function DiffdiffApp({
                   <>
                     <text fg={theme.textMuted} wrapMode="none">
                       <span fg={theme.accent} bg={theme.surfaceMuted}>
+                        {" i/o "}
+                      </span>
+                      <span>{" thread  "}</span>
+                      <span fg={theme.accent} bg={theme.surfaceMuted}>
                         {" [/] "}
                       </span>
-                      <span>{" line  "}</span>
+                      <span>{" cmt"}</span>
+                    </text>
+                    <text fg={theme.textMuted} wrapMode="none">
                       <span fg={theme.accent} bg={theme.surfaceMuted}>
                         {"  a  "}
                       </span>
-                      <span>{" note"}</span>
+                      <span>{" note  "}</span>
+                      <span fg={theme.accent} bg={theme.surfaceMuted}>
+                        {"  r  "}
+                      </span>
+                      <span>{" reply"}</span>
                     </text>
                     <text fg={theme.textMuted} wrapMode="none">
                       <span fg={theme.accent} bg={theme.surfaceMuted}>
-                        {"  s  "}
+                        {"  c  "}
                       </span>
-                      <span>{" send  "}</span>
-                      <span fg={theme.accent} bg={theme.surfaceMuted}>
-                        {"  t  "}
-                      </span>
-                      <span>{" thrd"}</span>
-                    </text>
-                    <text fg={theme.textMuted} wrapMode="none">
+                      <span>{" fold  "}</span>
                       <span fg={theme.accent} bg={theme.surfaceMuted}>
                         {"  y  "}
                       </span>
-                      <span>{" URL"}</span>
+                      <span>{" link"}</span>
                     </text>
                     <text fg={theme.textMuted} wrapMode="none">
                       <span fg={theme.accent} bg={theme.surfaceMuted}>
@@ -2120,6 +2320,8 @@ export function DiffdiffApp({
                     previewViewport={fileCardPreviewViewports[index]}
                     reviewThreads={reviewThreadsByPath.get(file.path) ?? EMPTY_REVIEW_THREADS}
                     rootRef={fileCardRootRefs[index]}
+                    selectedReviewCommentId={isSelected ? selectedReviewComment?.id : undefined}
+                    selectedReviewThreadId={isSelected ? selectedReviewThread?.id : undefined}
                     selectedReviewAnchor={
                       isSelected && session.github != null ? selectedReviewAnchor : undefined
                     }
@@ -2198,10 +2400,10 @@ export function DiffdiffApp({
         <ListFilterModal filters={branchListFilters} selectedIndex={filterIndex} theme={theme} />
       ) : null}
 
-      {showCommentComposer && selectedReviewAnchor != null ? (
+      {showCommentComposer && reviewComposerContext != null ? (
         <ReviewComposerModal
-          anchor={selectedReviewAnchor}
           body={reviewComposerBody}
+          context={reviewComposerContext}
           isSubmitting={isSubmittingReviewAction}
           theme={theme}
         />
@@ -2209,9 +2411,8 @@ export function DiffdiffApp({
 
       {showCommentsModal && session.github != null ? (
         <PullRequestCommentsModal
-          collapsedCommentStates={commentCollapseStates}
-          onToggleCollapsed={toggleReviewGroupCollapsed}
           pullRequest={session.github.pullRequest}
+          selectedItemId={selectedPullRequestConversationItem?.id}
           theme={theme}
         />
       ) : null}
@@ -2277,24 +2478,89 @@ export function DiffdiffApp({
     setStatusMessage(`Selected ${nextFilePath ?? "file"}.`);
   }
 
-  function moveSelectedReviewAnchor(delta: number): void {
-    if (selectedReviewAnchors.length === 0) {
-      setStatusMessage("No commentable lines are available in the selected file.");
+  function moveSelectedReviewThread(delta: number): void {
+    if (selectedFilePath == null || selectedFileReviewThreads.length === 0) {
+      setStatusMessage("No review threads are available in the selected file.");
       return;
     }
 
-    setSelectedReviewAnchorIndex((currentIndex) => {
-      const nextIndex = clampIndex(currentIndex + delta, selectedReviewAnchors.length);
-      const nextAnchor = selectedReviewAnchors[nextIndex];
+    setSelectedReviewThreadIndexByFilePath((currentIndexes) => {
+      const nextIndex = clampIndex(
+        (currentIndexes[selectedFilePath] ?? 0) + delta,
+        selectedFileReviewThreads.length,
+      );
+      const nextThread = selectedFileReviewThreads[nextIndex];
 
-      if (nextAnchor != null) {
-        setStatusMessage(
-          `Selected ${nextAnchor.path}:${nextAnchor.line} (${nextAnchor.side.toLowerCase()}).`,
-        );
+      if (nextThread != null) {
+        setStatusMessage(`Focused thread ${formatThreadAnchor(nextThread)}.`);
       }
 
-      return nextIndex;
+      return {
+        ...currentIndexes,
+        [selectedFilePath]: nextIndex,
+      };
     });
+  }
+
+  function moveSelectedReviewComment(delta: number): void {
+    if (selectedReviewThread == null) {
+      setStatusMessage("No focused review thread is available in the selected file.");
+      return;
+    }
+
+    setSelectedReviewCommentIndexByThreadId((currentIndexes) => {
+      const nextIndex = clampIndex(
+        (currentIndexes[selectedReviewThread.id] ?? 0) + delta,
+        selectedReviewThread.comments.length,
+      );
+      const nextComment = selectedReviewThread.comments[nextIndex];
+
+      if (nextComment != null) {
+        setStatusMessage(`Focused comment from ${nextComment.author.login}.`);
+      }
+
+      return {
+        ...currentIndexes,
+        [selectedReviewThread.id]: nextIndex,
+      };
+    });
+  }
+
+  function toggleFocusedReviewThreadCollapsed(): void {
+    if (selectedReviewThread == null) {
+      setStatusMessage("No focused review thread is available in the selected file.");
+      return;
+    }
+
+    toggleReviewThreadCollapsed(selectedReviewThread);
+  }
+
+  async function copyFocusedReviewCommentUrl(): Promise<void> {
+    if (selectedReviewComment == null) {
+      setStatusMessage("No focused review comment is available.");
+      return;
+    }
+
+    const copied = await copyTextToClipboard(selectedReviewComment.url);
+    setStatusMessage(
+      copied
+        ? "Copied focused comment URL to clipboard."
+        : "Unable to copy the focused comment URL.",
+    );
+  }
+
+  async function copySelectedPullRequestConversationItemUrl(): Promise<void> {
+    if (selectedPullRequestConversationItem == null) {
+      setStatusMessage("No focused PR conversation item is available.");
+      return;
+    }
+
+    const copied = await copyTextToClipboard(selectedPullRequestConversationItem.url);
+    setStatusMessage(
+      copied
+        ? "Copied PR conversation URL to clipboard."
+        : "Unable to copy the PR conversation URL.",
+    );
   }
 
   function toggleReviewed(fileIndex: number): void {
@@ -2428,23 +2694,6 @@ export function DiffdiffApp({
       toggleCommentCollapseState(currentStates, collapseKey, defaultCollapsed),
     );
     setStatusMessage(nextCollapsed ? "Collapsed comment thread." : "Expanded comment thread.");
-  }
-
-  function toggleReviewGroupCollapsed(
-    group: import("@diffdiff/core").GitHubPullRequestReviewGroup,
-  ): void {
-    const collapseKey = getReviewGroupCollapseKey(group);
-    const defaultCollapsed = getReviewGroupDefaultCollapsed();
-    const nextCollapsed = !getCommentCollapsed(
-      commentCollapseStates,
-      collapseKey,
-      defaultCollapsed,
-    );
-
-    setCommentCollapseStates((currentStates) =>
-      toggleCommentCollapseState(currentStates, collapseKey, defaultCollapsed),
-    );
-    setStatusMessage(nextCollapsed ? "Collapsed review comments." : "Expanded review comments.");
   }
 
   function toggleDiffView(): void {
@@ -3023,6 +3272,7 @@ export function DiffdiffApp({
   function handleCommentComposerKey(key: KeyboardInput): void {
     if (key.name === "escape") {
       setShowCommentComposer(false);
+      setReviewComposerTarget(null);
       setReviewComposerBody("");
       setStatusMessage("Closed comment composer.");
       return;
@@ -3045,6 +3295,37 @@ export function DiffdiffApp({
 
     if (key.sequence != null && key.sequence.length === 1 && key.sequence >= " ") {
       setReviewComposerBody((currentBody) => currentBody + key.sequence);
+    }
+  }
+
+  function handlePullRequestCommentsModalKey(key: KeyboardInput): void {
+    if (key.name === "escape" || key.name === "q" || key.name === "t") {
+      setShowCommentsModal(false);
+      setStatusMessage("Closed PR conversation.");
+      return;
+    }
+
+    if (key.name === "j" || key.name === "down") {
+      setPullRequestConversationIndex((currentIndex) =>
+        clampIndex(currentIndex + 1, pullRequestConversationItems.length),
+      );
+      return;
+    }
+
+    if (key.name === "k" || key.name === "up") {
+      setPullRequestConversationIndex((currentIndex) =>
+        clampIndex(currentIndex - 1, pullRequestConversationItems.length),
+      );
+      return;
+    }
+
+    if (key.name === "r") {
+      openPullRequestConversationReplyComposer();
+      return;
+    }
+
+    if (key.name === "y") {
+      void copySelectedPullRequestConversationItemUrl();
     }
   }
 
@@ -3221,9 +3502,74 @@ export function DiffdiffApp({
       return;
     }
 
+    setReviewComposerTarget({
+      anchor: selectedReviewAnchor,
+      kind: "review-thread",
+    });
     setReviewComposerBody("");
     setShowCommentComposer(true);
     setStatusMessage(`Commenting on ${selectedReviewAnchor.path}:${selectedReviewAnchor.line}.`);
+  }
+
+  function openFocusedReviewThreadReplyComposer(): void {
+    if (session.github == null) {
+      setStatusMessage("Open a GitHub pull request first.");
+      return;
+    }
+
+    if (!session.github.auth.isAuthenticated) {
+      setStatusMessage("GitHub auth is required. Run `diffdiff auth login --token-stdin` first.");
+      return;
+    }
+
+    if (selectedReviewThread == null || selectedReviewComment == null) {
+      setStatusMessage("No focused review thread is available in the selected file.");
+      return;
+    }
+
+    const rootComment =
+      selectedReviewThread.comments.find((comment) => comment.replyToId == null) ??
+      selectedReviewThread.comments[0];
+    if (rootComment == null) {
+      setStatusMessage("No reply target is available for the focused thread.");
+      return;
+    }
+
+    setReviewComposerTarget({
+      comment: selectedReviewComment,
+      kind: "review-thread-reply",
+      rootCommentId: rootComment.id,
+      thread: selectedReviewThread,
+    });
+    setReviewComposerBody("");
+    setShowCommentComposer(true);
+    setStatusMessage(`Replying in ${formatThreadAnchor(selectedReviewThread)}.`);
+  }
+
+  function openPullRequestConversationReplyComposer(): void {
+    if (session.github == null) {
+      setStatusMessage("Open a GitHub pull request first.");
+      return;
+    }
+
+    if (!session.github.auth.isAuthenticated) {
+      setStatusMessage("GitHub auth is required. Run `diffdiff auth login --token-stdin` first.");
+      return;
+    }
+
+    if (selectedPullRequestConversationItem == null) {
+      setStatusMessage("No focused PR conversation item is available.");
+      return;
+    }
+
+    setReviewComposerTarget({
+      item: selectedPullRequestConversationItem,
+      kind: "pull-request-comment-reply",
+      quotedBody: selectedPullRequestConversationItem.body,
+    });
+    setReviewComposerBody("");
+    setShowCommentComposer(true);
+    setStatusMessage(`Replying to ${selectedPullRequestConversationItem.author.login}.`);
   }
 
   function openSubmitReviewModal(): void {
@@ -3267,29 +3613,66 @@ export function DiffdiffApp({
   async function submitCommentComposer(): Promise<void> {
     if (
       session.github == null ||
-      addReviewThread == null ||
-      selectedReviewAnchor == null ||
+      reviewComposerTarget == null ||
       reviewComposerBody.trim() === ""
     ) {
       return;
     }
 
+    const nextBody = reviewComposerBody.trim();
+
     setIsSubmittingReviewAction(true);
-    setStatusMessage(
-      `Adding review comment on ${selectedReviewAnchor.path}:${selectedReviewAnchor.line}...`,
-    );
 
     try {
-      await addReviewThread(session.github, selectedReviewAnchor, reviewComposerBody.trim());
+      if (reviewComposerTarget.kind === "review-thread") {
+        if (addReviewThread == null) {
+          return;
+        }
+
+        setStatusMessage(
+          `Adding review comment on ${reviewComposerTarget.anchor.path}:${reviewComposerTarget.anchor.line}...`,
+        );
+        await addReviewThread(session.github, reviewComposerTarget.anchor, nextBody);
+      } else if (reviewComposerTarget.kind === "review-thread-reply") {
+        if (replyToReviewComment == null) {
+          return;
+        }
+
+        setStatusMessage(`Replying in ${formatThreadAnchor(reviewComposerTarget.thread)}...`);
+        await replyToReviewComment(session.github, reviewComposerTarget.rootCommentId, nextBody);
+      } else {
+        if (addPullRequestComment == null) {
+          return;
+        }
+
+        setStatusMessage(`Replying to ${reviewComposerTarget.item.author.login}...`);
+        await addPullRequestComment(
+          session.github,
+          buildQuotedPullRequestReply(reviewComposerTarget.item, nextBody),
+        );
+      }
+
       const nextSession = await loadSession(startupOptions);
       setSession(nextSession);
       setShowCommentComposer(false);
+      setReviewComposerTarget(null);
       setReviewComposerBody("");
-      setStatusMessage("Added review comment.");
+      setStatusMessage(
+        reviewComposerTarget.kind === "review-thread"
+          ? "Added review comment."
+          : reviewComposerTarget.kind === "review-thread-reply"
+            ? "Added review reply."
+            : "Added PR reply comment.",
+      );
     } catch (error) {
-      handleAppError(error, "Unable to add the review comment.", {
-        action: "add-review-thread",
-        anchor: selectedReviewAnchor,
+      handleAppError(error, "Unable to submit the comment.", {
+        action: reviewComposerTarget.kind,
+        target:
+          reviewComposerTarget.kind === "review-thread"
+            ? reviewComposerTarget.anchor
+            : reviewComposerTarget.kind === "review-thread-reply"
+              ? reviewComposerTarget.comment
+              : reviewComposerTarget.item,
       });
     } finally {
       setIsSubmittingReviewAction(false);
@@ -3559,4 +3942,44 @@ export function DiffdiffApp({
       setIsReloading(false);
     }
   }
+}
+
+function getReviewComposerContext(target: ReviewComposerTarget): {
+  snippet: string;
+  subtitle: string;
+  title: string;
+} {
+  if (target.kind === "review-thread") {
+    return {
+      snippet: target.anchor.snippet,
+      subtitle: `Comment on ${target.anchor.path}:${target.anchor.line} (${target.anchor.side.toLowerCase()}).`,
+      title: "Add Comment",
+    };
+  }
+
+  if (target.kind === "review-thread-reply") {
+    return {
+      snippet: target.comment.body,
+      subtitle: `Reply in ${formatThreadAnchor(target.thread)} to ${target.comment.author.login}.`,
+      title: "Reply to Thread",
+    };
+  }
+
+  return {
+    snippet: target.quotedBody,
+    subtitle: `Reply to ${target.item.author.login}'s PR comment. A quoted top-level PR comment will be created.`,
+    title: "Reply to PR Comment",
+  };
+}
+
+function buildQuotedPullRequestReply(
+  item: GitHubPullRequestConversationItem,
+  body: string,
+): string {
+  const quotedBody = item.body
+    .split(/\r?\n/u)
+    .map((line) => `> ${line}`)
+    .join("\n");
+
+  return [`Replying to ${item.author.login}:`, quotedBody, "", body].join("\n");
 }

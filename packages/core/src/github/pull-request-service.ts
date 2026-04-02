@@ -198,6 +198,36 @@ export class GitHubPullRequestService {
     return pendingReview;
   }
 
+  async replyToReviewComment(
+    reviewSession: GitHubReviewSession,
+    commentId: number,
+    body: string,
+  ): Promise<void> {
+    const client = await this.requireClient(reviewSession);
+
+    await client.request(
+      "POST /repos/{owner}/{repo}/pulls/{pull_number}/comments/{comment_id}/replies",
+      {
+        body,
+        comment_id: commentId,
+        owner: reviewSession.repository.owner,
+        pull_number: reviewSession.pullRequest.number,
+        repo: reviewSession.repository.repo,
+      },
+    );
+  }
+
+  async addPullRequestComment(reviewSession: GitHubReviewSession, body: string): Promise<void> {
+    const client = await this.requireClient(reviewSession);
+
+    await client.request("POST /repos/{owner}/{repo}/issues/{issue_number}/comments", {
+      body,
+      issue_number: reviewSession.pullRequest.number,
+      owner: reviewSession.repository.owner,
+      repo: reviewSession.repository.repo,
+    });
+  }
+
   async submitPendingReview(
     reviewSession: GitHubReviewSession,
     event: GitHubReviewSubmissionEvent,

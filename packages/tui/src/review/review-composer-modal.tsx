@@ -1,15 +1,18 @@
-import type { SelectedReviewAnchor } from "../review-anchors.ts";
 import type { UiTheme } from "../theme.ts";
 import { MODAL_OVERLAY, REVIEW_BORDER } from "./shared.tsx";
 
 export function ReviewComposerModal({
-  anchor,
   body,
+  context,
   isSubmitting,
   theme,
 }: {
-  anchor: SelectedReviewAnchor;
   body: string;
+  context: {
+    snippet: string;
+    subtitle: string;
+    title: string;
+  };
   isSubmitting: boolean;
   theme: UiTheme;
 }) {
@@ -36,10 +39,10 @@ export function ReviewComposerModal({
         <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
           <box flexDirection="column">
             <text fg={theme.accent} wrapMode="none">
-              Add Comment
+              {context.title}
             </text>
             <text fg={theme.textMuted} wrapMode="none">
-              {`Comment on ${anchor.path}:${anchor.line} (${anchor.side.toLowerCase()}).`}
+              {context.subtitle}
             </text>
           </box>
           <text fg={theme.textMuted} wrapMode="none">
@@ -69,7 +72,7 @@ export function ReviewComposerModal({
           paddingBottom={1}
         >
           <text fg={theme.text} wrapMode="word">
-            {anchor.snippet}
+            {context.snippet}
           </text>
         </box>
         <box

@@ -886,9 +886,9 @@ test("opens the PR comments modal from review mode", () => {
 
   emitKey({ name: "t" });
 
-  expect(getAppText(tree)).toContain("Comments");
+  expect(getAppText(tree)).toContain("PR Conversation");
   expect(getAppText(tree)).toContain("Looks ready to merge.");
-  expect(getAppText(tree)).not.toContain("Grouped by GitHub review");
+  expect(getAppText(tree)).toContain("Can we tighten the rollout copy?");
   expect(getAppText(tree)).not.toContain(pendingComment);
   expect(getAppText(tree)).not.toContain("pending");
 });
@@ -902,6 +902,7 @@ test("copies the PR URL from review mode", async () => {
     />,
   );
 
+  emitKey({ ctrl: true, name: "x" });
   emitKey({ name: "y", sequence: "y" });
   await act(async () => {
     await Promise.resolve();
@@ -911,6 +912,110 @@ test("copies the PR URL from review mode", async () => {
     "https://github.com/diffdiff/diffdiff/pull/42",
   );
   expect(getAppText(tree)).toContain("Copied PR URL to clipboard");
+});
+
+test("cycles inline thread and comment focus, then copies the focused comment URL", async () => {
+  render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+      })}
+    />,
+  );
+
+  emitKey({ name: "]", sequence: "]" });
+  emitKey({ name: "y", sequence: "y" });
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(clipboardState.copyTextToClipboard).toHaveBeenLastCalledWith(
+    "https://github.com/diffdiff/diffdiff/pull/42#discussion_r103",
+  );
+
+  emitKey({ name: "o", sequence: "o" });
+  emitKey({ name: "y", sequence: "y" });
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(clipboardState.copyTextToClipboard).toHaveBeenLastCalledWith(
+    "https://github.com/diffdiff/diffdiff/pull/42#discussion_r102",
+  );
+});
+
+test("replies to the root comment of the focused inline thread", async () => {
+  const replyToReviewComment = vi.fn(async () => undefined);
+  const nextSession = createPreparedSession({ github: createGitHubReviewSession() });
+  const loadSession = vi.fn(async () => nextSession);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        loadSession,
+        replyToReviewComment,
+      })}
+    />,
+  );
+
+  emitKey({ name: "]", sequence: "]" });
+  emitKey({ name: "r", sequence: "r" });
+
+  expect(getAppText(tree)).toContain("Reply to Thread");
+  expect(getAppText(tree)).toContain("I renamed it in the follow-up commit.");
+
+  emitText("Thanks for the follow-up.");
+  await emitAsyncKey({ name: "return" });
+
+  expect(replyToReviewComment).toHaveBeenCalledWith(
+    expect.objectContaining({ pullRequest: expect.objectContaining({ number: 42 }) }),
+    101,
+    "Thanks for the follow-up.",
+  );
+});
+
+test("replies to a PR conversation item with a quoted top-level comment", async () => {
+  const addPullRequestComment = vi.fn(async () => undefined);
+  const nextSession = createPreparedSession({ github: createGitHubReviewSession() });
+  const loadSession = vi.fn(async () => nextSession);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        addPullRequestComment,
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        loadSession,
+      })}
+    />,
+  );
+
+  emitKey({ name: "t" });
+  emitKey({ name: "y", sequence: "y" });
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(clipboardState.copyTextToClipboard).toHaveBeenLastCalledWith(
+    "https://github.com/diffdiff/diffdiff/pull/42#issuecomment-501",
+  );
+
+  emitKey({ name: "r", sequence: "r" });
+  expect(getAppText(tree)).toContain("Reply to PR Comment");
+  expect(getAppText(tree)).toContain("Can we tighten the rollout copy?");
+
+  emitText("We can tighten it before ship.");
+  await emitAsyncKey({ name: "return" });
+
+  expect(addPullRequestComment).toHaveBeenCalledTimes(1);
+  const [reviewSession, body] = addPullRequestComment.mock.calls[0] as unknown as [unknown, string];
+
+  expect(reviewSession).toEqual(
+    expect.objectContaining({
+      pullRequest: expect.objectContaining({ number: 42 }),
+    }),
+  );
+  expect(body).toContain("Replying to octocat:");
+  expect(body).toContain("> Can we tighten the rollout copy?");
+  expect(body).toContain("We can tighten it before ship.");
 });
 
 test("opens the comment composer and submits a pending review thread", async () => {
@@ -1194,6 +1299,7 @@ function createAppPropsBase(): DiffdiffAppProps {
   const initialSession = createPreparedSession();
 
   return {
+    addPullRequestComment: vi.fn(async () => undefined),
     addReviewThread: vi.fn(async () => undefined),
     initialGitHubPreferences: createGitHubPreferences(),
     initialOptions,
@@ -1207,6 +1313,7 @@ function createAppPropsBase(): DiffdiffAppProps {
       sha: "mergedsha",
     }),
     onExit: vi.fn(),
+    replyToReviewComment: vi.fn(async () => undefined),
     removeCleanupRefs: async () => undefined,
     submitPendingReview: vi.fn(async () => undefined),
     syntaxStyle,
@@ -1336,6 +1443,35 @@ function createGitHubReviewSession(
         successful: 1,
         total: 1,
       },
+      conversationItems: [
+        {
+          author: {
+            login: "octocat",
+            url: "https://github.com/octocat",
+          },
+          body: "Can we tighten the rollout copy?",
+          createdAt: "2026-04-01T11:58:00Z",
+          id: "pull-request-comment:501",
+          kind: "pull-request-comment",
+          updatedAt: "2026-04-01T11:58:00Z",
+          url: "https://github.com/diffdiff/diffdiff/pull/42#issuecomment-501",
+        },
+        {
+          author: {
+            login: "octocat",
+            url: "https://github.com/octocat",
+          },
+          body: "Looks ready to merge.",
+          createdAt: "2026-04-01T12:00:00Z",
+          id: "review:700",
+          kind: "review",
+          reviewId: 700,
+          reviewNodeId: "PRR_700",
+          reviewState: "APPROVED",
+          updatedAt: "2026-04-01T12:00:00Z",
+          url: "https://github.com/diffdiff/diffdiff/pull/42#pullrequestreview-700",
+        },
+      ],
       headRefName: "feature/tui",
       headSha: "headsha",
       isDraft: false,
@@ -1406,6 +1542,24 @@ function createGitHubReviewSession(
               side: "RIGHT",
               updatedAt: "2026-04-01T12:01:00Z",
               url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r101",
+            },
+            {
+              author: {
+                login: "madison",
+                url: "https://github.com/madison",
+              },
+              body: "I renamed it in the follow-up commit.",
+              createdAt: "2026-04-01T12:02:00Z",
+              id: 103,
+              isOutdated: false,
+              line: 1,
+              nodeId: "PRRC_103",
+              path: "src/app.ts",
+              replyToId: 101,
+              reviewId: 700,
+              side: "RIGHT",
+              updatedAt: "2026-04-01T12:02:00Z",
+              url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r103",
             },
           ],
           id: "101",

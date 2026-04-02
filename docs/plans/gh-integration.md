@@ -6,6 +6,56 @@
 
 ---
 
+## Implementation Update
+
+The next implemented slice follows the later decisions made after the original plan snapshot above.
+
+### Newly Locked During Implementation
+
+1. Inline review interaction is keyboard-first.
+2. Inline and modal comment surfaces both get keyboard interaction.
+3. Focus in the diff starts at the thread level, with separate comment focus inside the selected thread.
+4. When a file with inline threads is focused, the first thread is active automatically.
+5. `i` and `o` cycle focused inline threads within the selected file.
+6. `[` and `]` move focused comments within the active inline thread.
+7. On files with inline threads, `[` and `]` prioritize comment focus over diff-anchor focus.
+8. Direct inline-thread actions are `r` reply, `c` collapse, and `y` copy focused comment URL.
+9. Replying from an inline thread uses GitHub's review-comment reply REST path.
+10. If the focused inline comment is already a reply, the reply action targets the thread root comment.
+11. Non-code PR conversation lives in a separate modal.
+12. That modal shows everything non-anchored as a flattened timeline, not grouped review buckets.
+13. Pending review body stays hidden from that modal.
+14. Modal actions are `r` reply and `y` copy focused item URL.
+15. Because PR-level issue comments are flat in GitHub, modal "reply" creates a new top-level PR comment with a quote block referencing the focused item.
+
+### Implemented Changes
+
+1. `packages/core` now loads flattened non-anchored PR conversation items alongside inline review threads.
+2. Those conversation items include submitted review bodies and PR-level issue comments, but exclude pending review body.
+3. `packages/core` now exposes shared support for:
+   review-thread replies via REST,
+   and PR-level conversation comments via the issue-comments REST endpoint.
+4. The TUI now tracks focused inline thread and focused inline comment separately.
+5. The selected file auto-focuses its first inline thread when threads exist.
+6. The diff view now supports keyboard actions on the focused inline thread/comment:
+   cycle threads,
+   cycle comments,
+   reply,
+   collapse,
+   and copy comment URL.
+7. The old grouped comments modal has been replaced by a PR conversation modal driven by flattened non-anchored conversation items.
+8. That modal has its own keyboard interaction mode for moving between items, replying with quoted top-level comments, and copying item URLs.
+9. The shared composer modal is now mode-aware and is reused for:
+   new inline comments,
+   inline thread replies,
+   and quoted PR-level replies.
+10. Core and TUI tests were expanded to cover the new reply and conversation flows.
+
+### Verification
+
+1. `vp run test -r`
+2. Passed for both `packages/core` and `packages/tui`.
+
 ## User
 
 Work with me to plan out a github integration. the user should be able to interface with github PRs entirely via the TUI. make sure you add files to the core package that could be shared with future non-tui clients. do not make any judgment calls. frequently pause to present options to me and provide a brief optimist take and skeptic take on each option. use the ask-questions tool.

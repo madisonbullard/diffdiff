@@ -27,7 +27,9 @@ export interface FileCardProps {
   isSelected: boolean;
   onToggleReviewThreadCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
   previewViewport?: FileCardPreviewViewport;
+  selectedReviewCommentId?: number;
   reviewThreads?: readonly GitHubPullRequestReviewThread[];
+  selectedReviewThreadId?: string;
   rootRef?: Ref<BoxRenderable>;
   selectedReviewAnchor?: SelectedReviewAnchor;
   syntaxStyle: SyntaxStyle;
@@ -50,7 +52,9 @@ const MemoizedFileCard = memo(function FileCard({
   isSelected,
   onToggleReviewThreadCollapsed,
   previewViewport,
+  selectedReviewCommentId,
   reviewThreads = [],
+  selectedReviewThreadId,
   rootRef,
   selectedReviewAnchor,
   syntaxStyle,
@@ -148,6 +152,8 @@ const MemoizedFileCard = memo(function FileCard({
           file={file}
           onToggleReviewThreadCollapsed={onToggleReviewThreadCollapsed}
           previewViewport={bodyViewport}
+          selectedReviewCommentId={selectedReviewCommentId}
+          selectedReviewThreadId={selectedReviewThreadId}
           reviewThreads={reviewThreads}
           selectedReviewAnchor={selectedReviewAnchor}
           syntaxStyle={syntaxStyle}
@@ -165,7 +171,9 @@ const MemoizedFileCardBody = memo(function FileCardBody({
   file,
   onToggleReviewThreadCollapsed,
   previewViewport,
+  selectedReviewCommentId,
   reviewThreads,
+  selectedReviewThreadId,
   selectedReviewAnchor,
   syntaxStyle,
   terminalWidth,
@@ -176,7 +184,9 @@ const MemoizedFileCardBody = memo(function FileCardBody({
   file: PreparedReviewFile;
   onToggleReviewThreadCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
   previewViewport?: FileCardPreviewViewport;
+  selectedReviewCommentId?: number;
   reviewThreads: readonly GitHubPullRequestReviewThread[];
+  selectedReviewThreadId?: string;
   selectedReviewAnchor?: SelectedReviewAnchor;
   syntaxStyle: SyntaxStyle;
   terminalWidth: number;
@@ -215,6 +225,8 @@ const MemoizedFileCardBody = memo(function FileCardBody({
                   ? previewViewport
                   : undefined
               }
+              selectedReviewCommentId={selectedReviewCommentId}
+              selectedReviewThreadId={selectedReviewThreadId}
               reviewThreads={reviewThreads}
               selectedReviewAnchor={selectedReviewAnchor}
               terminalWidth={terminalWidth}
@@ -225,6 +237,8 @@ const MemoizedFileCardBody = memo(function FileCardBody({
               collapsedCommentStates={collapsedCommentStates}
               file={file}
               onToggleReviewThreadCollapsed={onToggleReviewThreadCollapsed}
+              selectedReviewCommentId={selectedReviewCommentId}
+              selectedReviewThreadId={selectedReviewThreadId}
               reviewThreads={reviewThreads}
               selectedReviewAnchor={selectedReviewAnchor}
               terminalWidth={terminalWidth}

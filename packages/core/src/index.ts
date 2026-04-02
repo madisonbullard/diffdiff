@@ -53,6 +53,7 @@ export type {
   GitHubPendingReview,
   GitHubPullRequestChecksSummary,
   GitHubPullRequestComment,
+  GitHubPullRequestConversationItem,
   GitHubPullRequestDetail,
   GitHubPullRequestMergeRequest,
   GitHubPullRequestMergeResult,

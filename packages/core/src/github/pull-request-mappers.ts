@@ -1,6 +1,7 @@
 import type {
   ForgeRepository,
   GitHubPullRequestComment,
+  GitHubPullRequestConversationItem,
   GitHubPullRequestDetail,
   GitHubPullRequestMergeState,
   GitHubPullRequestReviewGroup,
@@ -10,6 +11,7 @@ import type {
 import type { ReviewSession, ReviewWarning } from "../types/session.ts";
 import type {
   GitHubPullRequestDetailResponse,
+  GitHubIssueCommentResponse,
   GitHubPullRequestListResponse,
   GitHubReviewCommentResponse,
   GitHubReviewResponse,
@@ -86,6 +88,33 @@ export function buildReviewGroups(
   return groups.sort((left, right) => {
     const leftDate = left.submittedAt ?? left.comments[0]?.createdAt ?? "";
     const rightDate = right.submittedAt ?? right.comments[0]?.createdAt ?? "";
+    return leftDate.localeCompare(rightDate);
+  });
+}
+
+export function buildConversationItems(
+  reviews: readonly GitHubReviewResponse[],
+  issueComments: readonly GitHubPullRequestConversationItem[],
+): GitHubPullRequestConversationItem[] {
+  const reviewItems = reviews
+    .filter((review) => review.state !== "PENDING")
+    .filter((review) => review.body != null && review.body.trim() !== "")
+    .map((review) => ({
+      author: mapActor(review.user),
+      body: review.body!.trim(),
+      createdAt: review.submitted_at ?? "",
+      id: `review:${review.id}`,
+      kind: "review" as const,
+      reviewId: review.id,
+      reviewNodeId: review.node_id,
+      reviewState: review.state,
+      updatedAt: review.submitted_at ?? "",
+      url: review.html_url,
+    }));
+
+  return [...issueComments, ...reviewItems].sort((left, right) => {
+    const leftDate = left.createdAt || left.updatedAt;
+    const rightDate = right.createdAt || right.updatedAt;
     return leftDate.localeCompare(rightDate);
   });
 }
@@ -206,6 +235,20 @@ export function mapPullRequestComment(
     side: comment.side ?? "RIGHT",
     startLine: comment.start_line ?? undefined,
     startSide: comment.start_side ?? undefined,
+    updatedAt: comment.updated_at,
+    url: comment.html_url,
+  };
+}
+
+export function mapIssueComment(
+  comment: GitHubIssueCommentResponse,
+): GitHubPullRequestConversationItem {
+  return {
+    author: mapActor(comment.user),
+    body: comment.body,
+    createdAt: comment.created_at,
+    id: `pull-request-comment:${comment.id}`,
+    kind: "pull-request-comment",
     updatedAt: comment.updated_at,
     url: comment.html_url,
   };

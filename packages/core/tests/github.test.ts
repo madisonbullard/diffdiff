@@ -131,6 +131,7 @@ describe("GitHubPullRequestService", () => {
 
     expect(session.github?.pullRequest.title).toBe("UI polish");
     expect(session.github?.pullRequest.checks.state).toBe("success");
+    expect(session.github?.pullRequest.conversationItems).toHaveLength(2);
     expect(session.github?.pullRequest.reviewGroups).toHaveLength(2);
     expect(session.github?.pullRequest.reviewThreads).toHaveLength(1);
     expect(session.github?.pullRequest.reviewThreads[0]?.comments).toHaveLength(2);
@@ -218,6 +219,51 @@ describe("GitHubPullRequestService", () => {
         pull_number: 42,
         repo: "diffdiff",
         review_id: 9010,
+      },
+    );
+  });
+
+  test("replies to a review comment through the REST replies endpoint", async () => {
+    const client = createGitHubApiClient();
+    const clientFactory: GitHubClientFactory = {
+      create: vi.fn(async () => client),
+    };
+    const service = new GitHubPullRequestService(clientFactory);
+    const session = await service.attachReviewSession(createReviewSession());
+    const { requestMock } = client;
+
+    await service.replyToReviewComment(session.github!, 101, "Following up here.");
+
+    expect(requestMock).toHaveBeenCalledWith(
+      "POST /repos/{owner}/{repo}/pulls/{pull_number}/comments/{comment_id}/replies",
+      {
+        body: "Following up here.",
+        comment_id: 101,
+        owner: "diffdiff",
+        pull_number: 42,
+        repo: "diffdiff",
+      },
+    );
+  });
+
+  test("creates a PR-level conversation comment through the issues comments endpoint", async () => {
+    const client = createGitHubApiClient();
+    const clientFactory: GitHubClientFactory = {
+      create: vi.fn(async () => client),
+    };
+    const service = new GitHubPullRequestService(clientFactory);
+    const session = await service.attachReviewSession(createReviewSession());
+    const { requestMock } = client;
+
+    await service.addPullRequestComment(session.github!, "Quoting the earlier discussion.");
+
+    expect(requestMock).toHaveBeenCalledWith(
+      "POST /repos/{owner}/{repo}/issues/{issue_number}/comments",
+      {
+        body: "Quoting the earlier discussion.",
+        issue_number: 42,
+        owner: "diffdiff",
+        repo: "diffdiff",
       },
     );
   });
@@ -366,6 +412,42 @@ function createGitHubApiClient(options: { commentPath?: string } = {}): GitHubAp
       };
     }
 
+    if (route === "POST /repos/{owner}/{repo}/pulls/{pull_number}/comments/{comment_id}/replies") {
+      return {
+        body: "Following up here.",
+        commit_id: "headsha",
+        created_at: "2026-04-01T12:04:00Z",
+        diff_hunk: "@@ -1 +1 @@",
+        html_url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r103",
+        id: 103,
+        in_reply_to_id: 101,
+        line: 1,
+        node_id: "PRRC_103",
+        original_commit_id: "basesha",
+        original_line: 1,
+        path: commentPath,
+        pull_request_review_id: 9001,
+        side: "RIGHT",
+        start_line: null,
+        original_start_line: null,
+        start_side: null,
+        updated_at: "2026-04-01T12:04:00Z",
+        user: { html_url: "https://github.com/madison", login: "madison" },
+      };
+    }
+
+    if (route === "POST /repos/{owner}/{repo}/issues/{issue_number}/comments") {
+      return {
+        body: "Quoting the earlier discussion.",
+        created_at: "2026-04-01T12:05:00Z",
+        html_url: "https://github.com/diffdiff/diffdiff/pull/42#issuecomment-502",
+        id: 502,
+        node_id: "PRIC_502",
+        updated_at: "2026-04-01T12:05:00Z",
+        user: { html_url: "https://github.com/madison", login: "madison" },
+      };
+    }
+
     if (route === "PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge") {
       return {
         message: "Pull Request successfully merged",
@@ -390,6 +472,7 @@ function createGitHubApiClient(options: { commentPath?: string } = {}): GitHubAp
         return [
           {
             body: "Looks good.",
+            html_url: "https://github.com/diffdiff/diffdiff/pull/42#pullrequestreview-9001",
             id: 9001,
             node_id: "PRR_9001",
             state: "APPROVED",
@@ -398,6 +481,7 @@ function createGitHubApiClient(options: { commentPath?: string } = {}): GitHubAp
           },
           {
             body: null,
+            html_url: "https://github.com/diffdiff/diffdiff/pull/42#pullrequestreview-9010",
             id: 9010,
             node_id: "PRR_pending_9010",
             state: "PENDING",
@@ -450,6 +534,20 @@ function createGitHubApiClient(options: { commentPath?: string } = {}): GitHubAp
             start_side: null,
             updated_at: "2026-04-01T12:02:00Z",
             user: { html_url: "https://github.com/diffdiff-bot", login: "diffdiff-bot" },
+          },
+        ];
+      }
+
+      if (route === "GET /repos/{owner}/{repo}/issues/{issue_number}/comments") {
+        return [
+          {
+            body: "Can we tighten the rollout copy?",
+            created_at: "2026-04-01T11:58:00Z",
+            html_url: "https://github.com/diffdiff/diffdiff/pull/42#issuecomment-501",
+            id: 501,
+            node_id: "PRIC_501",
+            updated_at: "2026-04-01T11:58:00Z",
+            user: { html_url: "https://github.com/octocat", login: "octocat" },
           },
         ];
       }

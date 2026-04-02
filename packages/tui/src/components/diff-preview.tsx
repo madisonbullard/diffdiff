@@ -18,19 +18,25 @@ import {
 } from "../review-anchors.ts";
 import { tintHex } from "./shared.tsx";
 import {
+  buildSideBySideThreadIndex,
+  buildUnifiedThreadIndex,
+  getSideBySideRowThreads,
+  getUnifiedLineThreads,
+} from "./diff-thread-index.ts";
+import {
   getUnifiedVirtualWindow,
   shouldVirtualizeUnifiedPreview,
   type PreviewViewport,
 } from "./unified-diff-virtualization.ts";
-
-const EMPTY_THREADS: readonly GitHubPullRequestReviewThread[] = [];
 
 export function UnifiedDiffPreview({
   collapsedCommentStates,
   file,
   onToggleReviewThreadCollapsed,
   previewViewport,
+  selectedReviewCommentId,
   reviewThreads,
+  selectedReviewThreadId,
   selectedReviewAnchor,
   terminalWidth,
   theme,
@@ -39,7 +45,9 @@ export function UnifiedDiffPreview({
   file: PreparedReviewFile;
   onToggleReviewThreadCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
   previewViewport?: PreviewViewport;
+  selectedReviewCommentId?: number;
   reviewThreads: readonly GitHubPullRequestReviewThread[];
+  selectedReviewThreadId?: string;
   selectedReviewAnchor?: SelectedReviewAnchor;
   terminalWidth: number;
   theme: UiTheme;
@@ -86,6 +94,8 @@ export function UnifiedDiffPreview({
             <ReviewThreadList
               collapsedCommentStates={collapsedCommentStates}
               onToggleCollapsed={onToggleReviewThreadCollapsed}
+              selectedCommentId={selectedReviewCommentId}
+              selectedThreadId={selectedReviewThreadId}
               threads={lineThreads}
               theme={theme}
             />
@@ -98,6 +108,8 @@ export function UnifiedDiffPreview({
       <ReviewThreadList
         collapsedCommentStates={collapsedCommentStates}
         onToggleCollapsed={onToggleReviewThreadCollapsed}
+        selectedCommentId={selectedReviewCommentId}
+        selectedThreadId={selectedReviewThreadId}
         threads={threadIndex.unanchoredThreads}
         theme={theme}
       />
@@ -109,7 +121,9 @@ export function SideBySideDiffPreview({
   collapsedCommentStates,
   file,
   onToggleReviewThreadCollapsed,
+  selectedReviewCommentId,
   reviewThreads,
+  selectedReviewThreadId,
   selectedReviewAnchor,
   terminalWidth,
   theme,
@@ -117,7 +131,9 @@ export function SideBySideDiffPreview({
   collapsedCommentStates?: Readonly<Record<string, boolean>>;
   file: PreparedReviewFile;
   onToggleReviewThreadCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
+  selectedReviewCommentId?: number;
   reviewThreads: readonly GitHubPullRequestReviewThread[];
+  selectedReviewThreadId?: string;
   selectedReviewAnchor?: SelectedReviewAnchor;
   terminalWidth: number;
   theme: UiTheme;
@@ -147,6 +163,8 @@ export function SideBySideDiffPreview({
             <ReviewThreadList
               collapsedCommentStates={collapsedCommentStates}
               onToggleCollapsed={onToggleReviewThreadCollapsed}
+              selectedCommentId={selectedReviewCommentId}
+              selectedThreadId={selectedReviewThreadId}
               threads={rowThreads}
               theme={theme}
             />
@@ -156,207 +174,13 @@ export function SideBySideDiffPreview({
       <ReviewThreadList
         collapsedCommentStates={collapsedCommentStates}
         onToggleCollapsed={onToggleReviewThreadCollapsed}
+        selectedCommentId={selectedReviewCommentId}
+        selectedThreadId={selectedReviewThreadId}
         threads={threadIndex.unanchoredThreads}
         theme={theme}
       />
     </box>
   );
-}
-
-function buildUnifiedThreadIndex(
-  threads: readonly GitHubPullRequestReviewThread[],
-  lines: readonly UnifiedDiffLine[],
-) {
-  const leftLineNumbers = new Set<number>();
-  const rightLineNumbers = new Set<number>();
-
-  for (const line of lines) {
-    if (line.kind === "hunk" || line.kind === "gap") {
-      continue;
-    }
-
-    if (line.oldLineNumber != null) {
-      leftLineNumbers.add(line.oldLineNumber);
-    }
-
-    if (line.newLineNumber != null) {
-      rightLineNumbers.add(line.newLineNumber);
-    }
-  }
-
-  const leftThreads = new Map<number, GitHubPullRequestReviewThread[]>();
-  const rightThreads = new Map<number, GitHubPullRequestReviewThread[]>();
-  const unanchoredThreads: GitHubPullRequestReviewThread[] = [];
-
-  for (const thread of threads) {
-    const anchorLine = thread.line ?? thread.originalLine;
-    if (anchorLine == null) {
-      unanchoredThreads.push(thread);
-      continue;
-    }
-
-    if (thread.side === "LEFT") {
-      if (!leftLineNumbers.has(anchorLine)) {
-        unanchoredThreads.push(thread);
-        continue;
-      }
-
-      pushThread(leftThreads, anchorLine, thread);
-      continue;
-    }
-
-    if (!rightLineNumbers.has(anchorLine)) {
-      unanchoredThreads.push(thread);
-      continue;
-    }
-
-    pushThread(rightThreads, anchorLine, thread);
-  }
-
-  return {
-    leftThreads,
-    rightThreads,
-    unanchoredThreads,
-  };
-}
-
-function getUnifiedLineThreads(
-  threadIndex: ReturnType<typeof buildUnifiedThreadIndex>,
-  line: UnifiedDiffLine,
-): readonly GitHubPullRequestReviewThread[] {
-  if (line.kind === "hunk" || line.kind === "gap") {
-    return EMPTY_THREADS;
-  }
-
-  if (line.kind === "deletion") {
-    return line.oldLineNumber == null
-      ? EMPTY_THREADS
-      : (threadIndex.leftThreads.get(line.oldLineNumber) ?? EMPTY_THREADS);
-  }
-
-  if (line.kind === "addition") {
-    return line.newLineNumber == null
-      ? EMPTY_THREADS
-      : (threadIndex.rightThreads.get(line.newLineNumber) ?? EMPTY_THREADS);
-  }
-
-  const leftThreads =
-    line.oldLineNumber == null
-      ? EMPTY_THREADS
-      : (threadIndex.leftThreads.get(line.oldLineNumber) ?? EMPTY_THREADS);
-  const rightThreads =
-    line.newLineNumber == null
-      ? EMPTY_THREADS
-      : (threadIndex.rightThreads.get(line.newLineNumber) ?? EMPTY_THREADS);
-
-  if (leftThreads.length === 0) {
-    return rightThreads;
-  }
-
-  if (rightThreads.length === 0) {
-    return leftThreads;
-  }
-
-  return [...leftThreads, ...rightThreads];
-}
-
-function buildSideBySideThreadIndex(
-  threads: readonly GitHubPullRequestReviewThread[],
-  rows: readonly SideBySideDiffRow[],
-) {
-  const leftLineNumbers = new Set<number>();
-  const rightLineNumbers = new Set<number>();
-
-  for (const row of rows) {
-    if (row.kind !== "line") {
-      continue;
-    }
-
-    if (row.left?.lineNumber != null) {
-      leftLineNumbers.add(row.left.lineNumber);
-    }
-
-    if (row.right?.lineNumber != null) {
-      rightLineNumbers.add(row.right.lineNumber);
-    }
-  }
-
-  const leftThreads = new Map<number, GitHubPullRequestReviewThread[]>();
-  const rightThreads = new Map<number, GitHubPullRequestReviewThread[]>();
-  const unanchoredThreads: GitHubPullRequestReviewThread[] = [];
-
-  for (const thread of threads) {
-    const anchorLine = thread.line ?? thread.originalLine;
-    if (anchorLine == null) {
-      unanchoredThreads.push(thread);
-      continue;
-    }
-
-    if (thread.side === "LEFT") {
-      if (!leftLineNumbers.has(anchorLine)) {
-        unanchoredThreads.push(thread);
-        continue;
-      }
-
-      pushThread(leftThreads, anchorLine, thread);
-      continue;
-    }
-
-    if (!rightLineNumbers.has(anchorLine)) {
-      unanchoredThreads.push(thread);
-      continue;
-    }
-
-    pushThread(rightThreads, anchorLine, thread);
-  }
-
-  return {
-    leftThreads,
-    rightThreads,
-    unanchoredThreads,
-  };
-}
-
-function getSideBySideRowThreads(
-  threadIndex: ReturnType<typeof buildSideBySideThreadIndex>,
-  row: SideBySideDiffRow,
-): readonly GitHubPullRequestReviewThread[] {
-  if (row.kind !== "line") {
-    return EMPTY_THREADS;
-  }
-
-  const leftThreads =
-    row.left?.lineNumber == null
-      ? EMPTY_THREADS
-      : (threadIndex.leftThreads.get(row.left.lineNumber) ?? EMPTY_THREADS);
-  const rightThreads =
-    row.right?.lineNumber == null
-      ? EMPTY_THREADS
-      : (threadIndex.rightThreads.get(row.right.lineNumber) ?? EMPTY_THREADS);
-
-  if (leftThreads.length === 0) {
-    return rightThreads;
-  }
-
-  if (rightThreads.length === 0) {
-    return leftThreads;
-  }
-
-  return [...leftThreads, ...rightThreads];
-}
-
-function pushThread(
-  index: Map<number, GitHubPullRequestReviewThread[]>,
-  lineNumber: number,
-  thread: GitHubPullRequestReviewThread,
-): void {
-  const existingThreads = index.get(lineNumber);
-  if (existingThreads == null) {
-    index.set(lineNumber, [thread]);
-    return;
-  }
-
-  existingThreads.push(thread);
 }
 
 function SideBySideDiffRowView({

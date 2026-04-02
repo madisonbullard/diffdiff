@@ -32,6 +32,7 @@ export interface GitHubReviewResponse {
   node_id: string;
   state: string;
   body: string | null;
+  html_url: string;
   submitted_at: string | null;
   user: GitHubUserResponse | null;
 }
@@ -55,6 +56,16 @@ export interface GitHubReviewCommentResponse {
   in_reply_to_id: number | null;
   commit_id: string | null;
   original_commit_id: string | null;
+  user: GitHubUserResponse | null;
+}
+
+export interface GitHubIssueCommentResponse {
+  id: number;
+  node_id: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+  html_url: string;
   user: GitHubUserResponse | null;
 }
 
