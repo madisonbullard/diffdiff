@@ -268,6 +268,95 @@ test("uses a compact header for the sticky diff card and removes top list paddin
   expect(diffListContent.props.paddingBottom).toBe(1);
 });
 
+test("keeps non-first file headers expanded when selecting a later file", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ name: "j" });
+
+  const [firstCard, secondCard] = tree.root.findAllByType(FileCard);
+
+  expect(firstCard?.props.headerVariant).toBe("sticky-compact");
+  expect(secondCard?.props.headerVariant).toBeUndefined();
+});
+
+test("scrolls slightly past the next file when marking a file reviewed", () => {
+  const scrollboxes: ReturnType<typeof createMockScrollbox>[] = [];
+  const fileCardYs = [0, 10];
+  let fileCardRefIndex = 0;
+  const tree = render(<DiffdiffApp {...createAppProps()} />, {
+    createNodeMock(element) {
+      const props =
+        typeof element.props === "object" && element.props != null
+          ? (element.props as {
+              border?: unknown;
+              flexDirection?: unknown;
+              gap?: unknown;
+              paddingLeft?: unknown;
+            })
+          : undefined;
+
+      if (element.type === "scrollbox") {
+        const scrollbox = createMockScrollbox(false);
+        scrollboxes.push(scrollbox);
+        return scrollbox;
+      }
+
+      if (
+        element.type === "box" &&
+        Array.isArray(props?.border) &&
+        props.border[0] === "left" &&
+        props.paddingLeft === 2 &&
+        props.flexDirection === "column" &&
+        props.gap === 1
+      ) {
+        return { y: fileCardYs[fileCardRefIndex++] ?? 0 };
+      }
+
+      if (element.type === "box") {
+        return { y: 0 };
+      }
+
+      return null;
+    },
+  });
+
+  emitKey({ ctrl: true, name: "x" });
+  emitKey({ name: "r", sequence: "r" });
+
+  expect(getAppText(tree)).toContain("Reviewed src/app.ts. Jumped to src/utils.ts.");
+  expect(scrollboxes[1]?.scrollTo).toHaveBeenLastCalledWith({ x: 0, y: 13 });
+});
+
+test("marks all files reviewed with shift+r", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ name: "r", sequence: "R", shift: true });
+
+  expect(getAppText(tree)).toContain("Reviewed all 2 files.");
+  expect(getAppText(tree)).toContain("2 / 2 reviewed");
+});
+
+test("clears all reviewed files with alt+r", () => {
+  const files = [createPreparedFile(), createPreparedFile({ path: "src/utils.ts" })];
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ files }),
+        initialReviewCache: {
+          collapsedPaths: files.map((file) => file.path),
+          selectedFilePath: files[0]!.path,
+          reviewedPaths: files.map((file) => file.path),
+        },
+      })}
+    />,
+  );
+
+  emitKey({ meta: true, name: "r", sequence: "r" });
+
+  expect(getAppText(tree)).toContain("Cleared review marks from 2 files.");
+  expect(getAppText(tree)).toContain("0 / 2 reviewed");
+});
+
 test("renders base and head as the header comparison tags", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 
@@ -1486,15 +1575,22 @@ function render(node: ReactNode, options: Partial<TestRendererOptions> = {}): Re
 }
 
 function createMockScrollbox(visible: boolean) {
-  return {
+  const scrollbox = {
     content: { y: 0 },
-    scrollTo: vi.fn(),
+    height: 20,
+    scrollTop: 0,
+    scrollTo: vi.fn(({ y }: { x: number; y: number }) => {
+      scrollbox.scrollTop = y;
+    }),
+    viewport: { height: 20 },
     verticalScrollBar: {
       visible,
       on: vi.fn(),
       off: vi.fn(),
     },
   };
+
+  return scrollbox;
 }
 
 function collectInstanceText(node: ReactTestInstance): string {

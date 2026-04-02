@@ -168,6 +168,7 @@ const TERMINAL_BLUR_EVENT = "blur";
 const LEADER_KEYBIND = "ctrl+x";
 const COMMAND_LIST_KEYBIND = "ctrl+p";
 const EMPTY_REVIEW_THREADS: readonly import("@diffdiff/core").GitHubPullRequestReviewThread[] = [];
+const REVIEWED_NEXT_FILE_SCROLL_OFFSET = 3;
 
 function getMonotonicNow(): number {
   const now = globalThis.performance?.now?.();
@@ -435,6 +436,7 @@ export function DiffdiffApp({
   const mergeBodyScrollRef = useRef<ScrollBoxRenderable | null>(null);
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
   const fileCardRefs = useRef<(BoxRenderable | null)[]>([]);
+  const pendingSelectedFileScrollOffsetRef = useRef(0);
   const pendingInteractionRef = useRef<PendingInteraction | null>(null);
   const pendingReviewCacheRef = useRef<{ key: ReviewCacheKey; state: ReviewCacheState } | null>(
     null,
@@ -749,6 +751,22 @@ export function DiffdiffApp({
       },
       {
         category: "Review",
+        description: "Mark every file in the current comparison as reviewed.",
+        keybind: "shift+r",
+        title: "Mark all reviewed",
+        value: "review.mark-all-reviewed",
+        run: () => markAllReviewed(),
+      },
+      {
+        category: "Review",
+        description: "Clear the reviewed state from every file in the current comparison.",
+        keybind: "alt+r",
+        title: "Unmark all reviewed",
+        value: "review.clear-reviewed",
+        run: () => clearReviewed(),
+      },
+      {
+        category: "Review",
         description: "Collapse or expand the selected file diff.",
         keybind: "<leader>c,c,return",
         title: "Toggle collapsed",
@@ -821,6 +839,8 @@ export function DiffdiffApp({
       selectedFileIndex,
       session.github,
       showKeyLegend,
+      clearReviewed,
+      markAllReviewed,
       toggleCollapsed,
       toggleActivePane,
       toggleDiffView,
@@ -1270,7 +1290,9 @@ export function DiffdiffApp({
       return;
     }
 
-    scrollBox.scrollTo({ x: 0, y: offset });
+    const scrollOffset = pendingSelectedFileScrollOffsetRef.current;
+    pendingSelectedFileScrollOffsetRef.current = 0;
+    scrollBox.scrollTo({ x: 0, y: Math.max(offset + scrollOffset, 0) });
     setActiveFileIndex(selectedFileIndex);
   }, [getFileTopOffsets, selectedFileIndex]);
 
@@ -2089,7 +2111,7 @@ export function DiffdiffApp({
                     key={file.path}
                     file={file}
                     diffView={diffView}
-                    headerVariant={index === activeFileIndex ? "sticky-compact" : undefined}
+                    headerVariant={index === 0 ? "sticky-compact" : undefined}
                     isCollapsed={isCollapsed}
                     removeTopPadding={index === 0}
                     isReviewed={isReviewed}
@@ -2320,6 +2342,7 @@ export function DiffdiffApp({
           });
         }
 
+        pendingSelectedFileScrollOffsetRef.current = REVIEWED_NEXT_FILE_SCROLL_OFFSET;
         setSelectedFileIndex(nextIndex);
         setStatusMessage(
           `Reviewed ${file.path}. Jumped to ${files[nextIndex]?.path ?? "next file"}.`,
@@ -2328,6 +2351,39 @@ export function DiffdiffApp({
         setStatusMessage(`Reviewed ${file.path}. All files reviewed!`);
       }
     }
+  }
+
+  function markAllReviewed(): void {
+    if (session.files.length === 0) {
+      setStatusMessage("No files are available to review.");
+      return;
+    }
+
+    const allPaths = new Set(session.files.map((file) => file.path));
+    if (haveSamePaths(reviewedPaths, allPaths)) {
+      setStatusMessage("All files are already reviewed.");
+      return;
+    }
+
+    setReviewedPaths(allPaths);
+    setCollapsedPaths((currentPaths) => {
+      const nextPaths = new Set(currentPaths);
+      for (const path of allPaths) {
+        nextPaths.add(path);
+      }
+      return nextPaths;
+    });
+    setStatusMessage(`Reviewed all ${session.files.length} files.`);
+  }
+
+  function clearReviewed(): void {
+    if (reviewedPaths.size === 0) {
+      setStatusMessage("No files are marked reviewed.");
+      return;
+    }
+
+    setReviewedPaths(new Set());
+    setStatusMessage(`Cleared review marks from ${reviewedPaths.size} files.`);
   }
 
   function toggleCollapsed(fileIndex: number): void {
