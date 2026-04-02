@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
-import type { GitHubAuthSession } from "../types.ts";
+import type { GitHubAuthSession } from "../types/github.ts";
 import { getGitHubAuthConfigPaths } from "./config.ts";
 
 const execFileAsync = promisify(execFile);

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, test } from "vite-plus/test";
 import { loadReviewSession } from "../src/load-review-session.ts";
-import { parsePorcelainStatusEntries } from "../src/git.ts";
+import { parsePorcelainStatusEntries } from "../src/repository/patch.ts";
 
 const temporaryDirectories: string[] = [];
 const execFileAsync = promisify(execFile);

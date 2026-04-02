@@ -3,7 +3,7 @@ import type {
   GitHubPullRequestMergeRequest,
   GitHubRefCleanupCandidate,
   GitHubReviewSession,
-} from "../types.ts";
+} from "../types/github.ts";
 import type { DeletedRemoteRef } from "./pull-request-types.ts";
 
 export async function refreshPostMergeRefs(

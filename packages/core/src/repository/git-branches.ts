@@ -1,15 +1,15 @@
 import { runCommand } from "../command.ts";
 import { prioritizeRemoteBranches } from "../github/index.ts";
+import type { GitRemote } from "../types/github.ts";
+import type { ForgeMetadataProvider } from "../types/providers.ts";
 import type {
   BranchCollection,
   BranchInfo,
   BranchSummary,
   ComparisonCommit,
   ComparisonInfo,
-  ForgeMetadataProvider,
-  GitRemote,
   ReviewWarning,
-} from "../types.ts";
+} from "../types/session.ts";
 import { parseNumstatSummary } from "./patch.ts";
 
 const FIELD_SEPARATOR = "\u0000";

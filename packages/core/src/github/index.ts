@@ -1,23 +1,11 @@
+import type { BranchInfo } from "../types/session.ts";
 import type {
-  BranchInfo,
   ForgeBranchMetadataRequest,
   ForgeBranchMetadataResult,
   ForgeMetadataProvider,
-  ForgeRepository,
-  GitRemote,
-  PullRequestInfo,
-} from "../types.ts";
-import { clearGitHubToken, resolveGitHubAuth, storeGitHubToken } from "./auth.ts";
-import { OctokitGitHubClientFactory } from "./client.ts";
-import { getGitHubAuthConfigPaths } from "./config.ts";
-import { GitHubPullRequestService } from "./pull-requests.ts";
-import {
-  getDefaultDiffdiffPreferences,
-  getDefaultGitHubPreferences,
-  getDiffdiffPreferencesFilePath,
-  loadDiffdiffPreferences,
-  saveDiffdiffPreferences,
-} from "../preferences.ts";
+} from "../types/providers.ts";
+import type { ForgeRepository, GitRemote, PullRequestInfo } from "../types/github.ts";
+import { GitHubPullRequestService } from "./pull-request-service.ts";
 
 export class GitHubMetadataProvider implements ForgeMetadataProvider {
   readonly kind = "github";
@@ -110,17 +98,3 @@ export function prioritizeRemoteBranches(branches: BranchInfo[]): BranchInfo[] {
     return left.name.localeCompare(right.name);
   });
 }
-
-export {
-  clearGitHubToken,
-  getDefaultDiffdiffPreferences,
-  getDefaultGitHubPreferences,
-  getDiffdiffPreferencesFilePath,
-  getGitHubAuthConfigPaths,
-  GitHubPullRequestService,
-  loadDiffdiffPreferences,
-  OctokitGitHubClientFactory,
-  resolveGitHubAuth,
-  saveDiffdiffPreferences,
-  storeGitHubToken,
-};

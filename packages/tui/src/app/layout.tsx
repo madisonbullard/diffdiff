@@ -1,22 +1,17 @@
 import type { GitHubCleanupPreferences, GitHubRefCleanupCandidate } from "@diffdiff/core";
 import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
-import {
-  BranchModal,
-  CommandPaletteModal,
-  FileCard,
-  FileTreeSidebar,
-  HelpModal,
-  ListFilterModal,
-  StickyFileHeader,
-} from "../components.tsx";
-import {
-  MergePullRequestModal,
-  PostMergeCleanupModal,
-  PullRequestBanner,
-  PullRequestCommentsModal,
-  ReviewComposerModal,
-  SubmitReviewModal,
-} from "../github-review.tsx";
+import { BranchModal } from "../components/branch-modal.tsx";
+import { CommandPaletteModal } from "../components/command-palette-modal.tsx";
+import { FileCard, StickyFileHeader } from "../components/file-card.tsx";
+import { FileTreeSidebar } from "../components/file-tree-sidebar.tsx";
+import { HelpModal } from "../components/help-modal.tsx";
+import { ListFilterModal } from "../components/list-filter-modal.tsx";
+import { PullRequestBanner } from "../review/banner.tsx";
+import { PullRequestCommentsModal } from "../review/comments-modal.tsx";
+import { MergePullRequestModal } from "../review/merge-pull-request-modal.tsx";
+import { PostMergeCleanupModal } from "../review/post-merge-cleanup-modal.tsx";
+import { ReviewComposerModal } from "../review/review-composer-modal.tsx";
+import { SubmitReviewModal } from "../review/submit-review-modal.tsx";
 import type {
   AppPane,
   BranchListFilters,

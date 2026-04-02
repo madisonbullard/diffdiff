@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { parseChangedFilePatch, splitPatchIntoFiles } from "../src/git.ts";
+import { parseChangedFilePatch, splitPatchIntoFiles } from "../src/repository/patch.ts";
 
 describe("splitPatchIntoFiles", () => {
   test("splits a multi-file patch into separate sections", () => {

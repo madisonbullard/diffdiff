@@ -1,5 +1,5 @@
 import { runCommand } from "../command.ts";
-import type { ChangedFile, ChangeSummary } from "../types.ts";
+import type { ChangedFile, ChangeSummary } from "../types/session.ts";
 import {
   parseChangedFilePatch,
   parseNumstatSummary,

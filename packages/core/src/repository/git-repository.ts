@@ -2,17 +2,19 @@ import { basename } from "node:path";
 import { runCommand } from "../command.ts";
 import { DiffdiffError } from "../errors.ts";
 import { parseGitHubRemote } from "../github/index.ts";
+import type { GitRemote } from "../types/github.ts";
+import type {
+  ForgeMetadataProvider,
+  RepositoryHandle,
+  RepositoryProvider,
+} from "../types/providers.ts";
 import type {
   ComparisonInfo,
-  ForgeMetadataProvider,
-  GitRemote,
-  RepositoryHandle,
   RepositoryInfo,
-  RepositoryProvider,
   ReviewSession,
   ReviewWarning,
-  StartupOptions,
-} from "../types.ts";
+} from "../types/session.ts";
+import type { StartupOptions } from "../types/startup.ts";
 import {
   enrichBranchSummaries,
   enrichRemoteBranches,

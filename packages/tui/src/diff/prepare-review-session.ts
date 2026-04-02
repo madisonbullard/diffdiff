@@ -22,8 +22,6 @@ import {
 import { loadPierreDiffs, type PrepareReviewSessionOptions } from "./pierre-internals.ts";
 import { buildSideBySideRows, buildUnifiedLines, parseThemeVariables } from "./rich-preview.ts";
 
-export type { PrepareReviewSessionOptions } from "./pierre-internals.ts";
-
 export async function loadPreparedReviewSession(
   options: StartupOptions,
   themeName: PierreThemeName,

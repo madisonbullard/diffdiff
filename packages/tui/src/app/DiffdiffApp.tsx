@@ -26,26 +26,23 @@ import {
 import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  BranchModal,
-  CommandPaletteModal,
-  FileCard,
-  FileTreeSidebar,
-  HelpModal,
-  ListFilterModal,
-  StickyFileHeader,
-} from "../components.tsx";
+import { BranchModal } from "../components/branch-modal.tsx";
+import { CommandPaletteModal } from "../components/command-palette-modal.tsx";
+import { FileCard, StickyFileHeader } from "../components/file-card.tsx";
+import { FileTreeSidebar } from "../components/file-tree-sidebar.tsx";
+import { HelpModal } from "../components/help-modal.tsx";
+import { ListFilterModal } from "../components/list-filter-modal.tsx";
+import { PullRequestBanner } from "../review/banner.tsx";
+import { PullRequestCommentsModal } from "../review/comments-modal.tsx";
 import {
   getMergeMethod,
   getMergeMethodIndex,
-  MergePullRequestModal,
-  PostMergeCleanupModal,
   getReviewSubmissionEvent,
-  PullRequestBanner,
-  PullRequestCommentsModal,
-  ReviewComposerModal,
-  SubmitReviewModal,
-} from "../github-review.tsx";
+} from "../review/formatting.ts";
+import { MergePullRequestModal } from "../review/merge-pull-request-modal.tsx";
+import { PostMergeCleanupModal } from "../review/post-merge-cleanup-modal.tsx";
+import { ReviewComposerModal } from "../review/review-composer-modal.tsx";
+import { SubmitReviewModal } from "../review/submit-review-modal.tsx";
 import { getReviewAnchors } from "../review-anchors.ts";
 import type { UiTheme } from "../theme.ts";
 import type {
@@ -1548,14 +1545,13 @@ export function DiffdiffApp({
           </scrollbox>
 
           {showKeyLegend ? (
-            <box width="100%" paddingRight={1}>
+            <box width="100%" flexShrink={0} paddingRight={1}>
               <box
                 width="100%"
                 border={["left"]}
                 borderColor={theme.border}
                 paddingLeft={2}
                 paddingRight={1}
-                paddingY={1}
                 flexDirection="column"
                 gap={0}
               >
@@ -1575,7 +1571,7 @@ export function DiffdiffApp({
                   </span>
                   <span>{" pane  "}</span>
                   <span fg={theme.accent} bg={theme.surfaceMuted}>
-                    {" c/v "}
+                    {"  c  "}
                   </span>
                   <span>{" fold"}</span>
                 </text>
@@ -1585,15 +1581,21 @@ export function DiffdiffApp({
                   </span>
                   <span>{" mark  "}</span>
                   <span fg={theme.accent} bg={theme.surfaceMuted}>
-                    {"  l  "}
+                    {"  v  "}
                   </span>
-                  <span>{" list"}</span>
+                  <span>{" view"}</span>
                 </text>
                 <text fg={theme.textMuted} wrapMode="none">
                   <span fg={theme.accent} bg={theme.surfaceMuted}>
+                    {"  l  "}
+                  </span>
+                  <span>{" list  "}</span>
+                  <span fg={theme.accent} bg={theme.surfaceMuted}>
                     {"  ?  "}
                   </span>
-                  <span>{" help  "}</span>
+                  <span>{" help"}</span>
+                </text>
+                <text fg={theme.textMuted} wrapMode="none">
                   <span fg={theme.accent} bg={theme.surfaceMuted}>
                     {"  q  "}
                   </span>

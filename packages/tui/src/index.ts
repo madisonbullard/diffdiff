@@ -1,6 +1,9 @@
-export { DiffdiffApp } from "./app.tsx";
-export { BranchModal, FileCard, HelpModal, ListFilterModal } from "./components.tsx";
-export { loadPreparedReviewSession, prepareReviewSession } from "./pierre.ts";
+export { DiffdiffApp } from "./app/DiffdiffApp.tsx";
+export { BranchModal } from "./components/branch-modal.tsx";
+export { FileCard } from "./components/file-card.tsx";
+export { HelpModal } from "./components/help-modal.tsx";
+export { ListFilterModal } from "./components/list-filter-modal.tsx";
+export { loadPreparedReviewSession, prepareReviewSession } from "./diff/prepare-review-session.ts";
 export { getUiTheme } from "./theme.ts";
 export {
   buildBranchListItems,

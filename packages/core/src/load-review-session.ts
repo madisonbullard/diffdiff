@@ -1,13 +1,12 @@
-import { GitRepositoryProvider, getRepositorySearchPath } from "./git.ts";
-import { GitHubMetadataProvider, GitHubPullRequestService } from "./github/index.ts";
+import { GitHubMetadataProvider } from "./github/index.ts";
+import { GitHubPullRequestService } from "./github/pull-request-service.ts";
+import { GitRepositoryProvider } from "./repository/git-repository.ts";
+import { getRepositorySearchPath } from "./repository/path.ts";
 import { DiffdiffError } from "./errors.ts";
 import { logDiffdiffError, logDiffdiffInfo } from "./logging.ts";
-import type {
-  ForgeMetadataProvider,
-  RepositoryProvider,
-  ReviewSession,
-  StartupOptions,
-} from "./types.ts";
+import type { ForgeMetadataProvider, RepositoryProvider } from "./types/providers.ts";
+import type { ReviewSession } from "./types/session.ts";
+import type { StartupOptions } from "./types/startup.ts";
 
 const DEFAULT_REPOSITORY_PROVIDERS: readonly RepositoryProvider[] = [new GitRepositoryProvider()];
 const DEFAULT_GITHUB_PULL_REQUEST_SERVICE = new GitHubPullRequestService();

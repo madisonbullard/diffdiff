@@ -3,14 +3,11 @@ import type { ReactNode } from "react";
 import type { ReactTestRenderer } from "react-test-renderer";
 import { act, create } from "react-test-renderer";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
-import {
-  BranchModal,
-  FileCard,
-  FileTreeSidebar,
-  HelpModal,
-  ListFilterModal,
-  StickyFileHeader,
-} from "../src/components.tsx";
+import { BranchModal } from "../src/components/branch-modal.tsx";
+import { FileCard, StickyFileHeader } from "../src/components/file-card.tsx";
+import { FileTreeSidebar } from "../src/components/file-tree-sidebar.tsx";
+import { HelpModal } from "../src/components/help-modal.tsx";
+import { ListFilterModal } from "../src/components/list-filter-modal.tsx";
 import { getUiTheme } from "../src/theme.ts";
 import type { BranchListFilters, PreparedReviewFile } from "../src/types.ts";
 import {

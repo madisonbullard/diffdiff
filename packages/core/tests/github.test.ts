@@ -6,8 +6,9 @@ import * as commandModule from "../src/command.ts";
 import { GitHubMetadataProvider } from "../src/github/index.ts";
 import { resolveGitHubAuth, storeGitHubToken } from "../src/github/auth.ts";
 import { getGitHubAuthConfigPaths } from "../src/github/config.ts";
-import { GitHubPullRequestService } from "../src/github/pull-requests.ts";
-import type { GitHubApiClient, GitHubClientFactory, ReviewSession } from "../src/types.ts";
+import { GitHubPullRequestService } from "../src/github/pull-request-service.ts";
+import type { GitHubApiClient, GitHubClientFactory } from "../src/types/providers.ts";
+import type { ReviewSession } from "../src/types/session.ts";
 
 const temporaryDirectories: string[] = [];
 

@@ -7,8 +7,8 @@ import type {
 } from "react-test-renderer";
 import { act, create } from "react-test-renderer";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
-import { DiffdiffApp } from "../src/app.tsx";
-import { FileCard } from "../src/components.tsx";
+import { DiffdiffApp } from "../src/app/DiffdiffApp.tsx";
+import { FileCard } from "../src/components/file-card.tsx";
 import { getUiTheme } from "../src/theme.ts";
 import type { PreparedReviewFile, PreparedReviewSession } from "../src/types.ts";
 

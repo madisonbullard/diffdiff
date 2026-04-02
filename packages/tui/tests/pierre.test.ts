@@ -2,7 +2,7 @@ import type { ReviewSession } from "@diffdiff/core";
 import type { TerminalColors } from "@opentui/core";
 import { expect, test } from "vite-plus/test";
 import { createPierreSegmentColorResolver } from "../src/pierre-colors.ts";
-import { prepareReviewSession } from "../src/pierre.ts";
+import { prepareReviewSession } from "../src/diff/prepare-review-session.ts";
 import { createTerminalSyntaxPalette } from "../src/syntax-palette.ts";
 import { createTerminalUiTheme } from "../src/theme.ts";
 

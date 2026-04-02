@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { appendFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { ComparisonInfo } from "./types.ts";
+import type { ComparisonInfo } from "./types/session.ts";
 
 export type DiffdiffLogLevel = "info" | "warn" | "error";
 

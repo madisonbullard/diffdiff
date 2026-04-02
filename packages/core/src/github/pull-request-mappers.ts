@@ -1,13 +1,13 @@
 import type {
+  ForgeRepository,
   GitHubPullRequestComment,
   GitHubPullRequestDetail,
   GitHubPullRequestMergeState,
   GitHubPullRequestReviewGroup,
   GitHubPullRequestReviewThread,
   PullRequestInfo,
-  ReviewSession,
-  ReviewWarning,
-} from "../types.ts";
+} from "../types/github.ts";
+import type { ReviewSession, ReviewWarning } from "../types/session.ts";
 import type {
   GitHubPullRequestDetailResponse,
   GitHubPullRequestListResponse,
@@ -138,7 +138,7 @@ export function buildPullRequestWarnings(
 export function findActivePullRequestCandidate(session: ReviewSession): {
   pullRequest: PullRequestInfo;
   remoteName: string;
-  repository: import("../types.ts").ForgeRepository;
+  repository: ForgeRepository;
 } | null {
   if (session.comparison.mode !== "range") {
     return null;

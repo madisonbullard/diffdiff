@@ -175,8 +175,8 @@ async function launchTui(options: StartupOptions): Promise<void> {
   // background-color probe with the heavier TUI/runtime imports for the real app launch.
   const themeModulePromise = import("./theme.ts");
   const runtimeModulesPromise = Promise.all([
-    import("./app.tsx"),
-    import("./pierre.ts"),
+    import("./app/DiffdiffApp.tsx"),
+    import("./diff/prepare-review-session.ts"),
     import("./syntax-palette.ts"),
     import("./syntax-style.ts"),
   ]);

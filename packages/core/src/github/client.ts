@@ -1,10 +1,6 @@
 import { Octokit } from "octokit";
-import type {
-  ForgeRepository,
-  GitHubApiClient,
-  GitHubAuthSession,
-  GitHubClientFactory,
-} from "../types.ts";
+import type { ForgeRepository, GitHubAuthSession } from "../types/github.ts";
+import type { GitHubApiClient, GitHubClientFactory } from "../types/providers.ts";
 import { logDiffdiffError, logDiffdiffInfo } from "../logging.ts";
 import { resolveGitHubAuth } from "./auth.ts";
 

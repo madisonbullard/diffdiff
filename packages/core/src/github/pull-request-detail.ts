@@ -1,10 +1,10 @@
 import { logDiffdiffError } from "../logging.ts";
 import type {
   ForgeRepository,
-  GitHubApiClient,
   GitHubPullRequestChecksSummary,
   GitHubPullRequestDetail,
-} from "../types.ts";
+} from "../types/github.ts";
+import type { GitHubApiClient } from "../types/providers.ts";
 import {
   buildMergeState,
   buildReviewGroups,

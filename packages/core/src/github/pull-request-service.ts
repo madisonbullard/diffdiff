@@ -3,8 +3,6 @@ import { DiffdiffError } from "../errors.ts";
 import { logDiffdiffError, logDiffdiffInfo, logDiffdiffWarn } from "../logging.ts";
 import type {
   ForgeRepository,
-  GitHubApiClient,
-  GitHubClientFactory,
   GitHubPendingReview,
   GitHubPullRequestMergeRequest,
   GitHubPullRequestMergeResult,
@@ -13,8 +11,9 @@ import type {
   GitHubReviewSession,
   GitHubReviewSubmissionEvent,
   PullRequestInfo,
-  ReviewSession,
-} from "../types.ts";
+} from "../types/github.ts";
+import type { GitHubApiClient, GitHubClientFactory } from "../types/providers.ts";
+import type { ReviewSession } from "../types/session.ts";
 import { OctokitGitHubClientFactory } from "./client.ts";
 import { loadPullRequestDetail } from "./pull-request-detail.ts";
 import {

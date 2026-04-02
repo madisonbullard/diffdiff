@@ -14,25 +14,22 @@ export {
   startDiffdiffLogging,
   updateDiffdiffSessionActivity,
 } from "./logging.ts";
+export { GitRepositoryProvider } from "./repository/git-repository.ts";
 export {
-  GitRepositoryProvider,
   parseChangedFilePatch,
   parsePorcelainStatusEntries,
   splitPatchIntoFiles,
-} from "./git.ts";
+} from "./repository/patch.ts";
+export { getRepositorySearchPath } from "./repository/path.ts";
 export {
   GitHubMetadataProvider,
   parseGitHubRemote,
   prioritizeRemoteBranches,
 } from "./github/index.ts";
-export {
-  clearGitHubToken,
-  getGitHubAuthConfigPaths,
-  GitHubPullRequestService,
-  OctokitGitHubClientFactory,
-  resolveGitHubAuth,
-  storeGitHubToken,
-} from "./github/index.ts";
+export { clearGitHubToken, resolveGitHubAuth, storeGitHubToken } from "./github/auth.ts";
+export { OctokitGitHubClientFactory } from "./github/client.ts";
+export { getGitHubAuthConfigPaths } from "./github/config.ts";
+export { GitHubPullRequestService } from "./github/pull-request-service.ts";
 export { loadReviewCache, saveReviewCache } from "./review-cache.ts";
 export {
   getDefaultDiffdiffPreferences,
@@ -44,26 +41,12 @@ export {
 export { formatHelpText, parseStartupOptions, resolveStartupOptions } from "./startup-options.ts";
 export type { ReviewCacheKey, ReviewCacheState } from "./review-cache.ts";
 export type {
-  BranchCollection,
-  BranchInfo,
-  BranchSummary,
-  ChangedFile,
-  ChangeSummary,
-  ComparisonMode,
-  ComparisonCommit,
-  ComparisonInfo,
-  FileStatus,
-  ForgeBranchMetadataRequest,
-  ForgeBranchMetadataResult,
-  ForgeMetadataProvider,
+  DiffdiffPreferences,
   ForgeRepository,
-  GitRemote,
-  GitHubCleanupPreferences,
   GitHubActor,
-  GitHubApiClient,
   GitHubAuthSession,
   GitHubAuthStatus,
-  GitHubClientFactory,
+  GitHubCleanupPreferences,
   GitHubMergeMethod,
   GitHubPendingReview,
   GitHubPullRequestChecksSummary,
@@ -80,13 +63,30 @@ export type {
   GitHubReviewSubmissionEvent,
   GitHubTokenSource,
   GitHubUserPreferences,
-  DiffdiffPreferences,
-  ParsedStartupOptions,
+  GitRemote,
   PullRequestInfo,
+} from "./types/github.ts";
+export type {
+  ForgeBranchMetadataRequest,
+  ForgeBranchMetadataResult,
+  ForgeMetadataProvider,
+  GitHubApiClient,
+  GitHubClientFactory,
   RepositoryHandle,
-  RepositoryInfo,
   RepositoryProvider,
+} from "./types/providers.ts";
+export type {
+  BranchCollection,
+  BranchInfo,
+  BranchSummary,
+  ChangedFile,
+  ChangeSummary,
+  ComparisonMode,
+  ComparisonCommit,
+  ComparisonInfo,
+  FileStatus,
+  RepositoryInfo,
   ReviewSession,
   ReviewWarning,
-  StartupOptions,
-} from "./types.ts";
+} from "./types/session.ts";
+export type { ParsedStartupOptions, StartupOptions } from "./types/startup.ts";

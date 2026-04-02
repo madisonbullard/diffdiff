@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import type { DiffdiffPreferences, GitHubUserPreferences } from "./types.ts";
+import type { DiffdiffPreferences, GitHubUserPreferences } from "./types/github.ts";
 import { logDiffdiffError, logDiffdiffInfo } from "./logging.ts";
 
 const PREFERENCES_VERSION = 1;

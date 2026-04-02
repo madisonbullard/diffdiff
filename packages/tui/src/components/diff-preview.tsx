@@ -6,7 +6,7 @@ import {
   getThreadsForUnifiedLine,
   getUnanchoredSideBySideThreads,
   getUnanchoredUnifiedThreads,
-} from "../github-review.tsx";
+} from "../review/threads.tsx";
 import type { UiTheme } from "../theme.ts";
 import type {
   PreparedReviewFile,

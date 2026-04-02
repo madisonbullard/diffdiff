@@ -1,5 +1,5 @@
 import { DiffdiffError } from "../errors.ts";
-import type { ChangedFile, ChangeSummary } from "../types.ts";
+import type { ChangedFile, ChangeSummary } from "../types/session.ts";
 
 const FIELD_SEPARATOR = "\u0000";
 
