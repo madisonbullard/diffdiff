@@ -16,6 +16,9 @@ interface KeyboardInput {
   name: string;
   sequence?: string;
   shift?: boolean;
+  ctrl?: boolean;
+  meta?: boolean;
+  super?: boolean;
 }
 
 const selectionCopyState = vi.hoisted(() => ({
@@ -66,6 +69,11 @@ const rendererState = vi.hoisted(() => {
   return { renderer };
 });
 
+const terminalDimensionsState = vi.hoisted(() => ({
+  height: 40,
+  width: 160,
+}));
+
 const registeredKeyboardHandlers = new Set<(key: KeyboardInput) => void>();
 
 vi.mock("@opentui/react", () => {
@@ -77,7 +85,7 @@ vi.mock("@opentui/react", () => {
       return rendererState.renderer;
     },
     useTerminalDimensions() {
-      return { width: 160, height: 40 };
+      return terminalDimensionsState;
     },
   };
 });
@@ -99,6 +107,8 @@ beforeEach(() => {
   ).IS_REACT_ACT_ENVIRONMENT = true;
   registeredKeyboardHandlers.clear();
   rendererState.renderer.removeAllListeners();
+  terminalDimensionsState.width = 160;
+  terminalDimensionsState.height = 40;
   selectionCopyState.copySelection.mockReset().mockReturnValue(false);
   clipboardState.copyTextToClipboard.mockReset().mockResolvedValue(true);
   vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -125,6 +135,35 @@ test("removes main scroll focus while a modal is open", () => {
   expect(getDiffScrollbox(tree).props.focused).toBe(true);
 });
 
+test("opens the command palette with ctrl+p and runs the selected command", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ ctrl: true, name: "p" });
+
+  expect(getTreeScrollbox(tree).props.focused).toBe(false);
+  expect(getDiffScrollbox(tree).props.focused).toBe(false);
+  expect(getAppText(tree)).toContain("Commands");
+
+  emitText("list");
+  emitKey({ name: "return" });
+
+  expect(getAppText(tree)).toContain("Opened list modal.");
+  expect(getAppText(tree)).toContain("Working tree");
+});
+
+test("runs leader key commands with ctrl+x", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ ctrl: true, name: "x" });
+
+  expect(getAppText(tree)).toContain("Leader key active");
+
+  emitKey({ name: "l", sequence: "l" });
+
+  expect(getAppText(tree)).toContain("Opened list modal.");
+  expect(getAppText(tree)).toContain("Working tree");
+});
+
 test("tab switches to the file tree and tree navigation opens files", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 
@@ -141,33 +180,38 @@ test("tab switches to the file tree and tree navigation opens files", () => {
   expect(getDiffScrollbox(tree).props.focused).toBe(true);
 });
 
-test("shrinks the file tree header when the tree scrollbar is visible", () => {
-  let scrollboxIndex = 0;
-  const tree = render(<DiffdiffApp {...createAppProps()} />, {
-    createNodeMock(element) {
-      if (element.type === "scrollbox") {
-        scrollboxIndex += 1;
-
-        return createMockScrollbox(scrollboxIndex === 1);
-      }
-
-      if (element.type === "box") {
-        return { y: 0 };
-      }
-
-      return null;
-    },
-  });
-
-  const reviewSummaryCard = tree.root.find(
-    (node) =>
-      String(node.type) === "box" &&
-      Array.isArray(node.props.border) &&
-      node.props.border.includes("left") &&
-      collectInstanceText(node).includes("reviewed"),
+test("uses a compact file tree summary when the sidebar is narrow", () => {
+  terminalDimensionsState.width = 80;
+  const files = [
+    createPreparedFile({ additions: 206, deletions: 1 }),
+    createPreparedFile({ path: "src/components.tsx", additions: 104, deletions: 3 }),
+    createPreparedFile({ path: "src/github-review.tsx", additions: 63, deletions: 35 }),
+    createPreparedFile({ path: "src/view-model.ts", additions: 3, deletions: 3 }),
+    createPreparedFile({
+      path: "tests/__snapshots__/components.test.tsx.snap",
+      additions: 219,
+      deletions: 0,
+    }),
+    createPreparedFile({ path: "tests/app.test.tsx", additions: 137, deletions: 5 }),
+    createPreparedFile({ path: "tests/components.test.tsx", additions: 41, deletions: 0 }),
+    createPreparedFile({ path: "tests/view-model.test.ts", additions: 1, deletions: 0 }),
+  ];
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ files }),
+        initialReviewCache: {
+          collapsedPaths: [],
+          selectedFilePath: files[5]!.path,
+          reviewedPaths: [files[0]!.path, files[5]!.path],
+        },
+      })}
+    />,
   );
 
-  expect(reviewSummaryCard.parent?.props.paddingRight).toBe(1);
+  expect(getAppText(tree)).toContain("2 /8 rev");
+  expect(getAppText(tree)).toContain("+774 / -47");
+  expect(getAppText(tree)).not.toContain("2 / 8 reviewed");
 });
 
 test("keeps background file selection stable when modal handlers rerender", () => {
@@ -202,6 +246,26 @@ test("starts deleted file diffs collapsed", () => {
 
   expect(deletedCard?.props.file.path).toBe("src/removed.ts");
   expect(deletedCard?.props.isCollapsed).toBe(true);
+});
+
+test("uses a compact header for the sticky diff card and removes top list padding", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  const [firstCard, secondCard] = tree.root.findAllByType(FileCard);
+  const diffListContent = getDiffScrollbox(tree).find(
+    (node) =>
+      String(node.type) === "box" &&
+      node.parent === getDiffScrollbox(tree) &&
+      node.props.paddingLeft === 1 &&
+      node.props.gap === 1,
+  );
+
+  expect(firstCard?.props.headerVariant).toBe("sticky-compact");
+  expect(firstCard?.props.removeTopPadding).toBe(true);
+  expect(secondCard?.props.headerVariant).toBeUndefined();
+  expect(secondCard?.props.removeTopPadding).toBe(false);
+  expect(diffListContent.props.paddingTop).toBeUndefined();
+  expect(diffListContent.props.paddingBottom).toBe(1);
 });
 
 test("shows a copy toast for five seconds after a successful copy", () => {
@@ -332,6 +396,15 @@ test("shows an animated event log entry while loading a new base branch", async 
   expect(getAppText(tree)).toContain("Updating base to main...");
   expect(getAppText(tree)).not.toContain("Loading...");
   expect(getAppText(tree)).toMatch(/⠋\s+Updating base to main\.\.\./);
+  const footerEventBox = tree.root.find(
+    (node) =>
+      String(node.type) === "box" &&
+      node.props.flexGrow === 1 &&
+      collectInstanceText(node).includes("Updating base to main..."),
+  );
+
+  expect(footerEventBox.props.flexDirection).toBe("row");
+  expect(footerEventBox.props.justifyContent).toBe("flex-end");
 
   act(() => {
     vi.advanceTimersByTime(80);
@@ -455,14 +528,111 @@ test("shows PR review context and can toggle outdated threads", () => {
     />,
   );
 
-  expect(getAppText(tree)).toContain("PR #42");
+  expect(getAppText(tree)).toContain("#42");
   expect(getAppText(tree)).toContain("Build TUI reviewer");
+  expect(getAppText(tree)).toContain("1 outdated");
+  expect(getAppText(tree)).not.toContain("threads");
+  expect(getAppText(tree)).not.toContain("hiding outdated");
+  expect(getAppText(tree)).toContain("show outdated");
   expect(getAppText(tree)).toContain("Please rename this variable.");
   expect(getAppText(tree)).not.toContain("This thread is outdated.");
 
   emitKey({ name: "u" });
 
+  expect(getAppText(tree)).not.toContain("show outdated");
+  expect(getAppText(tree)).toContain("hide outdated");
   expect(getAppText(tree)).toContain("This thread is outdated.");
+});
+
+test("renders the PR banner flush with the header", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+      })}
+    />,
+  );
+
+  const prBanner = tree.root.find(
+    (node) =>
+      String(node.type) === "box" &&
+      collectInstanceText(node).includes("#42") &&
+      collectInstanceText(node).includes("Build TUI reviewer") &&
+      collectInstanceText(node).includes("merge ready") &&
+      !collectInstanceText(node).includes("diffdiff"),
+  );
+
+  expect(prBanner.props.border).toBeUndefined();
+  expect(prBanner.props.paddingLeft).toBeUndefined();
+  expect(prBanner.props.paddingRight).toBeUndefined();
+  expect(prBanner.props.paddingTop).toBeUndefined();
+  expect(prBanner.props.paddingBottom).toBeUndefined();
+  expect(prBanner.props.backgroundColor).toBeUndefined();
+  expect(prBanner.findAll((node) => String(node.type) === "text")).toHaveLength(1);
+});
+
+test("uses the draft PR tag instead of a separate draft status", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({
+          github: createGitHubReviewSession({
+            pullRequest: {
+              ...createGitHubReviewSession()!.pullRequest,
+              isDraft: true,
+              merge: {
+                ...createGitHubReviewSession()!.pullRequest.merge,
+                canMerge: false,
+                isDraft: true,
+                mergeableState: "blocked",
+              },
+            },
+          }),
+        }),
+      })}
+    />,
+  );
+
+  const draftTag = tree.root.find(
+    (node) => String(node.type) === "span" && collectInstanceText(node).includes("DRAFT PR"),
+  );
+
+  expect(draftTag.props.bg).toBe(theme.warning);
+  expect(getAppText(tree)).toContain("DRAFT PR");
+  expect(getAppText(tree)).toContain("#42");
+  expect(getAppText(tree)).not.toContain(" draft ");
+  expect(getAppText(tree)).toContain("merge blocked");
+});
+
+test("shows a red closed PR tag", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({
+          github: createGitHubReviewSession({
+            pullRequest: {
+              ...createGitHubReviewSession()!.pullRequest,
+              state: "closed",
+              merge: {
+                ...createGitHubReviewSession()!.pullRequest.merge,
+                canMerge: false,
+                mergeableState: "blocked",
+              },
+            },
+          }),
+        }),
+      })}
+    />,
+  );
+
+  const closedTag = tree.root.find(
+    (node) => String(node.type) === "span" && collectInstanceText(node).includes("CLOSED PR"),
+  );
+
+  expect(closedTag.props.bg).toBe(theme.danger);
+  expect(getAppText(tree)).toContain("CLOSED PR");
+  expect(getAppText(tree)).toContain("#42");
+  expect(getAppText(tree)).toContain("closed");
 });
 
 test("opens the PR comments modal from review mode", () => {
@@ -1240,9 +1410,11 @@ function createMockScrollbox(visible: boolean) {
 }
 
 function collectInstanceText(node: ReactTestInstance): string {
-  return node.children
-    .map((child) => (typeof child === "string" ? child : collectInstanceText(child)))
-    .join(" ");
+  return normalizeWhitespace(
+    node.children
+      .map((child) => (typeof child === "string" ? child : collectInstanceText(child)))
+      .join(" "),
+  );
 }
 
 function collectText(node: unknown): string {
@@ -1260,8 +1432,12 @@ function collectText(node: unknown): string {
 
   if (typeof node === "object" && "children" in node) {
     const children = (node as { children?: unknown[] }).children;
-    return children?.map((child) => collectText(child)).join(" ") ?? "";
+    return normalizeWhitespace(children?.map((child) => collectText(child)).join(" ") ?? "");
   }
 
   return "";
+}
+
+function normalizeWhitespace(value: string): string {
+  return value.replace(/\s+/gu, " ").trim();
 }

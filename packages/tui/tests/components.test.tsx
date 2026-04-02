@@ -50,6 +50,47 @@ test("renders an expanded file card snapshot", () => {
   expect(tree.toJSON()).toMatchSnapshot();
 });
 
+test("renders a compact sticky file card header snapshot", () => {
+  const tree = render(
+    <FileCard
+      file={createPreparedFile()}
+      diffView="unified"
+      headerVariant="sticky-compact"
+      isCollapsed={false}
+      isReviewed={true}
+      isSelected={false}
+      syntaxStyle={syntaxStyle}
+      terminalWidth={160}
+      theme={theme}
+    />,
+  );
+
+  expect(tree.toJSON()).toMatchSnapshot();
+  expect(collectText(tree.toJSON())).toContain("CHANGED");
+  expect(collectText(tree.toJSON())).toContain("REVIEWED");
+  expect(collectText(tree.toJSON())).not.toContain("src/app.ts");
+});
+
+test("removes top padding for the first compact file card", () => {
+  const tree = render(
+    <FileCard
+      file={createPreparedFile()}
+      diffView="unified"
+      headerVariant="sticky-compact"
+      isCollapsed={false}
+      removeTopPadding={true}
+      isReviewed={false}
+      isSelected={true}
+      syntaxStyle={syntaxStyle}
+      terminalWidth={160}
+      theme={theme}
+    />,
+  );
+
+  expect(tree.toJSON()).toMatchObject({ props: { paddingTop: 0 } });
+  expect(collectText(tree.toJSON())).toContain("CHANGED");
+});
+
 test("renders a branch modal snapshot", () => {
   const filters: BranchListFilters = {
     workingTree: true,
@@ -300,6 +341,8 @@ test("renders empty branch columns and help copy", () => {
   expect(collectText(branchModal.toJSON())).toContain("Working tree");
   expect(collectText(branchModal.toJSON())).toContain("ACTIVE");
   expect(collectText(filterModal.toJSON())).toContain("Remote branches");
+  expect(collectText(helpModal.toJSON())).toContain("ctrl+p");
+  expect(collectText(helpModal.toJSON())).toContain("ctrl+x");
   expect(collectText(helpModal.toJSON())).toContain("list modal");
   expect(collectText(helpModal.toJSON())).toContain("working tree");
   expect(collectText(helpModal.toJSON())).toContain("switch tree/diff pane");

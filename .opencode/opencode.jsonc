@@ -1,9 +1,9 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "interactive-terminal": {
+    "ht-mcp": {
       "type": "local",
-      "command": ["uvx", "interactive-terminal-mcp"],
+      "command": ["ht-mcp"],
       "enabled": true,
     },
   },

@@ -224,6 +224,7 @@ test("resolveDiffView matches the split threshold used by side-by-side mode", ()
   expect(getDiffViewLabel("unified")).toBe("unified");
   expect(getDiffViewLabel("split")).toBe("side-by-side");
   expect(getFileTreeSidebarWidth(80)).toBe(FILE_TREE_SIDEBAR_MIN_WIDTH);
+  expect(getFileTreeSidebarWidth(120)).toBe(36);
   expect(getFileTreeSidebarWidth(300)).toBe(FILE_TREE_SIDEBAR_MAX_WIDTH);
   expect(getDiffPaneWidth(160, 32)).toBe(124);
 });

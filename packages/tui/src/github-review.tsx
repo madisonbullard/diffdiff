@@ -32,58 +32,38 @@ const MODAL_OVERLAY = "#00000096";
 
 export function PullRequestBanner({
   pullRequest,
-  showOutdatedThreads,
   theme,
 }: {
   pullRequest: GitHubPullRequestDetail;
-  showOutdatedThreads: boolean;
   theme: UiTheme;
 }) {
-  const hiddenOutdatedCount = pullRequest.reviewThreads.filter(
+  const outdatedThreadCount = pullRequest.reviewThreads.filter(
     (thread) => thread.isOutdated,
   ).length;
-  const mergeStatus = pullRequest.merge.canMerge
-    ? "merge ready"
-    : pullRequest.isMerged
-      ? "merged"
-      : pullRequest.isDraft
-        ? "draft"
-        : (pullRequest.merge.mergeableState ?? "merge blocked");
+  const pullRequestTag = getPullRequestTag(pullRequest, theme);
+  const mergeStatus = getMergeStatusLabel(pullRequest);
 
   return (
-    <box
-      width="100%"
-      border={["left"]}
-      customBorderChars={REVIEW_BORDER}
-      borderColor={theme.success}
-      backgroundColor={theme.surface}
-      paddingLeft={2}
-      paddingRight={1}
-      paddingTop={1}
-      paddingBottom={1}
-      flexDirection="column"
-      gap={0}
-    >
-      <text fg={theme.text} wrapMode="none">
-        <span fg={theme.inverseText} bg={theme.success}>{` PR #${pullRequest.number} `}</span>
+    <box width="100%">
+      <text fg={theme.textMuted} wrapMode="none">
+        <span
+          fg={theme.inverseText}
+          bg={pullRequestTag.background}
+        >{` ${pullRequestTag.label} `}</span>
         <span> </span>
-        <span fg={theme.success}>{pullRequest.title}</span>
+        <span fg={theme.text}>{`#${pullRequest.number}`}</span>
+        <span> </span>
+        <span fg={theme.text}>{pullRequest.title}</span>
         <span fg={theme.border}>{"  │  "}</span>
         <span fg={theme.textMuted}>{pullRequest.author.login}</span>
-      </text>
-      <text fg={theme.textMuted} wrapMode="none">
-        <span>{`${pullRequest.reviewThreads.length}`}</span>
-        <span>{" threads"}</span>
         <span fg={theme.border}>{"  │  "}</span>
         <span fg={getChecksColor(pullRequest, theme)}>{formatChecksSummary(pullRequest)}</span>
         <span fg={theme.border}>{"  │  "}</span>
-        <span fg={pullRequest.merge.canMerge ? theme.success : theme.warning}>{mergeStatus}</span>
-        <span fg={theme.border}>{"  │  "}</span>
-        <span>{showOutdatedThreads ? "showing outdated" : "hiding outdated"}</span>
-        {!showOutdatedThreads && hiddenOutdatedCount > 0 ? (
+        <span fg={getMergeStatusColor(pullRequest, theme)}>{mergeStatus}</span>
+        {outdatedThreadCount > 0 ? (
           <>
             <span fg={theme.border}>{"  │  "}</span>
-            <span>{`${hiddenOutdatedCount} hidden`}</span>
+            <span>{`${outdatedThreadCount} outdated`}</span>
           </>
         ) : null}
       </text>
@@ -895,6 +875,41 @@ function formatChecksSummary(pullRequest: GitHubPullRequestDetail): string {
   return `${pullRequest.checks.successful}/${pullRequest.checks.total} checks ${pullRequest.checks.state}`;
 }
 
+function getPullRequestTag(
+  pullRequest: GitHubPullRequestDetail,
+  theme: UiTheme,
+): { background: string; label: string } {
+  if (pullRequest.state !== "open") {
+    return { background: theme.danger, label: "CLOSED PR" };
+  }
+
+  if (pullRequest.isDraft) {
+    return { background: theme.warning, label: "DRAFT PR" };
+  }
+
+  return { background: theme.success, label: "PR" };
+}
+
+function getMergeStatusLabel(pullRequest: GitHubPullRequestDetail): string {
+  if (pullRequest.isMerged) {
+    return "merged";
+  }
+
+  if (pullRequest.state !== "open") {
+    return "closed";
+  }
+
+  if (pullRequest.isDraft) {
+    return "merge blocked";
+  }
+
+  if (pullRequest.merge.canMerge) {
+    return "merge ready";
+  }
+
+  return pullRequest.merge.mergeableState ?? "merge blocked";
+}
+
 function formatTimestamp(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -915,6 +930,22 @@ function getChecksColor(pullRequest: GitHubPullRequestDetail, theme: UiTheme): s
     case "unknown":
       return theme.textMuted;
   }
+}
+
+function getMergeStatusColor(pullRequest: GitHubPullRequestDetail, theme: UiTheme): string {
+  if (pullRequest.isMerged) {
+    return theme.success;
+  }
+
+  if (pullRequest.state !== "open") {
+    return theme.danger;
+  }
+
+  if (pullRequest.isDraft) {
+    return theme.warning;
+  }
+
+  return pullRequest.merge.canMerge ? theme.success : theme.warning;
 }
 
 function getReviewStateColor(state: string, theme: UiTheme): string {

@@ -1052,6 +1052,225 @@ exports[`renders a commit view snapshot 1`] = `
 </box>
 `;
 
+exports[`renders a compact sticky file card header snapshot 1`] = `
+<box
+  backgroundColor="#10202d"
+  border={
+    [
+      "left",
+    ]
+  }
+  borderColor="#3fb950"
+  customBorderChars={
+    {
+      "bottomLeft": "",
+      "bottomRight": "",
+      "bottomT": "",
+      "cross": "",
+      "horizontal": " ",
+      "leftT": "",
+      "rightT": "",
+      "topLeft": "",
+      "topRight": "",
+      "topT": "",
+      "vertical": "┃",
+    }
+  }
+  flexDirection="column"
+  gap={1}
+  paddingBottom={1}
+  paddingLeft={2}
+  paddingRight={0}
+  paddingTop={1}
+  width="100%"
+>
+  <box
+    width="100%"
+  >
+    <text
+      fg="#8ea4b5"
+      wrapMode="none"
+    >
+      <span
+        bg="#9cdcfe"
+        fg="#0b1b26"
+      >
+         CHANGED 
+      </span>
+      <span>
+         
+      </span>
+      <span
+        bg="#0d2634"
+        fg="#3fb950"
+      >
+         REVIEWED 
+      </span>
+    </text>
+  </box>
+  <box
+    flexDirection="column"
+    width="100%"
+  >
+    <box
+      width="100%"
+    >
+      <box
+        flexDirection="column"
+        width="100%"
+      >
+        <box
+          flexDirection="column"
+          width="100%"
+        >
+          <box
+            backgroundColor="#183041"
+            width="100%"
+          >
+            <text
+              fg="#d4a72c"
+              wrapMode="word"
+            >
+              <span>
+                     
+              </span>
+              <span
+                fg="#e6edf3"
+              >
+                @@ -1,2 +1,3 @@
+              </span>
+            </text>
+          </box>
+        </box>
+        <box
+          flexDirection="column"
+          width="100%"
+        >
+          <box
+            flexDirection="row"
+            width="100%"
+          >
+            <box
+              backgroundColor="#3a2021"
+              width={5}
+            >
+              <text
+                fg="#8ea4b5"
+                wrapMode="none"
+              >
+                 1
+                <span
+                  fg="#ff7b72"
+                >
+                   -
+                </span>
+              </text>
+            </box>
+            <box
+              backgroundColor="#2a1718"
+              flexGrow={1}
+            >
+              <text
+                fg="#e6edf3"
+                wrapMode="word"
+              >
+                <span
+                  fg="#ff7b72"
+                >
+                  const count = 0
+                </span>
+              </text>
+            </box>
+          </box>
+        </box>
+        <box
+          flexDirection="column"
+          width="100%"
+        >
+          <box
+            flexDirection="row"
+            width="100%"
+          >
+            <box
+              backgroundColor="#163526"
+              width={5}
+            >
+              <text
+                fg="#8ea4b5"
+                wrapMode="none"
+              >
+                 1
+                <span
+                  fg="#3fb950"
+                >
+                   +
+                </span>
+              </text>
+            </box>
+            <box
+              backgroundColor="#0f2619"
+              flexGrow={1}
+            >
+              <text
+                fg="#e6edf3"
+                wrapMode="word"
+              >
+                <span
+                  fg="#3fb950"
+                >
+                  const count = 1
+                </span>
+              </text>
+            </box>
+          </box>
+        </box>
+        <box
+          flexDirection="column"
+          width="100%"
+        >
+          <box
+            flexDirection="row"
+            width="100%"
+          >
+            <box
+              backgroundColor="#0d1822"
+              width={5}
+            >
+              <text
+                fg="#8ea4b5"
+                wrapMode="none"
+              >
+                 2
+                <span
+                  fg="#8ea4b5"
+                >
+                    
+                </span>
+              </text>
+            </box>
+            <box
+              backgroundColor="#0d1822"
+              flexGrow={1}
+            >
+              <text
+                fg="#e6edf3"
+                wrapMode="word"
+              >
+                <span
+                  fg="#e6edf3"
+                >
+                  console.log(count)
+                </span>
+              </text>
+            </box>
+          </box>
+        </box>
+      </box>
+    </box>
+  </box>
+</box>
+`;
+
 exports[`renders a sticky file header for the active viewport file 1`] = `
 <box
   backgroundColor="#10202d"
@@ -1232,7 +1451,7 @@ exports[`renders an expanded file card snapshot 1`] = `
     width="100%"
   >
     <box
-      paddingLeft={1}
+      width="100%"
     >
       <box
         flexDirection="column"

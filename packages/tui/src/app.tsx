@@ -28,6 +28,7 @@ import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BranchModal,
+  CommandPaletteModal,
   FileCard,
   FileTreeSidebar,
   HelpModal,
@@ -55,6 +56,14 @@ import type {
   ListModalView,
   PreparedReviewSession,
 } from "./types.ts";
+import {
+  filterCommands,
+  formatCommandKeybind,
+  isPrintableKey,
+  matchCommandKeybind,
+  type CommandDefinition,
+  type KeyboardInput,
+} from "./commands.ts";
 import {
   buildFileTreeNodes,
   buildBranchListItems,
@@ -104,18 +113,17 @@ interface DiffdiffAppProps {
   theme: UiTheme;
 }
 
-interface KeyboardInput {
-  name: string;
-  sequence?: string;
-  shift?: boolean;
-}
-
 type MergeModalField = "method" | "title" | "body";
+type AppCommand = CommandDefinition & {
+  run: () => void;
+};
 
 const LIST_FILTER_KEYS = ["workingTree", "localBranch", "openPr", "remoteBranch"] as const;
 const LOADING_INDICATOR_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
 const TERMINAL_FOCUS_EVENT = "focus";
 const TERMINAL_BLUR_EVENT = "blur";
+const LEADER_KEYBIND = "ctrl+x";
+const COMMAND_LIST_KEYBIND = "ctrl+p";
 
 function haveSamePaths(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
   if (left.size !== right.size) {
@@ -196,6 +204,71 @@ function getBranchFilterLabel(key: keyof BranchListFilters): string {
   }
 }
 
+function normalizeInlineMessage(message: string): string {
+  return message.replace(/\s+/gu, " ").trim();
+}
+
+function truncateInlineMessage(message: string, maxWidth: number): string {
+  const normalizedMessage = normalizeInlineMessage(message);
+  if (maxWidth <= 0) {
+    return "";
+  }
+
+  if (normalizedMessage.length <= maxWidth) {
+    return normalizedMessage;
+  }
+
+  if (maxWidth <= 3) {
+    return normalizedMessage.slice(0, maxWidth);
+  }
+
+  return `${normalizedMessage.slice(0, maxWidth - 3)}...`;
+}
+
+function getTreeSummaryLabels({
+  additions,
+  deletions,
+  reviewedCount,
+  sidebarWidth,
+  totalFiles,
+}: {
+  additions: number;
+  deletions: number;
+  reviewedCount: number;
+  sidebarWidth: number;
+  totalFiles: number;
+}) {
+  const contentWidth = Math.max(sidebarWidth - 6, 0);
+  const variants = [
+    {
+      reviewed: `${reviewedCount} / ${totalFiles} reviewed`,
+      diffAdditions: `+${additions}`,
+      diffSeparator: " / ",
+      diffDeletions: `-${deletions}`,
+    },
+    {
+      reviewed: `${reviewedCount}/${totalFiles} rev`,
+      diffAdditions: `+${additions}`,
+      diffSeparator: "/",
+      diffDeletions: `-${deletions}`,
+    },
+    {
+      reviewed: `${reviewedCount}/${totalFiles}`,
+      diffAdditions: `+${additions}`,
+      diffSeparator: "/",
+      diffDeletions: `-${deletions}`,
+    },
+  ];
+
+  return (
+    variants.find(
+      ({ reviewed, diffAdditions, diffSeparator, diffDeletions }) =>
+        reviewed.length + diffAdditions.length + diffSeparator.length + diffDeletions.length + 1 <=
+        contentWidth,
+    ) ?? variants[variants.length - 1]!
+  );
+}
+
 export function DiffdiffApp({
   addReviewThread,
   initialGitHubPreferences,
@@ -258,11 +331,14 @@ export function DiffdiffApp({
   const gitHubPreferencesRef = useRef<GitHubUserPreferences>(
     initialGitHubPreferences ?? getDefaultGitHubPreferences(),
   );
+  const leaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [showCleanupModal, setShowCleanupModal] = useState(false);
   const [showCommentComposer, setShowCommentComposer] = useState(false);
+  const [showCommandModal, setShowCommandModal] = useState(false);
   const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [showKeyLegend, setShowKeyLegend] = useState(true);
   const [showListFilterModal, setShowListFilterModal] = useState(false);
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [showOutdatedReviewThreads, setShowOutdatedReviewThreads] = useState(false);
@@ -272,12 +348,15 @@ export function DiffdiffApp({
     ...DEFAULT_BRANCH_LIST_FILTERS,
   });
   const [branchListIndex, setBranchListIndex] = useState(0);
+  const [commandQuery, setCommandQuery] = useState("");
+  const [commandIndex, setCommandIndex] = useState(0);
   const [commitListIndex, setCommitListIndex] = useState(0);
   const [commitSearchQuery, setCommitSearchQuery] = useState("");
   const [commitSearchActive, setCommitSearchActive] = useState(false);
   const [filterIndex, setFilterIndex] = useState(0);
   const [isReloading, setIsReloading] = useState(false);
   const [isSubmittingReviewAction, setIsSubmittingReviewAction] = useState(false);
+  const [leaderActive, setLeaderActive] = useState(false);
   const [diffViewPreference, setDiffViewPreference] = useState<DiffViewPreference>("unified");
   const [mergeCommitMessage, setMergeCommitMessage] = useState("");
   const [mergeCommitTitle, setMergeCommitTitle] = useState("");
@@ -296,7 +375,6 @@ export function DiffdiffApp({
   const [collapsedDirectories, setCollapsedDirectories] = useState<Set<string>>(new Set());
   const [selectedTreePath, setSelectedTreePath] = useState(initialSession.files[0]?.path ?? "");
   const [loadingIndicatorFrame, setLoadingIndicatorFrame] = useState(0);
-  const [treeScrollbarVisible, setTreeScrollbarVisible] = useState(false);
   const treeScrollRef = useRef<ScrollBoxRenderable | null>(null);
   const treeRowRefs = useRef<(BoxRenderable | null)[]>([]);
   const mergeBodyScrollRef = useRef<ScrollBoxRenderable | null>(null);
@@ -329,6 +407,23 @@ export function DiffdiffApp({
   const visibleTreeNodes = useMemo(
     () => getVisibleFileTreeNodes(fileTreeNodes, collapsedDirectories),
     [collapsedDirectories, fileTreeNodes],
+  );
+  const treeSummaryLabels = useMemo(
+    () =>
+      getTreeSummaryLabels({
+        additions: totalDiff.additions,
+        deletions: totalDiff.deletions,
+        reviewedCount: reviewedPaths.size,
+        sidebarWidth,
+        totalFiles: session.files.length,
+      }),
+    [
+      reviewedPaths.size,
+      session.files.length,
+      sidebarWidth,
+      totalDiff.additions,
+      totalDiff.deletions,
+    ],
   );
   const diffView = useMemo(
     () => resolveDiffView(diffViewPreference, diffPaneWidth),
@@ -367,28 +462,261 @@ export function DiffdiffApp({
     selectedReviewAnchors[clampIndex(selectedReviewAnchorIndex, selectedReviewAnchors.length)];
   const openPrCount = session.branches.remote.filter((branch) => branch.pullRequest != null).length;
   const remoteBranchCount = session.branches.remote.length - openPrCount;
+  const commandListLabel = formatCommandKeybind(COMMAND_LIST_KEYBIND, LEADER_KEYBIND) ?? "ctrl+p";
+  const leaderKeyLabel = formatCommandKeybind(LEADER_KEYBIND, LEADER_KEYBIND) ?? "ctrl+x";
+  const keyLegendToggleLabel = showKeyLegend ? "hide keys" : "show keys";
+  const outdatedThreadToggleLabel = showOutdatedReviewThreads ? "hide outdated" : "show outdated";
+  const commands = useMemo<AppCommand[]>(
+    () => [
+      {
+        category: "System",
+        description: "Open the searchable command palette.",
+        keybind: COMMAND_LIST_KEYBIND,
+        suggested: true,
+        title: "Open command palette",
+        value: "system.command-palette",
+        run: () => openCommandModal(),
+      },
+      {
+        category: "System",
+        description: "Show keyboard shortcuts and usage help.",
+        keybind: "<leader>h",
+        suggested: true,
+        title: "Open help",
+        value: "system.help",
+        run: () => {
+          setShowHelp(true);
+        },
+      },
+      {
+        category: "System",
+        description: "Show or hide the shortcut legend in the sidebar.",
+        keybind: "<leader>z,z",
+        title: showKeyLegend ? "Hide key legend" : "Show key legend",
+        value: "system.key-legend",
+        run: () => toggleKeyLegend(),
+      },
+      {
+        category: "System",
+        description: "Close diffdiff.",
+        keybind: "<leader>q,q",
+        title: "Quit",
+        value: "system.quit",
+        run: () => onExit(),
+      },
+      {
+        category: "View",
+        description: "Move focus between the file tree and diff panes.",
+        keybind: "<leader>p,tab",
+        suggested: true,
+        title: "Switch active pane",
+        value: "view.pane-toggle",
+        run: () => toggleActivePane(),
+      },
+      {
+        category: "View",
+        description: "Toggle between unified and side-by-side diffs.",
+        keybind: "<leader>v,v",
+        suggested: true,
+        title: "Toggle diff view",
+        value: "view.diff-toggle",
+        run: () => toggleDiffView(),
+      },
+      {
+        category: "Comparison",
+        description: "Browse the working tree, branches, PRs, and commits.",
+        keybind: "<leader>l,l",
+        suggested: true,
+        title: "Open comparison list",
+        value: "comparison.list",
+        run: () => openBranchModal(),
+      },
+      {
+        category: "Review",
+        description: "Mark the selected file as reviewed or not reviewed.",
+        keybind: "<leader>r,r",
+        suggested: true,
+        title: "Toggle reviewed",
+        value: "review.toggle-reviewed",
+        run: () => toggleReviewed(selectedFileIndex),
+      },
+      {
+        category: "Review",
+        description: "Collapse or expand the selected file diff.",
+        keybind: "<leader>c,c,return",
+        title: "Toggle collapsed",
+        value: "review.toggle-collapsed",
+        run: () => toggleCollapsed(selectedFileIndex),
+      },
+      {
+        category: "GitHub",
+        description: "Show the pull request conversation timeline.",
+        enabled: session.github != null,
+        keybind: "<leader>t,t",
+        suggested: session.github != null,
+        title: "Open PR comments",
+        value: "github.comments",
+        run: () => {
+          setShowCommentsModal(true);
+          setStatusMessage("Opened PR comments.");
+        },
+      },
+      {
+        category: "GitHub",
+        description: "Show or hide outdated review threads in the diff.",
+        enabled: session.github != null,
+        keybind: "<leader>u,u",
+        title: showOutdatedReviewThreads ? "Hide outdated PR threads" : "Show outdated PR threads",
+        value: "github.outdated-threads",
+        run: () => {
+          setShowOutdatedReviewThreads((currentValue) => {
+            const nextValue = !currentValue;
+            setStatusMessage(
+              nextValue ? "Showing outdated PR threads." : "Hiding outdated PR threads.",
+            );
+            return nextValue;
+          });
+        },
+      },
+      {
+        category: "GitHub",
+        description: "Copy the current pull request URL to the clipboard.",
+        enabled: session.github != null,
+        keybind: "<leader>y,y",
+        title: "Copy PR URL",
+        value: "github.copy-url",
+        run: () => {
+          void copyPullRequestUrl();
+        },
+      },
+      {
+        category: "GitHub",
+        description: "Create a review comment on the selected diff line.",
+        enabled: session.github != null,
+        keybind: "<leader>a,a",
+        suggested: session.github != null,
+        title: "Add review comment",
+        value: "github.add-comment",
+        run: () => openCommentComposer(),
+      },
+      {
+        category: "GitHub",
+        description: "Submit the pending review to GitHub.",
+        enabled: session.github != null,
+        keybind: "<leader>s,s",
+        suggested: session.github != null,
+        title: "Submit review",
+        value: "github.submit-review",
+        run: () => openSubmitReviewModal(),
+      },
+      {
+        category: "GitHub",
+        description: "Merge the pull request with the selected merge strategy.",
+        enabled: session.github != null,
+        keybind: "<leader>m,m",
+        suggested: session.github != null,
+        title: "Merge pull request",
+        value: "github.merge",
+        run: () => openMergeModal(),
+      },
+    ],
+    [
+      copyPullRequestUrl,
+      openBranchModal,
+      openCommandModal,
+      onExit,
+      openCommentComposer,
+      openMergeModal,
+      openSubmitReviewModal,
+      selectedFileIndex,
+      session.github,
+      showKeyLegend,
+      showOutdatedReviewThreads,
+      toggleCollapsed,
+      toggleActivePane,
+      toggleDiffView,
+      toggleKeyLegend,
+      toggleReviewed,
+    ],
+  );
+  const visibleCommands = useMemo(
+    () => commands.filter((command) => command.enabled !== false && command.hidden !== true),
+    [commands],
+  );
+  const filteredCommands = useMemo(
+    () => filterCommands(visibleCommands, commandQuery),
+    [commandQuery, visibleCommands],
+  );
+  const footerEvent = useMemo(() => {
+    if (errorToastMessage != null) {
+      return {
+        color: theme.danger,
+        message: errorToastMessage,
+      };
+    }
+
+    if (toastMessage != null) {
+      return {
+        color: theme.success,
+        message: `✓ ${toastMessage}`,
+      };
+    }
+
+    if (baseBranchLoadingMessage != null) {
+      return {
+        color: theme.accent,
+        message: `${LOADING_INDICATOR_FRAMES[loadingIndicatorFrame]} ${baseBranchLoadingMessage}`,
+      };
+    }
+
+    return {
+      color: isReloading || leaderActive ? theme.accent : theme.textMuted,
+      message: statusMessage,
+    };
+  }, [
+    baseBranchLoadingMessage,
+    errorToastMessage,
+    isReloading,
+    leaderActive,
+    loadingIndicatorFrame,
+    statusMessage,
+    theme.accent,
+    theme.danger,
+    theme.success,
+    theme.textMuted,
+    toastMessage,
+  ]);
+  const footerEventMessage = useMemo(() => {
+    const reservedWidth = commandListLabel.length + keyLegendToggleLabel.length + 28;
+    return truncateInlineMessage(
+      footerEvent.message,
+      Math.max(terminalDimensions.width - reservedWidth, 0),
+    );
+  }, [commandListLabel, footerEvent.message, keyLegendToggleLabel, terminalDimensions.width]);
   const canApplyCleanup =
     (cleanupCandidates.some((candidate) => candidate.kind === "local-branch") &&
       cleanupSelection.removeLocal) ||
     (cleanupCandidates.some((candidate) => candidate.kind === "remote-tracking") &&
       cleanupSelection.removeRemote);
-  const activeOverlay = showHelp
-    ? "help"
-    : showCommentComposer
-      ? "comment-composer"
-      : showCommentsModal
-        ? "comments"
-        : showSubmitReviewModal
-          ? "submit-review"
-          : showMergeModal
-            ? "merge"
-            : showCleanupModal
-              ? "cleanup"
-              : showListFilterModal
-                ? "list-filter"
-                : showBranchModal
-                  ? "branch"
-                  : null;
+  const activeOverlay = showCommandModal
+    ? "command-palette"
+    : showHelp
+      ? "help"
+      : showCommentComposer
+        ? "comment-composer"
+        : showCommentsModal
+          ? "comments"
+          : showSubmitReviewModal
+            ? "submit-review"
+            : showMergeModal
+              ? "merge"
+              : showCleanupModal
+                ? "cleanup"
+                : showListFilterModal
+                  ? "list-filter"
+                  : showBranchModal
+                    ? "branch"
+                    : null;
   const keyboardHandlerRef = useRef<(key: KeyboardInput) => void>(() => undefined);
   const resolvedLogFilePath =
     logFilePath ?? getDiffdiffLogSession()?.logFilePath ?? "~/.diffdiff/logs/log-unknown.jsonl";
@@ -406,14 +734,33 @@ export function DiffdiffApp({
     });
   }, [resolvedLogFilePath]);
 
-  const showErrorToast = useCallback(() => {
-    const message = `View error logs at ${resolvedLogFilePath}`;
-    setErrorToastMessage(message);
-    logDiffdiffWarn("app", "error_toast_shown", {
-      logFilePath: resolvedLogFilePath,
-      message,
-    });
-  }, [resolvedLogFilePath]);
+  useEffect(() => {
+    setCommandIndex((currentIndex) => clampIndex(currentIndex, filteredCommands.length));
+  }, [filteredCommands.length]);
+
+  useEffect(() => {
+    return () => {
+      if (leaderTimeoutRef.current != null) {
+        clearTimeout(leaderTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const showErrorToast = useCallback(
+    (contextMessage?: string) => {
+      const message =
+        contextMessage == null
+          ? `View error logs at ${resolvedLogFilePath}`
+          : `${contextMessage}  View error logs at ${resolvedLogFilePath}`;
+
+      setErrorToastMessage(message);
+      logDiffdiffWarn("app", "error_toast_shown", {
+        logFilePath: resolvedLogFilePath,
+        message,
+      });
+    },
+    [resolvedLogFilePath],
+  );
 
   const handleAppError = useCallback(
     (error: unknown, fallbackMessage: string, context: Record<string, unknown>) => {
@@ -429,7 +776,7 @@ export function DiffdiffApp({
         statusMessage: message,
       });
       setStatusMessage(message);
-      showErrorToast();
+      showErrorToast(message);
     },
     [resolvedLogFilePath, showErrorToast],
   );
@@ -446,7 +793,7 @@ export function DiffdiffApp({
         statusMessage: message,
       });
       setStatusMessage(message);
-      showErrorToast();
+      showErrorToast(message);
     },
     [resolvedLogFilePath, showErrorToast],
   );
@@ -517,16 +864,6 @@ export function DiffdiffApp({
   useEffect(() => {
     treeRowRefs.current.length = visibleTreeNodes.length;
   }, [visibleTreeNodes.length]);
-
-  useEffect(() => {
-    // OpenTUI reserves one column for a visible scrollbar outside the viewport.
-    // Mirror that gutter in the summary card so the header and tree rows stay aligned.
-    const nextVisible = treeScrollRef.current?.verticalScrollBar.visible === true;
-
-    setTreeScrollbarVisible((currentVisible) =>
-      currentVisible === nextVisible ? currentVisible : nextVisible,
-    );
-  });
 
   useEffect(() => {
     return () => {
@@ -766,15 +1103,22 @@ export function DiffdiffApp({
       activeOverlay,
       errorToastVisible: errorToastMessage != null,
       key,
+      leaderActive,
       selectedFilePath: session.files[selectedFileIndex]?.path,
     });
 
     if (
       activeOverlay == null &&
+      !leaderActive &&
       errorToastMessage != null &&
       (key.name === "escape" || key.name === "x")
     ) {
       dismissErrorToast();
+      return;
+    }
+
+    if (activeOverlay === "command-palette") {
+      handleCommandModalKey(key);
       return;
     }
 
@@ -822,50 +1166,33 @@ export function DiffdiffApp({
       return;
     }
 
-    if (key.name === "q") {
-      onExit();
+    if (leaderActive) {
+      if (key.name === "escape") {
+        clearLeaderMode("Canceled leader key.");
+        return;
+      }
+
+      const command = findCommandByKey(key, true);
+      if (command != null) {
+        runCommand(command);
+      } else {
+        clearLeaderMode(`No command is bound to ${leaderKeyLabel} ${key.name}.`);
+      }
+      return;
+    }
+
+    if (matchCommandKeybind(COMMAND_LIST_KEYBIND, key)) {
+      openCommandModal();
+      return;
+    }
+
+    if (matchCommandKeybind(LEADER_KEYBIND, key)) {
+      enterLeaderMode();
       return;
     }
 
     if (key.sequence === "?") {
       setShowHelp(true);
-      return;
-    }
-
-    if (key.name === "l") {
-      openBranchModal();
-      return;
-    }
-
-    if (key.name === "tab") {
-      toggleActivePane();
-      return;
-    }
-
-    if (key.name === "v") {
-      toggleDiffView();
-      return;
-    }
-
-    if (session.github != null && key.name === "t") {
-      setShowCommentsModal(true);
-      setStatusMessage("Opened PR comments.");
-      return;
-    }
-
-    if (session.github != null && key.name === "u") {
-      setShowOutdatedReviewThreads((currentValue) => {
-        const nextValue = !currentValue;
-        setStatusMessage(
-          nextValue ? "Showing outdated PR threads." : "Hiding outdated PR threads.",
-        );
-        return nextValue;
-      });
-      return;
-    }
-
-    if (session.github != null && key.name === "y") {
-      void copyPullRequestUrl();
       return;
     }
 
@@ -879,23 +1206,24 @@ export function DiffdiffApp({
       return;
     }
 
-    if (session.github != null && activePane === "diff" && key.name === "a") {
-      openCommentComposer();
-      return;
-    }
-
-    if (session.github != null && key.name === "s") {
-      openSubmitReviewModal();
-      return;
-    }
-
-    if (session.github != null && key.name === "m") {
-      openMergeModal();
-      return;
-    }
-
     if (activePane === "tree") {
+      const treeCommand = findCommandByKey(key);
+      if (
+        treeCommand != null &&
+        treeCommand.value !== "review.toggle-collapsed" &&
+        treeCommand.value !== "review.toggle-reviewed"
+      ) {
+        runCommand(treeCommand);
+        return;
+      }
+
       handleTreePaneKey(key);
+      return;
+    }
+
+    const command = findCommandByKey(key);
+    if (command != null) {
+      runCommand(command);
       return;
     }
 
@@ -921,13 +1249,8 @@ export function DiffdiffApp({
       return;
     }
 
-    if (key.name === "c" || key.name === "return") {
+    if (key.name === "return") {
       toggleCollapsed(selectedFileIndex);
-      return;
-    }
-
-    if (key.name === "r") {
-      toggleReviewed(selectedFileIndex);
       return;
     }
   };
@@ -943,7 +1266,7 @@ export function DiffdiffApp({
     session.comparison.mode === "working-tree" ? "working tree" : "branch range";
   const currentBranchLabel = session.repository.currentBranch ?? "detached";
 
-  const showToast = useCallback((message: string) => {
+  function showToast(message: string): void {
     if (toastTimeoutRef.current != null) {
       clearTimeout(toastTimeoutRef.current);
     }
@@ -953,8 +1276,9 @@ export function DiffdiffApp({
       toastTimeoutRef.current = null;
       setToastMessage(null);
     }, 5000);
-  }, []);
-  const copyPullRequestUrl = useCallback(async () => {
+  }
+
+  async function copyPullRequestUrl(): Promise<void> {
     if (session.github == null) {
       setStatusMessage("Open a GitHub pull request first.");
       return;
@@ -977,7 +1301,7 @@ export function DiffdiffApp({
       pullRequestNumber: number,
       url,
     });
-  }, [handleAppFailure, session.github, showToast]);
+  }
   const handleMouseUp = useCallback(() => {
     copySelection(renderer, {
       onSuccess: () => {
@@ -1155,11 +1479,7 @@ export function DiffdiffApp({
           </text>
         ) : null}
         {session.github != null ? (
-          <PullRequestBanner
-            pullRequest={session.github.pullRequest}
-            showOutdatedThreads={showOutdatedReviewThreads}
-            theme={theme}
-          />
+          <PullRequestBanner pullRequest={session.github.pullRequest} theme={theme} />
         ) : null}
       </box>
 
@@ -1174,13 +1494,13 @@ export function DiffdiffApp({
           flexDirection="column"
           gap={1}
         >
-          <box width="100%" paddingRight={treeScrollbarVisible ? 1 : 0}>
+          <box width="100%">
             <box
               width="100%"
               border={["left"]}
               borderColor={activePane === "tree" ? theme.borderActive : theme.border}
               backgroundColor={activePane === "tree" ? theme.surfaceMuted : theme.surface}
-              paddingLeft={2}
+              paddingLeft={1}
               paddingRight={1}
               paddingY={1}
               flexDirection="column"
@@ -1191,12 +1511,12 @@ export function DiffdiffApp({
                   <span fg={reviewedPaths.size > 0 ? theme.success : theme.textMuted}>
                     {reviewedPaths.size}
                   </span>
-                  <span>{` / ${session.files.length} reviewed`}</span>
+                  <span>{treeSummaryLabels.reviewed.slice(String(reviewedPaths.size).length)}</span>
                 </text>
                 <text fg={theme.textMuted} wrapMode="none">
-                  <span fg={theme.success}>{`+${totalDiff.additions}`}</span>
-                  <span fg={theme.border}>{" / "}</span>
-                  <span fg={theme.danger}>{`-${totalDiff.deletions}`}</span>
+                  <span fg={theme.success}>{treeSummaryLabels.diffAdditions}</span>
+                  <span fg={theme.border}>{treeSummaryLabels.diffSeparator}</span>
+                  <span fg={theme.danger}>{treeSummaryLabels.diffDeletions}</span>
                 </text>
               </box>
             </box>
@@ -1226,6 +1546,117 @@ export function DiffdiffApp({
               theme={theme}
             />
           </scrollbox>
+
+          {showKeyLegend ? (
+            <box
+              width="100%"
+              flexDirection="column"
+              gap={0}
+              paddingLeft={1}
+              paddingRight={1}
+              paddingBottom={1}
+            >
+              <box width="100%" paddingX={1} paddingBottom={1}>
+                <text fg={theme.border} wrapMode="none">
+                  {"─".repeat(Math.max(sidebarWidth - 4, 0))}
+                </text>
+              </box>
+              <box width="100%" flexDirection="column" gap={0} paddingX={1}>
+                <text fg={theme.textMuted} wrapMode="none">
+                  <span fg={theme.accent} bg={theme.surfaceMuted}>{` ${commandListLabel} `}</span>
+                  <span>{" commands "}</span>
+                  <span fg={theme.accent} bg={theme.surfaceMuted}>{` ${leaderKeyLabel} `}</span>
+                  <span>{" leader"}</span>
+                </text>
+                <text fg={theme.textMuted} wrapMode="none">
+                  <span fg={theme.accent} bg={theme.surfaceMuted}>
+                    {" j/k "}
+                  </span>
+                  <span>{" move "}</span>
+                  <span fg={theme.accent} bg={theme.surfaceMuted}>
+                    {" v "}
+                  </span>
+                  <span>{" view"}</span>
+                </text>
+                <text fg={theme.textMuted} wrapMode="none">
+                  <span fg={theme.accent} bg={theme.surfaceMuted}>
+                    {" \u2190/\u2192 "}
+                  </span>
+                  <span>{" tree "}</span>
+                  <span fg={theme.accent} bg={theme.surfaceMuted}>
+                    {" r "}
+                  </span>
+                  <span>{" review"}</span>
+                </text>
+                <text fg={theme.textMuted} wrapMode="none">
+                  <span fg={theme.accent} bg={theme.surfaceMuted}>
+                    {" tab "}
+                  </span>
+                  <span>{" pane "}</span>
+                  <span fg={theme.accent} bg={theme.surfaceMuted}>
+                    {" l "}
+                  </span>
+                  <span>{" list"}</span>
+                </text>
+                <text fg={theme.textMuted} wrapMode="none">
+                  <span fg={theme.accent} bg={theme.surfaceMuted}>
+                    {" c "}
+                  </span>
+                  <span>{"   fold "}</span>
+                  <span fg={theme.accent} bg={theme.surfaceMuted}>
+                    {" ? "}
+                  </span>
+                  <span>{" help"}</span>
+                </text>
+                <text fg={theme.textMuted} wrapMode="none">
+                  <span fg={theme.accent} bg={theme.surfaceMuted}>
+                    {" q "}
+                  </span>
+                  <span>{" quit"}</span>
+                </text>
+                {session.github != null ? (
+                  <>
+                    <text fg={theme.textMuted} wrapMode="none">
+                      <span fg={theme.accent} bg={theme.surfaceMuted}>
+                        {" [/] "}
+                      </span>
+                      <span>{" line "}</span>
+                      <span fg={theme.accent} bg={theme.surfaceMuted}>
+                        {" a "}
+                      </span>
+                      <span>{" comment"}</span>
+                    </text>
+                    <text fg={theme.textMuted} wrapMode="none">
+                      <span fg={theme.accent} bg={theme.surfaceMuted}>
+                        {" s "}
+                      </span>
+                      <span>{"   submit "}</span>
+                      <span fg={theme.accent} bg={theme.surfaceMuted}>
+                        {" t "}
+                      </span>
+                      <span>{" comments"}</span>
+                    </text>
+                    <text fg={theme.textMuted} wrapMode="none">
+                      <span fg={theme.accent} bg={theme.surfaceMuted}>
+                        {" u "}
+                      </span>
+                      <span>{`   ${outdatedThreadToggleLabel} `}</span>
+                      <span fg={theme.accent} bg={theme.surfaceMuted}>
+                        {" y "}
+                      </span>
+                      <span>{" PR URL"}</span>
+                    </text>
+                    <text fg={theme.textMuted} wrapMode="none">
+                      <span fg={theme.accent} bg={theme.surfaceMuted}>
+                        {" m "}
+                      </span>
+                      <span>{" merge"}</span>
+                    </text>
+                  </>
+                ) : null}
+              </box>
+            </box>
+          ) : null}
         </box>
 
         <box flexGrow={1} flexDirection="column">
@@ -1261,7 +1692,7 @@ export function DiffdiffApp({
               flexDirection="column"
               paddingLeft={1}
               paddingRight={0}
-              paddingY={1}
+              paddingBottom={1}
               gap={1}
             >
               {session.files.length === 0 ? (
@@ -1288,7 +1719,9 @@ export function DiffdiffApp({
                     key={file.path}
                     file={file}
                     diffView={diffView}
+                    headerVariant={index === activeFileIndex ? "sticky-compact" : undefined}
                     isCollapsed={isCollapsed}
+                    removeTopPadding={index === 0}
                     isReviewed={isReviewed}
                     isSelected={isSelected}
                     reviewThreads={session.github?.pullRequest.reviewThreads.filter(
@@ -1317,167 +1750,30 @@ export function DiffdiffApp({
         width="100%"
         backgroundColor={theme.chromeBackground}
         paddingX={2}
-        paddingTop={1}
-        paddingBottom={1}
-        flexDirection="column"
-        gap={0}
+        paddingTop={0}
+        paddingBottom={0}
+        flexDirection="row"
+        alignItems="center"
+        gap={2}
       >
-        <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
+        <box flexShrink={0}>
           <text fg={theme.textMuted} wrapMode="none">
-            {selectedFile != null ? (
-              <>
-                <span fg={theme.text}>{selectedFile.path}</span>
-                {selectedReviewAnchor != null && session.github != null ? (
-                  <>
-                    <span fg={theme.border}>{"  │  "}</span>
-                    <span>{`${selectedReviewAnchor.side.toLowerCase()} ${selectedReviewAnchor.line}`}</span>
-                  </>
-                ) : null}
-              </>
-            ) : (
-              <span>No file selected</span>
-            )}
-          </text>
-          <text fg={isReloading ? theme.accent : theme.textMuted} wrapMode="none">
-            <span>{statusMessage}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {` ${commandListLabel} `}
+            </span>
+            <span>{" commands  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" z "}
+            </span>
+            <span>{` ${keyLegendToggleLabel}`}</span>
           </text>
         </box>
-        <text fg={theme.textMuted} wrapMode="none">
-          <span fg={theme.accent} bg={theme.surfaceMuted}>
-            {" j/k "}
-          </span>
-          <span>{" move "}</span>
-          <span fg={theme.accent} bg={theme.surfaceMuted}>
-            {" \u2190/\u2192 "}
-          </span>
-          <span>{" tree "}</span>
-          <span fg={theme.accent} bg={theme.surfaceMuted}>
-            {" tab "}
-          </span>
-          <span>{" pane "}</span>
-          <span fg={theme.border}>{"│ "}</span>
-          <span fg={theme.accent} bg={theme.surfaceMuted}>
-            {" r "}
-          </span>
-          <span>{" review "}</span>
-          <span fg={theme.accent} bg={theme.surfaceMuted}>
-            {" c "}
-          </span>
-          <span>{" collapse "}</span>
-          <span fg={theme.accent} bg={theme.surfaceMuted}>
-            {" v "}
-          </span>
-          <span>{" view "}</span>
-          <span fg={theme.border}>{"│ "}</span>
-          <span fg={theme.accent} bg={theme.surfaceMuted}>
-            {" l "}
-          </span>
-          <span>{" list "}</span>
-          <span fg={theme.accent} bg={theme.surfaceMuted}>
-            {" ? "}
-          </span>
-          <span>{" help "}</span>
-          <span fg={theme.accent} bg={theme.surfaceMuted}>
-            {" q "}
-          </span>
-          <span>{" quit"}</span>
-        </text>
-        {session.github != null ? (
-          <text fg={theme.textMuted} wrapMode="none">
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" [/] "}
-            </span>
-            <span>{" line "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" a "}
-            </span>
-            <span>{" comment "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" s "}
-            </span>
-            <span>{" submit review "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" t "}
-            </span>
-            <span>{" comments "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" u "}
-            </span>
-            <span>{" outdated "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" y "}
-            </span>
-            <span>{" PR URL  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" m "}
-            </span>
-            <span>{" merge"}</span>
+        <box flexGrow={1} flexDirection="row" justifyContent="flex-end">
+          <text fg={footerEvent.color} wrapMode="none">
+            <span>{footerEventMessage}</span>
           </text>
-        ) : null}
+        </box>
       </box>
-
-      {baseBranchLoadingMessage != null || toastMessage != null || errorToastMessage != null ? (
-        <box
-          position="absolute"
-          right={2}
-          bottom={4}
-          marginBottom={1}
-          zIndex={40}
-          flexDirection="column"
-          gap={1}
-        >
-          {baseBranchLoadingMessage != null ? (
-            <box
-              backgroundColor={theme.surfaceMuted}
-              border={["left"]}
-              borderColor={theme.accent}
-              paddingX={2}
-              paddingY={1}
-            >
-              <text fg={theme.accent} wrapMode="none">
-                {`${LOADING_INDICATOR_FRAMES[loadingIndicatorFrame]} `}
-                <span fg={theme.text}>{baseBranchLoadingMessage}</span>
-              </text>
-            </box>
-          ) : null}
-          {toastMessage != null ? (
-            <box
-              backgroundColor={theme.surfaceMuted}
-              border={["left"]}
-              borderColor={theme.success}
-              paddingX={2}
-              paddingY={1}
-            >
-              <text fg={theme.success} wrapMode="none">
-                {"\u2713 "}
-                <span fg={theme.text}>{toastMessage}</span>
-              </text>
-            </box>
-          ) : null}
-          {errorToastMessage != null ? (
-            <box
-              backgroundColor={theme.surfaceMuted}
-              border={["left"]}
-              borderColor={theme.danger}
-              paddingX={2}
-              paddingY={1}
-            >
-              <box width="100%" flexDirection="column" gap={0}>
-                <text fg={theme.danger} wrapMode="none">
-                  {"! "}
-                  <span fg={theme.text}>{errorToastMessage}</span>
-                </text>
-                <text fg={theme.textMuted} wrapMode="none">
-                  <span fg={theme.inverseText} bg={theme.surface}>
-                    {" x "}
-                  </span>
-                  <span>{" dismiss"}</span>
-                </text>
-              </box>
-            </box>
-          ) : null}
-        </box>
-      ) : null}
 
       {showBranchModal ? (
         <BranchModal
@@ -1495,6 +1791,16 @@ export function DiffdiffApp({
           localBranchCount={session.branches.local.length}
           openPrCount={openPrCount}
           remoteBranchCount={remoteBranchCount}
+          theme={theme}
+        />
+      ) : null}
+
+      {showCommandModal ? (
+        <CommandPaletteModal
+          commands={filteredCommands}
+          leaderKeybind={LEADER_KEYBIND}
+          query={commandQuery}
+          selectedIndex={commandIndex}
           theme={theme}
         />
       ) : null}
@@ -1664,6 +1970,64 @@ export function DiffdiffApp({
       }
 
       return nextPreference;
+    });
+  }
+
+  function clearLeaderMode(status?: string): void {
+    if (leaderTimeoutRef.current != null) {
+      clearTimeout(leaderTimeoutRef.current);
+      leaderTimeoutRef.current = null;
+    }
+
+    setLeaderActive(false);
+
+    if (status != null) {
+      setStatusMessage(status);
+    }
+  }
+
+  function enterLeaderMode(): void {
+    if (leaderTimeoutRef.current != null) {
+      clearTimeout(leaderTimeoutRef.current);
+    }
+
+    setLeaderActive(true);
+    setStatusMessage(`Leader key active. Awaiting a ${leaderKeyLabel} command.`);
+    leaderTimeoutRef.current = setTimeout(() => {
+      leaderTimeoutRef.current = null;
+      setLeaderActive(false);
+      setStatusMessage("Leader key timed out.");
+    }, 2000);
+  }
+
+  function openCommandModal(): void {
+    clearLeaderMode();
+    setCommandQuery("");
+    setCommandIndex(0);
+    setShowCommandModal(true);
+    setStatusMessage("Opened command palette.");
+  }
+
+  function closeCommandModal(): void {
+    setShowCommandModal(false);
+    setCommandQuery("");
+    setCommandIndex(0);
+    setStatusMessage("Closed command palette.");
+  }
+
+  function runCommand(command: AppCommand): void {
+    clearLeaderMode();
+    setShowCommandModal(false);
+    setCommandQuery("");
+    setCommandIndex(0);
+    command.run();
+  }
+
+  function toggleKeyLegend(): void {
+    setShowKeyLegend((currentValue) => {
+      const nextValue = !currentValue;
+      setStatusMessage(nextValue ? "Key legend shown." : "Key legend hidden.");
+      return nextValue;
     });
   }
 
@@ -2077,6 +2441,66 @@ export function DiffdiffApp({
         remoteBranch: false,
       });
       setStatusMessage("Disabled all list filters.");
+    }
+  }
+
+  function findCommandByKey(key: KeyboardInput, leader = false): AppCommand | undefined {
+    return visibleCommands.find((command) => matchCommandKeybind(command.keybind, key, leader));
+  }
+
+  function handleCommandModalKey(key: KeyboardInput): void {
+    if (key.name === "escape" || key.name === "q") {
+      closeCommandModal();
+      return;
+    }
+
+    if (key.name === "j" || key.name === "down" || (key.ctrl && key.name === "n")) {
+      setCommandIndex((currentIndex) => clampIndex(currentIndex + 1, filteredCommands.length));
+      return;
+    }
+
+    if (key.name === "k" || key.name === "up" || (key.ctrl && key.name === "p")) {
+      setCommandIndex((currentIndex) => clampIndex(currentIndex - 1, filteredCommands.length));
+      return;
+    }
+
+    if (key.name === "pageup") {
+      setCommandIndex((currentIndex) => clampIndex(currentIndex - 10, filteredCommands.length));
+      return;
+    }
+
+    if (key.name === "pagedown") {
+      setCommandIndex((currentIndex) => clampIndex(currentIndex + 10, filteredCommands.length));
+      return;
+    }
+
+    if (key.name === "home") {
+      setCommandIndex(0);
+      return;
+    }
+
+    if (key.name === "end") {
+      setCommandIndex(Math.max(filteredCommands.length - 1, 0));
+      return;
+    }
+
+    if (key.name === "backspace") {
+      setCommandQuery((currentQuery) => currentQuery.slice(0, -1));
+      setCommandIndex(0);
+      return;
+    }
+
+    if (key.name === "return") {
+      const command = filteredCommands[clampIndex(commandIndex, filteredCommands.length)];
+      if (command != null) {
+        runCommand(command);
+      }
+      return;
+    }
+
+    if (isPrintableKey(key)) {
+      setCommandQuery((currentQuery) => currentQuery + key.sequence);
+      setCommandIndex(0);
     }
   }
 

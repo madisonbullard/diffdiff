@@ -16,8 +16,8 @@ import type {
 } from "./types.ts";
 
 export const MIN_SIDE_BY_SIDE_DIFF_WIDTH = 121;
-export const FILE_TREE_SIDEBAR_MIN_WIDTH = 24;
-export const FILE_TREE_SIDEBAR_MAX_WIDTH = 36;
+export const FILE_TREE_SIDEBAR_MIN_WIDTH = 30;
+export const FILE_TREE_SIDEBAR_MAX_WIDTH = 45;
 
 export const DEFAULT_BRANCH_LIST_FILTERS: BranchListFilters = {
   workingTree: true,
@@ -428,7 +428,7 @@ export function getVisibleFileTreeNodes(
 export function getFileTreeSidebarWidth(terminalWidth: number): number {
   return Math.max(
     FILE_TREE_SIDEBAR_MIN_WIDTH,
-    Math.min(Math.floor(terminalWidth * 0.24), FILE_TREE_SIDEBAR_MAX_WIDTH),
+    Math.min(Math.floor(terminalWidth * 0.3), FILE_TREE_SIDEBAR_MAX_WIDTH),
   );
 }
 

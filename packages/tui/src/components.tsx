@@ -38,6 +38,7 @@ import {
   formatCommitDelta,
   truncateSegments,
 } from "./view-model.ts";
+import { formatCommandKeybind, type CommandDefinition } from "./commands.ts";
 
 const SPLIT_BORDER = {
   topLeft: "",
@@ -58,7 +59,9 @@ const MODAL_OVERLAY = "#00000096";
 export interface FileCardProps {
   file: PreparedReviewFile;
   diffView: DiffView;
+  headerVariant?: "sticky-compact";
   isCollapsed: boolean;
+  removeTopPadding?: boolean;
   isReviewed: boolean;
   isSelected: boolean;
   reviewThreads?: readonly GitHubPullRequestReviewThread[];
@@ -86,7 +89,9 @@ export interface FileTreeSidebarProps {
 export function FileCard({
   file,
   diffView,
+  headerVariant,
   isCollapsed,
+  removeTopPadding = false,
   isReviewed,
   isSelected,
   reviewThreads = [],
@@ -98,16 +103,9 @@ export function FileCard({
   theme,
 }: FileCardProps) {
   const filetype = getDiffFiletype(file.path);
-  const statusLabel = file.status === "modified" ? "Changed" : capitalize(file.status);
-  const statusColor =
-    file.status === "added"
-      ? theme.success
-      : file.status === "deleted"
-        ? theme.danger
-        : file.status === "renamed"
-          ? theme.warning
-          : theme.accent;
+  const { statusColor, statusLabel } = getFileStatusChrome(file.status, theme);
   const { borderColor, fileBackground } = getFileCardChrome(isSelected, isReviewed, theme);
+  const usesCompactHeader = headerVariant === "sticky-compact";
 
   const usesFallbackRenderer =
     !file.isBinary &&
@@ -142,26 +140,34 @@ export function FileCard({
       flexDirection="column"
       paddingLeft={2}
       paddingRight={0}
-      paddingTop={1}
+      paddingTop={removeTopPadding ? 0 : 1}
       paddingBottom={isCollapsed ? 0 : 1}
       gap={1}
     >
-      <FileCardTitleRow
-        file={file}
-        isCollapsed={isCollapsed}
-        isSelected={isSelected}
-        theme={theme}
-      />
+      {usesCompactHeader ? (
+        <FileCardStatusRow
+          isReviewed={isReviewed}
+          statusColor={statusColor}
+          statusLabel={statusLabel}
+          theme={theme}
+        />
+      ) : (
+        <>
+          <FileCardTitleRow
+            file={file}
+            isCollapsed={isCollapsed}
+            isSelected={isSelected}
+            theme={theme}
+          />
 
-      <text fg={theme.textMuted} wrapMode="none">
-        <Tag label={statusLabel.toUpperCase()} fg={theme.inverseText} bg={statusColor} />
-        {isReviewed ? (
-          <>
-            <span> </span>
-            <Tag label="REVIEWED" fg={theme.success} bg={theme.reviewedBg} />
-          </>
-        ) : null}
-      </text>
+          <FileCardStatusTags
+            isReviewed={isReviewed}
+            statusColor={statusColor}
+            statusLabel={statusLabel}
+            theme={theme}
+          />
+        </>
+      )}
 
       {file.previousPath != null ? (
         <text fg={theme.textMuted} wrapMode="none">
@@ -193,7 +199,7 @@ export function FileCard({
             </box>
           ) : null}
           {!file.isBinary && file.renderError == null && file.patch.trim() !== "" ? (
-            <box paddingLeft={1}>
+            <box width="100%">
               {diffView === "unified" && file.unifiedLines.length > 0 ? (
                 <UnifiedDiffPreview
                   file={file}
@@ -422,13 +428,66 @@ function FileCardTitleRow({
         <span fg={theme.textMuted}>{isCollapsed ? "\u25B6 " : "\u25BC "}</span>
         <span fg={isSelected ? theme.accent : theme.text}>{file.path}</span>
       </text>
-      <box paddingRight={2}>
-        <text fg={theme.textMuted} wrapMode="none">
-          <span fg={theme.success}>{`+${file.additions}`}</span>
-          <span fg={theme.border}>{" / "}</span>
-          <span fg={theme.danger}>{`-${file.deletions}`}</span>
-        </text>
-      </box>
+      <FileCardChangeCounts file={file} theme={theme} />
+    </box>
+  );
+}
+
+function FileCardStatusRow({
+  isReviewed,
+  statusColor,
+  statusLabel,
+  theme,
+}: {
+  isReviewed: boolean;
+  statusColor: ColorInput;
+  statusLabel: string;
+  theme: UiTheme;
+}) {
+  return (
+    <box width="100%">
+      <FileCardStatusTags
+        isReviewed={isReviewed}
+        statusColor={statusColor}
+        statusLabel={statusLabel}
+        theme={theme}
+      />
+    </box>
+  );
+}
+
+function FileCardStatusTags({
+  isReviewed,
+  statusColor,
+  statusLabel,
+  theme,
+}: {
+  isReviewed: boolean;
+  statusColor: ColorInput;
+  statusLabel: string;
+  theme: UiTheme;
+}) {
+  return (
+    <text fg={theme.textMuted} wrapMode="none">
+      <Tag label={statusLabel.toUpperCase()} fg={theme.inverseText} bg={statusColor} />
+      {isReviewed ? (
+        <>
+          <span> </span>
+          <Tag label="REVIEWED" fg={theme.success} bg={theme.reviewedBg} />
+        </>
+      ) : null}
+    </text>
+  );
+}
+
+function FileCardChangeCounts({ file, theme }: { file: PreparedReviewFile; theme: UiTheme }) {
+  return (
+    <box paddingRight={2}>
+      <text fg={theme.textMuted} wrapMode="none">
+        <span fg={theme.success}>{`+${file.additions}`}</span>
+        <span fg={theme.border}>{" / "}</span>
+        <span fg={theme.danger}>{`-${file.deletions}`}</span>
+      </text>
     </box>
   );
 }
@@ -437,6 +496,20 @@ function getFileCardChrome(isSelected: boolean, isReviewed: boolean, theme: UiTh
   return {
     borderColor: isSelected ? theme.borderActive : isReviewed ? theme.success : theme.border,
     fileBackground: isSelected ? theme.surfaceMuted : theme.surface,
+  };
+}
+
+function getFileStatusChrome(status: PreparedReviewFile["status"], theme: UiTheme) {
+  return {
+    statusColor:
+      status === "added"
+        ? theme.success
+        : status === "deleted"
+          ? theme.danger
+          : status === "renamed"
+            ? theme.warning
+            : theme.accent,
+    statusLabel: status === "modified" ? "Changed" : capitalize(status),
   };
 }
 
@@ -1499,6 +1572,33 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
         gap={0}
       >
         <text fg={theme.accent} wrapMode="none">
+          Commands
+        </text>
+        <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="ctrl+p" theme={theme} />
+          <span>{" open the command palette  "}</span>
+          <KeyCap label="ctrl+x" theme={theme} />
+          <span>{" leader shortcuts"}</span>
+        </text>
+        <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="z" theme={theme} />
+          <span>{" show or hide the key legend"}</span>
+        </text>
+      </box>
+      <box
+        width="100%"
+        border={["left"]}
+        customBorderChars={SPLIT_BORDER}
+        borderColor={theme.accent}
+        backgroundColor={theme.surface}
+        paddingLeft={2}
+        paddingRight={1}
+        paddingTop={1}
+        paddingBottom={1}
+        flexDirection="column"
+        gap={0}
+      >
+        <text fg={theme.accent} wrapMode="none">
           Navigation
         </text>
         <text fg={theme.textMuted} wrapMode="none">
@@ -1589,6 +1689,155 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
           <KeyCap label="q" theme={theme} />
           <span>{" quit"}</span>
         </text>
+      </box>
+    </ModalFrame>
+  );
+}
+
+export function CommandPaletteModal({
+  commands,
+  leaderKeybind,
+  query,
+  selectedIndex,
+  theme,
+}: {
+  commands: readonly CommandDefinition[];
+  leaderKeybind: string;
+  query: string;
+  selectedIndex: number;
+  theme: UiTheme;
+}) {
+  const selectedCommand = selectItem(commands, selectedIndex);
+  const normalizedQuery = query.trim();
+  let activeCategory: string | undefined;
+
+  return (
+    <ModalFrame
+      title="Commands"
+      subtitle={
+        normalizedQuery === ""
+          ? "Search or browse available diffdiff actions."
+          : `Filtering commands for "${normalizedQuery}".`
+      }
+      theme={theme}
+      maxWidth={96}
+      width="78%"
+      zIndex={30}
+      headerRight={
+        <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="esc" theme={theme} />
+          <span>{" close"}</span>
+        </text>
+      }
+    >
+      <box width="100%" flexDirection="column" gap={1}>
+        <box
+          width="100%"
+          border={["left"]}
+          customBorderChars={SPLIT_BORDER}
+          borderColor={theme.border}
+          backgroundColor={theme.surface}
+          paddingLeft={2}
+          paddingRight={2}
+          paddingTop={1}
+          paddingBottom={1}
+          flexDirection="column"
+          gap={0}
+        >
+          <text fg={theme.textMuted} wrapMode="none">
+            <span fg={theme.text}>query</span>
+            <span>{": "}</span>
+            <span fg={normalizedQuery === "" ? theme.textMuted : theme.text}>
+              {normalizedQuery === "" ? "type to filter commands" : normalizedQuery}
+            </span>
+          </text>
+        </box>
+
+        <box
+          width="100%"
+          border={["left"]}
+          customBorderChars={SPLIT_BORDER}
+          borderColor={theme.accent}
+          backgroundColor={theme.surface}
+          paddingLeft={1}
+          paddingRight={1}
+          paddingTop={1}
+          paddingBottom={1}
+          flexDirection="column"
+          gap={0}
+        >
+          {commands.length === 0 ? (
+            <text fg={theme.textMuted} wrapMode="none">
+              No matching commands.
+            </text>
+          ) : (
+            commands.map((command, index) => {
+              const showCategory = command.category !== activeCategory;
+              activeCategory = command.category;
+              const isSelected = index === selectedIndex;
+              const backgroundColor = isSelected ? theme.accent : theme.surface;
+              const foreground = isSelected ? theme.appBackground : theme.text;
+              const detail = isSelected ? theme.appBackground : theme.textMuted;
+
+              return (
+                <box key={command.value} width="100%" flexDirection="column" gap={0}>
+                  {showCategory ? (
+                    <text fg={theme.success} wrapMode="none">
+                      {command.category}
+                    </text>
+                  ) : null}
+                  <box
+                    width="100%"
+                    backgroundColor={backgroundColor}
+                    paddingLeft={1}
+                    paddingRight={1}
+                    flexDirection="row"
+                    justifyContent="space-between"
+                    gap={1}
+                  >
+                    <text fg={foreground} wrapMode="none">
+                      <span>{isSelected ? "› " : "  "}</span>
+                      <span>{command.title}</span>
+                      {command.description != null ? (
+                        <span fg={detail}>{`  ${command.description}`}</span>
+                      ) : null}
+                    </text>
+                    <text fg={detail} wrapMode="none">
+                      {formatCommandKeybind(command.keybind, leaderKeybind) ?? ""}
+                    </text>
+                  </box>
+                </box>
+              );
+            })
+          )}
+        </box>
+
+        <box
+          width="100%"
+          border={["left"]}
+          customBorderChars={SPLIT_BORDER}
+          borderColor={theme.border}
+          backgroundColor={theme.surface}
+          paddingLeft={2}
+          paddingRight={2}
+          paddingTop={1}
+          paddingBottom={1}
+          flexDirection="row"
+          justifyContent="space-between"
+          gap={2}
+        >
+          <text fg={theme.textMuted} wrapMode="none">
+            <KeyCap label="j / k" theme={theme} />
+            <span>{" move  "}</span>
+            <KeyCap label="enter" theme={theme} />
+            <span>{" run  "}</span>
+            <KeyCap label="backspace" theme={theme} />
+            <span>{" edit query"}</span>
+          </text>
+          <text fg={theme.textMuted} wrapMode="none">
+            {selectedCommand != null ? selectedCommand.value : ""}
+          </text>
+        </box>
       </box>
     </ModalFrame>
   );
