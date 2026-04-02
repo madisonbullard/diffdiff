@@ -9,7 +9,7 @@
   },
   "permission": {
     "read": {
-      "/Users/madisonbullard/.diffdiff/logs/**": "allow",
+      "/Users/madisonbullard/.diffdiff/**": "allow",
     },
   },
 }
