@@ -3,6 +3,7 @@ import type {
   GitHubPullRequestReviewGroup,
   GitHubPullRequestReviewThread,
 } from "@diffdiff/core";
+import { getCollapseToggleGlyph } from "../components/shared.tsx";
 import type { SideBySideDiffRow, UnifiedDiffLine } from "../types.ts";
 import type { UiTheme } from "../theme.ts";
 import { formatTimestamp, getReviewStateColor } from "./formatting.ts";
@@ -82,7 +83,7 @@ export function ReviewGroupCard({
         }}
       >
         <text fg={theme.textMuted} wrapMode="none">
-          <span fg={theme.accent}>{isCollapsed ? ">" : "v"}</span>
+          <span fg={theme.accent}>{getCollapseToggleGlyph(isCollapsed)}</span>
           <span> </span>
           <span fg={theme.text}>{group.author.login}</span>
           <span fg={theme.border}>{"  │  "}</span>
@@ -196,7 +197,7 @@ function ReviewThreadCard({
         }}
       >
         <text fg={theme.textMuted} wrapMode="none">
-          <span fg={theme.accent}>{isCollapsed ? ">" : "v"}</span>
+          <span fg={theme.accent}>{getCollapseToggleGlyph(isCollapsed)}</span>
           <span> </span>
           <span fg={theme.text}>{thread.comments[0]?.author.login ?? "unknown"}</span>
           <span fg={theme.border}>{"  │  "}</span>

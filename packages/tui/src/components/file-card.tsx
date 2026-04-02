@@ -8,7 +8,7 @@ import type { UiTheme } from "../theme.ts";
 import type { PreparedReviewFile } from "../types.ts";
 import type { SelectedReviewAnchor } from "../review-anchors.ts";
 import { SideBySideDiffPreview, UnifiedDiffPreview } from "./diff-preview.tsx";
-import { SPLIT_BORDER, Tag, capitalize } from "./shared.tsx";
+import { SPLIT_BORDER, Tag, capitalize, getCollapseToggleGlyph } from "./shared.tsx";
 
 export interface FileCardPreviewViewport {
   bottom: number;
@@ -324,7 +324,7 @@ function FileCardTitleRow({
   return (
     <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
       <text fg={theme.text} wrapMode="none">
-        <span fg={theme.textMuted}>{isCollapsed ? "\u25B6 " : "\u25BC "}</span>
+        <span fg={theme.textMuted}>{`${getCollapseToggleGlyph(isCollapsed)} `}</span>
         <span fg={isSelected ? theme.accent : theme.text}>{file.path}</span>
       </text>
       <FileCardChangeCounts file={file} theme={theme} />

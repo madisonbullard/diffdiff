@@ -162,6 +162,10 @@ export function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+export function getCollapseToggleGlyph(isCollapsed: boolean): string {
+  return isCollapsed ? "\u25B6" : "\u25BC";
+}
+
 function parseHexColor(color: string): { r: number; g: number; b: number } {
   return {
     r: Number.parseInt(color.slice(1, 3), 16),
