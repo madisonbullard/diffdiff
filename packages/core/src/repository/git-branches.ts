@@ -109,9 +109,10 @@ export async function enrichBranchSummaries(
     local: await Promise.all(
       branches.local.map((branch) => attachBranchSummary(rootPath, branch, defaultBranch)),
     ),
-    remote: await Promise.all(
-      branches.remote.map((branch) => attachBranchSummary(rootPath, branch, defaultBranch)),
-    ),
+    // Remote branch summaries require two git commands per branch. Deferring them keeps
+    // startup responsive on repositories with lots of open PR refs while preserving the
+    // richer local-branch summaries most people use to change the base/head selection.
+    remote: branches.remote,
   };
 }
 

@@ -6,6 +6,7 @@ import { FileCard, StickyFileHeader } from "../components/file-card.tsx";
 import { FileTreeSidebar } from "../components/file-tree-sidebar.tsx";
 import { HelpModal } from "../components/help-modal.tsx";
 import { ListFilterModal } from "../components/list-filter-modal.tsx";
+import { Tag } from "../components/shared.tsx";
 import { PullRequestBanner } from "../review/banner.tsx";
 import { PullRequestCommentsModal } from "../review/comments-modal.tsx";
 import { MergePullRequestModal } from "../review/merge-pull-request-modal.tsx";
@@ -168,8 +169,6 @@ export function DiffdiffAppLayout(props: {
     scrollRef,
   } = props;
   const selectedFile = session.files[selectedFileIndex];
-  const comparisonModeLabel =
-    session.comparison.mode === "working-tree" ? "working tree" : "branch range";
   const currentBranchLabel = session.repository.currentBranch ?? "detached";
 
   return (
@@ -196,15 +195,17 @@ export function DiffdiffAppLayout(props: {
             <span fg={theme.border}>{" / "}</span>
             <span>{session.repository.name}</span>
             <span>{"  "}</span>
-            <span fg={theme.inverseText} bg={theme.border}>{` ${comparisonModeLabel} `}</span>
-            <span>{"  "}</span>
-            <span fg={theme.warning}>base</span>
-            <span fg={theme.textMuted}>{" \u2190 "}</span>
-            <span fg={theme.text}>{session.comparison.base}</span>
+            <Tag
+              label={`base ← ${session.comparison.base}`}
+              fg={theme.inverseText}
+              bg={theme.warning}
+            />
             <span fg={theme.border}>{"  \u2502  "}</span>
-            <span fg={theme.accent}>head</span>
-            <span fg={theme.textMuted}>{" \u2192 "}</span>
-            <span fg={theme.text}>{session.comparison.head}</span>
+            <Tag
+              label={`head → ${session.comparison.head}`}
+              fg={theme.inverseText}
+              bg={theme.accent}
+            />
           </text>
           <text fg={theme.textMuted} wrapMode="none">
             <span>{session.repository.rootPath}</span>

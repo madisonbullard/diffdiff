@@ -41,6 +41,20 @@ describe("parseStartupOptions", () => {
     expect(result.head).toBe("feature");
   });
 
+  test("supports verbose logging from CLI flags", () => {
+    const result = parseStartupOptions(["-v"], {});
+
+    expect(result.verbose).toBe(true);
+  });
+
+  test("supports verbose logging from env", () => {
+    const result = parseStartupOptions([], {
+      DIFFDIFF_VERBOSE: "true",
+    });
+
+    expect(result.verbose).toBe(true);
+  });
+
   test("resolves startup options from command values and env", () => {
     const result = resolveStartupOptions(
       { base: "origin/main" },
@@ -64,6 +78,7 @@ describe("parseStartupOptions", () => {
     expect(helpText).toContain("diffdiff session remove <session-id>");
     expect(helpText).toContain("diffdiff session remove-all");
     expect(helpText).toContain("  --head, -H   Head branch or commit to compare to");
+    expect(helpText).toContain("  --verbose, -v  Preserve full command/API payloads in logs");
   });
 });
 

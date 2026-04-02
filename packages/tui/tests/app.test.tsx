@@ -268,6 +268,36 @@ test("uses a compact header for the sticky diff card and removes top list paddin
   expect(diffListContent.props.paddingBottom).toBe(1);
 });
 
+test("renders base and head as the header comparison tags", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  expect(getAppText(tree)).toContain("base ← origin/main");
+  expect(getAppText(tree)).toContain("head → feature/tui");
+  expect(getAppText(tree)).not.toContain("branch range");
+});
+
+test("does not duplicate the working tree label in the header", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({
+          comparison: {
+            base: "HEAD",
+            head: "working tree",
+            range: "HEAD...working tree",
+            mode: "working-tree",
+            usesMergeBase: false,
+          },
+        }),
+      })}
+    />,
+  );
+
+  expect(getAppText(tree)).toContain("base ← HEAD");
+  expect(getAppText(tree)).toContain("head → working tree");
+  expect(getAppText(tree).match(/working tree/gu) ?? []).toHaveLength(1);
+});
+
 test("shows a copy toast for five seconds after a successful copy", () => {
   vi.useFakeTimers();
   selectionCopyState.copySelection.mockImplementation(

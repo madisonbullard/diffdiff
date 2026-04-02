@@ -1,7 +1,7 @@
 import { Octokit } from "octokit";
 import type { ForgeRepository, GitHubAuthSession } from "../types/github.ts";
 import type { GitHubApiClient, GitHubClientFactory } from "../types/providers.ts";
-import { logDiffdiffError, logDiffdiffInfo } from "../logging.ts";
+import { logDiffdiffError, logDiffdiffInfo, logDiffdiffVerbose } from "../logging.ts";
 import { resolveGitHubAuth } from "./auth.ts";
 
 export class OctokitGitHubClientFactory implements GitHubClientFactory {
@@ -36,7 +36,7 @@ class OctokitGitHubApiClient implements GitHubApiClient {
 
   async graphql<T = unknown>(query: string, parameters: Record<string, unknown>): Promise<T> {
     const startedAt = Date.now();
-    logDiffdiffInfo("github", "graphql_request_started", {
+    logDiffdiffVerbose("github", "graphql_request_started", {
       parameters,
       query,
     });
@@ -49,6 +49,12 @@ class OctokitGitHubApiClient implements GitHubApiClient {
       ).graphql<T>(query, parameters)) as T;
 
       logDiffdiffInfo("github", "graphql_request_completed", {
+        durationMs: Date.now() - startedAt,
+        parameters,
+        query,
+        response: summarizeGitHubPayload(response),
+      });
+      logDiffdiffVerbose("github", "graphql_request_response", {
         durationMs: Date.now() - startedAt,
         parameters,
         query,
@@ -68,7 +74,7 @@ class OctokitGitHubApiClient implements GitHubApiClient {
 
   async paginate(route: string, parameters: Record<string, unknown>): Promise<unknown[]> {
     const startedAt = Date.now();
-    logDiffdiffInfo("github", "rest_paginate_started", {
+    logDiffdiffVerbose("github", "rest_paginate_started", {
       parameters,
       route,
     });
@@ -81,6 +87,12 @@ class OctokitGitHubApiClient implements GitHubApiClient {
       ).paginate(route, parameters)) as unknown[];
 
       logDiffdiffInfo("github", "rest_paginate_completed", {
+        durationMs: Date.now() - startedAt,
+        parameters,
+        response: summarizeGitHubPayload(response),
+        route,
+      });
+      logDiffdiffVerbose("github", "rest_paginate_response", {
         durationMs: Date.now() - startedAt,
         parameters,
         response,
@@ -100,7 +112,7 @@ class OctokitGitHubApiClient implements GitHubApiClient {
 
   async request(route: string, parameters: Record<string, unknown>): Promise<unknown> {
     const startedAt = Date.now();
-    logDiffdiffInfo("github", "rest_request_started", {
+    logDiffdiffVerbose("github", "rest_request_started", {
       parameters,
       route,
     });
@@ -120,6 +132,12 @@ class OctokitGitHubApiClient implements GitHubApiClient {
       logDiffdiffInfo("github", "rest_request_completed", {
         durationMs: Date.now() - startedAt,
         parameters,
+        response: summarizeGitHubPayload(response.data),
+        route,
+      });
+      logDiffdiffVerbose("github", "rest_request_response", {
+        durationMs: Date.now() - startedAt,
+        parameters,
         response: response.data,
         route,
       });
@@ -134,4 +152,34 @@ class OctokitGitHubApiClient implements GitHubApiClient {
       throw error;
     }
   }
+}
+
+function summarizeGitHubPayload(payload: unknown): {
+  itemCount?: number;
+  keys?: string[];
+  type: string;
+} {
+  if (Array.isArray(payload)) {
+    return {
+      itemCount: payload.length,
+      type: "array",
+    };
+  }
+
+  if (payload == null) {
+    return {
+      type: "null",
+    };
+  }
+
+  if (typeof payload === "object") {
+    return {
+      keys: Object.keys(payload as Record<string, unknown>).slice(0, 12),
+      type: "object",
+    };
+  }
+
+  return {
+    type: typeof payload,
+  };
 }

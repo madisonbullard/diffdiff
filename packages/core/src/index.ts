@@ -4,9 +4,11 @@ export { DiffdiffError, CommandError } from "./errors.ts";
 export {
   flushDiffdiffLogs,
   getDiffdiffLogSession,
+  isDiffdiffVerboseLoggingEnabled,
   listDiffdiffSessions,
   logDiffdiffError,
   logDiffdiffInfo,
+  logDiffdiffVerbose,
   logDiffdiffWarn,
   markDiffdiffSessionEnded,
   removeAllDiffdiffSessions,

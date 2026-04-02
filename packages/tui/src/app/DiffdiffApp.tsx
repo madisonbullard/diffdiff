@@ -18,6 +18,7 @@ import {
   getDiffdiffLogSession,
   logDiffdiffError,
   logDiffdiffInfo,
+  logDiffdiffVerbose,
   logDiffdiffWarn,
   saveReviewCache,
   saveDiffdiffPreferences,
@@ -32,6 +33,7 @@ import { FileCard, StickyFileHeader } from "../components/file-card.tsx";
 import { FileTreeSidebar } from "../components/file-tree-sidebar.tsx";
 import { HelpModal } from "../components/help-modal.tsx";
 import { ListFilterModal } from "../components/list-filter-modal.tsx";
+import { Tag } from "../components/shared.tsx";
 import { PullRequestBanner } from "../review/banner.tsx";
 import { PullRequestCommentsModal } from "../review/comments-modal.tsx";
 import {
@@ -121,6 +123,7 @@ const TERMINAL_FOCUS_EVENT = "focus";
 const TERMINAL_BLUR_EVENT = "blur";
 const LEADER_KEYBIND = "ctrl+x";
 const COMMAND_LIST_KEYBIND = "ctrl+p";
+const EMPTY_REVIEW_THREADS: readonly import("@diffdiff/core").GitHubPullRequestReviewThread[] = [];
 
 function haveSamePaths(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
   if (left.size !== right.size) {
@@ -390,6 +393,11 @@ export function DiffdiffApp({
     [sidebarWidth, terminalDimensions.width],
   );
   const fileTreeNodes = useMemo(() => buildFileTreeNodes(session.files), [session.files]);
+  const fileTreeNodeByPath = useMemo(
+    () => new Map(fileTreeNodes.map((node) => [node.path, node])),
+    [fileTreeNodes],
+  );
+  const fileTreeNodePaths = useMemo(() => new Set(fileTreeNodeByPath.keys()), [fileTreeNodeByPath]);
   const totalDiff = useMemo(
     () =>
       session.files.reduce(
@@ -405,6 +413,28 @@ export function DiffdiffApp({
     () => getVisibleFileTreeNodes(fileTreeNodes, collapsedDirectories),
     [collapsedDirectories, fileTreeNodes],
   );
+  const visibleTreeNodeIndexByPath = useMemo(
+    () => new Map(visibleTreeNodes.map((node, index) => [node.path, index])),
+    [visibleTreeNodes],
+  );
+  const reviewThreadsByPath = useMemo(() => {
+    const threadsByPath = new Map<
+      string,
+      import("@diffdiff/core").GitHubPullRequestReviewThread[]
+    >();
+
+    for (const thread of session.github?.pullRequest.reviewThreads ?? EMPTY_REVIEW_THREADS) {
+      const pathThreads = threadsByPath.get(thread.path);
+      if (pathThreads == null) {
+        threadsByPath.set(thread.path, [thread]);
+        continue;
+      }
+
+      pathThreads.push(thread);
+    }
+
+    return threadsByPath;
+  }, [session.github?.pullRequest.reviewThreads]);
   const treeSummaryLabels = useMemo(
     () =>
       getTreeSummaryLabels({
@@ -450,7 +480,8 @@ export function DiffdiffApp({
   const selectedBranchItem = branchItems[clampIndex(branchListIndex, branchItems.length)];
   const selectedCommitItem =
     filteredCommitItems[clampIndex(commitListIndex, filteredCommitItems.length)];
-  const selectedTreeNode = fileTreeNodes.find((node) => node.path === selectedTreePath);
+  const selectedTreeNode =
+    selectedTreePath === "" ? undefined : fileTreeNodeByPath.get(selectedTreePath);
   const selectedReviewAnchors = useMemo(
     () => getReviewAnchors(session.files[selectedFileIndex], diffView),
     [diffView, selectedFileIndex, session.files],
@@ -909,20 +940,17 @@ export function DiffdiffApp({
 
     const selectedFilePath = session.files[selectedFileIndex]?.path;
     setSelectedTreePath((currentPath) => {
-      if (currentPath !== "" && fileTreeNodes.some((node) => node.path === currentPath)) {
+      if (currentPath !== "" && fileTreeNodePaths.has(currentPath)) {
         return currentPath;
       }
 
-      if (
-        selectedFilePath != null &&
-        fileTreeNodes.some((node) => node.path === selectedFilePath)
-      ) {
+      if (selectedFilePath != null && fileTreeNodePaths.has(selectedFilePath)) {
         return selectedFilePath;
       }
 
       return fileTreeNodes[0]?.path ?? "";
     });
-  }, [fileTreeNodes, selectedFileIndex, session.files]);
+  }, [fileTreeNodePaths, fileTreeNodes, selectedFileIndex, session.files]);
 
   useEffect(() => {
     const selectedFilePath = session.files[selectedFileIndex]?.path;
@@ -993,7 +1021,7 @@ export function DiffdiffApp({
   }, [getFileTopOffsets, selectedFileIndex]);
 
   useEffect(() => {
-    const selectedTreeIndex = visibleTreeNodes.findIndex((node) => node.path === selectedTreePath);
+    const selectedTreeIndex = visibleTreeNodeIndexByPath.get(selectedTreePath) ?? -1;
     const offset = getTreeTopOffsets()[selectedTreeIndex];
     const scrollBox = treeScrollRef.current;
     if (scrollBox == null || offset == null || !Number.isFinite(offset)) {
@@ -1001,7 +1029,7 @@ export function DiffdiffApp({
     }
 
     scrollBox.scrollTo({ x: 0, y: Math.max(offset - 2, 0) });
-  }, [getTreeTopOffsets, selectedTreePath, visibleTreeNodes]);
+  }, [getTreeTopOffsets, selectedTreePath, visibleTreeNodeIndexByPath]);
 
   useEffect(() => {
     if (!showMergeModal || mergeModalField !== "body") {
@@ -1096,7 +1124,7 @@ export function DiffdiffApp({
   }, [refreshGitState, renderer]);
 
   keyboardHandlerRef.current = (key) => {
-    logDiffdiffInfo("app", "key_pressed", {
+    logDiffdiffVerbose("app", "key_pressed", {
       activeOverlay,
       errorToastVisible: errorToastMessage != null,
       key,
@@ -1259,8 +1287,6 @@ export function DiffdiffApp({
   );
 
   const selectedFile = session.files[selectedFileIndex];
-  const comparisonModeLabel =
-    session.comparison.mode === "working-tree" ? "working tree" : "branch range";
   const currentBranchLabel = session.repository.currentBranch ?? "detached";
 
   function showToast(message: string): void {
@@ -1349,7 +1375,7 @@ export function DiffdiffApp({
   }, [session]);
 
   useEffect(() => {
-    logDiffdiffInfo("app", "selection_updated", {
+    logDiffdiffVerbose("app", "selection_updated", {
       activeFileIndex,
       activePane,
       diffView,
@@ -1360,6 +1386,24 @@ export function DiffdiffApp({
       selectedFilePath: session.files[selectedFileIndex]?.path,
     });
   }, [activeFileIndex, activePane, diffView, selectedFileIndex, session.files]);
+
+  useEffect(() => {
+    const selectedFile = session.files[selectedFileIndex];
+    if (selectedFile == null) {
+      return;
+    }
+
+    logDiffdiffInfo("app", "selected_file_profile", {
+      diffView,
+      isCollapsed: collapsedPaths.has(selectedFile.path),
+      patchBytes: Buffer.byteLength(selectedFile.patch, "utf8"),
+      path: selectedFile.path,
+      reviewThreadCount: (reviewThreadsByPath.get(selectedFile.path) ?? EMPTY_REVIEW_THREADS)
+        .length,
+      splitRowCount: selectedFile.sideBySideRows.length,
+      unifiedLineCount: selectedFile.unifiedLines.length,
+    });
+  }, [collapsedPaths, diffView, reviewThreadsByPath, selectedFileIndex, session.files]);
 
   useEffect(() => {
     if (session.github != null) {
@@ -1390,7 +1434,7 @@ export function DiffdiffApp({
   ]);
 
   useEffect(() => {
-    logDiffdiffInfo("app", "overlay_updated", {
+    logDiffdiffVerbose("app", "overlay_updated", {
       activeOverlay,
     });
     void updateDiffdiffSessionActivity({
@@ -1399,7 +1443,7 @@ export function DiffdiffApp({
   }, [activeOverlay]);
 
   useEffect(() => {
-    logDiffdiffInfo("app", "status_message_updated", {
+    logDiffdiffVerbose("app", "status_message_updated", {
       message: statusMessage,
     });
     void updateDiffdiffSessionActivity({
@@ -1453,15 +1497,17 @@ export function DiffdiffApp({
             <span fg={theme.border}>{" / "}</span>
             <span>{session.repository.name}</span>
             <span>{"  "}</span>
-            <span fg={theme.inverseText} bg={theme.border}>{` ${comparisonModeLabel} `}</span>
-            <span>{"  "}</span>
-            <span fg={theme.warning}>base</span>
-            <span fg={theme.textMuted}>{" \u2190 "}</span>
-            <span fg={theme.text}>{session.comparison.base}</span>
+            <Tag
+              label={`base ← ${session.comparison.base}`}
+              fg={theme.inverseText}
+              bg={theme.warning}
+            />
             <span fg={theme.border}>{"  \u2502  "}</span>
-            <span fg={theme.accent}>head</span>
-            <span fg={theme.textMuted}>{" \u2192 "}</span>
-            <span fg={theme.text}>{session.comparison.head}</span>
+            <Tag
+              label={`head → ${session.comparison.head}`}
+              fg={theme.inverseText}
+              bg={theme.accent}
+            />
           </text>
           <text fg={theme.textMuted} wrapMode="none">
             <span>{session.repository.rootPath}</span>
@@ -1711,9 +1757,7 @@ export function DiffdiffApp({
                     removeTopPadding={index === 0}
                     isReviewed={isReviewed}
                     isSelected={isSelected}
-                    reviewThreads={session.github?.pullRequest.reviewThreads.filter(
-                      (thread) => thread.path === file.path,
-                    )}
+                    reviewThreads={reviewThreadsByPath.get(file.path) ?? EMPTY_REVIEW_THREADS}
                     rootRef={(node) => {
                       fileCardRefs.current[index] = node;
                     }}
@@ -2090,7 +2134,7 @@ export function DiffdiffApp({
       return;
     }
 
-    const currentIndex = visibleTreeNodes.findIndex((node) => node.path === selectedTreePath);
+    const currentIndex = visibleTreeNodeIndexByPath.get(selectedTreePath) ?? -1;
     const startIndex = currentIndex >= 0 ? currentIndex : 0;
     const nextIndex = clampIndex(startIndex + delta, visibleTreeNodes.length);
     const nextNode = visibleTreeNodes[nextIndex];
@@ -2141,7 +2185,7 @@ export function DiffdiffApp({
       }
 
       if (currentNode.parentPath != null) {
-        const parentNode = fileTreeNodes.find((node) => node.path === currentNode.parentPath);
+        const parentNode = fileTreeNodeByPath.get(currentNode.parentPath);
         if (parentNode != null) {
           selectTreeNode(parentNode);
         }

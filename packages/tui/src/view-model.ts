@@ -294,6 +294,7 @@ export function buildFileTreeNodes(files: readonly ChangedFile[]): FileTreeNode[
     name: string;
     parentPath?: string;
     directories: Map<string, DirectoryBuilder>;
+    fileCount: number;
     files: Array<{ file: ChangedFile; fileIndex: number }>;
   }
 
@@ -302,6 +303,7 @@ export function buildFileTreeNodes(files: readonly ChangedFile[]): FileTreeNode[
     name: "",
     parentPath: undefined,
     directories: new Map(),
+    fileCount: 0,
     files: [],
   };
 
@@ -324,10 +326,14 @@ export function buildFileTreeNodes(files: readonly ChangedFile[]): FileTreeNode[
           name: part,
           parentPath: directory.path === "" ? undefined : directory.path,
           directories: new Map(),
+          fileCount: 0,
           files: [],
         };
         directory.directories.set(part, nextDirectory);
       }
+      // Keep descendant counts incrementally so the tree renderer does not have to recursively
+      // recount every directory on each rebuild.
+      nextDirectory.fileCount += 1;
       directory = nextDirectory;
     }
 
@@ -348,8 +354,6 @@ export function buildFileTreeNodes(files: readonly ChangedFile[]): FileTreeNode[
       left.file.path.localeCompare(right.file.path),
     );
 
-    const fileCount = countFiles(directory);
-
     nodes.push({
       kind: "directory",
       path: directory.path,
@@ -357,7 +361,7 @@ export function buildFileTreeNodes(files: readonly ChangedFile[]): FileTreeNode[
       depth,
       parentPath: directory.parentPath,
       ancestorPaths: ancestorPaths.filter(Boolean),
-      fileCount,
+      fileCount: directory.fileCount,
     });
 
     for (const childDirectory of childDirectories) {
@@ -379,14 +383,6 @@ export function buildFileTreeNodes(files: readonly ChangedFile[]): FileTreeNode[
         deletions: file.deletions,
       });
     }
-  }
-
-  function countFiles(directory: DirectoryBuilder): number {
-    let fileCount = directory.files.length;
-    for (const childDirectory of directory.directories.values()) {
-      fileCount += countFiles(childDirectory);
-    }
-    return fileCount;
   }
 
   const rootDirectories = Array.from(root.directories.values()).sort((left, right) =>

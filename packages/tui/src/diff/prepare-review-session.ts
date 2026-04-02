@@ -29,6 +29,7 @@ export async function loadPreparedReviewSession(
   syntaxPalette: SyntaxPalette = getSyntaxPalette(themeName),
   prepareOptions: PrepareReviewSessionOptions = {},
 ): Promise<PreparedReviewSession> {
+  const startedAt = Date.now();
   logDiffdiffInfo("render", "prepared_review_session_load_started", {
     options,
     prepareOptions,
@@ -44,7 +45,9 @@ export async function loadPreparedReviewSession(
   );
   logDiffdiffInfo("render", "prepared_review_session_load_completed", {
     deferredSyntaxRendering: prepareOptions.deferSyntaxRendering === true,
+    durationMs: Date.now() - startedAt,
     fileCount: preparedSession.files.length,
+    metrics: summarizePreparedFiles(preparedSession.files),
     themeName,
   });
   return preparedSession;
@@ -60,7 +63,13 @@ export async function prepareReviewSession(
   const sortedSession = { ...session, files: sortFilesInTreeOrder(session.files) };
 
   if (prepareOptions.deferSyntaxRendering) {
-    return prepareDeferredReviewSession(sortedSession, themeName, theme, syntaxPalette);
+    return prepareDeferredReviewSession(
+      sortedSession,
+      themeName,
+      theme,
+      syntaxPalette,
+      prepareOptions.initialDiffView ?? "both",
+    );
   }
 
   const pierreDiffs = await loadPierreDiffs();
@@ -73,7 +82,14 @@ export async function prepareReviewSession(
   const resolveSegmentColor = createPierreSegmentColorResolver(themeName, theme, syntaxPalette);
 
   const files = parsedFiles.map((file) =>
-    renderPreparedFile(file, pierreDiffs, highlighter, themeName, resolveSegmentColor),
+    renderPreparedFile(
+      file,
+      pierreDiffs,
+      highlighter,
+      themeName,
+      resolveSegmentColor,
+      prepareOptions.initialDiffView ?? "both",
+    ),
   );
 
   return {
@@ -88,6 +104,7 @@ async function prepareDeferredReviewSession(
   themeName: PierreThemeName,
   theme: UiTheme,
   syntaxPalette: SyntaxPalette,
+  initialDiffView: PrepareReviewSessionOptions["initialDiffView"] = "both",
 ): Promise<PreparedReviewSession> {
   const pierreDiffs = await loadPierreDiffs();
   const files = session.files.map((file) => createDeferredPreparedFile(file, pierreDiffs));
@@ -125,8 +142,14 @@ async function prepareDeferredReviewSession(
 
         return {
           ...file,
-          sideBySideRows: buildPlainSideBySideRows(file.diff),
-          unifiedLines: buildPlainUnifiedLines(file.diff),
+          sideBySideRows:
+            initialDiffView === "split" || initialDiffView === "both"
+              ? buildPlainSideBySideRows(file.diff)
+              : [],
+          unifiedLines:
+            initialDiffView === "unified" || initialDiffView === "both"
+              ? buildPlainUnifiedLines(file.diff)
+              : [],
         };
       }),
       themeName,
@@ -152,20 +175,26 @@ async function prepareDeferredReviewSession(
 
         return {
           ...file,
-          sideBySideRows: buildSideBySideRows(
-            file.diff,
-            rendered.code.deletionLines as never[],
-            rendered.code.additionLines as never[],
-            themeVariables,
-            resolveSegmentColor,
-          ),
-          unifiedLines: buildUnifiedLines(
-            file.diff,
-            rendered.code.deletionLines as never[],
-            rendered.code.additionLines as never[],
-            themeVariables,
-            resolveSegmentColor,
-          ),
+          sideBySideRows:
+            initialDiffView === "split" || initialDiffView === "both"
+              ? buildSideBySideRows(
+                  file.diff,
+                  rendered.code.deletionLines as never[],
+                  rendered.code.additionLines as never[],
+                  themeVariables,
+                  resolveSegmentColor,
+                )
+              : [],
+          unifiedLines:
+            initialDiffView === "unified" || initialDiffView === "both"
+              ? buildUnifiedLines(
+                  file.diff,
+                  rendered.code.deletionLines as never[],
+                  rendered.code.additionLines as never[],
+                  themeVariables,
+                  resolveSegmentColor,
+                )
+              : [],
         };
       } catch (error) {
         logDiffdiffWarn("render", "deferred_diff_render_fallback", {
@@ -175,8 +204,14 @@ async function prepareDeferredReviewSession(
         });
         return {
           ...file,
-          sideBySideRows: buildPlainSideBySideRows(file.diff),
-          unifiedLines: buildPlainUnifiedLines(file.diff),
+          sideBySideRows:
+            initialDiffView === "split" || initialDiffView === "both"
+              ? buildPlainSideBySideRows(file.diff)
+              : [],
+          unifiedLines:
+            initialDiffView === "unified" || initialDiffView === "both"
+              ? buildPlainUnifiedLines(file.diff)
+              : [],
         };
       }
     }),
@@ -215,6 +250,7 @@ function renderPreparedFile(
   highlighter: unknown,
   themeName: PierreThemeName,
   resolveSegmentColor: ReturnType<typeof createPierreSegmentColorResolver>,
+  initialDiffView: PrepareReviewSessionOptions["initialDiffView"],
 ): PreparedReviewFile {
   if (file.diff == null || file.isBinary) {
     return file;
@@ -228,20 +264,29 @@ function renderPreparedFile(
     });
 
     const themeVariables = parseThemeVariables(rendered.themeStyles);
-    const unifiedLines = buildUnifiedLines(
-      file.diff,
-      rendered.code.deletionLines as never[],
-      rendered.code.additionLines as never[],
-      themeVariables,
-      resolveSegmentColor,
-    );
-    const sideBySideRows = buildSideBySideRows(
-      file.diff,
-      rendered.code.deletionLines as never[],
-      rendered.code.additionLines as never[],
-      themeVariables,
-      resolveSegmentColor,
-    );
+    // Startup spends most of its time building diff rows. When the app opens in unified mode,
+    // skipping split-row materialization cuts a large chunk of that work without losing the raw
+    // patch data needed to render the alternate view later.
+    const unifiedLines =
+      initialDiffView === "unified" || initialDiffView === "both"
+        ? buildUnifiedLines(
+            file.diff,
+            rendered.code.deletionLines as never[],
+            rendered.code.additionLines as never[],
+            themeVariables,
+            resolveSegmentColor,
+          )
+        : [];
+    const sideBySideRows =
+      initialDiffView === "split" || initialDiffView === "both"
+        ? buildSideBySideRows(
+            file.diff,
+            rendered.code.deletionLines as never[],
+            rendered.code.additionLines as never[],
+            themeVariables,
+            resolveSegmentColor,
+          )
+        : [];
 
     return {
       ...file,
@@ -259,4 +304,41 @@ function renderPreparedFile(
       renderError: error instanceof Error ? error.message : "Unable to render diff.",
     };
   }
+}
+
+function summarizePreparedFiles(files: readonly PreparedReviewFile[]): {
+  binaryFileCount: number;
+  largestFile?: { path: string; patchBytes: number };
+  patchBytes: number;
+  splitRowCount: number;
+  unifiedLineCount: number;
+} {
+  let patchBytes = 0;
+  let unifiedLineCount = 0;
+  let splitRowCount = 0;
+  let binaryFileCount = 0;
+  let largestFile: { path: string; patchBytes: number } | undefined;
+
+  for (const file of files) {
+    const filePatchBytes = Buffer.byteLength(file.patch, "utf8");
+    patchBytes += filePatchBytes;
+    unifiedLineCount += file.unifiedLines.length;
+    splitRowCount += file.sideBySideRows.length;
+    binaryFileCount += file.isBinary ? 1 : 0;
+
+    if (largestFile == null || filePatchBytes > largestFile.patchBytes) {
+      largestFile = {
+        path: file.path,
+        patchBytes: filePatchBytes,
+      };
+    }
+  }
+
+  return {
+    binaryFileCount,
+    largestFile,
+    patchBytes,
+    splitRowCount,
+    unifiedLineCount,
+  };
 }

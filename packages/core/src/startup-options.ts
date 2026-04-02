@@ -5,6 +5,7 @@ export interface StartupOptionValues {
   repo?: string;
   base?: string;
   head?: string;
+  verbose?: boolean;
 }
 
 export function resolveStartupOptions(
@@ -14,11 +15,13 @@ export function resolveStartupOptions(
   const repoPath = typeof values.repo === "string" ? values.repo : env.DIFFDIFF_REPO;
   const base = typeof values.base === "string" ? values.base : env.DIFFDIFF_BASE;
   const head = typeof values.head === "string" ? values.head : env.DIFFDIFF_HEAD;
+  const verbose = values.verbose ?? parseBooleanEnvValue(env.DIFFDIFF_VERBOSE);
 
   return {
     repoPath,
     base,
     head,
+    verbose,
   };
 }
 
@@ -44,6 +47,10 @@ export function parseStartupOptions(
         type: "string",
         short: "H",
       },
+      verbose: {
+        type: "boolean",
+        short: "v",
+      },
       help: {
         type: "boolean",
       },
@@ -62,6 +69,7 @@ export function parseStartupOptions(
         base: typeof values.base === "string" ? values.base : undefined,
         head: typeof values.head === "string" ? values.head : undefined,
         repo: typeof values.repo === "string" ? values.repo : undefined,
+        verbose: values.verbose === true ? true : undefined,
       },
       env,
     ),
@@ -85,6 +93,7 @@ export function formatHelpText(): string {
     "  --repo, -r   Path inside the repository to review",
     "  --base, -b   Base branch or commit to compare from",
     "  --head, -H   Head branch or commit to compare to",
+    "  --verbose, -v  Preserve full command/API payloads in logs",
     "  --help       Show this help text",
     "  --version    Show the current package version",
     "",
@@ -92,6 +101,28 @@ export function formatHelpText(): string {
     "  DIFFDIFF_REPO",
     "  DIFFDIFF_BASE",
     "  DIFFDIFF_HEAD",
+    "  DIFFDIFF_VERBOSE",
     "  DIFFDIFF_GITHUB_TOKEN",
   ].join("\n");
+}
+
+function parseBooleanEnvValue(value: string | undefined): boolean | undefined {
+  if (value == null) {
+    return undefined;
+  }
+
+  switch (value.trim().toLowerCase()) {
+    case "1":
+    case "true":
+    case "yes":
+    case "on":
+      return true;
+    case "0":
+    case "false":
+    case "no":
+    case "off":
+      return false;
+    default:
+      return undefined;
+  }
 }

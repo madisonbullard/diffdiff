@@ -21,6 +21,7 @@ export interface SegmentStyle {
 
 export interface PrepareReviewSessionOptions {
   deferSyntaxRendering?: boolean;
+  initialDiffView?: "unified" | "split" | "both";
 }
 
 export interface PierreDiffsModule {

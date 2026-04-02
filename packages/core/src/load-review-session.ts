@@ -20,6 +20,7 @@ export async function loadReviewSession(
   forgeProviders: readonly ForgeMetadataProvider[] = DEFAULT_FORGE_PROVIDERS,
   githubPullRequestService: GitHubPullRequestService = DEFAULT_GITHUB_PULL_REQUEST_SERVICE,
 ): Promise<ReviewSession> {
+  const startedAt = Date.now();
   const searchPath = getRepositorySearchPath(options.repoPath);
   logDiffdiffInfo("session", "review_session_load_started", {
     options,
@@ -37,6 +38,7 @@ export async function loadReviewSession(
 
     logDiffdiffInfo("session", "review_session_load_completed", {
       comparison: reviewSession.comparison,
+      durationMs: Date.now() - startedAt,
       fileCount: reviewSession.files.length,
       hasGitHubReview: reviewSession.github != null,
       repository: {
@@ -52,6 +54,7 @@ export async function loadReviewSession(
 
   const error = new DiffdiffError(`No supported repository found from ${searchPath}.`);
   logDiffdiffError("session", "review_session_load_failed", error, {
+    durationMs: Date.now() - startedAt,
     options,
     searchPath,
   });

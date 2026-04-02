@@ -2,6 +2,7 @@ import { basename } from "node:path";
 import { runCommand } from "../command.ts";
 import { DiffdiffError } from "../errors.ts";
 import { parseGitHubRemote } from "../github/index.ts";
+import { logDiffdiffInfo } from "../logging.ts";
 import type { GitRemote } from "../types/github.ts";
 import type {
   ForgeMetadataProvider,
@@ -61,6 +62,7 @@ class GitRepository implements RepositoryHandle {
     options: StartupOptions,
     forgeProviders: ForgeMetadataProvider[],
   ): Promise<ReviewSession> {
+    const startedAt = Date.now();
     const warnings: ReviewWarning[] = [];
     const hasCommitHistory = await this.hasCommitHistory();
     const resolvedComparison = !hasCommitHistory
@@ -102,6 +104,19 @@ class GitRepository implements RepositoryHandle {
       ),
       listComparisonCommits(this.rootPath, resolvedComparison.comparison),
     ]);
+    logDiffdiffInfo("session", "git_review_session_components_loaded", {
+      commitCount: commits.length,
+      durationMs: Date.now() - startedAt,
+      fileCount: files.length,
+      largestFilePatchBytes: files.reduce(
+        (maxPatchBytes, file) => Math.max(maxPatchBytes, Buffer.byteLength(file.patch, "utf8")),
+        0,
+      ),
+      localBranchCount: branches.local.length,
+      remoteBranchCount: branches.remote.length,
+      remoteCount: remotes.length,
+      workingTreeSummary,
+    });
     const repository = this.buildRepositoryInfo(
       remotes,
       resolvedComparison.currentBranch,

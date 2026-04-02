@@ -26,6 +26,7 @@ interface LaunchCommandOptions {
   base?: string;
   head?: string;
   repo?: string;
+  verbose?: boolean;
 }
 
 interface AuthLoginCommandOptions {
@@ -158,12 +159,14 @@ function addStartupOptions(command: Command): void {
   command.option("-r, --repo <path>", "Path inside the repository to review.");
   command.option("-b, --base <ref>", "Base branch or commit to compare from.");
   command.option("-H, --head <ref>", "Head branch or commit to compare to.");
+  command.option("-v, --verbose", "Preserve full command and API payloads in session logs.");
 }
 
 async function launchTui(options: StartupOptions): Promise<void> {
   const logSession = await startDiffdiffLogging({
     command: process.argv,
     cwd: process.cwd(),
+    verbose: options.verbose,
   });
 
   logDiffdiffInfo("cli", "tui_launch_started", {
@@ -229,6 +232,7 @@ async function launchTui(options: StartupOptions): Promise<void> {
     const loadSession = (nextOptions: StartupOptions) =>
       loadPreparedReviewSession(nextOptions, themeName, theme, syntaxPalette, {
         deferSyntaxRendering: true,
+        initialDiffView: "unified",
       });
     const gitHubPullRequestService = new GitHubPullRequestService();
     const initialSession = await loadSession(options);

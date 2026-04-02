@@ -18,6 +18,7 @@ export interface StartDiffdiffLoggingOptions {
   logDirectoryPath?: string;
   sessionDirectoryPath?: string;
   sessionId?: string;
+  verbose?: boolean;
 }
 
 export interface DiffdiffSessionActivity {
@@ -67,6 +68,7 @@ let activeSessionRecord: Omit<DiffdiffSessionRecord, "isActive" | "state"> | und
 let loggingEnabled = false;
 let processHandlersInstalled = false;
 let sequence = 0;
+let verboseLoggingEnabled = false;
 let writeQueue = Promise.resolve();
 
 export async function startDiffdiffLogging(
@@ -99,6 +101,7 @@ export async function startDiffdiffLogging(
     sessionId,
   };
   const startedAt = new Date().toISOString();
+  verboseLoggingEnabled = options.verbose === true;
   activeSessionRecord = {
     command: [...(options.command ?? process.argv)],
     cwd: options.cwd ?? process.cwd(),
@@ -133,7 +136,24 @@ export function getDiffdiffLogSession(): DiffdiffLogSession | undefined {
   return activeLogSession;
 }
 
+export function isDiffdiffVerboseLoggingEnabled(): boolean {
+  return verboseLoggingEnabled;
+}
+
 export function logDiffdiffInfo(scope: string, event: string, data?: unknown): void {
+  queueLogEntry({
+    data,
+    event,
+    level: "info",
+    scope,
+  });
+}
+
+export function logDiffdiffVerbose(scope: string, event: string, data?: unknown): void {
+  if (!verboseLoggingEnabled) {
+    return;
+  }
+
   queueLogEntry({
     data,
     event,
