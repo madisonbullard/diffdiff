@@ -22,6 +22,7 @@ import {
 import { Command } from "commander";
 import packageJson from "../package.json";
 import { resolveLaunchOptionsFromTarget } from "./launch-target.ts";
+import { StartupScreen } from "./startup-screen.tsx";
 import type { LaunchOptions } from "./types.ts";
 
 interface LaunchCommandOptions {
@@ -38,36 +39,6 @@ interface AuthLoginCommandOptions {
 
 interface SessionListCommandOptions {
   json?: boolean;
-}
-
-// This tiny shell gives users immediate feedback while the heavier repository and diff prep runs.
-function StartupScreen({
-  chromeBackground,
-  path,
-  text,
-  textMuted,
-}: {
-  chromeBackground: string;
-  path: string;
-  text: string;
-  textMuted: string;
-}) {
-  return (
-    <box width="100%" height="100%" backgroundColor={chromeBackground} paddingX={2} paddingY={1}>
-      <box width="100%" flexDirection="column" gap={0}>
-        <text fg="#9cdcfe" wrapMode="none">
-          diffdiff
-        </text>
-        <text wrapMode="none">
-          <span fg={text}>Loading review session</span>
-          <span fg={textMuted}>{"..."}</span>
-        </text>
-        <text fg={textMuted} wrapMode="none">
-          {path}
-        </text>
-      </box>
-    </box>
-  );
 }
 
 async function main(): Promise<void> {
