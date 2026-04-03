@@ -40,8 +40,7 @@ import {
   openDialog as openAppDialog,
   type AppDialog,
 } from "./dialog-stack.ts";
-import { BranchModal } from "../components/branch-modal.tsx";
-import { CommandPaletteModal } from "../components/command-palette-modal.tsx";
+import { DiffdiffAppDialogs } from "./layout.tsx";
 import {
   getUnifiedVirtualWindow,
   shouldVirtualizeUnifiedPreview,
@@ -52,11 +51,8 @@ import {
   type FileCardPreviewViewport,
 } from "../components/file-card.tsx";
 import { FileTreeSidebar } from "../components/file-tree-sidebar.tsx";
-import { HelpModal } from "../components/help-modal.tsx";
-import { ListFilterModal } from "../components/list-filter-modal.tsx";
 import { Tag } from "../components/shared.tsx";
 import { PullRequestBanner } from "../review/banner.tsx";
-import { PullRequestCommentsModal } from "../review/comments-modal.tsx";
 import {
   getCommentCollapsed,
   getReviewThreadCollapseKey,
@@ -68,10 +64,6 @@ import {
   getMergeMethodIndex,
   getReviewSubmissionEvent,
 } from "../review/formatting.ts";
-import { MergePullRequestModal } from "../review/merge-pull-request-modal.tsx";
-import { PostMergeCleanupModal } from "../review/post-merge-cleanup-modal.tsx";
-import { ReviewComposerModal } from "../review/review-composer-modal.tsx";
-import { SubmitReviewModal } from "../review/submit-review-modal.tsx";
 import { formatThreadAnchor } from "../review/threads.tsx";
 import { getReviewAnchors } from "../review-anchors.ts";
 import type { UiTheme } from "../theme.ts";
@@ -2576,92 +2568,53 @@ export function DiffdiffApp({
         </box>
       </box>
 
-      {showBranchModal ? (
-        <BranchModal
-          activeView={activeListView}
-          base={session.comparison.base}
-          branchItems={branchItems}
-          branchIndex={branchListIndex}
-          commitItems={filteredCommitItems}
-          commitIndex={commitListIndex}
-          commitSearchQuery={commitSearchQuery}
-          commitSearchActive={commitSearchActive}
-          comparisonMode={session.comparison.mode}
-          filters={branchListFilters}
-          head={session.comparison.head}
-          localBranchCount={session.branches.local.length}
-          openPrCount={openPrCount}
-          remoteBranchCount={remoteBranchCount}
-          theme={theme}
-        />
-      ) : null}
-
-      {showCommandModal ? (
-        <CommandPaletteModal
-          commands={filteredCommands}
-          leaderKeybind={LEADER_KEYBIND}
-          query={commandQuery}
-          selectedIndex={commandIndex}
-          theme={theme}
-        />
-      ) : null}
-
-      {showBranchModal && showListFilterModal ? (
-        <ListFilterModal filters={branchListFilters} selectedIndex={filterIndex} theme={theme} />
-      ) : null}
-
-      {showCommentComposer && reviewComposerContext != null ? (
-        <ReviewComposerModal
-          body={reviewComposerBody}
-          context={reviewComposerContext}
-          isSubmitting={isSubmittingReviewAction}
-          theme={theme}
-        />
-      ) : null}
-
-      {showCommentsModal && session.github != null ? (
-        <PullRequestCommentsModal
-          pullRequest={session.github.pullRequest}
-          selectedItemId={selectedPullRequestConversationItem?.id}
-          theme={theme}
-        />
-      ) : null}
-
-      {showSubmitReviewModal ? (
-        <SubmitReviewModal
-          body={reviewSubmissionBody}
-          eventIndex={reviewSubmissionEventIndex}
-          isSubmitting={isSubmittingReviewAction}
-          theme={theme}
-        />
-      ) : null}
-
-      {showMergeModal && session.github != null ? (
-        <MergePullRequestModal
-          body={mergeCommitMessage}
-          bodyScrollRef={mergeBodyScrollRef}
-          canSubmit={session.github.pullRequest.merge.canMerge && mergeMethod != null}
-          field={mergeModalField}
-          isSubmitting={isSubmittingReviewAction}
-          method={mergeMethod}
-          pullRequest={session.github.pullRequest}
-          theme={theme}
-          title={mergeCommitTitle}
-        />
-      ) : null}
-
-      {showCleanupModal ? (
-        <PostMergeCleanupModal
-          canApply={canApplyCleanup}
-          candidates={cleanupCandidates}
-          isSubmitting={isSubmittingReviewAction}
-          selectedIndex={cleanupCandidateIndex}
-          selection={cleanupSelection}
-          theme={theme}
-        />
-      ) : null}
-
-      {showHelp ? <HelpModal theme={theme} /> : null}
+      <DiffdiffAppDialogs
+        activeListView={activeListView}
+        branchItems={branchItems}
+        branchListFilters={branchListFilters}
+        branchListIndex={branchListIndex}
+        canApplyCleanup={canApplyCleanup}
+        cleanupCandidateIndex={cleanupCandidateIndex}
+        cleanupCandidates={cleanupCandidates}
+        cleanupSelection={cleanupSelection}
+        commandIndex={commandIndex}
+        commandQuery={commandQuery}
+        commitListIndex={commitListIndex}
+        commitSearchActive={commitSearchActive}
+        commitSearchQuery={commitSearchQuery}
+        filteredCommands={filteredCommands}
+        filteredCommitItems={filteredCommitItems}
+        filterIndex={filterIndex}
+        isSubmittingReviewAction={isSubmittingReviewAction}
+        leaderKeybind={LEADER_KEYBIND}
+        mergeBodyScrollRef={mergeBodyScrollRef}
+        mergeCommitMessage={mergeCommitMessage}
+        mergeCommitTitle={mergeCommitTitle}
+        mergeMethod={mergeMethod}
+        mergeModalField={mergeModalField}
+        openPrCount={openPrCount}
+        remoteBranchCount={remoteBranchCount}
+        reviewComposerBody={reviewComposerBody}
+        reviewComposerContext={reviewComposerContext}
+        reviewSubmissionBody={reviewSubmissionBody}
+        reviewSubmissionEventIndex={reviewSubmissionEventIndex}
+        selectedPullRequestConversationItemId={
+          selectedPullRequestConversationItem?.id == null
+            ? undefined
+            : String(selectedPullRequestConversationItem.id)
+        }
+        session={session}
+        showBranchModal={showBranchModal}
+        showCleanupModal={showCleanupModal}
+        showCommandModal={showCommandModal}
+        showCommentComposer={showCommentComposer}
+        showCommentsModal={showCommentsModal}
+        showHelp={showHelp}
+        showListFilterModal={showListFilterModal}
+        showMergeModal={showMergeModal}
+        showSubmitReviewModal={showSubmitReviewModal}
+        theme={theme}
+      />
     </box>
   );
 
