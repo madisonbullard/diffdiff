@@ -1,4 +1,8 @@
-import type { GitHubUserPreferences, StartupOptions } from "@diffdiff/core";
+import {
+  buildReviewedFileFingerprint,
+  buildReviewSessionFingerprint,
+  type GitHubUserPreferences,
+} from "@diffdiff/core";
 import type { ComponentProps, ReactNode } from "react";
 import type {
   ReactTestInstance,
@@ -10,7 +14,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 import { DiffdiffApp } from "../src/app/DiffdiffApp.tsx";
 import { FileCard } from "../src/components/file-card.tsx";
 import { getUiTheme } from "../src/theme.ts";
-import type { PreparedReviewFile, PreparedReviewSession } from "../src/types.ts";
+import type { LaunchOptions, PreparedReviewFile, PreparedReviewSession } from "../src/types.ts";
 
 interface KeyboardInput {
   name: string;
@@ -164,6 +168,25 @@ test("runs leader key commands with ctrl+x", () => {
   expect(getAppText(tree)).toContain("Working tree");
 });
 
+test("opens the PR-only list on launch when requested", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialOptions: {
+          base: "origin/main",
+          head: "feature/tui",
+          initialListMode: "pull-requests",
+        },
+      })}
+    />,
+  );
+
+  expect(getAppText(tree)).toContain("Opened list modal.");
+  expect(getAppText(tree)).toContain("review PR");
+  expect(getAppText(tree)).toContain("Build TUI reviewer");
+  expect(getAppText(tree)).not.toContain("Working tree 1 file");
+});
+
 test("tab switches to the file tree and tree navigation opens files", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 
@@ -212,6 +235,42 @@ test("uses a compact file tree summary when the sidebar is narrow", () => {
   expect(getAppText(tree)).toContain("2 /8 rev");
   expect(getAppText(tree)).toContain("+774 / -47");
   expect(getAppText(tree)).not.toContain("2 / 8 reviewed");
+});
+
+test("restores reviewed files by file fingerprint", () => {
+  const initialSession = createPreparedSession({
+    files: [
+      createPreparedFile(),
+      createPreparedFile({
+        path: "src/utils.ts",
+        patch: "diff --git a/src/utils.ts b/src/utils.ts\n+new",
+      }),
+    ],
+  });
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession,
+        initialReviewCache: {
+          collapsedPaths: [],
+          reviewedFiles: [
+            {
+              fingerprint: buildReviewedFileFingerprint(initialSession.files[0]!),
+              path: initialSession.files[0]!.path,
+            },
+            {
+              fingerprint: "stale-reviewed-file",
+              path: initialSession.files[1]!.path,
+            },
+          ],
+          selectedFilePath: initialSession.files[0]!.path,
+        },
+      })}
+    />,
+  );
+
+  expect(getAppText(tree)).toContain("1 / 2 reviewed");
+  expect(getAppText(tree)).not.toContain("2 / 2 reviewed");
 });
 
 test("keeps background file selection stable when modal handlers rerender", () => {
@@ -453,14 +512,14 @@ test("shows a copy toast for five seconds after a successful copy", () => {
 
 test("shows a persistent error log toast until dismissed", async () => {
   const logFilePath = "/Users/test/.diffdiff/logs/log-test.jsonl";
-  const loadSession = vi.fn(async () => {
+  const probeFreshness = vi.fn(async () => {
     throw new Error("Unable to refresh git state.");
   });
   const tree = render(
     <DiffdiffApp
       {...createAppProps({
-        loadSession,
         logFilePath,
+        probeFreshness,
       })}
     />,
   );
@@ -571,7 +630,8 @@ test("shows an animated event log entry while loading a new base branch", async 
   expect(getAppText(tree)).not.toContain("Updating base to main...");
 });
 
-test("refreshes git state when the terminal regains focus", async () => {
+test("shows a files changed header indicator until refresh reloads the session", async () => {
+  vi.useFakeTimers();
   const nextSession = createPreparedSession({
     repository: {
       kind: "git",
@@ -581,6 +641,16 @@ test("refreshes git state when the terminal regains focus", async () => {
       currentBranch: "feature/fresh",
       defaultBranch: "main",
     },
+    comparison: {
+      base: "origin/main",
+      baseSha: "fedcba9",
+      head: "feature/tui",
+      headSha: "1234567",
+      range: "origin/main...feature/tui",
+      mode: "range",
+      usesMergeBase: true,
+    },
+    files: [createPreparedFile({ path: "src/fresh.ts" })],
     branches: {
       local: [
         {
@@ -622,29 +692,103 @@ test("refreshes git state when the terminal regains focus", async () => {
       ],
     },
   });
+  const probeFreshness = vi.fn(async () => ({
+    comparisonSummary: {
+      additions: 3,
+      deletions: 1,
+      filesChanged: 1,
+    },
+    hasComparisonUpdates: true,
+    hasGitHubUpdates: false,
+    nextBaseSha: "fedcba9",
+    nextHeadSha: "1234567",
+  }));
+  const syncRemotes = vi.fn(async () => undefined);
   const loadSession = vi.fn(async () => nextSession);
   const tree = render(
     <DiffdiffApp
       {...createAppProps({
         loadSession,
+        probeFreshness,
+        syncRemotes,
       })}
     />,
   );
 
+  expect(getAppText(tree)).not.toContain("1 file changed");
+
   await act(async () => {
-    rendererState.renderer.emit("blur");
-    rendererState.renderer.emit("focus");
+    vi.advanceTimersByTime(5_000);
   });
 
+  expect(probeFreshness).toHaveBeenCalledTimes(1);
+  expect(syncRemotes).not.toHaveBeenCalled();
+  expect(loadSession).not.toHaveBeenCalled();
+  expect(getAppText(tree)).toContain("1 file changed");
+  expect(getAppText(tree)).toContain("feature/tui");
+  expect(getAppText(tree)).not.toContain("feature/fresh");
+
+  await act(async () => {
+    vi.advanceTimersByTime(5_000);
+  });
+
+  expect(probeFreshness).toHaveBeenCalledTimes(2);
+  expect(getAppText(tree)).toContain("1 file changed");
+
+  await emitAsyncKey({ name: "f", sequence: "F", shift: true });
+
+  expect(syncRemotes).toHaveBeenCalledWith("/tmp/diffdiff");
   expect(loadSession).toHaveBeenCalledWith({
     base: "origin/main",
     head: "feature/tui",
   });
   expect(getAppText(tree)).toContain("feature/fresh");
+  expect(getAppText(tree)).not.toContain("1 file changed");
+});
 
-  emitKey({ name: "l" });
+test("keeps reviewed files across refresh when their diffs are unchanged", async () => {
+  const initialSession = createPreparedSession({
+    files: [
+      createPreparedFile({
+        path: "src/app.ts",
+        patch: "diff --git a/src/app.ts b/src/app.ts\napp",
+      }),
+      createPreparedFile({
+        path: "src/utils.ts",
+        patch: "diff --git a/src/utils.ts b/src/utils.ts\nold",
+      }),
+    ],
+  });
+  const nextSession = createPreparedSession({
+    files: [
+      createPreparedFile({
+        path: "src/app.ts",
+        patch: "diff --git a/src/app.ts b/src/app.ts\napp",
+      }),
+      createPreparedFile({
+        path: "src/utils.ts",
+        patch: "diff --git a/src/utils.ts b/src/utils.ts\nnew",
+      }),
+    ],
+  });
+  const loadSession = vi.fn(async () => nextSession);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession,
+        loadSession,
+        syncRemotes: vi.fn(async () => undefined),
+      })}
+    />,
+  );
 
-  expect(getAppText(tree)).toContain("feature/fresh");
+  emitKey({ name: "r", sequence: "R", shift: true });
+  expect(getAppText(tree)).toContain("2 / 2 reviewed");
+
+  await emitAsyncKey({ name: "f", sequence: "F", shift: true });
+
+  expect(getAppText(tree)).toContain("1 / 2 reviewed");
+  expect(getAppText(tree)).not.toContain("2 / 2 reviewed");
 });
 
 test("opens PR review mode from the list modal", () => {
@@ -1296,7 +1440,7 @@ function createAppPropsBase(): DiffdiffAppProps {
   const initialOptions = {
     base: "origin/main",
     head: "feature/tui",
-  } satisfies StartupOptions;
+  } satisfies LaunchOptions;
 
   const initialSession = createPreparedSession();
 
@@ -1318,6 +1462,7 @@ function createAppPropsBase(): DiffdiffAppProps {
     replyToReviewComment: vi.fn(async () => undefined),
     removeCleanupRefs: async () => undefined,
     submitPendingReview: vi.fn(async () => undefined),
+    syncRemotes: vi.fn(async () => undefined),
     syntaxStyle,
     theme,
   };
@@ -1339,7 +1484,7 @@ function createGitHubPreferences(
 function createPreparedSession(
   overrides: Partial<PreparedReviewSession> = {},
 ): PreparedReviewSession {
-  return {
+  const session: PreparedReviewSession = {
     repository: {
       kind: "git",
       rootPath: "/tmp/diffdiff",
@@ -1350,7 +1495,9 @@ function createPreparedSession(
     },
     comparison: {
       base: "origin/main",
+      baseSha: "fedcba0",
       head: "feature/tui",
+      headSha: "1234567",
       range: "origin/main...feature/tui",
       mode: "range",
       usesMergeBase: true,
@@ -1416,9 +1563,23 @@ function createPreparedSession(
       additions: 12,
       deletions: 4,
     },
+    renderFingerprint: {
+      baseRef: "origin/main",
+      headRef: "feature/tui",
+      comparisonMode: "range",
+      baseSha: "fedcba0",
+      headSha: "1234567",
+      fileCount: 2,
+      patchDigest: "placeholder",
+    },
     warnings: [],
     themeName: "pierre-dark",
     ...overrides,
+  };
+
+  return {
+    ...session,
+    renderFingerprint: overrides.renderFingerprint ?? buildReviewSessionFingerprint(session),
   };
 }
 
@@ -1600,6 +1761,7 @@ function createGitHubReviewSession(
         },
       ],
       state: "open",
+      updatedAt: "2026-04-01T12:03:00Z",
       title: "Build TUI reviewer",
       url: "https://github.com/diffdiff/diffdiff/pull/42",
     },

@@ -1,6 +1,7 @@
 import { runCommand } from "../command.ts";
 import { DiffdiffError } from "../errors.ts";
 import { logDiffdiffError, logDiffdiffInfo, logDiffdiffWarn } from "../logging.ts";
+import type { PullRequestFingerprint } from "../types/session.ts";
 import type {
   ForgeRepository,
   GitHubPendingReview,
@@ -29,9 +30,11 @@ import {
 } from "./pull-request-refs.ts";
 import type {
   GitHubCreateReviewResponse,
+  GitHubCommitStatusResponse,
   GitHubGraphqlAddPullRequestReviewThreadResponse,
   GitHubMergeResponse,
   GitHubPullRequestListResponse,
+  GitHubPullRequestDetailResponse,
 } from "./pull-request-types.ts";
 
 export class GitHubPullRequestService {
@@ -68,6 +71,20 @@ export class GitHubPullRequestService {
       });
       return null;
     }
+  }
+
+  async loadPullRequest(
+    repository: ForgeRepository,
+    pullRequestNumber: number,
+  ): Promise<GitHubPullRequestDetail> {
+    const client = await this.clientFactory.create(repository);
+    if (client == null) {
+      throw new DiffdiffError(
+        `Unable to create a GitHub client for ${repository.owner}/${repository.repo}.`,
+      );
+    }
+
+    return loadPullRequestDetail(client, repository, pullRequestNumber);
   }
 
   async attachReviewSession(session: ReviewSession): Promise<ReviewSession> {
@@ -310,6 +327,48 @@ export class GitHubPullRequestService {
       await runCommand("git", ["branch", "-dr", ref.ref], {
         cwd: repositoryRootPath,
       });
+    }
+  }
+
+  async probePullRequestFingerprint(
+    reviewSession: GitHubReviewSession,
+  ): Promise<PullRequestFingerprint | undefined> {
+    const client = await this.clientFactory.create(reviewSession.repository);
+    if (client == null) {
+      return undefined;
+    }
+
+    try {
+      const pullRequest = (await client.request("GET /repos/{owner}/{repo}/pulls/{pull_number}", {
+        owner: reviewSession.repository.owner,
+        pull_number: reviewSession.pullRequest.number,
+        repo: reviewSession.repository.repo,
+      })) as GitHubPullRequestDetailResponse;
+      const combinedStatus = (await client.request(
+        "GET /repos/{owner}/{repo}/commits/{ref}/status",
+        {
+          owner: reviewSession.repository.owner,
+          repo: reviewSession.repository.repo,
+          ref: pullRequest.head.sha,
+        },
+      )) as GitHubCommitStatusResponse;
+
+      return {
+        number: pullRequest.number,
+        headSha: pullRequest.head.sha,
+        checksState: combinedStatus.state ?? "unknown",
+        state: pullRequest.state,
+        isDraft: pullRequest.draft,
+        isMerged: pullRequest.merged,
+        mergeableState: pullRequest.mergeable_state ?? undefined,
+        updatedAt: pullRequest.updated_at,
+      };
+    } catch (error) {
+      logDiffdiffError("github", "probe_pull_request_fingerprint_failed", error, {
+        pullRequestNumber: reviewSession.pullRequest.number,
+        repository: reviewSession.repository,
+      });
+      return undefined;
     }
   }
 

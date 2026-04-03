@@ -3,6 +3,7 @@ import { runCommand } from "../command.ts";
 import { DiffdiffError } from "../errors.ts";
 import { parseGitHubRemote } from "../github/index.ts";
 import { logDiffdiffInfo } from "../logging.ts";
+import { buildReviewSessionFingerprint } from "../review-session-fingerprint.ts";
 import type { GitRemote } from "../types/github.ts";
 import type {
   ForgeMetadataProvider,
@@ -51,6 +52,16 @@ export class GitRepositoryProvider implements RepositoryProvider {
       return null;
     }
   }
+}
+
+export async function syncGitRemotes(rootPath: string): Promise<string[]> {
+  const remoteNames = await listGitRemoteNames(rootPath);
+
+  for (const remoteName of remoteNames) {
+    await runCommand("git", ["fetch", "--prune", remoteName], { cwd: rootPath });
+  }
+
+  return remoteNames;
 }
 
 class GitRepository implements RepositoryHandle {
@@ -134,14 +145,26 @@ class GitRepository implements RepositoryHandle {
       enrichedRemoteBranches,
       resolvedComparison.defaultBranch,
     );
-    return {
+    const session: ReviewSession = {
       repository,
       comparison: resolvedComparison.comparison,
       files,
       commits,
       branches: enrichedBranches,
       workingTreeSummary,
+      renderFingerprint: {
+        comparisonMode: resolvedComparison.comparison.mode,
+        baseRef: resolvedComparison.comparison.base,
+        headRef: resolvedComparison.comparison.head,
+        fileCount: 0,
+        patchDigest: "",
+      },
       warnings,
+    };
+
+    return {
+      ...session,
+      renderFingerprint: buildReviewSessionFingerprint(session),
     };
   }
 
@@ -181,12 +204,19 @@ class GitRepository implements RepositoryHandle {
       mergeBase = undefined;
     }
 
+    const [baseSha, headSha] = await Promise.all([
+      this.resolveRefSha(base),
+      this.resolveRefSha(head),
+    ]);
+
     return {
       currentBranch,
       defaultBranch,
       comparison: {
         base,
+        baseSha,
         head,
+        headSha,
         mergeBase,
         mode: "range",
         range: `${base}...${head}`,
@@ -198,13 +228,19 @@ class GitRepository implements RepositoryHandle {
   private async resolveWorkingTreeComparison(base: string): Promise<ResolvedComparison> {
     const currentBranch = await this.getCurrentBranch();
     const defaultBranch = base === EMPTY_TREE_LABEL ? undefined : await this.selectDefaultBaseRef();
+    const [baseSha, headSha] = await Promise.all([
+      base === EMPTY_TREE_LABEL ? Promise.resolve(undefined) : this.resolveRefSha(base),
+      this.resolveRefSha("HEAD"),
+    ]);
 
     return {
       currentBranch,
       defaultBranch,
       comparison: {
         base,
+        baseSha,
         head: WORKING_TREE_LABEL,
+        headSha,
         mergeBase: undefined,
         mode: "working-tree",
         range: `${base}...${WORKING_TREE_LABEL}`,
@@ -237,6 +273,16 @@ class GitRepository implements RepositoryHandle {
     }
   }
 
+  private async resolveRefSha(ref: string): Promise<string | undefined> {
+    try {
+      return (
+        await runCommand("git", ["rev-parse", "--verify", ref], { cwd: this.rootPath })
+      ).trim();
+    } catch {
+      return undefined;
+    }
+  }
+
   private async getOriginHead(): Promise<string | undefined> {
     try {
       const symbolicRef = (
@@ -259,11 +305,7 @@ class GitRepository implements RepositoryHandle {
   }
 
   private async listRemotes(): Promise<GitRemote[]> {
-    const stdout = await runCommand("git", ["remote"], { cwd: this.rootPath });
-    const remoteNames = stdout
-      .split(/\r?\n/u)
-      .map((line) => line.trim())
-      .filter((line) => line !== "");
+    const remoteNames = await listGitRemoteNames(this.rootPath);
 
     const remotes: GitRemote[] = [];
 
@@ -280,4 +322,13 @@ class GitRepository implements RepositoryHandle {
 
     return remotes;
   }
+}
+
+async function listGitRemoteNames(rootPath: string): Promise<string[]> {
+  const stdout = await runCommand("git", ["remote"], { cwd: rootPath });
+
+  return stdout
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
 }

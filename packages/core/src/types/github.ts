@@ -171,6 +171,7 @@ export interface GitHubPullRequestDetail extends PullRequestInfo {
   reviewGroups: GitHubPullRequestReviewGroup[];
   reviewThreads: GitHubPullRequestReviewThread[];
   state: "open" | "closed";
+  updatedAt: string;
 }
 
 export interface ForgeRepository {

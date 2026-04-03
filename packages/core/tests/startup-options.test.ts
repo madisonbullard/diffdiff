@@ -13,6 +13,12 @@ describe("parseStartupOptions", () => {
     expect(result.base).toBe("origin/main");
   });
 
+  test("captures a positional launch target", () => {
+    const result = parseStartupOptions(["@diffdiff/diffdiff/42"]);
+
+    expect(result.target).toBe("@diffdiff/diffdiff/42");
+  });
+
   test("prefers CLI values over env values", () => {
     const result = parseStartupOptions(["--base", "origin/main", "--head", "feature"], {
       DIFFDIFF_BASE: "main",
@@ -74,6 +80,9 @@ describe("parseStartupOptions", () => {
   test("documents the session command suite in help output", () => {
     const helpText = formatHelpText();
 
+    expect(helpText).toContain("diffdiff [tui] [target]");
+    expect(helpText).toContain("diffdiff pr");
+    expect(helpText).toContain("diffdiff 42");
     expect(helpText).toContain("diffdiff session list [--json]");
     expect(helpText).toContain("diffdiff session remove <session-id>");
     expect(helpText).toContain("diffdiff session remove-all");

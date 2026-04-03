@@ -17,10 +17,12 @@ import {
   resolveStartupOptions,
   startDiffdiffLogging,
   storeGitHubToken,
+  syncGitRemotes,
 } from "@diffdiff/core";
-import type { StartupOptions } from "@diffdiff/core";
 import { Command } from "commander";
 import packageJson from "../package.json";
+import { resolveLaunchOptionsFromTarget } from "./launch-target.ts";
+import type { LaunchOptions } from "./types.ts";
 
 interface LaunchCommandOptions {
   base?: string;
@@ -83,16 +85,24 @@ function createProgram(): Command {
     .showHelpAfterError();
 
   addStartupOptions(program);
-  program.action(async (options: LaunchCommandOptions) => {
-    await launchTui(resolveStartupOptions(options));
+  program.argument(
+    "[target]",
+    "PR shortcut, PR number, GitHub PR URL, owner/repo/number, or repository path.",
+  );
+  program.action(async (target: string | undefined, options: LaunchCommandOptions) => {
+    await launchTui(await resolveLaunchOptionsFromTarget(target, resolveStartupOptions(options)));
   });
 
   const tuiCommand = program
     .command("tui")
     .description("Launch the diffdiff terminal UI for a repository comparison.");
   addStartupOptions(tuiCommand);
-  tuiCommand.action(async (options: LaunchCommandOptions) => {
-    await launchTui(resolveStartupOptions(options));
+  tuiCommand.argument(
+    "[target]",
+    "PR shortcut, PR number, GitHub PR URL, owner/repo/number, or repository path.",
+  );
+  tuiCommand.action(async (target: string | undefined, options: LaunchCommandOptions) => {
+    await launchTui(await resolveLaunchOptionsFromTarget(target, resolveStartupOptions(options)));
   });
 
   const authCommand = program.command("auth").description("Manage local GitHub authentication.");
@@ -162,7 +172,7 @@ function addStartupOptions(command: Command): void {
   command.option("-v, --verbose", "Preserve full command and API payloads in session logs.");
 }
 
-async function launchTui(options: StartupOptions): Promise<void> {
+async function launchTui(options: LaunchOptions): Promise<void> {
   const logSession = await startDiffdiffLogging({
     command: process.argv,
     cwd: process.cwd(),
@@ -229,7 +239,7 @@ async function launchTui(options: StartupOptions): Promise<void> {
       />,
     );
 
-    const loadSession = (nextOptions: StartupOptions) =>
+    const loadSession = (nextOptions: LaunchOptions) =>
       loadPreparedReviewSession(nextOptions, themeName, theme, syntaxPalette, {
         deferSyntaxRendering: true,
         initialDiffView: "unified",
@@ -282,6 +292,9 @@ async function launchTui(options: StartupOptions): Promise<void> {
         }
         submitPendingReview={(reviewSession, event, body) =>
           gitHubPullRequestService.submitPendingReview(reviewSession, event, body)
+        }
+        syncRemotes={(repositoryRootPath) =>
+          syncGitRemotes(repositoryRootPath).then(() => undefined)
         }
         syntaxStyle={syntaxStyle}
         theme={theme}

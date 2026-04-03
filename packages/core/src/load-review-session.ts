@@ -2,6 +2,7 @@ import { GitHubMetadataProvider } from "./github/index.ts";
 import { GitHubPullRequestService } from "./github/pull-request-service.ts";
 import { GitRepositoryProvider } from "./repository/git-repository.ts";
 import { getRepositorySearchPath } from "./repository/path.ts";
+import { buildReviewSessionFingerprint } from "./review-session-fingerprint.ts";
 import { DiffdiffError } from "./errors.ts";
 import { logDiffdiffError, logDiffdiffInfo } from "./logging.ts";
 import type { ForgeMetadataProvider, RepositoryProvider } from "./types/providers.ts";
@@ -35,21 +36,25 @@ export async function loadReviewSession(
 
     const session = await repository.loadReviewSession(options, [...forgeProviders]);
     const reviewSession = await githubPullRequestService.attachReviewSession(session);
+    const sessionWithFingerprint = {
+      ...reviewSession,
+      renderFingerprint: buildReviewSessionFingerprint(reviewSession),
+    };
 
     logDiffdiffInfo("session", "review_session_load_completed", {
-      comparison: reviewSession.comparison,
+      comparison: sessionWithFingerprint.comparison,
       durationMs: Date.now() - startedAt,
-      fileCount: reviewSession.files.length,
-      hasGitHubReview: reviewSession.github != null,
+      fileCount: sessionWithFingerprint.files.length,
+      hasGitHubReview: sessionWithFingerprint.github != null,
       repository: {
-        kind: reviewSession.repository.kind,
-        name: reviewSession.repository.name,
-        rootPath: reviewSession.repository.rootPath,
+        kind: sessionWithFingerprint.repository.kind,
+        name: sessionWithFingerprint.repository.name,
+        rootPath: sessionWithFingerprint.repository.rootPath,
       },
-      warningCount: reviewSession.warnings.length,
+      warningCount: sessionWithFingerprint.warnings.length,
     });
 
-    return reviewSession;
+    return sessionWithFingerprint;
   }
 
   const error = new DiffdiffError(`No supported repository found from ${searchPath}.`);

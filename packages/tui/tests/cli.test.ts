@@ -16,6 +16,7 @@ describe("diffdiff CLI help", () => {
     const { stdout } = await runCli(["-h"]);
 
     expect(stdout).toContain("Usage: diffdiff");
+    expect(stdout).toContain("[target]");
     expect(stdout).toContain("-H, --head <ref>");
     expect(stdout).toContain("auth");
     expect(stdout).toContain("session");
@@ -26,6 +27,7 @@ describe("diffdiff CLI help", () => {
     const { stdout } = await runCli(["tui", "-h"]);
 
     expect(stdout).toContain("Usage: diffdiff tui");
+    expect(stdout).toContain("[target]");
     expect(stdout).toContain("-r, --repo <path>");
     expect(stdout).toContain("-b, --base <ref>");
     expect(stdout).toContain("-H, --head <ref>");

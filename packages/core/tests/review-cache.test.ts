@@ -1,4 +1,5 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, test } from "vite-plus/test";
@@ -47,7 +48,10 @@ describe("review cache", () => {
       head: "feature/ui",
     };
     const state: ReviewCacheState = {
-      reviewedPaths: ["src/app.ts", "src/index.ts"],
+      reviewedFiles: [
+        { fingerprint: "fingerprint-app", path: "src/app.ts" },
+        { fingerprint: "fingerprint-index", path: "src/index.ts" },
+      ],
       collapsedPaths: ["src/app.ts"],
       commentCollapseStates: {
         "group:PRR_700": true,
@@ -75,11 +79,11 @@ describe("review cache", () => {
       head: "feature/b",
     };
     const stateA: ReviewCacheState = {
-      reviewedPaths: ["a.ts"],
+      reviewedFiles: [{ fingerprint: "fingerprint-a", path: "a.ts" }],
       collapsedPaths: [],
     };
     const stateB: ReviewCacheState = {
-      reviewedPaths: ["b.ts"],
+      reviewedFiles: [{ fingerprint: "fingerprint-b", path: "b.ts" }],
       collapsedPaths: ["b.ts"],
       selectedFilePath: "b.ts",
     };
@@ -107,11 +111,11 @@ describe("review cache", () => {
       head: "feature/x",
     };
     const stateA: ReviewCacheState = {
-      reviewedPaths: ["a.ts"],
+      reviewedFiles: [{ fingerprint: "fingerprint-a", path: "a.ts" }],
       collapsedPaths: [],
     };
     const stateB: ReviewCacheState = {
-      reviewedPaths: ["b.ts"],
+      reviewedFiles: [{ fingerprint: "fingerprint-b", path: "b.ts" }],
       collapsedPaths: [],
     };
 
@@ -130,17 +134,25 @@ describe("review cache", () => {
       head: "feature/ui",
     };
 
-    await saveReviewCache(key, { reviewedPaths: ["old.ts"], collapsedPaths: [] }, cacheDir);
     await saveReviewCache(
       key,
-      { reviewedPaths: ["new.ts"], collapsedPaths: ["new.ts"], selectedFilePath: "new.ts" },
+      { reviewedFiles: [{ fingerprint: "fingerprint-old", path: "old.ts" }], collapsedPaths: [] },
+      cacheDir,
+    );
+    await saveReviewCache(
+      key,
+      {
+        reviewedFiles: [{ fingerprint: "fingerprint-new", path: "new.ts" }],
+        collapsedPaths: ["new.ts"],
+        selectedFilePath: "new.ts",
+      },
       cacheDir,
     );
 
     const loaded = await loadReviewCache(key, cacheDir);
 
     expect(loaded).toEqual({
-      reviewedPaths: ["new.ts"],
+      reviewedFiles: [{ fingerprint: "fingerprint-new", path: "new.ts" }],
       collapsedPaths: ["new.ts"],
       selectedFilePath: "new.ts",
     });
@@ -154,7 +166,7 @@ describe("review cache", () => {
       head: "feature/ui",
     };
     const state: ReviewCacheState = {
-      reviewedPaths: [],
+      reviewedFiles: [],
       collapsedPaths: [],
     };
 
@@ -173,7 +185,11 @@ describe("review cache", () => {
       head: "HEAD",
     };
 
-    await saveReviewCache(key, { reviewedPaths: ["x.ts"], collapsedPaths: [] }, cacheDir);
+    await saveReviewCache(
+      key,
+      { reviewedFiles: [{ fingerprint: "fingerprint-x", path: "x.ts" }], collapsedPaths: [] },
+      cacheDir,
+    );
 
     const { readdir } = await import("node:fs/promises");
     const files = await readdir(cacheDir);
@@ -186,9 +202,42 @@ describe("review cache", () => {
       repositoryRootPath: "/tmp/repo",
       base: "main",
       head: "HEAD",
-      reviewedPaths: ["x.ts"],
+      reviewedFiles: [{ fingerprint: "fingerprint-x", path: "x.ts" }],
       collapsedPaths: [],
       updatedAt: expect.any(String),
+    });
+  });
+
+  test("loads legacy reviewed paths when present", async () => {
+    const cacheDir = await createTempDir();
+    const key: ReviewCacheKey = {
+      repositoryRootPath: "/tmp/repo",
+      base: "origin/main",
+      head: "feature/ui",
+    };
+    const legacyRecord = {
+      repositoryRootPath: key.repositoryRootPath,
+      base: key.base,
+      head: key.head,
+      reviewedPaths: ["src/app.ts"],
+      collapsedPaths: [],
+      updatedAt: "2026-04-02T00:00:00Z",
+    };
+
+    const hash = createHash("sha256")
+      .update(`${key.repositoryRootPath}\0${key.base}\0${key.head}`)
+      .digest("hex")
+      .slice(0, 16);
+    await mkdir(cacheDir, { recursive: true });
+    await writeFile(
+      join(cacheDir, `review-${hash}.json`),
+      `${JSON.stringify(legacyRecord, null, 2)}\n`,
+      "utf8",
+    );
+
+    expect(await loadReviewCache(key, cacheDir)).toEqual({
+      reviewedPaths: ["src/app.ts"],
+      collapsedPaths: [],
     });
   });
 });

@@ -4,6 +4,7 @@ import type {
   ChangedFile,
   ComparisonCommit,
   ReviewSession,
+  StartupOptions,
 } from "@diffdiff/core";
 import type { FileDiffMetadata } from "@pierre/diffs";
 
@@ -36,6 +37,10 @@ export interface BranchListItem {
 export interface CommitListItem {
   key: string;
   commit: ComparisonCommit;
+}
+
+export interface LaunchOptions extends StartupOptions {
+  initialListMode?: "pull-requests";
 }
 
 export interface TextSegment {

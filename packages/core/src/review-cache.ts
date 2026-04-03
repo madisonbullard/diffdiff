@@ -3,11 +3,13 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { logDiffdiffError, logDiffdiffInfo } from "./logging.ts";
+import type { ReviewedFileState } from "./reviewed-file-fingerprint.ts";
 
 const DEFAULT_CACHE_DIRECTORY = join(homedir(), ".diffdiff", "review-cache");
 
 export interface ReviewCacheState {
-  reviewedPaths: string[];
+  reviewedFiles?: ReviewedFileState[];
+  reviewedPaths?: string[];
   collapsedPaths: string[];
   commentCollapseStates?: Record<string, boolean>;
   selectedFilePath?: string;
@@ -66,11 +68,12 @@ export async function loadReviewCache(
       commentCollapseStateCount: Object.keys(record.commentCollapseStates ?? {}).length,
       head: key.head,
       repositoryRootPath: key.repositoryRootPath,
-      reviewedPathCount: record.reviewedPaths.length,
+      reviewedPathCount: record.reviewedFiles?.length ?? record.reviewedPaths?.length ?? 0,
       selectedFilePath: record.selectedFilePath,
     });
 
     return {
+      reviewedFiles: record.reviewedFiles,
       reviewedPaths: record.reviewedPaths,
       collapsedPaths: record.collapsedPaths,
       commentCollapseStates: record.commentCollapseStates,
@@ -92,7 +95,7 @@ export async function saveReviewCache(
     repositoryRootPath: key.repositoryRootPath,
     base: key.base,
     head: key.head,
-    reviewedPaths: state.reviewedPaths,
+    reviewedFiles: state.reviewedFiles,
     collapsedPaths: state.collapsedPaths,
     commentCollapseStates: state.commentCollapseStates,
     selectedFilePath: state.selectedFilePath,
@@ -108,7 +111,7 @@ export async function saveReviewCache(
       commentCollapseStateCount: Object.keys(state.commentCollapseStates ?? {}).length,
       head: key.head,
       repositoryRootPath: key.repositoryRootPath,
-      reviewedPathCount: state.reviewedPaths.length,
+      reviewedPathCount: state.reviewedFiles?.length ?? state.reviewedPaths?.length ?? 0,
       selectedFilePath: state.selectedFilePath,
     });
   } catch (error) {

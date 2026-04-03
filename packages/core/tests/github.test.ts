@@ -7,6 +7,7 @@ import { GitHubMetadataProvider } from "../src/github/index.ts";
 import { resolveGitHubAuth, storeGitHubToken } from "../src/github/auth.ts";
 import { getGitHubAuthConfigPaths } from "../src/github/config.ts";
 import { GitHubPullRequestService } from "../src/github/pull-request-service.ts";
+import { buildReviewSessionFingerprint } from "../src/review-session-fingerprint.ts";
 import type { GitHubApiClient, GitHubClientFactory } from "../src/types/providers.ts";
 import type { ReviewSession } from "../src/types/session.ts";
 
@@ -206,6 +207,27 @@ describe("GitHubMetadataProvider", () => {
 });
 
 describe("GitHubPullRequestService", () => {
+  test("loads pull request details on demand", async () => {
+    const clientFactory: GitHubClientFactory = {
+      create: vi.fn(async () => createGitHubApiClient()),
+    };
+    const service = new GitHubPullRequestService(clientFactory);
+
+    const pullRequest = await service.loadPullRequest(
+      {
+        forge: "github",
+        host: "github.com",
+        owner: "diffdiff",
+        repo: "diffdiff",
+      },
+      42,
+    );
+
+    expect(pullRequest.number).toBe(42);
+    expect(pullRequest.baseRefName).toBe("main");
+    expect(pullRequest.headRefName).toBe("feature/ui");
+  });
+
   test("attaches active pull request review data to a review session", async () => {
     mockRemoteTrackingRefs("refs/remotes/origin/main", "refs/remotes/origin/feature/ui");
     const clientFactory: GitHubClientFactory = {
@@ -701,7 +723,7 @@ function mockRemoteTrackingRefs(...existingRefs: string[]) {
 }
 
 function createReviewSession(): ReviewSession {
-  return {
+  const session: ReviewSession = {
     branches: {
       local: [
         {
@@ -783,5 +805,19 @@ function createReviewSession(): ReviewSession {
       deletions: 0,
       filesChanged: 0,
     },
+    renderFingerprint: {
+      baseRef: "origin/main",
+      headRef: "origin/feature/ui",
+      comparisonMode: "range",
+      baseSha: "basesha",
+      headSha: "headsha",
+      fileCount: 1,
+      patchDigest: "placeholder",
+    },
+  };
+
+  return {
+    ...session,
+    renderFingerprint: buildReviewSessionFingerprint(session),
   };
 }

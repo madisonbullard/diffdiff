@@ -14,6 +14,7 @@ export interface GitHubPullRequestListResponse {
 export interface GitHubPullRequestDetailResponse extends GitHubPullRequestListResponse {
   body: string | null;
   state: "open" | "closed";
+  updated_at: string;
   draft: boolean;
   merged: boolean;
   merged_at: string | null;

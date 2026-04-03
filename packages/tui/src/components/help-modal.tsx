@@ -52,7 +52,17 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
           title: "Comparison",
           rows: [
             ["l", "list modal", "b / h", "set base / head", "w", "working tree"],
-            ["o", "remote toggle", "f", "list filters", "/", "search commits", "q", "quit"],
+            [
+              "shift+f",
+              "refresh branches",
+              "o",
+              "remote toggle",
+              "f",
+              "list filters",
+              "/",
+              "search commits",
+            ],
+            ["q", "quit"],
           ],
         },
       ].map((section) => (

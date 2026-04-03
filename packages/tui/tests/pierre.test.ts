@@ -1,4 +1,4 @@
-import type { ReviewSession } from "@diffdiff/core";
+import { buildReviewSessionFingerprint, type ReviewSession } from "@diffdiff/core";
 import type { TerminalColors } from "@opentui/core";
 import { expect, test } from "vite-plus/test";
 import { createPierreSegmentColorResolver } from "../src/pierre-colors.ts";
@@ -204,7 +204,7 @@ function createLightPalette(): TerminalColors {
 }
 
 function createReviewSession(overrides: Partial<ReviewSession> = {}): ReviewSession {
-  return {
+  const session: ReviewSession = {
     repository: {
       kind: "git",
       rootPath: "/tmp/diffdiff",
@@ -248,7 +248,21 @@ function createReviewSession(overrides: Partial<ReviewSession> = {}): ReviewSess
       additions: 1,
       deletions: 1,
     },
+    renderFingerprint: {
+      baseRef: "HEAD",
+      headRef: "working tree",
+      comparisonMode: "working-tree",
+      baseSha: "1111111",
+      headSha: "1111111",
+      fileCount: 1,
+      patchDigest: "placeholder",
+    },
     warnings: [],
     ...overrides,
+  };
+
+  return {
+    ...session,
+    renderFingerprint: overrides.renderFingerprint ?? buildReviewSessionFingerprint(session),
   };
 }

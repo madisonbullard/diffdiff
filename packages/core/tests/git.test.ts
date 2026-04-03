@@ -95,6 +95,14 @@ describe("loadReviewSession", () => {
       additions: 3,
       deletions: 1,
     });
+    expect(session.renderFingerprint).toMatchObject({
+      baseRef: "HEAD",
+      comparisonMode: "working-tree",
+      fileCount: 3,
+      headRef: "working tree",
+      headSha: expect.any(String),
+      patchDigest: expect.any(String),
+    });
     expect(session.commits).toHaveLength(1);
     expect(session.commits[0]).toMatchObject({
       author: "Diffdiff Test",

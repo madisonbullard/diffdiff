@@ -30,9 +30,9 @@ export function parseStartupOptions(
   env: NodeJS.ProcessEnv = process.env,
 ): ParsedStartupOptions {
   const normalizedArgv = argv[0] === "tui" ? argv.slice(1) : argv;
-  const { values } = parseArgs({
+  const { positionals, values } = parseArgs({
     args: [...normalizedArgv],
-    allowPositionals: false,
+    allowPositionals: true,
     strict: false,
     options: {
       repo: {
@@ -74,13 +74,17 @@ export function parseStartupOptions(
       env,
     ),
     help,
+    target: typeof positionals[0] === "string" ? positionals[0] : undefined,
     version,
   };
 }
 
 export function formatHelpText(): string {
   return [
-    "diffdiff [tui]",
+    "diffdiff [tui] [target]",
+    "diffdiff pr",
+    "diffdiff 42",
+    "diffdiff https://github.com/diffdiff/diffdiff/pull/42",
     "diffdiff auth login --token-stdin",
     "diffdiff session list [--json]",
     "diffdiff session remove <session-id>",
@@ -88,6 +92,7 @@ export function formatHelpText(): string {
     "",
     "A git-backed terminal code review tool.",
     "Defaults to reviewing staged, unstaged, and untracked changes against HEAD.",
+    "Recognizes PR shortcuts like `pr`, PR numbers, GitHub PR URLs, and owner/repo/number.",
     "",
     "Options:",
     "  --repo, -r   Path inside the repository to review",

@@ -1,4 +1,5 @@
 import type {
+  ReviewSessionFreshnessResult,
   BranchInfo,
   GitHubCleanupPreferences,
   GitHubMergeMethod,
@@ -13,17 +14,20 @@ import type {
   GitHubUserPreferences,
   ReviewCacheKey,
   ReviewCacheState,
-  StartupOptions,
+  ReviewedFileState,
 } from "@diffdiff/core";
 import {
+  buildReviewedFileFingerprint,
   getDefaultGitHubPreferences,
   getDiffdiffLogSession,
   logDiffdiffError,
   logDiffdiffInfo,
   logDiffdiffVerbose,
   logDiffdiffWarn,
+  probeReviewSessionFreshness,
   saveReviewCache,
   saveDiffdiffPreferences,
+  syncGitRemotes,
   updateDiffdiffSessionActivity,
 } from "@diffdiff/core";
 import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
@@ -69,6 +73,7 @@ import type {
   BranchListFilters,
   DiffViewPreference,
   FileTreeNode,
+  LaunchOptions,
   ListModalView,
   PreparedReviewSession,
 } from "../types.ts";
@@ -109,8 +114,8 @@ interface DiffdiffAppProps {
   initialGitHubPreferences?: GitHubUserPreferences;
   initialReviewCache?: ReviewCacheState;
   initialSession: PreparedReviewSession;
-  initialOptions: StartupOptions;
-  loadSession: (options: StartupOptions) => Promise<PreparedReviewSession>;
+  initialOptions: LaunchOptions;
+  loadSession: (options: LaunchOptions) => Promise<PreparedReviewSession>;
   logFilePath?: string;
   mergePullRequest?: (
     reviewSession: GitHubReviewSession,
@@ -131,6 +136,8 @@ interface DiffdiffAppProps {
     event: GitHubReviewSubmissionEvent,
     body?: string,
   ) => Promise<void>;
+  probeFreshness?: (session: PreparedReviewSession) => Promise<ReviewSessionFreshnessResult>;
+  syncRemotes?: (repositoryRootPath: string) => Promise<unknown>;
   syntaxStyle: SyntaxStyle;
   theme: UiTheme;
 }
@@ -194,6 +201,7 @@ const COMMAND_LIST_KEYBIND = "ctrl+p";
 const EMPTY_REVIEW_THREADS: readonly import("@diffdiff/core").GitHubPullRequestReviewThread[] = [];
 const EMPTY_CONVERSATION_ITEMS: readonly GitHubPullRequestConversationItem[] = [];
 const REVIEWED_NEXT_FILE_SCROLL_OFFSET = 3;
+const LIVE_REFRESH_INTERVAL_MS = 5_000;
 
 function getMonotonicNow(): number {
   const now = globalThis.performance?.now?.();
@@ -300,6 +308,68 @@ function truncateInlineMessage(message: string, maxWidth: number): string {
   return `${normalizedMessage.slice(0, maxWidth - 3)}...`;
 }
 
+function getRefreshIndicatorLabel(result: ReviewSessionFreshnessResult): string | null {
+  if (result.hasComparisonUpdates && result.comparisonSummary != null) {
+    const { filesChanged } = result.comparisonSummary;
+    const changedLabel = `${filesChanged} ${filesChanged === 1 ? "file" : "files"} changed`;
+    return result.hasGitHubUpdates ? `${changedLabel} + PR` : changedLabel;
+  }
+
+  if (result.hasComparisonUpdates) {
+    return result.hasGitHubUpdates ? "updates + PR" : "updates available";
+  }
+
+  if (result.hasGitHubUpdates) {
+    return "PR updated";
+  }
+
+  return null;
+}
+
+function buildReviewedFiles(
+  files: PreparedReviewSession["files"],
+  reviewedPaths: ReadonlySet<string>,
+): ReviewedFileState[] {
+  return files.flatMap((file) =>
+    reviewedPaths.has(file.path)
+      ? [{ fingerprint: buildReviewedFileFingerprint(file), path: file.path }]
+      : [],
+  );
+}
+
+function restoreReviewedPaths(
+  files: PreparedReviewSession["files"],
+  cacheState?: Pick<ReviewCacheState, "reviewedFiles" | "reviewedPaths">,
+): Set<string> {
+  if (cacheState?.reviewedFiles != null) {
+    const reviewedFingerprintsByPath = new Map<string, Set<string>>();
+
+    for (const reviewedFile of cacheState.reviewedFiles) {
+      const fingerprints = reviewedFingerprintsByPath.get(reviewedFile.path) ?? new Set<string>();
+      fingerprints.add(reviewedFile.fingerprint);
+      reviewedFingerprintsByPath.set(reviewedFile.path, fingerprints);
+    }
+
+    return new Set(
+      files.flatMap((file) => {
+        const fingerprints = reviewedFingerprintsByPath.get(file.path);
+        if (fingerprints?.has(buildReviewedFileFingerprint(file)) !== true) {
+          return [];
+        }
+
+        return [file.path];
+      }),
+    );
+  }
+
+  if (cacheState?.reviewedPaths != null) {
+    const availablePaths = new Set(files.map((file) => file.path));
+    return new Set(cacheState.reviewedPaths.filter((path) => availablePaths.has(path)));
+  }
+
+  return new Set();
+}
+
 function getTreeSummaryLabels({
   additions,
   deletions,
@@ -355,14 +425,17 @@ export function DiffdiffApp({
   logFilePath,
   mergePullRequest,
   onExit,
+  probeFreshness = probeReviewSessionFreshness,
   replyToReviewComment,
   removeCleanupRefs,
   submitPendingReview,
+  syncRemotes = syncGitRemotes,
   syntaxStyle,
   theme,
 }: DiffdiffAppProps) {
+  const launchInPullRequestList = initialOptions.initialListMode === "pull-requests";
   const [session, setSession] = useState(initialSession);
-  const [startupOptions, setStartupOptions] = useState<StartupOptions>({ ...initialOptions });
+  const [startupOptions, setStartupOptions] = useState<LaunchOptions>({ ...initialOptions });
   const [selectedFileIndex, setSelectedFileIndex] = useState(() => {
     if (initialReviewCache?.selectedFilePath != null) {
       const cachedIndex = initialSession.files.findIndex(
@@ -375,11 +448,7 @@ export function DiffdiffApp({
     return 0;
   });
   const [reviewedPaths, setReviewedPaths] = useState<Set<string>>(() => {
-    if (initialReviewCache != null) {
-      const availablePaths = new Set(initialSession.files.map((file) => file.path));
-      return new Set(initialReviewCache.reviewedPaths.filter((path) => availablePaths.has(path)));
-    }
-    return new Set();
+    return restoreReviewedPaths(initialSession.files, initialReviewCache);
   });
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() => {
     const baseline = reconcileCollapsedPaths(new Set<string>(), initialSession.files);
@@ -393,7 +462,9 @@ export function DiffdiffApp({
     }
     return baseline;
   });
-  const [statusMessage, setStatusMessage] = useState<string>("Ready.");
+  const [statusMessage, setStatusMessage] = useState<string>(
+    launchInPullRequestList ? "Opened list modal." : "Ready.",
+  );
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [errorToastMessage, setErrorToastMessage] = useState<string | null>(null);
   const [baseBranchLoadingMessage, setBaseBranchLoadingMessage] = useState<string | null>(null);
@@ -410,7 +481,7 @@ export function DiffdiffApp({
   );
   const leaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showHelp, setShowHelp] = useState(false);
-  const [showBranchModal, setShowBranchModal] = useState(false);
+  const [showBranchModal, setShowBranchModal] = useState(launchInPullRequestList);
   const [showCleanupModal, setShowCleanupModal] = useState(false);
   const [showCommentComposer, setShowCommentComposer] = useState(false);
   const [showCommandModal, setShowCommandModal] = useState(false);
@@ -424,7 +495,14 @@ export function DiffdiffApp({
   const [showSubmitReviewModal, setShowSubmitReviewModal] = useState(false);
   const [activeListView, setActiveListView] = useState<ListModalView>("branch");
   const [branchListFilters, setBranchListFilters] = useState<BranchListFilters>({
-    ...DEFAULT_BRANCH_LIST_FILTERS,
+    ...(launchInPullRequestList
+      ? {
+          workingTree: false,
+          localBranch: false,
+          openPr: true,
+          remoteBranch: false,
+        }
+      : DEFAULT_BRANCH_LIST_FILTERS),
   });
   const [branchListIndex, setBranchListIndex] = useState(0);
   const [commandQuery, setCommandQuery] = useState("");
@@ -434,8 +512,10 @@ export function DiffdiffApp({
   const [commitSearchActive, setCommitSearchActive] = useState(false);
   const [filterIndex, setFilterIndex] = useState(0);
   const [isReloading, setIsReloading] = useState(false);
+  const [isCheckingForUpdates, setIsCheckingForUpdates] = useState(false);
   const [isSubmittingReviewAction, setIsSubmittingReviewAction] = useState(false);
   const [leaderActive, setLeaderActive] = useState(false);
+  const [refreshIndicatorLabel, setRefreshIndicatorLabel] = useState<string | null>(null);
   const [diffViewPreference, setDiffViewPreference] = useState<DiffViewPreference>("unified");
   const [mergeCommitMessage, setMergeCommitMessage] = useState("");
   const [mergeCommitTitle, setMergeCommitTitle] = useState("");
@@ -483,7 +563,7 @@ export function DiffdiffApp({
   const reviewCacheTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionActivityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const shouldRefreshOnFocusRef = useRef(false);
+  const terminalFocusedRef = useRef(true);
   const renderer = useRenderer();
   const terminalDimensions = useTerminalDimensions();
   const sidebarWidth = useMemo(
@@ -1500,28 +1580,54 @@ export function DiffdiffApp({
     syncActiveFileIndex();
   }, [collapsedPaths, diffView, session.files, syncActiveFileIndex, terminalDimensions.width]);
 
+  useEffect(() => {
+    if (refreshIndicatorLabel == null) {
+      return;
+    }
+
+    setRefreshIndicatorLabel(null);
+  }, [session]);
+
+  const syncRemoteState = useCallback(async () => {
+    await syncRemotes(session.repository.rootPath);
+  }, [session.repository.rootPath, syncRemotes]);
+
+  const applyLoadedSession = useCallback(
+    (nextSession: PreparedReviewSession) => {
+      setReviewedPaths(
+        restoreReviewedPaths(nextSession.files, {
+          reviewedFiles: buildReviewedFiles(session.files, reviewedPaths),
+        }),
+      );
+      setSession(nextSession);
+    },
+    [reviewedPaths, session.files],
+  );
+
   const refreshGitState = useCallback(async () => {
-    if (isReloading) {
+    if (isReloading || isCheckingForUpdates) {
       return;
     }
 
     const selectedFilePath = session.files[selectedFileIndex]?.path;
 
     setIsReloading(true);
-    setStatusMessage("Refreshing git state...");
+    setRefreshIndicatorLabel(null);
+    setStatusMessage("Refreshing branches and GitHub data...");
 
     try {
+      await syncRemoteState();
       const nextSession = await loadSession(startupOptions);
       const nextSelectedFileIndex =
         selectedFilePath == null
           ? -1
           : nextSession.files.findIndex((file) => file.path === selectedFilePath);
 
-      setSession(nextSession);
+      applyLoadedSession(nextSession);
       if (nextSelectedFileIndex >= 0) {
         setSelectedFileIndex(nextSelectedFileIndex);
       }
-      setStatusMessage("Refreshed git state.");
+      setStatusMessage("Refreshed branches and GitHub data.");
     } catch (error) {
       handleAppError(error, "Unable to refresh git state.", {
         action: "refresh-git-state",
@@ -1530,29 +1636,83 @@ export function DiffdiffApp({
     } finally {
       setIsReloading(false);
     }
-  }, [handleAppError, isReloading, loadSession, selectedFileIndex, session.files, startupOptions]);
+  }, [
+    handleAppError,
+    isCheckingForUpdates,
+    isReloading,
+    loadSession,
+    applyLoadedSession,
+    selectedFileIndex,
+    session.files,
+    startupOptions,
+    syncRemoteState,
+  ]);
+
+  const checkForUpdates = useCallback(async () => {
+    if (isReloading || isCheckingForUpdates) {
+      return;
+    }
+
+    setIsCheckingForUpdates(true);
+
+    try {
+      const freshness = await probeFreshness(session);
+      const nextRefreshIndicatorLabel = getRefreshIndicatorLabel(freshness);
+
+      setRefreshIndicatorLabel(nextRefreshIndicatorLabel);
+
+      if (
+        nextRefreshIndicatorLabel != null &&
+        nextRefreshIndicatorLabel !== refreshIndicatorLabel
+      ) {
+        setStatusMessage(`${nextRefreshIndicatorLabel}. Press Shift+F to refresh.`);
+      } else if (refreshIndicatorLabel != null) {
+        setStatusMessage("Current comparison is up to date.");
+      }
+    } catch (error) {
+      handleAppError(error, "Unable to refresh git state.", {
+        action: "check-for-updates",
+        comparison: session.comparison,
+      });
+    } finally {
+      setIsCheckingForUpdates(false);
+    }
+  }, [
+    handleAppError,
+    isCheckingForUpdates,
+    isReloading,
+    probeFreshness,
+    refreshIndicatorLabel,
+    session,
+  ]);
 
   useEffect(() => {
     const handleBlur = () => {
-      shouldRefreshOnFocusRef.current = true;
+      terminalFocusedRef.current = false;
     };
+
     const handleFocus = () => {
-      if (!shouldRefreshOnFocusRef.current) {
+      terminalFocusedRef.current = true;
+      void checkForUpdates();
+    };
+
+    const intervalId = setInterval(() => {
+      if (!terminalFocusedRef.current) {
         return;
       }
 
-      shouldRefreshOnFocusRef.current = false;
-      void refreshGitState();
-    };
+      void checkForUpdates();
+    }, LIVE_REFRESH_INTERVAL_MS);
 
     renderer.on(TERMINAL_BLUR_EVENT, handleBlur);
     renderer.on(TERMINAL_FOCUS_EVENT, handleFocus);
 
     return () => {
+      clearInterval(intervalId);
       renderer.off(TERMINAL_BLUR_EVENT, handleBlur);
       renderer.off(TERMINAL_FOCUS_EVENT, handleFocus);
     };
-  }, [refreshGitState, renderer]);
+  }, [checkForUpdates, renderer]);
 
   keyboardHandlerRef.current = (key) => {
     logDiffdiffVerbose("app", "key_pressed", {
@@ -1617,6 +1777,11 @@ export function DiffdiffApp({
 
     if (activeOverlay === "branch") {
       handleBranchModalKey(key);
+      return;
+    }
+
+    if (activeOverlay == null && !leaderActive && key.name === "f" && key.shift) {
+      void refreshGitState();
       return;
     }
 
@@ -1972,7 +2137,7 @@ export function DiffdiffApp({
       head: session.comparison.head,
     };
     const cacheState: ReviewCacheState = {
-      reviewedPaths: [...reviewedPaths],
+      reviewedFiles: buildReviewedFiles(session.files, reviewedPaths),
       collapsedPaths: [...collapsedPaths],
       commentCollapseStates,
       selectedFilePath: session.files[selectedFileIndex]?.path,
@@ -2066,6 +2231,12 @@ export function DiffdiffApp({
               fg={theme.inverseText}
               bg={theme.accent}
             />
+            {refreshIndicatorLabel != null ? (
+              <>
+                <span>{"  "}</span>
+                <Tag label={refreshIndicatorLabel} fg={theme.inverseText} bg={theme.danger} />
+              </>
+            ) : null}
           </text>
           <text fg={theme.textMuted} wrapMode="none">
             <span>{session.repository.rootPath}</span>
@@ -3653,7 +3824,7 @@ export function DiffdiffApp({
       }
 
       const nextSession = await loadSession(startupOptions);
-      setSession(nextSession);
+      applyLoadedSession(nextSession);
       setShowCommentComposer(false);
       setReviewComposerTarget(null);
       setReviewComposerBody("");
@@ -3694,7 +3865,7 @@ export function DiffdiffApp({
         reviewSubmissionBody.trim() === "" ? undefined : reviewSubmissionBody.trim(),
       );
       const nextSession = await loadSession(startupOptions);
-      setSession(nextSession);
+      applyLoadedSession(nextSession);
       setShowSubmitReviewModal(false);
       setReviewSubmissionBody("");
       setStatusMessage("Submitted review.");
@@ -3724,7 +3895,7 @@ export function DiffdiffApp({
         method: mergeMethod,
       });
       const nextSession = await loadSession(startupOptions);
-      setSession(nextSession);
+      applyLoadedSession(nextSession);
       setShowMergeModal(false);
       setStatusMessage("Merged the pull request and refreshed local refs.");
 
@@ -3766,7 +3937,7 @@ export function DiffdiffApp({
     try {
       await removeCleanupRefs(session.repository.rootPath, refsToRemove);
       const nextSession = await loadSession(startupOptions);
-      setSession(nextSession);
+      applyLoadedSession(nextSession);
       setCleanupCandidates([]);
       setShowCleanupModal(false);
       setStatusMessage("Removed selected refs and reloaded the current session.");
@@ -3799,7 +3970,7 @@ export function DiffdiffApp({
     const nextOptions = {
       ...startupOptions,
       [target]: branch.name,
-    } satisfies StartupOptions;
+    } satisfies LaunchOptions;
     const shouldShowEventLogLoading = target === "base";
 
     setIsReloading(true);
@@ -3810,7 +3981,7 @@ export function DiffdiffApp({
 
     try {
       const nextSession = await loadSession(nextOptions);
-      setSession(nextSession);
+      applyLoadedSession(nextSession);
       setStartupOptions(nextOptions);
       setShowBranchModal(false);
       setShowCommentComposer(false);
@@ -3843,14 +4014,14 @@ export function DiffdiffApp({
     const nextOptions = {
       ...startupOptions,
       [target]: sha,
-    } satisfies StartupOptions;
+    } satisfies LaunchOptions;
 
     setIsReloading(true);
     setStatusMessage(`Updating ${target} to commit ${shortSha}...`);
 
     try {
       const nextSession = await loadSession(nextOptions);
-      setSession(nextSession);
+      applyLoadedSession(nextSession);
       setStartupOptions(nextOptions);
       setShowBranchModal(false);
       setShowCommentComposer(false);
@@ -3875,14 +4046,14 @@ export function DiffdiffApp({
 
   async function applyWorkingTreeSelection(): Promise<void> {
     const { base: _base, head: _head, ...remainingOptions } = startupOptions;
-    const nextOptions = { ...remainingOptions } satisfies StartupOptions;
+    const nextOptions = { ...remainingOptions } satisfies LaunchOptions;
 
     setIsReloading(true);
     setStatusMessage("Reviewing working tree changes against HEAD...");
 
     try {
       const nextSession = await loadSession(nextOptions);
-      setSession(nextSession);
+      applyLoadedSession(nextSession);
       setStartupOptions(nextOptions);
       setShowBranchModal(false);
       setShowCommentComposer(false);
@@ -3917,14 +4088,14 @@ export function DiffdiffApp({
       ...startupOptions,
       base: baseRemoteBranch?.name ?? baseLocalBranch?.name ?? branch.pullRequest.baseRefName,
       head: branch.name,
-    } satisfies StartupOptions;
+    } satisfies LaunchOptions;
 
     setIsReloading(true);
     setStatusMessage(`Opening PR #${branch.pullRequest.number}...`);
 
     try {
       const nextSession = await loadSession(nextOptions);
-      setSession(nextSession);
+      applyLoadedSession(nextSession);
       setStartupOptions(nextOptions);
       setShowBranchModal(false);
       setShowCommentComposer(false);

@@ -99,6 +99,7 @@ export async function loadPullRequestDetail(
     reviewThreads,
     state: pullRequestResponse.state,
     title: pullRequestResponse.title,
+    updatedAt: pullRequestResponse.updated_at,
     url: pullRequestResponse.html_url,
   };
 }

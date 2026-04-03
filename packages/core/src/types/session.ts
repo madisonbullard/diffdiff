@@ -7,6 +7,7 @@ export interface ReviewSession {
   branches: BranchCollection;
   commits: ComparisonCommit[];
   github?: GitHubReviewSession;
+  renderFingerprint: ReviewSessionFingerprint;
   workingTreeSummary: ChangeSummary;
   warnings: ReviewWarning[];
 }
@@ -23,6 +24,8 @@ export interface RepositoryInfo {
 export interface ComparisonInfo {
   base: string;
   head: string;
+  baseSha?: string;
+  headSha?: string;
   mergeBase?: string;
   range: string;
   mode: ComparisonMode;
@@ -80,6 +83,37 @@ export interface ComparisonCommit {
   decoration?: string;
   subject: string;
   author: string;
+}
+
+export interface PullRequestFingerprint {
+  number: number;
+  headSha: string;
+  checksState: string;
+  state: "open" | "closed";
+  isDraft: boolean;
+  isMerged: boolean;
+  mergeableState?: string;
+  updatedAt: string;
+}
+
+export interface ReviewSessionFingerprint {
+  comparisonMode: ComparisonMode;
+  baseRef: string;
+  headRef: string;
+  baseSha?: string;
+  headSha?: string;
+  fileCount: number;
+  patchDigest: string;
+  pullRequest?: PullRequestFingerprint;
+}
+
+export interface ReviewSessionFreshnessResult {
+  hasComparisonUpdates: boolean;
+  hasGitHubUpdates: boolean;
+  comparisonSummary?: ChangeSummary;
+  nextBaseSha?: string;
+  nextHeadSha?: string;
+  nextPullRequestFingerprint?: PullRequestFingerprint;
 }
 
 export interface ReviewWarning {

@@ -6,6 +6,7 @@ export interface StartupOptions {
 }
 
 export interface ParsedStartupOptions extends StartupOptions {
+  target?: string;
   help: boolean;
   version: boolean;
 }
