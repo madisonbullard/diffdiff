@@ -102,6 +102,11 @@ import {
 } from "../view-model.ts";
 import { copyTextToClipboard } from "../clipboard.ts";
 import { copySelection } from "../selection-copy.ts";
+import {
+  getStartupTraceNow,
+  summarizeStartupInstrumentation,
+  type StartupInstrumentation,
+} from "../startup-tracing.ts";
 
 interface DiffdiffAppProps {
   addReviewThread?: (
@@ -130,6 +135,7 @@ interface DiffdiffAppProps {
     repositoryRootPath: string,
     refs: readonly GitHubRefCleanupCandidate[],
   ) => Promise<void>;
+  startupInstrumentation?: StartupInstrumentation;
   submitPendingReview?: (
     reviewSession: GitHubReviewSession,
     event: GitHubReviewSubmissionEvent,
@@ -434,6 +440,7 @@ export function DiffdiffApp({
   probeFreshness = probeReviewSessionFreshness,
   replyToReviewComment,
   removeCleanupRefs,
+  startupInstrumentation,
   submitPendingReview,
   syncRemotes = syncGitRemotes,
   syntaxStyle,
@@ -2124,12 +2131,17 @@ export function DiffdiffApp({
         name: session.repository.name,
         rootPath: session.repository.rootPath,
       },
+      startup:
+        startupInstrumentation == null
+          ? undefined
+          : summarizeStartupInstrumentation(startupInstrumentation, getStartupTraceNow()),
     });
   }, [
     resolvedLogFilePath,
     session.comparison,
     session.repository.name,
     session.repository.rootPath,
+    startupInstrumentation,
   ]);
 
   useEffect(() => {

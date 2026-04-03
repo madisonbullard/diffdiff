@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { getStartupTraceNow } from "./startup-tracing.ts";
 
 export const STARTUP_SCREEN_ART_LINES = [
   "   ███╗                ███╗",
@@ -11,6 +12,7 @@ export const STARTUP_SCREEN_ART_LINES = [
 ] as const;
 
 export const STARTUP_SCREEN_FRAME_MS = 33;
+export const STARTUP_SCREEN_FRAME_DELAY_THRESHOLD_MS = 40;
 export const STARTUP_SCREEN_WIPE_GRADIENT_WIDTH = 8;
 export const STARTUP_SCREEN_WIPE_ROW_OFFSET = 1;
 export const STARTUP_SCREEN_ART_WIDTH = Math.max(
@@ -29,9 +31,16 @@ export const STARTUP_SCREEN_FINAL_FRAME =
 
 export interface StartupScreenProps {
   chromeBackground: string;
+  onFrameDelay?: (details: StartupScreenFrameDelay) => void;
   path: string;
   text: string;
   textMuted: string;
+}
+
+export interface StartupScreenFrameDelay {
+  actualIntervalMs: number;
+  delayMs: number;
+  frame: number;
 }
 
 export type StartupScreenAnimationState =
@@ -46,18 +55,44 @@ export type StartupScreenAnimationState =
       toColor: string;
     };
 
-export function StartupScreen({ chromeBackground, path, text, textMuted }: StartupScreenProps) {
+export function StartupScreen({
+  chromeBackground,
+  onFrameDelay,
+  path,
+  text,
+  textMuted,
+}: StartupScreenProps) {
   const [frame, setFrame] = useState(0);
+  const lastTickAtRef = useRef<number | null>(null);
 
   useEffect(() => {
+    lastTickAtRef.current = getStartupTraceNow();
+
     const intervalId = setInterval(() => {
-      setFrame((currentFrame) => Math.min(currentFrame + 1, STARTUP_SCREEN_FINAL_FRAME));
+      const now = getStartupTraceNow();
+      const previousTickAt = lastTickAtRef.current ?? now;
+      const actualIntervalMs = now - previousTickAt;
+      lastTickAtRef.current = now;
+
+      setFrame((currentFrame) => {
+        const delayMs = actualIntervalMs - STARTUP_SCREEN_FRAME_MS;
+
+        if (delayMs >= STARTUP_SCREEN_FRAME_DELAY_THRESHOLD_MS) {
+          onFrameDelay?.({
+            actualIntervalMs: Math.round(actualIntervalMs * 10) / 10,
+            delayMs: Math.round(delayMs * 10) / 10,
+            frame: currentFrame,
+          });
+        }
+
+        return Math.min(currentFrame + 1, STARTUP_SCREEN_FINAL_FRAME);
+      });
     }, STARTUP_SCREEN_FRAME_MS);
 
     return () => {
       clearInterval(intervalId);
     };
-  }, []);
+  }, [onFrameDelay]);
 
   const animationState = getStartupScreenAnimationState(frame);
 

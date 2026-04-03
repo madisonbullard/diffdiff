@@ -23,6 +23,14 @@ import { Command } from "commander";
 import packageJson from "../package.json";
 import { resolveLaunchOptionsFromTarget } from "./launch-target.ts";
 import { StartupScreen } from "./startup-screen.tsx";
+import {
+  getStartupTraceNow,
+  createStartupInstrumentation,
+  markStartupInstrumentationPhase,
+  summarizeStartupInstrumentation,
+  type StartupInstrumentation,
+  type StartupInstrumentationPhase,
+} from "./startup-tracing.ts";
 import type { LaunchOptions } from "./types.ts";
 
 interface LaunchCommandOptions {
@@ -144,6 +152,7 @@ function addStartupOptions(command: Command): void {
 }
 
 async function launchTui(options: LaunchOptions): Promise<void> {
+  let startupInstrumentation = createStartupInstrumentation();
   const logSession = await startDiffdiffLogging({
     command: process.argv,
     cwd: process.cwd(),
@@ -172,6 +181,7 @@ async function launchTui(options: LaunchOptions): Promise<void> {
     { createTerminalSyntaxPalette, getSyntaxPalette },
     { createTerminalSyntaxStyle, getSyntaxStyle },
   ] = await runtimeModulesPromise;
+  startupInstrumentation = logStartupPhase(startupInstrumentation, "importsReadyAt");
   const mode = await modePromise;
   const themeName = themeModule.getPierreThemeName(mode);
   const fallbackTheme = themeModule.getUiTheme(themeName);
@@ -182,6 +192,7 @@ async function launchTui(options: LaunchOptions): Promise<void> {
     exitOnCtrlC: true,
     backgroundColor: "transparent",
   });
+  startupInstrumentation = logStartupPhase(startupInstrumentation, "rendererReadyAt");
 
   try {
     const terminalColors = await themeModule.getTerminalColors(renderer);
@@ -197,6 +208,7 @@ async function launchTui(options: LaunchOptions): Promise<void> {
       terminalColors == null
         ? getSyntaxStyle(themeName)
         : createTerminalSyntaxStyle(theme, terminalColors);
+    startupInstrumentation = logStartupPhase(startupInstrumentation, "themeReadyAt");
 
     renderer.setBackgroundColor(theme.appBackground);
     const root = createRoot(renderer);
@@ -204,11 +216,18 @@ async function launchTui(options: LaunchOptions): Promise<void> {
     root.render(
       <StartupScreen
         chromeBackground={theme.chromeBackground}
+        onFrameDelay={(details) => {
+          logDiffdiffInfo("perf", "startup_animation_frame_delayed", {
+            ...details,
+            startup: summarizeStartupInstrumentation(startupInstrumentation),
+          });
+        }}
         path={options.repoPath ?? process.cwd()}
         text={theme.text}
         textMuted={theme.textMuted}
       />,
     );
+    startupInstrumentation = logStartupPhase(startupInstrumentation, "startupScreenRenderedAt");
 
     const loadSession = (nextOptions: LaunchOptions) =>
       loadPreparedReviewSession(nextOptions, themeName, theme, syntaxPalette, {
@@ -217,13 +236,17 @@ async function launchTui(options: LaunchOptions): Promise<void> {
       });
     const gitHubPullRequestService = new GitHubPullRequestService();
     const initialSession = await loadSession(options);
+    startupInstrumentation = logStartupPhase(startupInstrumentation, "sessionPreparedAt");
     const initialPreferences = await loadDiffdiffPreferences();
+    startupInstrumentation = logStartupPhase(startupInstrumentation, "preferencesLoadedAt");
 
     const initialReviewCache = await loadReviewCache({
       repositoryRootPath: initialSession.repository.rootPath,
       base: initialSession.comparison.base,
       head: initialSession.comparison.head,
     });
+    startupInstrumentation = logStartupPhase(startupInstrumentation, "reviewCacheLoadedAt");
+    startupInstrumentation = logStartupPhase(startupInstrumentation, "appRenderRequestedAt");
 
     root.render(
       <DiffdiffApp
@@ -264,6 +287,7 @@ async function launchTui(options: LaunchOptions): Promise<void> {
         submitPendingReview={(reviewSession, event, body) =>
           gitHubPullRequestService.submitPendingReview(reviewSession, event, body)
         }
+        startupInstrumentation={startupInstrumentation}
         syncRemotes={(repositoryRootPath) =>
           syncGitRemotes(repositoryRootPath).then(() => undefined)
         }
@@ -271,6 +295,12 @@ async function launchTui(options: LaunchOptions): Promise<void> {
         theme={theme}
       />,
     );
+
+    setTimeout(() => {
+      logDiffdiffInfo("perf", "startup_app_render_settled", {
+        startup: summarizeStartupInstrumentation(startupInstrumentation, getStartupTraceNow()),
+      });
+    }, 0);
   } catch (error) {
     logDiffdiffError("cli", "tui_launch_failed", error, {
       logFilePath: logSession?.logFilePath,
@@ -283,6 +313,18 @@ async function launchTui(options: LaunchOptions): Promise<void> {
     process.stderr.write(`diffdiff: ${message}\n`);
     process.exitCode = 1;
   }
+}
+
+function logStartupPhase(
+  startupInstrumentation: StartupInstrumentation,
+  phase: StartupInstrumentationPhase,
+): StartupInstrumentation {
+  const nextInstrumentation = markStartupInstrumentationPhase(startupInstrumentation, phase);
+  logDiffdiffInfo("perf", "startup_phase_completed", {
+    phase,
+    startup: summarizeStartupInstrumentation(nextInstrumentation),
+  });
+  return nextInstrumentation;
 }
 
 async function runAuthLogin(options: AuthLoginCommandOptions): Promise<void> {
