@@ -1,4 +1,5 @@
 import { logDiffdiffError } from "../logging.ts";
+import type { PullRequestFingerprint } from "../types/session.ts";
 import type {
   ForgeRepository,
   GitHubPullRequestChecksSummary,
@@ -23,23 +24,23 @@ import type {
   GitHubReviewResponse,
 } from "./pull-request-types.ts";
 
+interface PullRequestSnapshot {
+  checksSummary: GitHubPullRequestChecksSummary;
+  pullRequestResponse: GitHubPullRequestDetailResponse;
+}
+
 export async function loadPullRequestDetail(
   client: GitHubApiClient,
   repository: ForgeRepository,
   pullRequestNumber: number,
 ): Promise<GitHubPullRequestDetail> {
   const [
-    pullRequestResponse,
+    { checksSummary, pullRequestResponse },
     reviewsResponse,
     commentsResponse,
     issueCommentsResponse,
-    checksSummary,
   ] = await Promise.all([
-    client.request("GET /repos/{owner}/{repo}/pulls/{pull_number}", {
-      owner: repository.owner,
-      repo: repository.repo,
-      pull_number: pullRequestNumber,
-    }) as Promise<GitHubPullRequestDetailResponse>,
+    loadPullRequestSnapshot(client, repository, pullRequestNumber),
     client.paginate("GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews", {
       owner: repository.owner,
       repo: repository.repo,
@@ -58,7 +59,6 @@ export async function loadPullRequestDetail(
       issue_number: pullRequestNumber,
       per_page: 100,
     }) as Promise<GitHubIssueCommentResponse[]>,
-    loadChecksSummary(client, repository, pullRequestNumber),
   ]);
 
   const comments = commentsResponse
@@ -104,11 +104,21 @@ export async function loadPullRequestDetail(
   };
 }
 
-async function loadChecksSummary(
+export async function loadPullRequestFingerprint(
   client: GitHubApiClient,
   repository: ForgeRepository,
   pullRequestNumber: number,
-): Promise<GitHubPullRequestChecksSummary> {
+): Promise<PullRequestFingerprint> {
+  return buildPullRequestFingerprintFromSnapshot(
+    await loadPullRequestSnapshot(client, repository, pullRequestNumber),
+  );
+}
+
+async function loadPullRequestSnapshot(
+  client: GitHubApiClient,
+  repository: ForgeRepository,
+  pullRequestNumber: number,
+): Promise<PullRequestSnapshot> {
   try {
     const pullRequest = (await client.request("GET /repos/{owner}/{repo}/pulls/{pull_number}", {
       owner: repository.owner,
@@ -116,17 +126,58 @@ async function loadChecksSummary(
       pull_number: pullRequestNumber,
     })) as GitHubPullRequestDetailResponse;
 
+    return {
+      checksSummary: await loadChecksSummaryForHeadSha(
+        client,
+        repository,
+        pullRequest.head.sha,
+        pullRequestNumber,
+      ),
+      pullRequestResponse: pullRequest,
+    };
+  } catch (error) {
+    logDiffdiffError("github", "load_pull_request_snapshot_failed", error, {
+      pullRequestNumber,
+      repository,
+    });
+    throw error;
+  }
+}
+
+function buildPullRequestFingerprintFromSnapshot({
+  checksSummary,
+  pullRequestResponse,
+}: PullRequestSnapshot): PullRequestFingerprint {
+  return {
+    number: pullRequestResponse.number,
+    headSha: pullRequestResponse.head.sha,
+    checksState: checksSummary.state,
+    state: pullRequestResponse.state,
+    isDraft: pullRequestResponse.draft,
+    isMerged: pullRequestResponse.merged,
+    mergeableState: pullRequestResponse.mergeable_state ?? undefined,
+    updatedAt: pullRequestResponse.updated_at,
+  };
+}
+
+export async function loadChecksSummaryForHeadSha(
+  client: GitHubApiClient,
+  repository: ForgeRepository,
+  headSha: string,
+  pullRequestNumber?: number,
+): Promise<GitHubPullRequestChecksSummary> {
+  try {
     const [checkRunsResponse, combinedStatusResponse] = await Promise.all([
       client.request("GET /repos/{owner}/{repo}/commits/{ref}/check-runs", {
         owner: repository.owner,
         repo: repository.repo,
-        ref: pullRequest.head.sha,
+        ref: headSha,
         per_page: 100,
       }) as Promise<GitHubCheckRunsResponse>,
       client.request("GET /repos/{owner}/{repo}/commits/{ref}/status", {
         owner: repository.owner,
         repo: repository.repo,
-        ref: pullRequest.head.sha,
+        ref: headSha,
       }) as Promise<GitHubCommitStatusResponse>,
     ]);
 
@@ -168,6 +219,7 @@ async function loadChecksSummary(
     };
   } catch (error) {
     logDiffdiffError("github", "load_checks_summary_failed", error, {
+      headSha,
       pullRequestNumber,
       repository,
     });

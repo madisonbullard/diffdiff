@@ -7,7 +7,11 @@ import { GitHubMetadataProvider } from "../src/github/index.ts";
 import { resolveGitHubAuth, storeGitHubToken } from "../src/github/auth.ts";
 import { getGitHubAuthConfigPaths } from "../src/github/config.ts";
 import { GitHubPullRequestService } from "../src/github/pull-request-service.ts";
-import { buildReviewSessionFingerprint } from "../src/review-session-fingerprint.ts";
+import {
+  buildPullRequestFingerprint,
+  buildReviewSessionFingerprint,
+} from "../src/review-session-fingerprint.ts";
+import { probeReviewSessionFreshness } from "../src/review-session-freshness.ts";
 import type { GitHubApiClient, GitHubClientFactory } from "../src/types/providers.ts";
 import type { ReviewSession } from "../src/types/session.ts";
 
@@ -208,8 +212,9 @@ describe("GitHubMetadataProvider", () => {
 
 describe("GitHubPullRequestService", () => {
   test("loads pull request details on demand", async () => {
+    const client = createGitHubApiClient();
     const clientFactory: GitHubClientFactory = {
-      create: vi.fn(async () => createGitHubApiClient()),
+      create: vi.fn(async () => client),
     };
     const service = new GitHubPullRequestService(clientFactory);
 
@@ -226,6 +231,11 @@ describe("GitHubPullRequestService", () => {
     expect(pullRequest.number).toBe(42);
     expect(pullRequest.baseRefName).toBe("main");
     expect(pullRequest.headRefName).toBe("feature/ui");
+    expect(
+      client.requestMock.mock.calls.filter(
+        ([route]) => route === "GET /repos/{owner}/{repo}/pulls/{pull_number}",
+      ),
+    ).toHaveLength(1);
   });
 
   test("attaches active pull request review data to a review session", async () => {
@@ -245,6 +255,33 @@ describe("GitHubPullRequestService", () => {
     expect(session.github?.pullRequest.reviewThreads[0]?.comments).toHaveLength(2);
     expect(session.github?.pullRequest.pendingReview).toMatchObject({ id: 9010 });
     expect(session.warnings).toEqual([]);
+  });
+
+  test("probes PR freshness with the same checks state as a loaded session", async () => {
+    mockRemoteTrackingRefs("refs/remotes/origin/main", "refs/remotes/origin/feature/ui");
+    const clientFactory: GitHubClientFactory = {
+      create: vi.fn(async () =>
+        createGitHubApiClient({
+          combinedStatusState: "pending",
+          checkRuns: [{ conclusion: "success", status: "completed" }],
+        }),
+      ),
+    };
+    const service = new GitHubPullRequestService(clientFactory);
+    const attachedSession = await service.attachReviewSession(createReviewSession());
+    const session = {
+      ...attachedSession,
+      renderFingerprint: buildReviewSessionFingerprint(attachedSession),
+    };
+
+    expect(buildPullRequestFingerprint(session.github!.pullRequest).checksState).toBe(
+      session.renderFingerprint.pullRequest?.checksState,
+    );
+
+    const freshness = await probeReviewSessionFreshness(session, service);
+
+    expect(freshness.hasGitHubUpdates).toBe(false);
+    expect(freshness.nextPullRequestFingerprint).toEqual(session.renderFingerprint.pullRequest);
   });
 
   test("warns when the PR head remote-tracking ref is not available locally", async () => {
@@ -513,10 +550,18 @@ describe("GitHubPullRequestService", () => {
   });
 });
 
-function createGitHubApiClient(options: { commentPath?: string } = {}): GitHubApiClient & {
+function createGitHubApiClient(
+  options: {
+    checkRuns?: Array<{ conclusion: string | null; status: string }>;
+    combinedStatusState?: string;
+    commentPath?: string;
+  } = {},
+): GitHubApiClient & {
   graphqlMock: ReturnType<typeof vi.fn>;
   requestMock: ReturnType<typeof vi.fn>;
 } {
+  const checkRuns = options.checkRuns ?? [{ conclusion: "success", status: "completed" }];
+  const combinedStatusState = options.combinedStatusState ?? "success";
   const commentPath = options.commentPath ?? "src/app.ts";
   const graphql = vi.fn(async () => ({ addPullRequestReviewThread: { thread: { id: "PRRT_1" } } }));
   const request = vi.fn(async (route) => {
@@ -541,12 +586,12 @@ function createGitHubApiClient(options: { commentPath?: string } = {}): GitHubAp
 
     if (route === "GET /repos/{owner}/{repo}/commits/{ref}/check-runs") {
       return {
-        check_runs: [{ conclusion: "success", status: "completed" }],
+        check_runs: checkRuns,
       };
     }
 
     if (route === "GET /repos/{owner}/{repo}/commits/{ref}/status") {
-      return { state: "success" };
+      return { state: combinedStatusState };
     }
 
     if (route === "POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews") {

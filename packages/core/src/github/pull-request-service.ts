@@ -17,7 +17,7 @@ import type {
 import type { GitHubApiClient, GitHubClientFactory } from "../types/providers.ts";
 import type { ReviewSession, ReviewWarning } from "../types/session.ts";
 import { OctokitGitHubClientFactory } from "./client.ts";
-import { loadPullRequestDetail } from "./pull-request-detail.ts";
+import { loadPullRequestDetail, loadPullRequestFingerprint } from "./pull-request-detail.ts";
 import {
   dedupeWarnings,
   findActivePullRequestCandidate,
@@ -30,11 +30,9 @@ import {
 } from "./pull-request-refs.ts";
 import type {
   GitHubCreateReviewResponse,
-  GitHubCommitStatusResponse,
   GitHubGraphqlAddPullRequestReviewThreadResponse,
   GitHubMergeResponse,
   GitHubPullRequestListResponse,
-  GitHubPullRequestDetailResponse,
 } from "./pull-request-types.ts";
 
 export class GitHubPullRequestService {
@@ -339,30 +337,11 @@ export class GitHubPullRequestService {
     }
 
     try {
-      const pullRequest = (await client.request("GET /repos/{owner}/{repo}/pulls/{pull_number}", {
-        owner: reviewSession.repository.owner,
-        pull_number: reviewSession.pullRequest.number,
-        repo: reviewSession.repository.repo,
-      })) as GitHubPullRequestDetailResponse;
-      const combinedStatus = (await client.request(
-        "GET /repos/{owner}/{repo}/commits/{ref}/status",
-        {
-          owner: reviewSession.repository.owner,
-          repo: reviewSession.repository.repo,
-          ref: pullRequest.head.sha,
-        },
-      )) as GitHubCommitStatusResponse;
-
-      return {
-        number: pullRequest.number,
-        headSha: pullRequest.head.sha,
-        checksState: combinedStatus.state ?? "unknown",
-        state: pullRequest.state,
-        isDraft: pullRequest.draft,
-        isMerged: pullRequest.merged,
-        mergeableState: pullRequest.mergeable_state ?? undefined,
-        updatedAt: pullRequest.updated_at,
-      };
+      return await loadPullRequestFingerprint(
+        client,
+        reviewSession.repository,
+        reviewSession.pullRequest.number,
+      );
     } catch (error) {
       logDiffdiffError("github", "probe_pull_request_fingerprint_failed", error, {
         pullRequestNumber: reviewSession.pullRequest.number,
