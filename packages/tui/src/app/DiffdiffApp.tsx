@@ -33,6 +33,13 @@ import {
 import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  closeDialog as closeAppDialog,
+  getActiveDialog,
+  hasOpenDialog,
+  openDialog as openAppDialog,
+  type AppDialog,
+} from "./dialog-stack.ts";
 import { BranchModal } from "../components/branch-modal.tsx";
 import { CommandPaletteModal } from "../components/command-palette-modal.tsx";
 import {
@@ -202,6 +209,13 @@ const EMPTY_REVIEW_THREADS: readonly import("@diffdiff/core").GitHubPullRequestR
 const EMPTY_CONVERSATION_ITEMS: readonly GitHubPullRequestConversationItem[] = [];
 const REVIEWED_NEXT_FILE_SCROLL_OFFSET = 3;
 const LIVE_REFRESH_INTERVAL_MS = 5_000;
+const GITHUB_DIALOGS = new Set<AppDialog>([
+  "cleanup",
+  "comment-composer",
+  "comments",
+  "merge",
+  "submit-review",
+]);
 
 function getMonotonicNow(): number {
   const now = globalThis.performance?.now?.();
@@ -480,19 +494,22 @@ export function DiffdiffApp({
     initialGitHubPreferences ?? getDefaultGitHubPreferences(),
   );
   const leaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [showHelp, setShowHelp] = useState(false);
-  const [showBranchModal, setShowBranchModal] = useState(launchInPullRequestList);
-  const [showCleanupModal, setShowCleanupModal] = useState(false);
-  const [showCommentComposer, setShowCommentComposer] = useState(false);
-  const [showCommandModal, setShowCommandModal] = useState(false);
-  const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [dialogStack, setDialogStack] = useState<readonly AppDialog[]>(() =>
+    launchInPullRequestList ? ["branch"] : [],
+  );
   const [commentCollapseStates, setCommentCollapseStates] = useState<Record<string, boolean>>(
     () => initialReviewCache?.commentCollapseStates ?? {},
   );
   const [showKeyLegend, setShowKeyLegend] = useState(true);
-  const [showListFilterModal, setShowListFilterModal] = useState(false);
-  const [showMergeModal, setShowMergeModal] = useState(false);
-  const [showSubmitReviewModal, setShowSubmitReviewModal] = useState(false);
+  const showHelp = hasOpenDialog(dialogStack, "help");
+  const showBranchModal = hasOpenDialog(dialogStack, "branch");
+  const showCleanupModal = hasOpenDialog(dialogStack, "cleanup");
+  const showCommentComposer = hasOpenDialog(dialogStack, "comment-composer");
+  const showCommandModal = hasOpenDialog(dialogStack, "command-palette");
+  const showCommentsModal = hasOpenDialog(dialogStack, "comments");
+  const showListFilterModal = hasOpenDialog(dialogStack, "list-filter");
+  const showMergeModal = hasOpenDialog(dialogStack, "merge");
+  const showSubmitReviewModal = hasOpenDialog(dialogStack, "submit-review");
   const [activeListView, setActiveListView] = useState<ListModalView>("branch");
   const [branchListFilters, setBranchListFilters] = useState<BranchListFilters>({
     ...(launchInPullRequestList
@@ -844,7 +861,7 @@ export function DiffdiffApp({
         title: "Open help",
         value: "system.help",
         run: () => {
-          setShowHelp(true);
+          openHelp();
         },
       },
       {
@@ -932,8 +949,7 @@ export function DiffdiffApp({
         title: "Open PR comments",
         value: "github.comments",
         run: () => {
-          setShowCommentsModal(true);
-          setStatusMessage("Opened PR comments.");
+          openPullRequestCommentsModal();
         },
       },
       {
@@ -1016,6 +1032,8 @@ export function DiffdiffApp({
       hasSelectedReviewThread,
       openMergeModal,
       openFocusedReviewThreadReplyComposer,
+      openHelp,
+      openPullRequestCommentsModal,
       openSubmitReviewModal,
       selectedFileIndex,
       selectedReviewThread,
@@ -1091,25 +1109,7 @@ export function DiffdiffApp({
       cleanupSelection.removeLocal) ||
     (cleanupCandidates.some((candidate) => candidate.kind === "remote-tracking") &&
       cleanupSelection.removeRemote);
-  const activeOverlay = showCommandModal
-    ? "command-palette"
-    : showHelp
-      ? "help"
-      : showCommentComposer
-        ? "comment-composer"
-        : showCommentsModal
-          ? "comments"
-          : showSubmitReviewModal
-            ? "submit-review"
-            : showMergeModal
-              ? "merge"
-              : showCleanupModal
-                ? "cleanup"
-                : showListFilterModal
-                  ? "list-filter"
-                  : showBranchModal
-                    ? "branch"
-                    : null;
+  const activeOverlay = getActiveDialog(dialogStack);
   const keyboardHandlerRef = useRef<(key: KeyboardInput) => void>(() => undefined);
   const resolvedLogFilePath =
     logFilePath ?? getDiffdiffLogSession()?.logFilePath ?? "~/.diffdiff/logs/log-unknown.jsonl";
@@ -1321,12 +1321,12 @@ export function DiffdiffApp({
   useEffect(() => {
     if (session.github == null) {
       setCleanupCandidates([]);
-      setShowCleanupModal(false);
-      setShowCommentComposer(false);
       setReviewComposerTarget(null);
-      setShowCommentsModal(false);
-      setShowMergeModal(false);
-      setShowSubmitReviewModal(false);
+      setReviewComposerBody("");
+      setDialogStack((currentStack) => {
+        const nextStack = currentStack.filter((dialog) => !GITHUB_DIALOGS.has(dialog));
+        return nextStack.length === currentStack.length ? currentStack : nextStack;
+      });
     }
   }, [session.github]);
 
@@ -1779,7 +1779,7 @@ export function DiffdiffApp({
 
     if (activeOverlay === "help") {
       if (key.name === "escape" || key.name === "q" || key.sequence === "?") {
-        setShowHelp(false);
+        setDialogStack((currentStack) => closeAppDialog(currentStack, "help"));
       }
       return;
     }
@@ -1850,7 +1850,7 @@ export function DiffdiffApp({
     }
 
     if (key.sequence === "?") {
-      setShowHelp(true);
+      openHelp();
       return;
     }
 
@@ -2961,12 +2961,14 @@ export function DiffdiffApp({
     clearLeaderMode();
     setCommandQuery("");
     setCommandIndex(0);
-    setShowCommandModal(true);
+    setDialogStack((currentStack) =>
+      openAppDialog(currentStack, "command-palette", { clear: true }),
+    );
     setStatusMessage("Opened command palette.");
   }
 
   function closeCommandModal(): void {
-    setShowCommandModal(false);
+    setDialogStack((currentStack) => closeAppDialog(currentStack, "command-palette"));
     setCommandQuery("");
     setCommandIndex(0);
     setStatusMessage("Closed command palette.");
@@ -2974,7 +2976,7 @@ export function DiffdiffApp({
 
   function runCommand(command: AppCommand): void {
     clearLeaderMode();
-    setShowCommandModal(false);
+    setDialogStack((currentStack) => closeAppDialog(currentStack, "command-palette"));
     setCommandQuery("");
     setCommandIndex(0);
     command.run();
@@ -3190,8 +3192,7 @@ export function DiffdiffApp({
     setCommitSearchQuery("");
     setCommitSearchActive(false);
     setActiveListView("branch");
-    setShowListFilterModal(false);
-    setShowBranchModal(true);
+    setDialogStack(["branch"]);
     setStatusMessage("Opened list modal.");
   }
 
@@ -3240,8 +3241,7 @@ export function DiffdiffApp({
     }
 
     if (key.name === "escape" || key.name === "q" || key.name === "l") {
-      setShowBranchModal(false);
-      setShowListFilterModal(false);
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "branch"));
       setCommitSearchQuery("");
       setCommitSearchActive(false);
       setStatusMessage("Closed list modal.");
@@ -3256,7 +3256,7 @@ export function DiffdiffApp({
 
     if (activeListView === "branch" && key.name === "f") {
       setFilterIndex(0);
-      setShowListFilterModal(true);
+      setDialogStack((currentStack) => openAppDialog(currentStack, "list-filter"));
       setStatusMessage("Opened list filters.");
       return;
     }
@@ -3364,7 +3364,7 @@ export function DiffdiffApp({
 
   function handleListFilterModalKey(key: KeyboardInput): void {
     if (key.name === "escape" || key.name === "q" || key.name === "f") {
-      setShowListFilterModal(false);
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "list-filter"));
       setStatusMessage("Closed list filters.");
       return;
     }
@@ -3481,7 +3481,7 @@ export function DiffdiffApp({
 
   function handleCommentComposerKey(key: KeyboardInput): void {
     if (key.name === "escape") {
-      setShowCommentComposer(false);
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "comment-composer"));
       setReviewComposerTarget(null);
       setReviewComposerBody("");
       setStatusMessage("Closed comment composer.");
@@ -3510,7 +3510,7 @@ export function DiffdiffApp({
 
   function handlePullRequestCommentsModalKey(key: KeyboardInput): void {
     if (key.name === "escape" || key.name === "q" || key.name === "t") {
-      setShowCommentsModal(false);
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "comments"));
       setStatusMessage("Closed PR conversation.");
       return;
     }
@@ -3541,7 +3541,7 @@ export function DiffdiffApp({
 
   function handleSubmitReviewModalKey(key: KeyboardInput): void {
     if (key.name === "escape") {
-      setShowSubmitReviewModal(false);
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "submit-review"));
       setReviewSubmissionBody("");
       setStatusMessage("Closed submit review modal.");
       return;
@@ -3579,7 +3579,7 @@ export function DiffdiffApp({
 
   function handleMergeModalKey(key: KeyboardInput): void {
     if (key.name === "escape") {
-      setShowMergeModal(false);
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "merge"));
       setStatusMessage("Closed merge modal.");
       return;
     }
@@ -3656,7 +3656,7 @@ export function DiffdiffApp({
     const entryCount = 2;
 
     if (key.name === "escape") {
-      setShowCleanupModal(false);
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "cleanup"));
       setCleanupCandidates([]);
       setStatusMessage("Skipped post-merge cleanup.");
       return;
@@ -3717,7 +3717,7 @@ export function DiffdiffApp({
       kind: "review-thread",
     });
     setReviewComposerBody("");
-    setShowCommentComposer(true);
+    setDialogStack((currentStack) => openAppDialog(currentStack, "comment-composer"));
     setStatusMessage(`Commenting on ${selectedReviewAnchor.path}:${selectedReviewAnchor.line}.`);
   }
 
@@ -3752,7 +3752,7 @@ export function DiffdiffApp({
       thread: selectedReviewThread,
     });
     setReviewComposerBody("");
-    setShowCommentComposer(true);
+    setDialogStack((currentStack) => openAppDialog(currentStack, "comment-composer"));
     setStatusMessage(`Replying in ${formatThreadAnchor(selectedReviewThread)}.`);
   }
 
@@ -3778,8 +3778,18 @@ export function DiffdiffApp({
       quotedBody: selectedPullRequestConversationItem.body,
     });
     setReviewComposerBody("");
-    setShowCommentComposer(true);
+    setDialogStack((currentStack) => openAppDialog(currentStack, "comment-composer"));
     setStatusMessage(`Replying to ${selectedPullRequestConversationItem.author.login}.`);
+  }
+
+  function openPullRequestCommentsModal(): void {
+    setPullRequestConversationIndex(0);
+    setDialogStack((currentStack) => openAppDialog(currentStack, "comments"));
+    setStatusMessage("Opened PR comments.");
+  }
+
+  function openHelp(): void {
+    setDialogStack((currentStack) => openAppDialog(currentStack, "help", { clear: true }));
   }
 
   function openSubmitReviewModal(): void {
@@ -3795,7 +3805,7 @@ export function DiffdiffApp({
 
     setReviewSubmissionBody(session.github.pullRequest.pendingReview?.body ?? "");
     setReviewSubmissionEventIndex(0);
-    setShowSubmitReviewModal(true);
+    setDialogStack((currentStack) => openAppDialog(currentStack, "submit-review"));
     setStatusMessage("Preparing review submission.");
   }
 
@@ -3816,7 +3826,7 @@ export function DiffdiffApp({
     setMergeModalField(
       gitHubPreferencesRef.current.defaultMergeMethod == null ? "method" : "title",
     );
-    setShowMergeModal(true);
+    setDialogStack((currentStack) => openAppDialog(currentStack, "merge"));
     setStatusMessage("Preparing merge modal.");
   }
 
@@ -3864,7 +3874,7 @@ export function DiffdiffApp({
 
       const nextSession = await loadSession(startupOptions);
       applyLoadedSession(nextSession);
-      setShowCommentComposer(false);
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "comment-composer"));
       setReviewComposerTarget(null);
       setReviewComposerBody("");
       setStatusMessage(
@@ -3905,7 +3915,7 @@ export function DiffdiffApp({
       );
       const nextSession = await loadSession(startupOptions);
       applyLoadedSession(nextSession);
-      setShowSubmitReviewModal(false);
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "submit-review"));
       setReviewSubmissionBody("");
       setStatusMessage("Submitted review.");
     } catch (error) {
@@ -3935,14 +3945,14 @@ export function DiffdiffApp({
       });
       const nextSession = await loadSession(startupOptions);
       applyLoadedSession(nextSession);
-      setShowMergeModal(false);
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "merge"));
       setStatusMessage("Merged the pull request and refreshed local refs.");
 
       if (mergeResult.cleanupCandidates.length > 0) {
         setCleanupCandidateIndex(0);
         setCleanupCandidates(mergeResult.cleanupCandidates);
         setCleanupSelection(gitHubPreferencesRef.current.cleanup);
-        setShowCleanupModal(true);
+        setDialogStack((currentStack) => openAppDialog(currentStack, "cleanup", { replace: true }));
         setStatusMessage("Merged the pull request. Choose any stale refs to remove.");
       }
     } catch (error) {
@@ -3978,7 +3988,7 @@ export function DiffdiffApp({
       const nextSession = await loadSession(startupOptions);
       applyLoadedSession(nextSession);
       setCleanupCandidates([]);
-      setShowCleanupModal(false);
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "cleanup"));
       setStatusMessage("Removed selected refs and reloaded the current session.");
     } catch (error) {
       handleAppError(error, "Unable to remove the selected refs.", {
@@ -4022,13 +4032,7 @@ export function DiffdiffApp({
       const nextSession = await loadSession(nextOptions);
       applyLoadedSession(nextSession);
       setStartupOptions(nextOptions);
-      setShowBranchModal(false);
-      setShowCommentComposer(false);
-      setShowCommentsModal(false);
-      setShowListFilterModal(false);
-      setShowMergeModal(false);
-      setShowSubmitReviewModal(false);
-      setShowCleanupModal(false);
+      setDialogStack([]);
       setSelectedFileIndex(0);
       setStatusMessage(`Updated ${target} to ${branch.name}.`);
     } catch (error) {
@@ -4062,13 +4066,7 @@ export function DiffdiffApp({
       const nextSession = await loadSession(nextOptions);
       applyLoadedSession(nextSession);
       setStartupOptions(nextOptions);
-      setShowBranchModal(false);
-      setShowCommentComposer(false);
-      setShowCommentsModal(false);
-      setShowListFilterModal(false);
-      setShowMergeModal(false);
-      setShowSubmitReviewModal(false);
-      setShowCleanupModal(false);
+      setDialogStack([]);
       setSelectedFileIndex(0);
       setStatusMessage(`Updated ${target} to commit ${shortSha}.`);
     } catch (error) {
@@ -4094,11 +4092,7 @@ export function DiffdiffApp({
       const nextSession = await loadSession(nextOptions);
       applyLoadedSession(nextSession);
       setStartupOptions(nextOptions);
-      setShowBranchModal(false);
-      setShowCommentComposer(false);
-      setShowCommentsModal(false);
-      setShowListFilterModal(false);
-      setShowSubmitReviewModal(false);
+      setDialogStack([]);
       setSelectedFileIndex(0);
       setStatusMessage("Showing working tree changes against HEAD.");
     } catch (error) {
@@ -4136,11 +4130,7 @@ export function DiffdiffApp({
       const nextSession = await loadSession(nextOptions);
       applyLoadedSession(nextSession);
       setStartupOptions(nextOptions);
-      setShowBranchModal(false);
-      setShowCommentComposer(false);
-      setShowCommentsModal(false);
-      setShowListFilterModal(false);
-      setShowSubmitReviewModal(false);
+      setDialogStack([]);
       setSelectedFileIndex(0);
       setStatusMessage(`Opened PR #${branch.pullRequest.number}.`);
     } catch (error) {

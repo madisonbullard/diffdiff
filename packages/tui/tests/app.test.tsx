@@ -155,6 +155,22 @@ test("opens the command palette with ctrl+p and runs the selected command", () =
   expect(getAppText(tree)).toContain("Working tree");
 });
 
+test("closes nested list filters back to the list modal", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ name: "l" });
+  emitKey({ name: "f", sequence: "f" });
+
+  expect(getAppText(tree)).toContain("Filters");
+  expect(getAppText(tree)).toContain("Working tree");
+
+  emitKey({ name: "escape" });
+
+  expect(getAppText(tree)).not.toContain("Filters");
+  expect(getAppText(tree)).toContain("List");
+  expect(getAppText(tree)).toContain("Working tree");
+});
+
 test("runs leader key commands with ctrl+x", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 
@@ -1241,6 +1257,27 @@ test("replies to a PR conversation item with a quoted top-level comment", async 
   expect(body).toContain("Replying to octocat:");
   expect(body).toContain("> Can we tighten the rollout copy?");
   expect(body).toContain("We can tighten it before ship.");
+});
+
+test("closes a nested PR reply composer back to the conversation modal", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+      })}
+    />,
+  );
+
+  emitKey({ name: "t" });
+  emitKey({ name: "r", sequence: "r" });
+
+  expect(getAppText(tree)).toContain("Reply to PR Comment");
+
+  emitKey({ name: "escape" });
+
+  expect(getAppText(tree)).not.toContain("Reply to PR Comment");
+  expect(getAppText(tree)).toContain("PR Conversation");
+  expect(getAppText(tree)).toContain("Can we tighten the rollout copy?");
 });
 
 test("opens the comment composer and submits a pending review thread", async () => {
