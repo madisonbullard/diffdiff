@@ -1717,6 +1717,31 @@ export function DiffdiffApp({
     startupOptions,
   ]);
 
+  const syncGitStateOnFocus = useCallback(async () => {
+    if (isReloading || isCheckingForUpdates) {
+      return;
+    }
+
+    try {
+      await syncRemoteState();
+    } catch (error) {
+      handleAppError(error, "Unable to refresh git state.", {
+        action: "sync-remotes-on-focus",
+        startupOptions,
+      });
+      return;
+    }
+
+    await checkForUpdates();
+  }, [
+    checkForUpdates,
+    handleAppError,
+    isCheckingForUpdates,
+    isReloading,
+    startupOptions,
+    syncRemoteState,
+  ]);
+
   useEffect(() => {
     const handleBlur = () => {
       terminalFocusedRef.current = false;
@@ -1724,7 +1749,7 @@ export function DiffdiffApp({
 
     const handleFocus = () => {
       terminalFocusedRef.current = true;
-      void checkForUpdates();
+      void syncGitStateOnFocus();
     };
 
     const intervalId = setInterval(() => {
@@ -1743,7 +1768,7 @@ export function DiffdiffApp({
       renderer.off(TERMINAL_BLUR_EVENT, handleBlur);
       renderer.off(TERMINAL_FOCUS_EVENT, handleFocus);
     };
-  }, [checkForUpdates, renderer]);
+  }, [renderer, syncGitStateOnFocus]);
 
   keyboardHandlerRef.current = (key) => {
     logDiffdiffVerbose("app", "key_pressed", {

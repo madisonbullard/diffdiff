@@ -298,10 +298,11 @@ function parseGitHubPullRequestUrl(target: string):
       repository: ForgeRepository;
     }
   | undefined {
+  const normalizedTarget = normalizeGitHubUrlCandidate(target);
   let url: URL;
 
   try {
-    url = new URL(target);
+    url = new URL(normalizedTarget);
   } catch {
     return undefined;
   }
@@ -311,7 +312,7 @@ function parseGitHubPullRequestUrl(target: string):
     return undefined;
   }
 
-  const match = /^\/([^/]+)\/([^/]+)\/pull\/(\d+)\/?$/u.exec(url.pathname);
+  const match = /^\/([^/]+)\/([^/]+)\/pull\/(\d+)(?:\/.*)?$/u.exec(url.pathname);
   if (match == null) {
     return undefined;
   }
@@ -325,6 +326,20 @@ function parseGitHubPullRequestUrl(target: string):
       repo: match[2]!,
     },
   };
+}
+
+function normalizeGitHubUrlCandidate(target: string): string {
+  const trimmedTarget = target.trim();
+
+  if (/^[a-z][a-z\d+.-]*:\/\//iu.test(trimmedTarget)) {
+    return trimmedTarget;
+  }
+
+  if (/^(?:www\.)?github\.com\//iu.test(trimmedTarget)) {
+    return `https://${trimmedTarget}`;
+  }
+
+  return trimmedTarget;
 }
 
 function selectMatchingGitHubRemote(

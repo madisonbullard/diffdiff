@@ -15,6 +15,25 @@ describe("parsePullRequestTarget", () => {
     });
   });
 
+  test("parses forgiving GitHub PR URL variants", () => {
+    for (const target of [
+      "https://github.com/diffdiff/diffdiff/pull/42/changes",
+      "https://github.com/diffdiff/diffdiff/pull/42/files?diff=split",
+      "github.com/diffdiff/diffdiff/pull/42/commits#top",
+    ]) {
+      expect(parsePullRequestTarget(target)).toEqual({
+        kind: "repository",
+        pullRequestNumber: 42,
+        repository: {
+          forge: "github",
+          host: "github.com",
+          owner: "diffdiff",
+          repo: "diffdiff",
+        },
+      });
+    }
+  });
+
   test("parses owner/repo shorthand with an @ prefix", () => {
     expect(parsePullRequestTarget("@diffdiff/diffdiff/42")).toEqual({
       kind: "repository",

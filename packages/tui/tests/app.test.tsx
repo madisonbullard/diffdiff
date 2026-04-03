@@ -557,6 +557,37 @@ test("shows a persistent error log toast until dismissed", async () => {
   expect(getAppText(tree)).not.toContain(`View error logs at ${logFilePath}`);
 });
 
+test("syncs remotes before checking for updates on terminal focus", async () => {
+  const syncRemotes = vi.fn(async () => undefined);
+  const probeFreshness = vi.fn(async () => ({
+    comparisonSummary: undefined,
+    hasComparisonUpdates: false,
+    hasGitHubUpdates: false,
+    nextBaseSha: "fedcba0",
+    nextHeadSha: "1234567",
+  }));
+
+  render(
+    <DiffdiffApp
+      {...createAppProps({
+        probeFreshness,
+        syncRemotes,
+      })}
+    />,
+  );
+
+  await act(async () => {
+    rendererState.renderer.emit("blur");
+    rendererState.renderer.emit("focus");
+  });
+
+  expect(syncRemotes).toHaveBeenCalledWith("/tmp/diffdiff");
+  expect(probeFreshness).toHaveBeenCalledTimes(1);
+  expect(syncRemotes.mock.invocationCallOrder[0]).toBeLessThan(
+    probeFreshness.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+  );
+});
+
 test("starts commit browsing at the top of the commit list", () => {
   const tree = render(
     <DiffdiffApp
