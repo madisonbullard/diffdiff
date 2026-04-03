@@ -87,7 +87,7 @@ test("animates once through white, red, green, and back to white", () => {
     fromColor: "#ffffff",
     kind: "wipe",
     progress: 1,
-    toColor: "#ff4d4f",
+    toColor: "#e34d5f",
   });
 
   expect(
@@ -95,17 +95,17 @@ test("animates once through white, red, green, and back to white", () => {
       STARTUP_SCREEN_INITIAL_FRAME_COUNT + STARTUP_SCREEN_WIPE_FRAME_COUNT,
     ),
   ).toEqual({
-    fromColor: "#ff4d4f",
+    fromColor: "#e34d5f",
     kind: "wipe",
     progress: 1 / STARTUP_SCREEN_WIPE_FRAME_COUNT,
-    toColor: "#22c55e",
+    toColor: "#42f58d",
   });
   expect(
     getStartupScreenAnimationState(
       STARTUP_SCREEN_INITIAL_FRAME_COUNT + STARTUP_SCREEN_WIPE_FRAME_COUNT * 2,
     ),
   ).toEqual({
-    fromColor: "#22c55e",
+    fromColor: "#42f58d",
     kind: "wipe",
     progress: 1 / STARTUP_SCREEN_WIPE_FRAME_COUNT,
     toColor: "#ffffff",

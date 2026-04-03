@@ -20,8 +20,8 @@ export const STARTUP_SCREEN_ART_WIDTH = Math.max(
 );
 
 const STARTUP_SCREEN_COLORS = {
-  green: "#22c55e",
-  red: "#ff4d4f",
+  green: "#42f58d",
+  red: "#e34d5f",
   white: "#ffffff",
 } as const;
 export const STARTUP_SCREEN_INITIAL_FRAME_COUNT = 1;
