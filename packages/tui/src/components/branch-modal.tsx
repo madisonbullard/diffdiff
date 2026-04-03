@@ -195,7 +195,7 @@ export function BranchModal({
             )}
             <text fg={theme.textMuted} wrapMode="none">
               <KeyCap label="enter" theme={theme} />
-              <span>{selectedBranchItem?.kind === "open-pr" ? " open PR  " : " select  "}</span>
+              <span>{selectedBranchItem?.kind === "open-pr" ? " review PR  " : " select  "}</span>
               <KeyCap label="b" theme={theme} />
               <span>{" set base  "}</span>
               <KeyCap label="h" theme={theme} />

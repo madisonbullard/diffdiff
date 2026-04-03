@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { access, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
@@ -13,6 +13,7 @@ import type { ReviewSession } from "../src/types/session.ts";
 const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(
     temporaryDirectories.splice(0).map((directory) =>
       rm(directory, {
@@ -24,6 +25,90 @@ afterEach(async () => {
 });
 
 describe("GitHub auth", () => {
+  test("stores and resolves a Linux Secret Service token before falling back to config", async () => {
+    const homePath = await mkdtemp(join(tmpdir(), "diffdiff-github-auth-"));
+    temporaryDirectories.push(homePath);
+
+    const secureStoreCommandRunner = vi.fn(
+      async (command: string, args: string[], options?: { input?: string }) => {
+        expect(command).toBe("secret-tool");
+
+        if (args[0] === "store") {
+          expect(options?.input).toBe("linux-secure-token");
+          return { stderr: "", stdout: "" };
+        }
+
+        if (args[0] === "lookup") {
+          return { stderr: "", stdout: "linux-secure-token\n" };
+        }
+
+        throw new Error(`Unexpected secret-tool invocation: ${args.join(" ")}`);
+      },
+    );
+
+    const storedAuth = await storeGitHubToken("linux-secure-token", {
+      env: {},
+      homePath,
+      platform: "linux",
+      secureStoreCommandRunner,
+    });
+    const resolvedAuth = await resolveGitHubAuth({
+      env: {},
+      homePath,
+      platform: "linux",
+      secureStoreCommandRunner,
+    });
+
+    expect(storedAuth.tokenSource).toBe("secure-store");
+    expect(resolvedAuth).toMatchObject({
+      host: "github.com",
+      token: "linux-secure-token",
+      tokenSource: "secure-store",
+    });
+    await expect(
+      access(getGitHubAuthConfigPaths({}, "linux", homePath).primaryFilePath),
+    ).rejects.toThrow();
+  });
+
+  test("stores and resolves a Windows credential manager token before falling back to config", async () => {
+    const homePath = await mkdtemp(join(tmpdir(), "diffdiff-github-auth-"));
+    temporaryDirectories.push(homePath);
+
+    const secureStoreCommandRunner = vi.fn(async (command: string, args: string[]) => {
+      expect(command).toBe("powershell.exe");
+      expect(args).toContain("-Command");
+
+      if (args[4]?.includes("[Console]::Out.Write($credential.Password)")) {
+        return { stderr: "", stdout: "windows-secure-token" };
+      }
+
+      return { stderr: "", stdout: "" };
+    });
+
+    const storedAuth = await storeGitHubToken("windows-secure-token", {
+      env: {},
+      homePath,
+      platform: "win32",
+      secureStoreCommandRunner,
+    });
+    const resolvedAuth = await resolveGitHubAuth({
+      env: {},
+      homePath,
+      platform: "win32",
+      secureStoreCommandRunner,
+    });
+
+    expect(storedAuth.tokenSource).toBe("secure-store");
+    expect(resolvedAuth).toMatchObject({
+      host: "github.com",
+      token: "windows-secure-token",
+      tokenSource: "secure-store",
+    });
+    await expect(
+      access(getGitHubAuthConfigPaths({}, "win32", homePath).primaryFilePath),
+    ).rejects.toThrow();
+  });
+
   test("stores and resolves a fallback config token", async () => {
     const homePath = await mkdtemp(join(tmpdir(), "diffdiff-github-auth-"));
     temporaryDirectories.push(homePath);
@@ -122,6 +207,7 @@ describe("GitHubMetadataProvider", () => {
 
 describe("GitHubPullRequestService", () => {
   test("attaches active pull request review data to a review session", async () => {
+    mockRemoteTrackingRefs("refs/remotes/origin/main", "refs/remotes/origin/feature/ui");
     const clientFactory: GitHubClientFactory = {
       create: vi.fn(async () => createGitHubApiClient()),
     };
@@ -139,7 +225,8 @@ describe("GitHubPullRequestService", () => {
     expect(session.warnings).toEqual([]);
   });
 
-  test("warns when inline threads cannot be anchored to the local comparison", async () => {
+  test("warns when the PR head remote-tracking ref is not available locally", async () => {
+    mockRemoteTrackingRefs("refs/remotes/origin/main");
     const clientFactory: GitHubClientFactory = {
       create: vi.fn(async () => createGitHubApiClient({ commentPath: "docs/guide.md" })),
     };
@@ -147,12 +234,45 @@ describe("GitHubPullRequestService", () => {
 
     const session = await service.attachReviewSession(createReviewSession());
 
-    expect(session.warnings.map((warning) => warning.code)).toContain(
-      "github-inline-thread-unavailable",
-    );
+    expect(session.warnings).toEqual([
+      {
+        code: "github-pr-head-local-ref-missing",
+        message:
+          "PR head ref refs/remotes/origin/feature/ui is not available locally, so diffdiff cannot build the exact PR comparison from local refs only.",
+      },
+      {
+        code: "github-inline-anchoring-unavailable",
+        message:
+          "Inline comment anchoring is unavailable because diffdiff cannot build the exact PR comparison from local refs only.",
+      },
+    ]);
+  });
+
+  test("warns when the PR base remote-tracking ref is not available locally", async () => {
+    mockRemoteTrackingRefs("refs/remotes/origin/feature/ui");
+    const clientFactory: GitHubClientFactory = {
+      create: vi.fn(async () => createGitHubApiClient()),
+    };
+    const service = new GitHubPullRequestService(clientFactory);
+
+    const session = await service.attachReviewSession(createReviewSession());
+
+    expect(session.warnings).toEqual([
+      {
+        code: "github-pr-base-local-ref-missing",
+        message:
+          "PR base ref refs/remotes/origin/main is not available locally, so diffdiff cannot build the exact PR comparison from local refs only.",
+      },
+      {
+        code: "github-inline-anchoring-unavailable",
+        message:
+          "Inline comment anchoring is unavailable because diffdiff cannot build the exact PR comparison from local refs only.",
+      },
+    ]);
   });
 
   test("creates a pending review thread with GraphQL when adding an inline comment", async () => {
+    mockRemoteTrackingRefs("refs/remotes/origin/main", "refs/remotes/origin/feature/ui");
     const client = createGitHubApiClient();
     const clientFactory: GitHubClientFactory = {
       create: vi.fn(async () => client),
@@ -200,6 +320,7 @@ describe("GitHubPullRequestService", () => {
   });
 
   test("submits a pending review through the REST review events endpoint", async () => {
+    mockRemoteTrackingRefs("refs/remotes/origin/main", "refs/remotes/origin/feature/ui");
     const client = createGitHubApiClient();
     const clientFactory: GitHubClientFactory = {
       create: vi.fn(async () => client),
@@ -224,6 +345,7 @@ describe("GitHubPullRequestService", () => {
   });
 
   test("replies to a review comment through the REST replies endpoint", async () => {
+    mockRemoteTrackingRefs("refs/remotes/origin/main", "refs/remotes/origin/feature/ui");
     const client = createGitHubApiClient();
     const clientFactory: GitHubClientFactory = {
       create: vi.fn(async () => client),
@@ -247,6 +369,7 @@ describe("GitHubPullRequestService", () => {
   });
 
   test("creates a PR-level conversation comment through the issues comments endpoint", async () => {
+    mockRemoteTrackingRefs("refs/remotes/origin/main", "refs/remotes/origin/feature/ui");
     const client = createGitHubApiClient();
     const clientFactory: GitHubClientFactory = {
       create: vi.fn(async () => client),
@@ -561,6 +684,20 @@ function createGitHubApiClient(options: { commentPath?: string } = {}): GitHubAp
     request,
     requestMock: request,
   };
+}
+
+function mockRemoteTrackingRefs(...existingRefs: string[]) {
+  return vi.spyOn(commandModule, "runCommand").mockImplementation(async (_command, args) => {
+    if (args[0] === "rev-parse" && args[1] === "--verify") {
+      if (existingRefs.includes(args[2] ?? "")) {
+        return "sha\n";
+      }
+
+      throw new Error(`Missing ref: ${args[2]}`);
+    }
+
+    return "";
+  });
 }
 
 function createReviewSession(): ReviewSession {

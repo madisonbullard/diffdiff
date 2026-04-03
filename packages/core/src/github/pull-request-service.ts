@@ -4,6 +4,7 @@ import { logDiffdiffError, logDiffdiffInfo, logDiffdiffWarn } from "../logging.t
 import type {
   ForgeRepository,
   GitHubPendingReview,
+  GitHubPullRequestDetail,
   GitHubPullRequestMergeRequest,
   GitHubPullRequestMergeResult,
   GitHubRefCleanupCandidate,
@@ -13,11 +14,10 @@ import type {
   PullRequestInfo,
 } from "../types/github.ts";
 import type { GitHubApiClient, GitHubClientFactory } from "../types/providers.ts";
-import type { ReviewSession } from "../types/session.ts";
+import type { ReviewSession, ReviewWarning } from "../types/session.ts";
 import { OctokitGitHubClientFactory } from "./client.ts";
 import { loadPullRequestDetail } from "./pull-request-detail.ts";
 import {
-  buildPullRequestWarnings,
   dedupeWarnings,
   findActivePullRequestCandidate,
   mapPullRequestSummary,
@@ -107,13 +107,16 @@ export class GitHubPullRequestService {
         repositoryRootPath: session.repository.rootPath,
       };
 
+      const pullRequestWarnings = await buildPullRequestWarnings(
+        session,
+        pullRequest,
+        candidate.remoteName,
+      );
+
       return {
         ...session,
         github: githubSession,
-        warnings: dedupeWarnings([
-          ...session.warnings,
-          ...buildPullRequestWarnings(session, pullRequest),
-        ]),
+        warnings: dedupeWarnings([...session.warnings, ...pullRequestWarnings]),
       };
     } catch (error) {
       logDiffdiffError("github", "attach_review_session_failed", error, {
@@ -320,5 +323,67 @@ export class GitHubPullRequestService {
     }
 
     return client;
+  }
+}
+
+async function buildPullRequestWarnings(
+  session: ReviewSession,
+  pullRequest: GitHubPullRequestDetail,
+  remoteName: string,
+): Promise<ReviewWarning[]> {
+  const warnings: ReviewWarning[] = [];
+  const comparisonBaseMatches =
+    session.comparison.base === pullRequest.baseRefName ||
+    session.comparison.base.endsWith(`/${pullRequest.baseRefName}`);
+
+  if (!comparisonBaseMatches) {
+    warnings.push({
+      code: "github-pr-base-mismatch",
+      message: `Current comparison base (${session.comparison.base}) does not match the PR base (${pullRequest.baseRefName}); inline anchors may not line up exactly.`,
+    });
+  }
+
+  const [hasLocalBaseRef, hasLocalHeadRef] = await Promise.all([
+    hasRemoteTrackingRef(session.repository.rootPath, remoteName, pullRequest.baseRefName),
+    hasRemoteTrackingRef(session.repository.rootPath, remoteName, pullRequest.headRefName),
+  ]);
+
+  if (!hasLocalBaseRef) {
+    warnings.push({
+      code: "github-pr-base-local-ref-missing",
+      message: `PR base ref refs/remotes/${remoteName}/${pullRequest.baseRefName} is not available locally, so diffdiff cannot build the exact PR comparison from local refs only.`,
+    });
+  }
+
+  if (!hasLocalHeadRef) {
+    warnings.push({
+      code: "github-pr-head-local-ref-missing",
+      message: `PR head ref refs/remotes/${remoteName}/${pullRequest.headRefName} is not available locally, so diffdiff cannot build the exact PR comparison from local refs only.`,
+    });
+  }
+
+  if (!hasLocalBaseRef || !hasLocalHeadRef) {
+    warnings.push({
+      code: "github-inline-anchoring-unavailable",
+      message:
+        "Inline comment anchoring is unavailable because diffdiff cannot build the exact PR comparison from local refs only.",
+    });
+  }
+
+  return warnings;
+}
+
+async function hasRemoteTrackingRef(
+  repositoryRootPath: string,
+  remoteName: string,
+  branchName: string,
+): Promise<boolean> {
+  try {
+    await runCommand("git", ["rev-parse", "--verify", `refs/remotes/${remoteName}/${branchName}`], {
+      cwd: repositoryRootPath,
+    });
+    return true;
+  } catch {
+    return false;
   }
 }

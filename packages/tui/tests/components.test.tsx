@@ -127,6 +127,41 @@ test("renders a branch modal snapshot", () => {
   expect(collectText(tree.toJSON())).toContain("feature/tui");
 });
 
+test("shows the review PR action when a PR entry is selected", () => {
+  const filters: BranchListFilters = {
+    workingTree: true,
+    localBranch: true,
+    openPr: true,
+    remoteBranch: false,
+  };
+  const tree = render(
+    <BranchModal
+      activeView="branch"
+      base="origin/main"
+      branchItems={buildBranchListItems({
+        filters,
+        localBranches: createLocalBranches(),
+        remoteBranches: createRemoteBranches(),
+        workingTreeSummary: { filesChanged: 4, additions: 18, deletions: 6 },
+      })}
+      branchIndex={3}
+      commitItems={buildCommitListItems(createComparisonCommits())}
+      commitIndex={0}
+      commitSearchQuery=""
+      commitSearchActive={false}
+      comparisonMode="range"
+      filters={filters}
+      head="feature/tui"
+      localBranchCount={2}
+      openPrCount={1}
+      remoteBranchCount={1}
+      theme={theme}
+    />,
+  );
+
+  expect(collectText(tree.toJSON())).toContain("review PR");
+});
+
 test("renders a commit view snapshot", () => {
   const filters: BranchListFilters = {
     workingTree: true,
@@ -299,6 +334,29 @@ test("renders a clickable file tree sidebar", () => {
   });
 
   expect(onNodeMouseUp).toHaveBeenCalledWith(expect.objectContaining({ path: "src" }));
+});
+
+test("uses only the checkmark to mark reviewed tree files", () => {
+  const nodes = buildFileTreeNodes([createPreparedFile({ path: "src/app.ts" })]);
+  const tree = render(
+    <FileTreeSidebar
+      activePane="diff"
+      collapsedDirectories={new Set()}
+      collapsedPaths={new Set()}
+      nodes={nodes}
+      onNodeMouseUp={vi.fn()}
+      reviewedPaths={new Set(["src/app.ts"])}
+      theme={theme}
+    />,
+  );
+  const clickableRows = tree.root.findAll(
+    (node) => String(node.type) === "box" && typeof node.props.onMouseUp === "function",
+  );
+  const reviewedFileRow = clickableRows[1];
+
+  expect(reviewedFileRow?.props.backgroundColor).toBe(theme.surface);
+  expect(reviewedFileRow?.props.borderColor).toBe(theme.border);
+  expect(collectText(tree.toJSON())).toContain("\u2713");
 });
 
 test("renders empty branch columns and help copy", () => {

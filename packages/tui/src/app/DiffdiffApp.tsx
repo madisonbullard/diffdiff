@@ -2054,13 +2054,13 @@ export function DiffdiffApp({
             <span fg={theme.accent}>diffdiff</span>
             <span fg={theme.border}>{" / "}</span>
             <span>{session.repository.name}</span>
-            <span>{"  "}</span>
+            <span fg={theme.border}>{"  \u2502  "}</span>
             <Tag
               label={`base ← ${session.comparison.base}`}
               fg={theme.inverseText}
               bg={theme.warning}
             />
-            <span fg={theme.border}>{"  \u2502  "}</span>
+            <span>{"  "}</span>
             <Tag
               label={`head → ${session.comparison.head}`}
               fg={theme.inverseText}

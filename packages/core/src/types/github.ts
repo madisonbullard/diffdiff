@@ -13,7 +13,7 @@ export interface GitHubActor {
   url?: string;
 }
 
-export type GitHubTokenSource = "env" | "keychain" | "config";
+export type GitHubTokenSource = "env" | "secure-store" | "config";
 
 export interface GitHubAuthSession {
   host: string;

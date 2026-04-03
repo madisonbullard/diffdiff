@@ -321,8 +321,8 @@ async function runAuthLogin(options: AuthLoginCommandOptions): Promise<void> {
   await markDiffdiffSessionEnded("Completed diffdiff auth login.");
   await flushDiffdiffLogs();
   process.stdout.write(
-    auth.tokenSource === "keychain"
-      ? "Stored GitHub token in the macOS Keychain.\n"
+    auth.tokenSource === "secure-store"
+      ? `Stored GitHub token in ${describeSecureStore(process.platform)}.\n`
       : `Stored GitHub token in ${auth.configFilePath}.\n`,
   );
 }
@@ -402,6 +402,19 @@ async function resolveAuthToken(options: AuthLoginCommandOptions): Promise<strin
   const token =
     process.env.DIFFDIFF_GITHUB_TOKEN ?? process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
   return token?.trim() === "" ? undefined : token?.trim();
+}
+
+function describeSecureStore(platform: NodeJS.Platform): string {
+  switch (platform) {
+    case "darwin":
+      return "the macOS Keychain";
+    case "linux":
+      return "the Secret Service keyring";
+    case "win32":
+      return "Windows Credential Manager";
+    default:
+      return "the OS credential store";
+  }
 }
 
 async function readStandardInput(): Promise<string> {

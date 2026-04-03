@@ -69,16 +69,12 @@ export function FileTreeSidebar({
           ? theme.borderActive
           : isCurrentFile
             ? theme.accent
-            : isReviewed
-              ? theme.success
-              : theme.border;
+            : theme.border;
         const backgroundColor = isSelected
           ? tintHex(theme.surface, accent, 0.24)
           : isCurrentFile
             ? tintHex(theme.surface, theme.accent, 0.14)
-            : isReviewed
-              ? theme.reviewedBg
-              : theme.surface;
+            : theme.surface;
         const labelColor = isSelected || isCurrentFile ? theme.text : theme.textMuted;
         const prefix =
           node.kind === "directory"

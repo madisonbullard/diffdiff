@@ -1,12 +1,24 @@
-import { execFile } from "node:child_process";
 import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { promisify } from "node:util";
 import type { GitHubAuthSession } from "../types/github.ts";
 import { getGitHubAuthConfigPaths } from "./config.ts";
+import {
+  deleteTokenFromMacOSKeychain,
+  loadTokenFromMacOSKeychain,
+  storeTokenInMacOSKeychain,
+} from "./secure-store/darwin.ts";
+import {
+  deleteTokenFromLinuxSecretService,
+  loadTokenFromLinuxSecretService,
+  storeTokenInLinuxSecretService,
+} from "./secure-store/linux.ts";
+import { runSecureStoreCommand, type SecureStoreCommandRunner } from "./secure-store/shared.ts";
+import {
+  deleteTokenFromWindowsCredentialManager,
+  loadTokenFromWindowsCredentialManager,
+  storeTokenInWindowsCredentialManager,
+} from "./secure-store/win32.ts";
 
-const execFileAsync = promisify(execFile);
 const DEFAULT_GITHUB_HOST = "github.com";
-const KEYCHAIN_SERVICE_PREFIX = "diffdiff:github-token:";
 
 interface GitHubAuthFile {
   version: 1;
@@ -16,6 +28,7 @@ interface GitHubAuthFile {
 }
 
 interface GitHubAuthOptions {
+  secureStoreCommandRunner?: SecureStoreCommandRunner;
   host?: string;
   env?: NodeJS.ProcessEnv;
   homePath?: string;
@@ -28,6 +41,7 @@ export async function resolveGitHubAuth(
   const host = options.host ?? DEFAULT_GITHUB_HOST;
   const env = options.env ?? process.env;
   const platform = options.platform ?? process.platform;
+  const secureStoreCommandRunner = options.secureStoreCommandRunner ?? runSecureStoreCommand;
   const paths = getGitHubAuthConfigPaths(env, platform, options.homePath);
   const envToken = readTokenFromEnv(env);
 
@@ -39,12 +53,12 @@ export async function resolveGitHubAuth(
     };
   }
 
-  const keychainToken = await loadTokenFromKeychain(host, platform);
-  if (keychainToken != null) {
+  const secureStoreToken = await loadTokenFromSecureStore(host, platform, secureStoreCommandRunner);
+  if (secureStoreToken != null) {
     return {
       host,
-      token: keychainToken,
-      tokenSource: "keychain",
+      token: secureStoreToken,
+      tokenSource: "secure-store",
     };
   }
 
@@ -72,9 +86,10 @@ export async function storeGitHubToken(
   const host = options.host ?? DEFAULT_GITHUB_HOST;
   const env = options.env ?? process.env;
   const platform = options.platform ?? process.platform;
+  const secureStoreCommandRunner = options.secureStoreCommandRunner ?? runSecureStoreCommand;
   const paths = getGitHubAuthConfigPaths(env, platform, options.homePath);
 
-  if (await storeTokenInKeychain(token, host, platform)) {
+  if (await storeTokenInSecureStore(token, host, platform, secureStoreCommandRunner)) {
     await Promise.all([
       deleteConfigFile(paths.primaryFilePath).catch(() => undefined),
       deleteConfigFile(paths.legacyFilePath).catch(() => undefined),
@@ -83,7 +98,7 @@ export async function storeGitHubToken(
     return {
       host,
       token,
-      tokenSource: "keychain",
+      tokenSource: "secure-store",
     };
   }
 
@@ -113,9 +128,10 @@ export async function clearGitHubToken(options: GitHubAuthOptions = {}): Promise
   const host = options.host ?? DEFAULT_GITHUB_HOST;
   const env = options.env ?? process.env;
   const platform = options.platform ?? process.platform;
+  const secureStoreCommandRunner = options.secureStoreCommandRunner ?? runSecureStoreCommand;
   const paths = getGitHubAuthConfigPaths(env, platform, options.homePath);
 
-  await deleteTokenFromKeychain(host, platform);
+  await deleteTokenFromSecureStore(host, platform, secureStoreCommandRunner);
   await Promise.all([
     deleteConfigFile(paths.primaryFilePath).catch(() => undefined),
     deleteConfigFile(paths.legacyFilePath).catch(() => undefined),
@@ -127,71 +143,58 @@ function readTokenFromEnv(env: NodeJS.ProcessEnv): string | undefined {
   return token?.trim() === "" ? undefined : token?.trim();
 }
 
-async function loadTokenFromKeychain(
+async function loadTokenFromSecureStore(
   host: string,
   platform: NodeJS.Platform,
+  secureStoreCommandRunner: SecureStoreCommandRunner,
 ): Promise<string | undefined> {
-  if (platform !== "darwin") {
-    return undefined;
-  }
-
-  try {
-    const { stdout } = await execFileAsync("security", [
-      "find-generic-password",
-      "-a",
-      host,
-      "-s",
-      `${KEYCHAIN_SERVICE_PREFIX}${host}`,
-      "-w",
-    ]);
-    const token = stdout.trim();
-    return token === "" ? undefined : token;
-  } catch {
-    return undefined;
+  switch (platform) {
+    case "darwin":
+      return loadTokenFromMacOSKeychain(host, secureStoreCommandRunner);
+    case "linux":
+      return loadTokenFromLinuxSecretService(host, secureStoreCommandRunner);
+    case "win32":
+      return loadTokenFromWindowsCredentialManager(host, secureStoreCommandRunner);
+    default:
+      return undefined;
   }
 }
 
-async function storeTokenInKeychain(
+async function storeTokenInSecureStore(
   token: string,
   host: string,
   platform: NodeJS.Platform,
+  secureStoreCommandRunner: SecureStoreCommandRunner,
 ): Promise<boolean> {
-  if (platform !== "darwin") {
-    return false;
-  }
-
-  try {
-    await execFileAsync("security", [
-      "add-generic-password",
-      "-U",
-      "-a",
-      host,
-      "-s",
-      `${KEYCHAIN_SERVICE_PREFIX}${host}`,
-      "-w",
-      token,
-    ]);
-    return true;
-  } catch {
-    return false;
+  switch (platform) {
+    case "darwin":
+      return storeTokenInMacOSKeychain(token, host, secureStoreCommandRunner);
+    case "linux":
+      return storeTokenInLinuxSecretService(token, host, secureStoreCommandRunner);
+    case "win32":
+      return storeTokenInWindowsCredentialManager(token, host, secureStoreCommandRunner);
+    default:
+      return false;
   }
 }
 
-async function deleteTokenFromKeychain(host: string, platform: NodeJS.Platform): Promise<void> {
-  if (platform !== "darwin") {
-    return;
-  }
-
-  try {
-    await execFileAsync("security", [
-      "delete-generic-password",
-      "-a",
-      host,
-      "-s",
-      `${KEYCHAIN_SERVICE_PREFIX}${host}`,
-    ]);
-  } catch {
-    return;
+async function deleteTokenFromSecureStore(
+  host: string,
+  platform: NodeJS.Platform,
+  secureStoreCommandRunner: SecureStoreCommandRunner,
+): Promise<void> {
+  switch (platform) {
+    case "darwin":
+      await deleteTokenFromMacOSKeychain(host, secureStoreCommandRunner);
+      return;
+    case "linux":
+      await deleteTokenFromLinuxSecretService(host, secureStoreCommandRunner);
+      return;
+    case "win32":
+      await deleteTokenFromWindowsCredentialManager(host, secureStoreCommandRunner);
+      return;
+    default:
+      return;
   }
 }
 

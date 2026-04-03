@@ -359,10 +359,12 @@ test("clears all reviewed files with alt+r", () => {
 
 test("renders base and head as the header comparison tags", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
+  const appText = getAppText(tree);
 
-  expect(getAppText(tree)).toContain("base ← origin/main");
-  expect(getAppText(tree)).toContain("head → feature/tui");
-  expect(getAppText(tree)).not.toContain("branch range");
+  expect(appText).toContain("base ← origin/main");
+  expect(appText).toContain("head → feature/tui");
+  expect(appText).toContain("diffdiff / diffdiff │ base ← origin/main head → feature/tui");
+  expect(appText).not.toContain("branch range");
 });
 
 test("renders the current branch with the muted gray header badge", () => {

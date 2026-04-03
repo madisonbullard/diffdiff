@@ -2,7 +2,6 @@ import type {
   ForgeRepository,
   GitHubPullRequestComment,
   GitHubPullRequestConversationItem,
-  GitHubPullRequestDetail,
   GitHubPullRequestMergeState,
   GitHubPullRequestReviewGroup,
   GitHubPullRequestReviewThread,
@@ -134,34 +133,6 @@ export function buildMergeState(
     mergeableState: pullRequest.mergeable_state ?? undefined,
     mergedAt: pullRequest.merged_at ?? undefined,
   };
-}
-
-export function buildPullRequestWarnings(
-  session: ReviewSession,
-  pullRequest: GitHubPullRequestDetail,
-): ReviewWarning[] {
-  const warnings: ReviewWarning[] = [];
-  const comparisonBaseMatches =
-    session.comparison.base === pullRequest.baseRefName ||
-    session.comparison.base.endsWith(`/${pullRequest.baseRefName}`);
-
-  if (!comparisonBaseMatches) {
-    warnings.push({
-      code: "github-pr-base-mismatch",
-      message: `Current comparison base (${session.comparison.base}) does not match the PR base (${pullRequest.baseRefName}); inline anchors may not line up exactly.`,
-    });
-  }
-
-  const changedPaths = new Set(session.files.map((file) => file.path));
-  if (pullRequest.reviewThreads.some((thread) => !changedPaths.has(thread.path))) {
-    warnings.push({
-      code: "github-inline-thread-unavailable",
-      message:
-        "Some GitHub review threads target paths that are not present in the local comparison, so they will remain available in the comments timeline only.",
-    });
-  }
-
-  return warnings;
 }
 
 export function findActivePullRequestCandidate(session: ReviewSession): {
