@@ -74,7 +74,7 @@ export function arePullRequestFingerprintsEqual(
   );
 }
 
-function buildChangedFilesDigest(files: readonly ChangedFile[]): string {
+export function buildChangedFilesDigest(files: readonly ChangedFile[]): string {
   const hash = createHash("sha256");
 
   for (const file of files) {

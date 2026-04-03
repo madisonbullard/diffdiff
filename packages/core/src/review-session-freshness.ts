@@ -1,6 +1,8 @@
 import { GitHubPullRequestService } from "./github/pull-request-service.ts";
+import { buildChangedFilesDigest } from "./review-session-fingerprint.ts";
 import { arePullRequestFingerprintsEqual } from "./review-session-fingerprint.ts";
-import { summarizeDiffRange } from "./repository/git-diff.ts";
+import { listWorkingTreeChanges, summarizeDiffRange } from "./repository/git-diff.ts";
+import { summarizeChangedFiles } from "./repository/patch.ts";
 import { runCommand } from "./command.ts";
 import type {
   ChangeSummary,
@@ -50,6 +52,27 @@ async function probeComparisonFreshness(session: ReviewSession): Promise<{
   nextBaseSha?: string;
   nextHeadSha?: string;
 }> {
+  if (session.comparison.mode === "working-tree") {
+    const [files, nextHeadSha] = await Promise.all([
+      listWorkingTreeChanges(session.repository.rootPath, session.comparison.base),
+      resolveLocalRefSha(session.repository.rootPath, "HEAD"),
+    ]);
+    const summary = summarizeChangedFiles(files);
+    const nextPatchDigest = buildChangedFilesDigest(files);
+    const hasUpdates =
+      session.renderFingerprint.baseSha !== nextHeadSha ||
+      session.renderFingerprint.headSha !== nextHeadSha ||
+      session.renderFingerprint.fileCount !== files.length ||
+      session.renderFingerprint.patchDigest !== nextPatchDigest;
+
+    return {
+      hasUpdates,
+      summary: hasUpdates ? summary : undefined,
+      nextBaseSha: nextHeadSha,
+      nextHeadSha,
+    };
+  }
+
   if (session.comparison.mode !== "range") {
     return {
       hasUpdates: false,

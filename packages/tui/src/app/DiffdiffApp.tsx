@@ -1657,6 +1657,41 @@ export function DiffdiffApp({
 
     try {
       const freshness = await probeFreshness(session);
+
+      if (
+        session.comparison.mode === "working-tree" &&
+        (freshness.hasComparisonUpdates || freshness.hasGitHubUpdates)
+      ) {
+        const selectedFilePath = session.files[selectedFileIndex]?.path;
+
+        setIsReloading(true);
+        setRefreshIndicatorLabel(null);
+        setStatusMessage("Updating working tree view...");
+
+        try {
+          const nextSession = await loadSession(startupOptions);
+          const nextSelectedFileIndex =
+            selectedFilePath == null
+              ? -1
+              : nextSession.files.findIndex((file) => file.path === selectedFilePath);
+
+          applyLoadedSession(nextSession);
+          if (nextSelectedFileIndex >= 0) {
+            setSelectedFileIndex(nextSelectedFileIndex);
+          }
+          setStatusMessage("Updated working tree view.");
+        } catch (error) {
+          handleAppError(error, "Unable to refresh the working tree view.", {
+            action: "auto-refresh-working-tree-session",
+            startupOptions,
+          });
+        } finally {
+          setIsReloading(false);
+        }
+
+        return;
+      }
+
       const nextRefreshIndicatorLabel = getRefreshIndicatorLabel(freshness);
 
       setRefreshIndicatorLabel(nextRefreshIndicatorLabel);
@@ -1683,7 +1718,11 @@ export function DiffdiffApp({
     isReloading,
     probeFreshness,
     refreshIndicatorLabel,
+    loadSession,
+    applyLoadedSession,
+    selectedFileIndex,
     session,
+    startupOptions,
   ]);
 
   useEffect(() => {

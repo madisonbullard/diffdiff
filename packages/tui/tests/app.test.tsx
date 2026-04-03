@@ -746,6 +746,85 @@ test("shows a files changed header indicator until refresh reloads the session",
   expect(getAppText(tree)).not.toContain("1 file changed");
 });
 
+test("auto-refreshes working tree sessions when local changes are detected", async () => {
+  vi.useFakeTimers();
+  const initialSession = createPreparedSession({
+    comparison: {
+      base: "HEAD",
+      baseSha: "1234567",
+      head: "working tree",
+      headSha: "1234567",
+      range: "HEAD...working tree",
+      mode: "working-tree",
+      usesMergeBase: false,
+    },
+    files: [createPreparedFile({ path: "src/old.ts" })],
+    repository: {
+      kind: "git",
+      rootPath: "/tmp/diffdiff",
+      name: "diffdiff",
+      remotes: [{ name: "origin", fetchUrl: "git@github.com:diffdiff/diffdiff.git" }],
+      currentBranch: "feature/tui",
+      defaultBranch: "main",
+    },
+  });
+  const nextSession = createPreparedSession({
+    comparison: {
+      base: "HEAD",
+      baseSha: "89abcde",
+      head: "working tree",
+      headSha: "89abcde",
+      range: "HEAD...working tree",
+      mode: "working-tree",
+      usesMergeBase: false,
+    },
+    files: [createPreparedFile({ path: "src/new.ts" })],
+    repository: {
+      kind: "git",
+      rootPath: "/tmp/diffdiff",
+      name: "diffdiff",
+      remotes: [{ name: "origin", fetchUrl: "git@github.com:diffdiff/diffdiff.git" }],
+      currentBranch: "feature/tui",
+      defaultBranch: "main",
+    },
+  });
+  const probeFreshness = vi.fn(async () => ({
+    comparisonSummary: {
+      additions: 1,
+      deletions: 0,
+      filesChanged: 1,
+    },
+    hasComparisonUpdates: true,
+    hasGitHubUpdates: false,
+    nextBaseSha: "89abcde",
+    nextHeadSha: "89abcde",
+  }));
+  const loadSession = vi.fn(async () => nextSession);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialOptions: {},
+        initialSession,
+        loadSession,
+        probeFreshness,
+      })}
+    />,
+  );
+
+  expect(getAppText(tree)).toContain("src/old.ts");
+  expect(getAppText(tree)).not.toContain("src/new.ts");
+
+  await act(async () => {
+    vi.advanceTimersByTime(5_000);
+  });
+
+  expect(probeFreshness).toHaveBeenCalledTimes(1);
+  expect(loadSession).toHaveBeenCalledWith({});
+  expect(getAppText(tree)).toContain("src/new.ts");
+  expect(getAppText(tree)).not.toContain("src/old.ts");
+  expect(getAppText(tree)).not.toContain("Press Shift+F to refresh.");
+});
+
 test("keeps reviewed files across refresh when their diffs are unchanged", async () => {
   const initialSession = createPreparedSession({
     files: [
