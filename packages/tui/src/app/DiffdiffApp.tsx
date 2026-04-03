@@ -493,6 +493,7 @@ export function DiffdiffApp({
     initialGitHubPreferences ?? getDefaultGitHubPreferences(),
   );
   const leaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestSessionLoadIdRef = useRef(0);
   const [dialogStack, setDialogStack] = useState<readonly AppDialog[]>(() =>
     launchInPullRequestList ? ["branch"] : [],
   );
@@ -1593,6 +1594,22 @@ export function DiffdiffApp({
 
   const applyLoadedSession = useCallback(
     (nextSession: PreparedReviewSession) => {
+      const scrollBox = scrollRef.current;
+      const currentSelectedFilePath = session.files[selectedFileIndex]?.path;
+      const currentSelectedFileOffset = getFileTopOffsets()[selectedFileIndex];
+
+      if (
+        scrollBox != null &&
+        currentSelectedFilePath != null &&
+        Number.isFinite(currentSelectedFileOffset) &&
+        nextSession.files.some((file) => file.path === currentSelectedFilePath)
+      ) {
+        // Preserve the user's in-file viewport so refreshes don't jump the selected file back to
+        // its header and hide the currently focused thread.
+        pendingSelectedFileScrollOffsetRef.current =
+          scrollBox.scrollTop - currentSelectedFileOffset;
+      }
+
       setReviewedPaths(
         restoreReviewedPaths(nextSession.files, {
           reviewedFiles: buildReviewedFiles(session.files, reviewedPaths),
@@ -1600,8 +1617,28 @@ export function DiffdiffApp({
       );
       setSession(nextSession);
     },
-    [reviewedPaths, session.files],
+    [getFileTopOffsets, reviewedPaths, selectedFileIndex, session.files],
   );
+
+  const beginSessionLoad = useCallback(() => {
+    const nextLoadId = latestSessionLoadIdRef.current + 1;
+    latestSessionLoadIdRef.current = nextLoadId;
+    return nextLoadId;
+  }, []);
+
+  const isLatestSessionLoad = useCallback((loadId: number, action: string) => {
+    const isLatest = loadId === latestSessionLoadIdRef.current;
+
+    if (!isLatest) {
+      logDiffdiffInfo("app", "stale_session_load_dropped", {
+        action,
+        latestSessionLoadId: latestSessionLoadIdRef.current,
+        loadId,
+      });
+    }
+
+    return isLatest;
+  }, []);
 
   const refreshGitState = useCallback(async () => {
     if (isReloading || isCheckingForUpdates) {
@@ -1613,10 +1650,14 @@ export function DiffdiffApp({
     setIsReloading(true);
     setRefreshIndicatorLabel(null);
     setStatusMessage("Refreshing branches and GitHub data...");
+    const sessionLoadId = beginSessionLoad();
 
     try {
       await syncRemoteState();
       const nextSession = await loadSession(startupOptions);
+      if (!isLatestSessionLoad(sessionLoadId, "refresh-git-state")) {
+        return;
+      }
       const nextSelectedFileIndex =
         selectedFilePath == null
           ? -1
@@ -1628,6 +1669,9 @@ export function DiffdiffApp({
       }
       setStatusMessage("Refreshed branches and GitHub data.");
     } catch (error) {
+      if (!isLatestSessionLoad(sessionLoadId, "refresh-git-state")) {
+        return;
+      }
       handleAppError(error, "Unable to refresh git state.", {
         action: "refresh-git-state",
         startupOptions,
@@ -1666,9 +1710,13 @@ export function DiffdiffApp({
         setIsReloading(true);
         setRefreshIndicatorLabel(null);
         setStatusMessage("Updating working tree view...");
+        const sessionLoadId = beginSessionLoad();
 
         try {
           const nextSession = await loadSession(startupOptions);
+          if (!isLatestSessionLoad(sessionLoadId, "auto-refresh-working-tree-session")) {
+            return;
+          }
           const nextSelectedFileIndex =
             selectedFilePath == null
               ? -1
@@ -1680,6 +1728,9 @@ export function DiffdiffApp({
           }
           setStatusMessage("Updated working tree view.");
         } catch (error) {
+          if (!isLatestSessionLoad(sessionLoadId, "auto-refresh-working-tree-session")) {
+            return;
+          }
           handleAppError(error, "Unable to refresh the working tree view.", {
             action: "auto-refresh-working-tree-session",
             startupOptions,
@@ -3830,6 +3881,7 @@ export function DiffdiffApp({
     }
 
     const nextBody = reviewComposerBody.trim();
+    let sessionLoadId: number | undefined;
 
     setIsSubmittingReviewAction(true);
 
@@ -3862,8 +3914,11 @@ export function DiffdiffApp({
         );
       }
 
+      sessionLoadId = beginSessionLoad();
       const nextSession = await loadSession(startupOptions);
-      applyLoadedSession(nextSession);
+      if (isLatestSessionLoad(sessionLoadId, reviewComposerTarget.kind)) {
+        applyLoadedSession(nextSession);
+      }
       setDialogStack((currentStack) => closeAppDialog(currentStack, "comment-composer"));
       setReviewComposerTarget(null);
       setReviewComposerBody("");
@@ -3875,6 +3930,9 @@ export function DiffdiffApp({
             : "Added PR reply comment.",
       );
     } catch (error) {
+      if (sessionLoadId != null && !isLatestSessionLoad(sessionLoadId, reviewComposerTarget.kind)) {
+        return;
+      }
       handleAppError(error, "Unable to submit the comment.", {
         action: reviewComposerTarget.kind,
         target:
@@ -3896,6 +3954,7 @@ export function DiffdiffApp({
 
     setIsSubmittingReviewAction(true);
     setStatusMessage("Submitting review...");
+    const sessionLoadId = beginSessionLoad();
 
     try {
       await submitPendingReview(
@@ -3904,11 +3963,17 @@ export function DiffdiffApp({
         reviewSubmissionBody.trim() === "" ? undefined : reviewSubmissionBody.trim(),
       );
       const nextSession = await loadSession(startupOptions);
+      if (!isLatestSessionLoad(sessionLoadId, "submit-review")) {
+        return;
+      }
       applyLoadedSession(nextSession);
       setDialogStack((currentStack) => closeAppDialog(currentStack, "submit-review"));
       setReviewSubmissionBody("");
       setStatusMessage("Submitted review.");
     } catch (error) {
+      if (!isLatestSessionLoad(sessionLoadId, "submit-review")) {
+        return;
+      }
       handleAppError(error, "Unable to submit the review.", {
         action: "submit-review",
         event: getReviewSubmissionEvent(reviewSubmissionEventIndex),
@@ -3925,6 +3990,7 @@ export function DiffdiffApp({
 
     setIsSubmittingReviewAction(true);
     setStatusMessage(`Merging pull request with ${mergeMethod}...`);
+    const sessionLoadId = beginSessionLoad();
 
     try {
       const mergeResult = await mergePullRequest(session.github, {
@@ -3934,6 +4000,9 @@ export function DiffdiffApp({
         method: mergeMethod,
       });
       const nextSession = await loadSession(startupOptions);
+      if (!isLatestSessionLoad(sessionLoadId, "merge-pull-request")) {
+        return;
+      }
       applyLoadedSession(nextSession);
       setDialogStack((currentStack) => closeAppDialog(currentStack, "merge"));
       setStatusMessage("Merged the pull request and refreshed local refs.");
@@ -3946,6 +4015,9 @@ export function DiffdiffApp({
         setStatusMessage("Merged the pull request. Choose any stale refs to remove.");
       }
     } catch (error) {
+      if (!isLatestSessionLoad(sessionLoadId, "merge-pull-request")) {
+        return;
+      }
       handleAppError(error, "Unable to merge the pull request.", {
         action: "merge-pull-request",
         mergeMethod,
@@ -3972,15 +4044,22 @@ export function DiffdiffApp({
 
     setIsSubmittingReviewAction(true);
     setStatusMessage("Removing selected refs...");
+    const sessionLoadId = beginSessionLoad();
 
     try {
       await removeCleanupRefs(session.repository.rootPath, refsToRemove);
       const nextSession = await loadSession(startupOptions);
+      if (!isLatestSessionLoad(sessionLoadId, "remove-cleanup-refs")) {
+        return;
+      }
       applyLoadedSession(nextSession);
       setCleanupCandidates([]);
       setDialogStack((currentStack) => closeAppDialog(currentStack, "cleanup"));
       setStatusMessage("Removed selected refs and reloaded the current session.");
     } catch (error) {
+      if (!isLatestSessionLoad(sessionLoadId, "remove-cleanup-refs")) {
+        return;
+      }
       handleAppError(error, "Unable to remove the selected refs.", {
         action: "remove-cleanup-refs",
         refsToRemove,
@@ -4017,15 +4096,22 @@ export function DiffdiffApp({
     if (shouldShowEventLogLoading) {
       setBaseBranchLoadingMessage(`Updating base to ${branch.name}...`);
     }
+    const sessionLoadId = beginSessionLoad();
 
     try {
       const nextSession = await loadSession(nextOptions);
+      if (!isLatestSessionLoad(sessionLoadId, "apply-branch-selection")) {
+        return;
+      }
       applyLoadedSession(nextSession);
       setStartupOptions(nextOptions);
       setDialogStack([]);
       setSelectedFileIndex(0);
       setStatusMessage(`Updated ${target} to ${branch.name}.`);
     } catch (error) {
+      if (!isLatestSessionLoad(sessionLoadId, "apply-branch-selection")) {
+        return;
+      }
       handleAppError(error, `Unable to update ${target}.`, {
         action: "apply-branch-selection",
         branch: branch.name,
@@ -4051,15 +4137,22 @@ export function DiffdiffApp({
 
     setIsReloading(true);
     setStatusMessage(`Updating ${target} to commit ${shortSha}...`);
+    const sessionLoadId = beginSessionLoad();
 
     try {
       const nextSession = await loadSession(nextOptions);
+      if (!isLatestSessionLoad(sessionLoadId, "apply-commit-selection")) {
+        return;
+      }
       applyLoadedSession(nextSession);
       setStartupOptions(nextOptions);
       setDialogStack([]);
       setSelectedFileIndex(0);
       setStatusMessage(`Updated ${target} to commit ${shortSha}.`);
     } catch (error) {
+      if (!isLatestSessionLoad(sessionLoadId, "apply-commit-selection")) {
+        return;
+      }
       handleAppError(error, `Unable to update ${target}.`, {
         action: "apply-commit-selection",
         sha,
@@ -4077,15 +4170,22 @@ export function DiffdiffApp({
 
     setIsReloading(true);
     setStatusMessage("Reviewing working tree changes against HEAD...");
+    const sessionLoadId = beginSessionLoad();
 
     try {
       const nextSession = await loadSession(nextOptions);
+      if (!isLatestSessionLoad(sessionLoadId, "apply-working-tree-selection")) {
+        return;
+      }
       applyLoadedSession(nextSession);
       setStartupOptions(nextOptions);
       setDialogStack([]);
       setSelectedFileIndex(0);
       setStatusMessage("Showing working tree changes against HEAD.");
     } catch (error) {
+      if (!isLatestSessionLoad(sessionLoadId, "apply-working-tree-selection")) {
+        return;
+      }
       handleAppError(error, "Unable to review working tree changes.", {
         action: "apply-working-tree-selection",
       });
@@ -4115,15 +4215,22 @@ export function DiffdiffApp({
 
     setIsReloading(true);
     setStatusMessage(`Opening PR #${branch.pullRequest.number}...`);
+    const sessionLoadId = beginSessionLoad();
 
     try {
       const nextSession = await loadSession(nextOptions);
+      if (!isLatestSessionLoad(sessionLoadId, "apply-pull-request-selection")) {
+        return;
+      }
       applyLoadedSession(nextSession);
       setStartupOptions(nextOptions);
       setDialogStack([]);
       setSelectedFileIndex(0);
       setStatusMessage(`Opened PR #${branch.pullRequest.number}.`);
     } catch (error) {
+      if (!isLatestSessionLoad(sessionLoadId, "apply-pull-request-selection")) {
+        return;
+      }
       handleAppError(error, "Unable to open the selected pull request.", {
         action: "apply-pull-request-selection",
         pullRequestNumber: branch.pullRequest.number,

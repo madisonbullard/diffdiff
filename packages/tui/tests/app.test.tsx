@@ -793,6 +793,72 @@ test("shows a files changed header indicator until refresh reloads the session",
   expect(getAppText(tree)).not.toContain("1 file changed");
 });
 
+test("preserves the selected file scroll position when refreshing", async () => {
+  const scrollboxes: ReturnType<typeof createMockScrollbox>[] = [];
+  const fileCardYs = [10, 110, 15, 115];
+  let fileCardRefIndex = 0;
+  const nextSession = createPreparedSession({ github: createGitHubReviewSession() });
+  const syncRemotes = vi.fn(async () => undefined);
+  const loadSession = vi.fn(async () => nextSession);
+
+  render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        loadSession,
+        syncRemotes,
+      })}
+    />,
+    {
+      createNodeMock(element) {
+        const props =
+          typeof element.props === "object" && element.props != null
+            ? (element.props as {
+                border?: unknown;
+                flexDirection?: unknown;
+                gap?: unknown;
+                paddingLeft?: unknown;
+              })
+            : undefined;
+
+        if (element.type === "scrollbox") {
+          const scrollbox = createMockScrollbox(false);
+          scrollboxes.push(scrollbox);
+          return scrollbox;
+        }
+
+        if (
+          element.type === "box" &&
+          Array.isArray(props?.border) &&
+          props.border[0] === "left" &&
+          props.paddingLeft === 2 &&
+          props.flexDirection === "column" &&
+          props.gap === 1
+        ) {
+          return { y: fileCardYs[fileCardRefIndex++] ?? 15 };
+        }
+
+        if (element.type === "box") {
+          return { y: 0 };
+        }
+
+        return null;
+      },
+    },
+  );
+
+  scrollboxes[1]!.scrollTop = 50;
+
+  await emitAsyncKey({ name: "f", sequence: "F", shift: true });
+
+  expect(syncRemotes).toHaveBeenCalledWith("/tmp/diffdiff");
+  expect(loadSession).toHaveBeenCalledWith({
+    base: "origin/main",
+    head: "feature/tui",
+  });
+  expect(scrollboxes[1]?.scrollTo).toHaveBeenLastCalledWith({ x: 0, y: 55 });
+});
+
 test("auto-refreshes working tree sessions when local changes are detected", async () => {
   vi.useFakeTimers();
   const initialSession = createPreparedSession({
