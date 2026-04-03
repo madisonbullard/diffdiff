@@ -49,6 +49,10 @@ export interface UiTheme {
   hunkBg: string;
   modalBg: string;
   reviewedBg: string;
+  /** Background for review comment cards -- lighter than surface to pop off the diff. */
+  commentBg: string;
+  /** Accent color for comment range annotations (gutter bracket + background tint). */
+  commentAnnotation: string;
 }
 
 interface RgbColor {
@@ -98,6 +102,8 @@ export const DARK_THEME: UiTheme = {
   hunkBg: "#183041",
   modalBg: "#0c1823",
   reviewedBg: "#0d2634",
+  commentBg: "#1c3347",
+  commentAnnotation: "#67b7e1",
 };
 
 export const LIGHT_THEME: UiTheme = {
@@ -122,6 +128,8 @@ export const LIGHT_THEME: UiTheme = {
   hunkBg: "#e5f0f7",
   modalBg: "#fdfefe",
   reviewedBg: "#e8f3f8",
+  commentBg: "#e2ebf0",
+  commentAnnotation: "#2676a3",
 };
 
 export function getUiTheme(themeName: PierreThemeName): UiTheme {
@@ -231,6 +239,8 @@ export function createTerminalUiTheme(colors: TerminalColors, mode: ThemeMode): 
     hunkBg: toHex(tint(grays[1], warning, isDark ? 0.16 : 0.12)),
     modalBg: toHex(grays[2]),
     reviewedBg: toHex(tint(grays[3], accent, isDark ? 0.2 : 0.14)),
+    commentBg: toHex(grays[4]),
+    commentAnnotation: toHex(accent),
   };
 }
 

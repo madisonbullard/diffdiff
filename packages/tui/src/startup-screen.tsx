@@ -13,7 +13,8 @@ export const STARTUP_SCREEN_ART_LINES = [
 
 export const STARTUP_SCREEN_FRAME_MS = 33;
 export const STARTUP_SCREEN_FRAME_DELAY_THRESHOLD_MS = 40;
-export const STARTUP_SCREEN_WIPE_GRADIENT_WIDTH = 8;
+export const STARTUP_SCREEN_BAND_WIDTH = 40;
+export const STARTUP_SCREEN_BAND_EDGE_WIDTH = 8;
 export const STARTUP_SCREEN_WIPE_ROW_OFFSET = 1;
 export const STARTUP_SCREEN_ART_WIDTH = Math.max(
   ...STARTUP_SCREEN_ART_LINES.map((line) => Array.from(line).length),
@@ -25,9 +26,9 @@ const STARTUP_SCREEN_COLORS = {
   white: "#ffffff",
 } as const;
 export const STARTUP_SCREEN_INITIAL_FRAME_COUNT = 1;
-export const STARTUP_SCREEN_WIPE_FRAME_COUNT = 6;
+export const STARTUP_SCREEN_WIPE_FRAME_COUNT = 15;
 export const STARTUP_SCREEN_FINAL_FRAME =
-  STARTUP_SCREEN_INITIAL_FRAME_COUNT + STARTUP_SCREEN_WIPE_FRAME_COUNT * 3;
+  STARTUP_SCREEN_INITIAL_FRAME_COUNT + STARTUP_SCREEN_WIPE_FRAME_COUNT;
 
 export interface StartupScreenProps {
   chromeBackground: string;
@@ -49,10 +50,8 @@ export type StartupScreenAnimationState =
       kind: "solid";
     }
   | {
-      fromColor: string;
-      kind: "wipe";
+      kind: "band";
       progress: number;
-      toColor: string;
     };
 
 export function StartupScreen({
@@ -142,38 +141,10 @@ export function getStartupScreenAnimationState(frame: number): StartupScreenAnim
 
   if (normalizedFrame < STARTUP_SCREEN_INITIAL_FRAME_COUNT + STARTUP_SCREEN_WIPE_FRAME_COUNT) {
     return {
-      fromColor: STARTUP_SCREEN_COLORS.white,
-      kind: "wipe",
-      progress: normalizedFrame / STARTUP_SCREEN_WIPE_FRAME_COUNT,
-      toColor: STARTUP_SCREEN_COLORS.red,
-    };
-  }
-
-  if (normalizedFrame < STARTUP_SCREEN_INITIAL_FRAME_COUNT + STARTUP_SCREEN_WIPE_FRAME_COUNT * 2) {
-    return {
-      fromColor: STARTUP_SCREEN_COLORS.red,
-      kind: "wipe",
+      kind: "band",
       progress:
-        (normalizedFrame -
-          STARTUP_SCREEN_INITIAL_FRAME_COUNT -
-          STARTUP_SCREEN_WIPE_FRAME_COUNT +
-          1) /
-        STARTUP_SCREEN_WIPE_FRAME_COUNT,
-      toColor: STARTUP_SCREEN_COLORS.green,
-    };
-  }
-
-  if (normalizedFrame < STARTUP_SCREEN_INITIAL_FRAME_COUNT + STARTUP_SCREEN_WIPE_FRAME_COUNT * 3) {
-    return {
-      fromColor: STARTUP_SCREEN_COLORS.green,
-      kind: "wipe",
-      progress:
-        (normalizedFrame -
-          STARTUP_SCREEN_INITIAL_FRAME_COUNT -
-          STARTUP_SCREEN_WIPE_FRAME_COUNT * 2 +
-          1) /
-        STARTUP_SCREEN_WIPE_FRAME_COUNT,
-      toColor: STARTUP_SCREEN_COLORS.white,
+        (normalizedFrame - STARTUP_SCREEN_INITIAL_FRAME_COUNT) /
+        (STARTUP_SCREEN_WIPE_FRAME_COUNT - 1),
     };
   }
 
@@ -189,11 +160,55 @@ export function getStartupScreenCharacterColor(
     return state.color;
   }
 
-  const wipeEdge =
-    state.progress * (STARTUP_SCREEN_ART_WIDTH + STARTUP_SCREEN_WIPE_GRADIENT_WIDTH) -
+  // The total travel distance: the band must clear the art plus its own width
+  // plus edge gradients on both sides, accounting for row offset slant.
+  const maxRowOffset = (STARTUP_SCREEN_ART_LINES.length - 1) * STARTUP_SCREEN_WIPE_ROW_OFFSET;
+  const totalTravel =
+    STARTUP_SCREEN_ART_WIDTH +
+    STARTUP_SCREEN_BAND_WIDTH +
+    STARTUP_SCREEN_BAND_EDGE_WIDTH * 2 +
+    maxRowOffset;
+
+  // bandCenter is the midpoint of the band for this row.
+  const bandCenter =
+    state.progress * totalTravel -
+    STARTUP_SCREEN_BAND_WIDTH / 2 -
+    STARTUP_SCREEN_BAND_EDGE_WIDTH -
     row * STARTUP_SCREEN_WIPE_ROW_OFFSET;
-  const mix = clamp((wipeEdge - column) / STARTUP_SCREEN_WIPE_GRADIENT_WIDTH, 0, 1);
-  return blendHexColors(state.fromColor, state.toColor, mix);
+
+  const halfBand = STARTUP_SCREEN_BAND_WIDTH / 2;
+  const bandLeft = bandCenter - halfBand;
+  const bandRight = bandCenter + halfBand;
+
+  // Distance from column into the band interior (negative = outside left, positive inside)
+  const distFromLeft = column - bandLeft;
+  const distFromRight = bandRight - column;
+
+  // Outside the band + edge regions entirely: white
+  if (
+    distFromLeft < -STARTUP_SCREEN_BAND_EDGE_WIDTH ||
+    distFromRight < -STARTUP_SCREEN_BAND_EDGE_WIDTH
+  ) {
+    return STARTUP_SCREEN_COLORS.white;
+  }
+
+  // Left edge gradient: white -> green
+  if (distFromLeft < 0) {
+    const edgeMix =
+      (distFromLeft + STARTUP_SCREEN_BAND_EDGE_WIDTH) / STARTUP_SCREEN_BAND_EDGE_WIDTH;
+    return blendHexColors(STARTUP_SCREEN_COLORS.white, STARTUP_SCREEN_COLORS.green, edgeMix);
+  }
+
+  // Right edge gradient: red -> white
+  if (distFromRight < 0) {
+    const edgeMix =
+      (distFromRight + STARTUP_SCREEN_BAND_EDGE_WIDTH) / STARTUP_SCREEN_BAND_EDGE_WIDTH;
+    return blendHexColors(STARTUP_SCREEN_COLORS.white, STARTUP_SCREEN_COLORS.red, edgeMix);
+  }
+
+  // Inside the band: gradient from green (left) to red (right)
+  const bandPosition = STARTUP_SCREEN_BAND_WIDTH > 0 ? distFromLeft / STARTUP_SCREEN_BAND_WIDTH : 0;
+  return blendHexColors(STARTUP_SCREEN_COLORS.green, STARTUP_SCREEN_COLORS.red, bandPosition);
 }
 
 function blendHexColors(fromColor: string, toColor: string, ratio: number): string {

@@ -35,7 +35,7 @@ export function ReviewThreadList({
   }
 
   return (
-    <box width="100%" flexDirection="column" gap={1} paddingTop={1}>
+    <box width="100%" flexDirection="column" gap={0}>
       {threads.map((thread) => (
         <ReviewThreadCard
           key={thread.id}
@@ -71,7 +71,7 @@ export function ReviewGroupCard({
       border={["left"]}
       customBorderChars={REVIEW_BORDER}
       borderColor={getReviewStateColor(group.state, theme)}
-      backgroundColor={theme.surface}
+      backgroundColor={theme.commentBg}
       paddingLeft={2}
       paddingRight={1}
       paddingTop={1}
@@ -184,54 +184,60 @@ function ReviewThreadCard({
     collapsedCommentStates?.[collapseKey] ?? getReviewThreadDefaultCollapsed(thread);
   const isSelected = selectedThreadId === thread.id;
 
+  const borderColor = isSelected ? theme.accent : thread.isOutdated ? theme.warning : theme.success;
+  const cardBg = isSelected ? theme.surface : theme.commentBg;
+
   return (
-    <box
-      width="100%"
-      border={["left"]}
-      customBorderChars={REVIEW_BORDER}
-      borderColor={isSelected ? theme.accent : thread.isOutdated ? theme.warning : theme.success}
-      backgroundColor={isSelected ? theme.surface : theme.surfaceMuted}
-      paddingLeft={2}
-      paddingRight={1}
-      paddingTop={1}
-      paddingBottom={1}
-      flexDirection="column"
-      gap={isCollapsed ? 0 : 1}
-    >
-      <box
-        width="100%"
-        flexDirection="row"
-        justifyContent="space-between"
-        gap={1}
-        onMouseUp={() => {
-          onToggleCollapsed?.(thread);
-        }}
-      >
-        <text fg={theme.textMuted} wrapMode="none">
-          <span fg={theme.accent}>{getCollapseToggleGlyph(isCollapsed)}</span>
-          <span> </span>
-          <span fg={theme.text}>{thread.comments[0]?.author.login ?? "unknown"}</span>
-          <span fg={theme.border}>{"  │  "}</span>
-          <span>{formatThreadAnchor(thread)}</span>
-          {thread.isOutdated ? (
-            <>
-              <span fg={theme.border}>{"  │  "}</span>
-              <span fg={theme.warning}>outdated</span>
-            </>
-          ) : null}
-        </text>
-        <text fg={theme.textMuted} wrapMode="none">
-          <span>{formatCommentCount(thread.comments.length)}</span>
+    <box width="100%" flexDirection="row">
+      <box width={1} backgroundColor={cardBg}>
+        <text fg={borderColor} wrapMode="none">
+          {"\u2503"}
         </text>
       </box>
-      {!isCollapsed ? (
-        <ReviewCommentList
-          comments={thread.comments}
-          selectedCommentId={isSelected ? selectedCommentId : undefined}
-          suppressFirstAuthorLogin={thread.comments[0]?.author.login}
-          theme={theme}
-        />
-      ) : null}
+      <box
+        flexGrow={1}
+        backgroundColor={cardBg}
+        paddingLeft={1}
+        paddingRight={1}
+        paddingBottom={1}
+        flexDirection="column"
+        gap={isCollapsed ? 0 : 1}
+      >
+        <box
+          width="100%"
+          flexDirection="row"
+          justifyContent="space-between"
+          gap={1}
+          onMouseUp={() => {
+            onToggleCollapsed?.(thread);
+          }}
+        >
+          <text fg={theme.textMuted} wrapMode="none">
+            <span fg={theme.accent}>{getCollapseToggleGlyph(isCollapsed)}</span>
+            <span> </span>
+            <span fg={theme.text}>{thread.comments[0]?.author.login ?? "unknown"}</span>
+            <span fg={theme.border}>{"  │  "}</span>
+            <span>{formatThreadAnchor(thread)}</span>
+            {thread.isOutdated ? (
+              <>
+                <span fg={theme.border}>{"  │  "}</span>
+                <span fg={theme.warning}>outdated</span>
+              </>
+            ) : null}
+          </text>
+          <text fg={theme.textMuted} wrapMode="none">
+            <span>{formatCommentCount(thread.comments.length)}</span>
+          </text>
+        </box>
+        {!isCollapsed ? (
+          <ReviewCommentList
+            comments={thread.comments}
+            selectedCommentId={isSelected ? selectedCommentId : undefined}
+            suppressFirstAuthorLogin={thread.comments[0]?.author.login}
+            theme={theme}
+          />
+        ) : null}
+      </box>
     </box>
   );
 }

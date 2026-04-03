@@ -128,7 +128,7 @@ function ConversationItemCard({
       width="100%"
       border={["left"]}
       borderColor={isSelected ? theme.accent : accentColor}
-      backgroundColor={isSelected ? theme.surfaceMuted : theme.surface}
+      backgroundColor={isSelected ? theme.surface : theme.commentBg}
       paddingLeft={2}
       paddingRight={1}
       paddingTop={1}

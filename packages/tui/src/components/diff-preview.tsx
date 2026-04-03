@@ -20,8 +20,11 @@ import { tintHex } from "./shared.tsx";
 import {
   buildSideBySideThreadIndex,
   buildUnifiedThreadIndex,
+  getSideBySideRowAnnotations,
   getSideBySideRowThreads,
+  getUnifiedLineAnnotations,
   getUnifiedLineThreads,
+  type LineAnnotation,
 } from "./diff-thread-index.ts";
 import {
   getUnifiedVirtualWindow,
@@ -82,10 +85,12 @@ export function UnifiedDiffPreview({
       {visibleLines.map((line, index) => {
         const lineIndex = visibleWindow == null ? index : visibleWindow.startIndex + index;
         const lineThreads = getUnifiedLineThreads(threadIndex, line);
+        const lineAnnotations = getUnifiedLineAnnotations(threadIndex, line);
 
         return (
           <box key={`${line.kind}-${lineIndex}`} width="100%" flexDirection="column">
             <UnifiedDiffRow
+              annotations={lineAnnotations}
               isSelected={matchesUnifiedAnchor(line, selectedReviewAnchor)}
               line={line}
               lineNumberWidth={file.lineNumberWidth}
@@ -149,10 +154,12 @@ export function SideBySideDiffPreview({
     <box width="100%" flexDirection="column">
       {file.sideBySideRows.map((row, index) => {
         const rowThreads = getSideBySideRowThreads(threadIndex, row);
+        const rowAnnotations = getSideBySideRowAnnotations(threadIndex, row);
 
         return (
           <box key={`${row.kind}-${index}`} width="100%" flexDirection="column">
             <SideBySideDiffRowView
+              annotations={rowAnnotations}
               contentWidth={contentWidth}
               isSelected={matchesSideBySideAnchor(row, selectedReviewAnchor)}
               lineNumberWidth={file.lineNumberWidth}
@@ -184,6 +191,7 @@ export function SideBySideDiffPreview({
 }
 
 function SideBySideDiffRowView({
+  annotations,
   contentWidth,
   isSelected,
   lineNumberWidth,
@@ -191,6 +199,7 @@ function SideBySideDiffRowView({
   row,
   theme,
 }: {
+  annotations: { left: readonly LineAnnotation[]; right: readonly LineAnnotation[] };
   contentWidth: number;
   isSelected: boolean;
   lineNumberWidth: number;
@@ -213,6 +222,7 @@ function SideBySideDiffRowView({
   return (
     <box width="100%" flexDirection="row" backgroundColor={rowBackground}>
       <SideBySideDiffCellView
+        annotations={annotations.left}
         cell={row.left ?? { kind: "empty", segments: [] }}
         contentWidth={contentWidth}
         isSelected={isSelected}
@@ -224,6 +234,7 @@ function SideBySideDiffRowView({
         <text fg={theme.border}> </text>
       </box>
       <SideBySideDiffCellView
+        annotations={annotations.right}
         cell={row.right ?? { kind: "empty", segments: [] }}
         contentWidth={contentWidth}
         isSelected={isSelected}
@@ -236,6 +247,7 @@ function SideBySideDiffRowView({
 }
 
 function SideBySideDiffCellView({
+  annotations,
   cell,
   contentWidth,
   isSelected,
@@ -243,6 +255,7 @@ function SideBySideDiffCellView({
   paneWidth,
   theme,
 }: {
+  annotations: readonly LineAnnotation[];
   cell: SideBySideDiffCell;
   contentWidth: number;
   isSelected: boolean;
@@ -250,6 +263,7 @@ function SideBySideDiffCellView({
   paneWidth: number;
   theme: UiTheme;
 }) {
+  const hasAnnotation = annotations.length > 0;
   const baseLineNumberBg =
     cell.kind === "addition"
       ? theme.additionLineNumberBg
@@ -262,10 +276,18 @@ function SideBySideDiffCellView({
       : cell.kind === "deletion"
         ? theme.deletionBg
         : theme.contextBg;
-  const lineNumberBg = isSelected
-    ? tintHex(baseLineNumberBg, theme.accent, 0.24)
+  const annotatedLineNumberBg = hasAnnotation
+    ? tintHex(baseLineNumberBg, theme.commentAnnotation, 0.1)
     : baseLineNumberBg;
-  const contentBg = isSelected ? tintHex(baseContentBg, theme.accent, 0.18) : baseContentBg;
+  const annotatedContentBg = hasAnnotation
+    ? tintHex(baseContentBg, theme.commentAnnotation, 0.07)
+    : baseContentBg;
+  const lineNumberBg = isSelected
+    ? tintHex(annotatedLineNumberBg, theme.accent, 0.24)
+    : annotatedLineNumberBg;
+  const contentBg = isSelected
+    ? tintHex(annotatedContentBg, theme.accent, 0.18)
+    : annotatedContentBg;
   const sign = cell.kind === "addition" ? "+" : cell.kind === "deletion" ? "-" : " ";
   const signColor =
     cell.kind === "addition"
@@ -273,10 +295,21 @@ function SideBySideDiffCellView({
       : cell.kind === "deletion"
         ? theme.danger
         : theme.textMuted;
+  const borderColor = hasAnnotation ? getAnnotationBorderColor(annotations, theme) : undefined;
 
   return (
     <box width={paneWidth} flexDirection="row">
-      <box width={lineNumberWidth + 3} backgroundColor={lineNumberBg}>
+      {borderColor != null ? (
+        <box width={1} backgroundColor={lineNumberBg}>
+          <text fg={borderColor} wrapMode="none">
+            {"\u2503"}
+          </text>
+        </box>
+      ) : null}
+      <box
+        width={borderColor != null ? lineNumberWidth + 2 : lineNumberWidth + 3}
+        backgroundColor={lineNumberBg}
+      >
         <text fg={theme.textMuted} wrapMode="none">
           {cell.lineNumber != null
             ? String(cell.lineNumber).padStart(lineNumberWidth, " ")
@@ -294,11 +327,13 @@ function SideBySideDiffCellView({
 }
 
 function UnifiedDiffRow({
+  annotations,
   isSelected,
   line,
   lineNumberWidth,
   theme,
 }: {
+  annotations: readonly LineAnnotation[];
   isSelected: boolean;
   line: UnifiedDiffLine;
   lineNumberWidth: number;
@@ -315,6 +350,7 @@ function UnifiedDiffRow({
     );
   }
 
+  const hasAnnotation = annotations.length > 0;
   const lineNumber = line.newLineNumber ?? line.oldLineNumber;
   const sign = line.kind === "addition" ? "+" : line.kind === "deletion" ? "-" : " ";
   const baseLineNumberBg =
@@ -329,20 +365,39 @@ function UnifiedDiffRow({
       : line.kind === "deletion"
         ? theme.deletionBg
         : theme.contextBg;
-  const lineNumberBg = isSelected
-    ? tintHex(baseLineNumberBg, theme.accent, 0.24)
+  const annotatedLineNumberBg = hasAnnotation
+    ? tintHex(baseLineNumberBg, theme.commentAnnotation, 0.1)
     : baseLineNumberBg;
-  const contentBg = isSelected ? tintHex(baseContentBg, theme.accent, 0.18) : baseContentBg;
+  const annotatedContentBg = hasAnnotation
+    ? tintHex(baseContentBg, theme.commentAnnotation, 0.07)
+    : baseContentBg;
+  const lineNumberBg = isSelected
+    ? tintHex(annotatedLineNumberBg, theme.accent, 0.24)
+    : annotatedLineNumberBg;
+  const contentBg = isSelected
+    ? tintHex(annotatedContentBg, theme.accent, 0.18)
+    : annotatedContentBg;
   const signColor =
     line.kind === "addition"
       ? theme.success
       : line.kind === "deletion"
         ? theme.danger
         : theme.textMuted;
+  const borderColor = hasAnnotation ? getAnnotationBorderColor(annotations, theme) : undefined;
 
   return (
     <box width="100%" flexDirection="row">
-      <box width={lineNumberWidth + 3} backgroundColor={lineNumberBg}>
+      {borderColor != null ? (
+        <box width={1} backgroundColor={lineNumberBg}>
+          <text fg={borderColor} wrapMode="none">
+            {"\u2503"}
+          </text>
+        </box>
+      ) : null}
+      <box
+        width={borderColor != null ? lineNumberWidth + 2 : lineNumberWidth + 3}
+        backgroundColor={lineNumberBg}
+      >
         <text fg={theme.textMuted} wrapMode="none">
           {lineNumber != null
             ? String(lineNumber).padStart(lineNumberWidth, " ")
@@ -365,4 +420,21 @@ function renderSegments(segments: readonly TextSegment[], defaultFg: ColorInput)
       {segment.text}
     </span>
   ));
+}
+
+/**
+ * Returns the border color for the annotation column on a code line.
+ * Uses the same color logic as the comment card border: green for active,
+ * yellow for outdated, so the `┃` line is visually continuous from code
+ * through the comment card below.
+ */
+function getAnnotationBorderColor(annotations: readonly LineAnnotation[], theme: UiTheme): string {
+  // When multiple annotations overlap, prefer the non-outdated thread color.
+  for (const annotation of annotations) {
+    if (!annotation.thread.isOutdated) {
+      return theme.success;
+    }
+  }
+
+  return theme.warning;
 }
