@@ -161,6 +161,23 @@ describe("loadReviewSession", () => {
     expect(session.files.every((file) => !file.path.includes(".git/"))).toBe(true);
   });
 
+  test("ignores untracked directories without diffable files", async () => {
+    const repositoryPath = await createTemporaryRepository();
+
+    await writeFile(join(repositoryPath, "README.md"), "# diffdiff\n");
+    await runGit(repositoryPath, ["add", "README.md"]);
+    await commitAll(repositoryPath, "Initial commit");
+
+    await mkdir(join(repositoryPath, ".ruff_cache"), { recursive: true });
+    await writeFile(join(repositoryPath, ".ruff_cache", ".gitignore"), "*\n");
+    await writeFile(join(repositoryPath, ".ruff_cache", "cache.bin"), "cached\n");
+    await writeFile(join(repositoryPath, "src.ts"), "export const value = true;\n");
+
+    const session = await loadReviewSession({ repoPath: repositoryPath });
+
+    expect(session.files.map((file) => file.path)).toEqual(["src.ts"]);
+  });
+
   test("warns when unborn repositories receive explicit refs", async () => {
     const repositoryPath = await createTemporaryRepository();
 
