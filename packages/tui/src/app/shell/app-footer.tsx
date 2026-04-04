@@ -31,7 +31,9 @@ export function AppFooter({
       gap={2}
     >
       <box flexShrink={0} flexDirection="row" alignItems="center" gap={2}>
-        <Tag label={footerModeBadge.label} fg={footerModeBadge.fg} bg={footerModeBadge.bg} />
+        <text wrapMode="none">
+          <Tag label={footerModeBadge.label} fg={footerModeBadge.fg} bg={footerModeBadge.bg} />
+        </text>
         <text fg={theme.textMuted} wrapMode="none">
           <span fg={theme.accent} bg={theme.surfaceMuted}>{` ${commandListLabel} `}</span>
           <span>{" commands  "}</span>
