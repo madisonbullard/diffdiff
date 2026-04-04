@@ -23,6 +23,7 @@ import {
 import { Command } from "commander";
 import packageJson from "../package.json";
 import { resolveLaunchOptionsFromTarget } from "./launch-target.ts";
+import { loadStartupPreparedReviewSession } from "./startup-session.ts";
 import { StartupScreen } from "./startup-screen.tsx";
 import {
   getStartupTraceNow,
@@ -231,10 +232,13 @@ async function launchTui(options: LaunchOptions): Promise<void> {
     startupInstrumentation = logStartupPhase(startupInstrumentation, "startupScreenRenderedAt");
 
     const loadSession = (nextOptions: LaunchOptions) =>
-      loadPreparedReviewSession(nextOptions, themeName, theme, syntaxPalette, {
-        deferSyntaxRendering: true,
-        initialDiffView: "unified",
-      });
+      loadStartupPreparedReviewSession(
+        loadPreparedReviewSession,
+        nextOptions,
+        themeName,
+        theme,
+        syntaxPalette,
+      );
     const gitHubPullRequestService = new GitHubPullRequestService();
     const isGitHubAuthenticated = (await resolveGitHubAuth({ host: "github.com" })) != null;
     const initialSession = await loadSession(options);

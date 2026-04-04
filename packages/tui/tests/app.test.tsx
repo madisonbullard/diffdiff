@@ -35,6 +35,10 @@ const clipboardState = vi.hoisted(() => ({
   copyTextToClipboard: vi.fn(async () => true),
 }));
 
+const prepareReviewSessionState = vi.hoisted(() => ({
+  hydratePreparedReviewFiles: vi.fn(async (files: PreparedReviewFile[]) => files),
+}));
+
 type MockRenderer = {
   clearSelection: () => void;
   getSelection: () => null;
@@ -104,6 +108,16 @@ vi.mock("../src/clipboard.ts", () => ({
   copyTextToClipboard: clipboardState.copyTextToClipboard,
 }));
 
+vi.mock("../src/diff/prepare-review-session.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/diff/prepare-review-session.ts")>();
+
+  return {
+    ...actual,
+    hydratePreparedReviewFiles: (...args: Parameters<typeof actual.hydratePreparedReviewFiles>) =>
+      prepareReviewSessionState.hydratePreparedReviewFiles([...args[0]]),
+  };
+});
+
 const theme = getUiTheme("pierre-dark");
 const syntaxStyle = { kind: "syntax-style" } as unknown as import("@opentui/core").SyntaxStyle;
 
@@ -117,6 +131,9 @@ beforeEach(() => {
   terminalDimensionsState.height = 40;
   selectionCopyState.copySelection.mockReset().mockReturnValue(false);
   clipboardState.copyTextToClipboard.mockReset().mockResolvedValue(true);
+  prepareReviewSessionState.hydratePreparedReviewFiles
+    .mockReset()
+    .mockImplementation(async (files) => files);
   vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 
@@ -398,6 +415,107 @@ test("starts deleted file diffs collapsed", () => {
 
   expect(deletedCard?.props.file.path).toBe("src/removed.ts");
   expect(deletedCard?.props.isCollapsed).toBe(true);
+});
+
+test("hydrates deferred syntax previews when files move close to the viewport", async () => {
+  const scrollboxes: ReturnType<typeof createMockScrollbox>[] = [];
+  const fileCardYs = [0, 80];
+  let fileCardRefIndex = 0;
+  prepareReviewSessionState.hydratePreparedReviewFiles.mockImplementation(async (files) =>
+    files.map((file) =>
+      createPreparedFile({
+        ...file,
+        path: file.path,
+        sideBySideRows: [
+          {
+            kind: "line",
+            left: { kind: "context", lineNumber: 1, segments: [{ text: `left:${file.path}` }] },
+            right: {
+              kind: "addition",
+              lineNumber: 1,
+              segments: [{ text: `right:${file.path}`, fg: "#3fb950" }],
+            },
+          },
+        ],
+        unifiedLines: [
+          {
+            kind: "addition",
+            newLineNumber: 1,
+            segments: [{ text: `hydrated:${file.path}`, fg: "#3fb950" }],
+          },
+        ],
+      }),
+    ),
+  );
+
+  const files = [
+    createDeferredSyntaxPreparedFile({ path: "src/app.ts" }),
+    createDeferredSyntaxPreparedFile({ path: "src/utils.ts" }),
+  ];
+
+  render(
+    <DiffdiffApp {...createAppProps({ initialSession: createPreparedSession({ files }) })} />,
+    {
+      createNodeMock(element) {
+        const props =
+          typeof element.props === "object" && element.props != null
+            ? (element.props as {
+                border?: unknown;
+                flexDirection?: unknown;
+                gap?: unknown;
+                paddingLeft?: unknown;
+              })
+            : undefined;
+
+        if (element.type === "scrollbox") {
+          const scrollbox = createMockScrollbox(false);
+          scrollboxes.push(scrollbox);
+          return scrollbox;
+        }
+
+        if (
+          element.type === "box" &&
+          Array.isArray(props?.border) &&
+          props.border[0] === "left" &&
+          props.paddingLeft === 2 &&
+          props.flexDirection === "column" &&
+          props.gap === 1
+        ) {
+          return { y: fileCardYs[fileCardRefIndex++] ?? 0 };
+        }
+
+        if (element.type === "box") {
+          return { y: 0 };
+        }
+
+        return null;
+      },
+    },
+  );
+
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  expect(prepareReviewSessionState.hydratePreparedReviewFiles).toHaveBeenCalledTimes(1);
+  expect(prepareReviewSessionState.hydratePreparedReviewFiles.mock.calls[0]?.[0]).toMatchObject([
+    { path: "src/app.ts" },
+  ]);
+
+  await act(async () => {
+    scrollboxes[1]!.scrollTop = 70;
+    scrollboxes[1]!.emitScroll();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  expect(prepareReviewSessionState.hydratePreparedReviewFiles).toHaveBeenCalledTimes(2);
+  expect(
+    prepareReviewSessionState.hydratePreparedReviewFiles.mock.calls[1]?.[0].map(
+      (file: PreparedReviewFile) => file.path,
+    ),
+  ).toContain("src/utils.ts");
 });
 
 test("uses a compact header for the sticky diff card and removes top list padding", () => {
@@ -2219,6 +2337,45 @@ function createPreparedFile(overrides: Partial<PreparedReviewFile> = {}): Prepar
   };
 }
 
+function createDeferredSyntaxPreparedFile(
+  overrides: Partial<PreparedReviewFile> = {},
+): PreparedReviewFile {
+  const path = overrides.path ?? "src/app.ts";
+
+  return createPreparedFile({
+    diff: {
+      additionLines: ["const count = 1"],
+      deletionLines: ["const count = 0"],
+      hunks: [
+        {
+          additionCount: 1,
+          additionStart: 1,
+          collapsedBefore: 0,
+          deletionCount: 1,
+          deletionStart: 1,
+          hunkContent: [{ additions: 1, deletions: 1, type: "change" }],
+          hunkContext: "",
+          hunkSpecs: "@@ -1 +1 @@",
+        },
+      ],
+      lang: "typescript",
+    } as unknown as PreparedReviewFile["diff"],
+    lineNumberWidth: 3,
+    patch: [
+      `diff --git a/${path} b/${path}`,
+      "index 1111111..2222222 100644",
+      `--- a/${path}`,
+      `+++ b/${path}`,
+      "@@ -1 +1 @@",
+      "-const count = 0",
+      "+const count = 1",
+    ].join("\n"),
+    sideBySideRows: [],
+    unifiedLines: [],
+    ...overrides,
+  });
+}
+
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (reason?: unknown) => void;
@@ -2285,8 +2442,14 @@ function render(node: ReactNode, options: Partial<TestRendererOptions> = {}): Re
 }
 
 function createMockScrollbox(visible: boolean) {
+  const listeners = new Set<() => void>();
   const scrollbox = {
     content: { y: 0 },
+    emitScroll: () => {
+      for (const listener of listeners) {
+        listener();
+      }
+    },
     height: 20,
     scrollTop: 0,
     scrollTo: vi.fn(({ y }: { x: number; y: number }) => {
@@ -2295,8 +2458,16 @@ function createMockScrollbox(visible: boolean) {
     viewport: { height: 20 },
     verticalScrollBar: {
       visible,
-      on: vi.fn(),
-      off: vi.fn(),
+      on: vi.fn((event: string, listener: () => void) => {
+        if (event === "change") {
+          listeners.add(listener);
+        }
+      }),
+      off: vi.fn((event: string, listener: () => void) => {
+        if (event === "change") {
+          listeners.delete(listener);
+        }
+      }),
     },
   };
 

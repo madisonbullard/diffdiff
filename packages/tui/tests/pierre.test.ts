@@ -3,9 +3,13 @@ import type { TerminalColors } from "@opentui/core";
 import type { PierreDiffsModule } from "../src/diff/pierre-internals.ts";
 import { afterEach, expect, test, vi } from "vite-plus/test";
 import { createPierreSegmentColorResolver } from "../src/pierre-colors.ts";
-import { prepareReviewSession } from "../src/diff/prepare-review-session.ts";
-import { createTerminalSyntaxPalette } from "../src/syntax-palette.ts";
-import { createTerminalUiTheme } from "../src/theme.ts";
+import {
+  hydratePreparedReviewFiles,
+  prepareReviewSession,
+} from "../src/diff/prepare-review-session.ts";
+import { createTerminalSyntaxPalette, getSyntaxPalette } from "../src/syntax-palette.ts";
+import { loadStartupPreparedReviewSession } from "../src/startup-session.ts";
+import { createTerminalUiTheme, getUiTheme } from "../src/theme.ts";
 
 const pierreInternalsState = vi.hoisted(() => ({
   loadPierreDiffsOverride: undefined as undefined | (() => Promise<PierreDiffsModule>),
@@ -215,6 +219,153 @@ test("deferred startup rendering skips eager highlighting work", async () => {
   expect(prepared.files[0]?.renderError).toBeUndefined();
   expect(getSharedHighlighter).not.toHaveBeenCalled();
   expect(renderDiffWithHighlighter).not.toHaveBeenCalled();
+});
+
+test("hydrates deferred files into syntax-highlighted previews", async () => {
+  const actualPierreInternals = await vi.importActual<
+    typeof import("../src/diff/pierre-internals.ts")
+  >("../src/diff/pierre-internals.ts");
+  const actualPierreDiffs = await actualPierreInternals.loadPierreDiffs();
+  const getSharedHighlighter = vi.fn(async () => ({ mocked: true }));
+  const renderDiffWithHighlighter = vi.fn(() => ({
+    themeStyles: "--keyword: #c678dd; --number: #e5c07b;",
+    code: {
+      deletionLines: [
+        {
+          type: "element",
+          tagName: "span",
+          children: [
+            {
+              type: "element",
+              tagName: "span",
+              properties: { style: "color: var(--keyword)" },
+              children: [{ type: "text", value: "export" }],
+            },
+            { type: "text", value: " const app = " },
+            {
+              type: "element",
+              tagName: "span",
+              properties: { style: "color: var(--number)" },
+              children: [{ type: "text", value: "true" }],
+            },
+            { type: "text", value: ";" },
+          ],
+        },
+      ],
+      additionLines: [
+        {
+          type: "element",
+          tagName: "span",
+          children: [
+            {
+              type: "element",
+              tagName: "span",
+              properties: { style: "color: var(--keyword)" },
+              children: [{ type: "text", value: "export" }],
+            },
+            { type: "text", value: " const app = " },
+            {
+              type: "element",
+              tagName: "span",
+              properties: { style: "color: var(--number)" },
+              children: [{ type: "text", value: "false" }],
+            },
+            { type: "text", value: ";" },
+          ],
+        },
+      ],
+    },
+  }));
+
+  pierreInternalsState.loadPierreDiffsOverride = async () => ({
+    ...actualPierreDiffs,
+    getSharedHighlighter,
+    renderDiffWithHighlighter,
+  });
+
+  const deferredPrepared = await prepareReviewSession(
+    createReviewSession(),
+    "pierre-dark",
+    undefined,
+    undefined,
+    {
+      deferSyntaxRendering: true,
+      initialDiffView: "unified",
+    },
+  );
+
+  const hydratedFiles = await hydratePreparedReviewFiles(
+    deferredPrepared.files,
+    "pierre-dark",
+    getUiTheme("pierre-dark"),
+    getSyntaxPalette("pierre-dark"),
+    {
+      initialDiffView: "both",
+    },
+  );
+
+  expect(getSharedHighlighter).toHaveBeenCalledTimes(1);
+  expect(renderDiffWithHighlighter).toHaveBeenCalledTimes(1);
+  expect(hydratedFiles[0]?.unifiedLines).toEqual([
+    {
+      kind: "hunk",
+      segments: [{ text: "@@ -1 +1 @@\n" }],
+    },
+    {
+      kind: "deletion",
+      oldLineNumber: 1,
+      segments: [
+        { text: "export", fg: "#c678dd" },
+        { text: " const app = " },
+        { text: "true", fg: "#e5c07b" },
+        { text: ";" },
+      ],
+    },
+    {
+      kind: "addition",
+      newLineNumber: 1,
+      segments: [
+        { text: "export", fg: "#c678dd" },
+        { text: " const app = " },
+        { text: "false", fg: "#e5c07b" },
+        { text: ";" },
+      ],
+    },
+  ]);
+  expect(hydratedFiles[0]?.sideBySideRows).not.toEqual([]);
+});
+
+test("startup session loading defers syntax rendering until viewport hydration", async () => {
+  const expectedSession = { marker: "prepared-session" } as unknown as Awaited<
+    ReturnType<typeof loadStartupPreparedReviewSession>
+  >;
+  const loadPreparedReviewSession = vi.fn(async () => expectedSession);
+
+  const prepared = await loadStartupPreparedReviewSession(
+    loadPreparedReviewSession,
+    {
+      base: "HEAD",
+      head: "working tree",
+    },
+    "pierre-dark",
+    getUiTheme("pierre-dark"),
+    getSyntaxPalette("pierre-dark"),
+  );
+
+  expect(prepared).toBe(expectedSession);
+  expect(loadPreparedReviewSession).toHaveBeenCalledWith(
+    {
+      base: "HEAD",
+      head: "working tree",
+    },
+    "pierre-dark",
+    getUiTheme("pierre-dark"),
+    getSyntaxPalette("pierre-dark"),
+    {
+      deferSyntaxRendering: true,
+      initialDiffView: "unified",
+    },
+  );
 });
 
 function createDarkPalette(): TerminalColors {

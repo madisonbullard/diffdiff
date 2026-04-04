@@ -23,7 +23,7 @@ test("builds a dark UI theme from terminal colors", () => {
   expect(formatColor(theme.accent)).toBe("#48bcca");
   expect(formatColor(theme.success)).toBe("#97c973");
   expect(formatColor(theme.danger)).toBe("#ec6570");
-  expect(formatColor(theme.additionBg)).toBe("#303e2b");
+  expect(formatColor(theme.additionBg)).toBe("#2b3727");
 });
 
 test("builds a light UI theme from terminal colors", () => {

@@ -43,6 +43,7 @@ import {
   type AppDialog,
   type AppDialogStackEntry,
 } from "./dialog-stack.ts";
+import { hydratePreparedReviewFiles } from "../diff/prepare-review-session.ts";
 import { DiffdiffAppDialogs } from "./layout.tsx";
 import {
   getUnifiedVirtualWindow,
@@ -218,6 +219,7 @@ const EMPTY_CONVERSATION_ITEMS: readonly GitHubPullRequestConversationItem[] = [
 const REVIEWED_NEXT_FILE_SCROLL_OFFSET = 3;
 const LIVE_REFRESH_INTERVAL_MS = 5_000;
 const INITIAL_FILE_BODY_RENDER_COUNT = 8;
+const FILE_PREVIEW_HYDRATION_DISTANCE = 24;
 const GITHUB_DIALOGS = new Set<AppDialog>([
   "cleanup",
   "comment-composer",
@@ -333,6 +335,83 @@ function shouldRenderFileCardBody({
     previewViewport.bottom > -previewViewport.overscan &&
     previewViewport.top < estimatedBodyHeight + previewViewport.overscan
   );
+}
+
+function shouldHydrateFileCardBody({
+  estimatedBodyHeight,
+  isSelected,
+  previewViewport,
+}: {
+  estimatedBodyHeight: number;
+  isSelected: boolean;
+  previewViewport?: FileCardPreviewViewport;
+}): boolean {
+  if (isSelected) {
+    return true;
+  }
+
+  if (previewViewport == null) {
+    return false;
+  }
+
+  return (
+    previewViewport.bottom > -FILE_PREVIEW_HYDRATION_DISTANCE &&
+    previewViewport.top < estimatedBodyHeight + FILE_PREVIEW_HYDRATION_DISTANCE
+  );
+}
+
+function needsSyntaxHydration(file: PreparedReviewSession["files"][number]): boolean {
+  return (
+    !file.isBinary &&
+    file.diff != null &&
+    file.renderError == null &&
+    file.patch.trim() !== "" &&
+    (file.unifiedLines.length === 0 || file.sideBySideRows.length === 0)
+  );
+}
+
+function mergeHydratedPreparedFile(
+  currentFile: PreparedReviewSession["files"][number],
+  hydratedFile: PreparedReviewSession["files"][number],
+): PreparedReviewSession["files"][number] {
+  const nextUnifiedLines =
+    hydratedFile.unifiedLines.length > 0 ? hydratedFile.unifiedLines : currentFile.unifiedLines;
+  const nextSideBySideRows =
+    hydratedFile.sideBySideRows.length > 0
+      ? hydratedFile.sideBySideRows
+      : currentFile.sideBySideRows;
+  const nextDiff = hydratedFile.diff ?? currentFile.diff;
+
+  if (
+    currentFile.diff === nextDiff &&
+    currentFile.lineNumberWidth === hydratedFile.lineNumberWidth &&
+    currentFile.renderError === hydratedFile.renderError &&
+    currentFile.unifiedLines === nextUnifiedLines &&
+    currentFile.sideBySideRows === nextSideBySideRows
+  ) {
+    return currentFile;
+  }
+
+  return {
+    ...currentFile,
+    diff: nextDiff,
+    lineNumberWidth: hydratedFile.lineNumberWidth,
+    renderError: hydratedFile.renderError,
+    sideBySideRows: nextSideBySideRows,
+    unifiedLines: nextUnifiedLines,
+  };
+}
+
+function getRenderFingerprintKey(fingerprint: PreparedReviewSession["renderFingerprint"]): string {
+  return [
+    fingerprint.baseRef,
+    fingerprint.headRef,
+    fingerprint.comparisonMode,
+    fingerprint.baseSha ?? "",
+    fingerprint.headSha ?? "",
+    String(fingerprint.fileCount),
+    fingerprint.patchDigest,
+  ].join(":");
 }
 
 function haveSamePaths(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
@@ -694,6 +773,7 @@ export function DiffdiffApp({
     null,
   );
   const pendingSessionActivityRef = useRef<SessionActivityUpdate | null>(null);
+  const pendingSyntaxHydrationPathsRef = useRef<Set<string>>(new Set());
   const pendingInteractionTokenRef = useRef(0);
   const initialRenderSurfaceLoggedRef = useRef(false);
   const reviewCacheTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -791,6 +871,10 @@ export function DiffdiffApp({
     () => resolveDiffView(diffViewPreference, diffPaneWidth),
     [diffPaneWidth, diffViewPreference],
   );
+  const sessionRenderKey = useMemo(
+    () => getRenderFingerprintKey(session.renderFingerprint),
+    [session.renderFingerprint],
+  );
   const selectedFileHasReviewAnchors = useMemo(
     () => getReviewAnchors(session.files[selectedFileIndex], diffView).length > 0,
     [diffView, selectedFileIndex, session.files],
@@ -844,6 +928,108 @@ export function DiffdiffApp({
       session.files,
     ],
   );
+
+  useEffect(() => {
+    pendingSyntaxHydrationPathsRef.current.clear();
+  }, [sessionRenderKey]);
+
+  useEffect(() => {
+    const candidateFiles: PreparedReviewSession["files"] = [];
+    const pendingPaths = pendingSyntaxHydrationPathsRef.current;
+
+    for (const [index, file] of session.files.entries()) {
+      if (
+        collapsedPaths.has(file.path) ||
+        pendingPaths.has(file.path) ||
+        !needsSyntaxHydration(file)
+      ) {
+        continue;
+      }
+
+      if (
+        !shouldHydrateFileCardBody({
+          estimatedBodyHeight: estimatedFileCardBodyHeights[index] ?? 1,
+          isSelected: index === selectedFileIndex,
+          previewViewport: fileCardPreviewViewports[index],
+        })
+      ) {
+        continue;
+      }
+
+      candidateFiles.push(file);
+    }
+
+    if (candidateFiles.length === 0) {
+      return;
+    }
+
+    const candidatePaths = candidateFiles.map((file) => file.path);
+    for (const path of candidatePaths) {
+      pendingPaths.add(path);
+    }
+
+    let cancelled = false;
+
+    void hydratePreparedReviewFiles(candidateFiles, session.themeName, theme, undefined, {
+      initialDiffView: "both",
+    })
+      .then((hydratedFiles) => {
+        if (cancelled) {
+          return;
+        }
+
+        const hydratedFilesByPath = new Map(hydratedFiles.map((file) => [file.path, file]));
+
+        setSession((currentSession) => {
+          if (getRenderFingerprintKey(currentSession.renderFingerprint) !== sessionRenderKey) {
+            return currentSession;
+          }
+
+          let changed = false;
+          const nextFiles = currentSession.files.map((file) => {
+            const hydratedFile = hydratedFilesByPath.get(file.path);
+            if (hydratedFile == null) {
+              return file;
+            }
+
+            const nextFile = mergeHydratedPreparedFile(file, hydratedFile);
+            changed ||= nextFile !== file;
+            return nextFile;
+          });
+
+          return changed ? { ...currentSession, files: nextFiles } : currentSession;
+        });
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+
+        logDiffdiffError("render", "deferred_syntax_hydration_failed", error, {
+          paths: candidatePaths,
+          themeName: session.themeName,
+        });
+      })
+      .finally(() => {
+        for (const path of candidatePaths) {
+          pendingPaths.delete(path);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    collapsedPaths,
+    estimatedFileCardBodyHeights,
+    fileCardPreviewViewports,
+    selectedFileIndex,
+    session.files,
+    session.themeName,
+    sessionRenderKey,
+    theme,
+  ]);
+
   const diffRenderSurface = useMemo<RenderSurfaceMetrics>(() => {
     let collapsedFileCount = 0;
     let deferredPreviewCount = 0;

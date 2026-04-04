@@ -129,6 +129,40 @@ export async function prepareReviewSession(
   };
 }
 
+export async function hydratePreparedReviewFiles(
+  files: readonly PreparedReviewFile[],
+  themeName: PierreThemeName,
+  theme: UiTheme = getUiTheme(themeName),
+  syntaxPalette: SyntaxPalette = getSyntaxPalette(themeName),
+  prepareOptions: PrepareReviewSessionOptions = {},
+): Promise<PreparedReviewFile[]> {
+  const candidates = files.filter(shouldHydratePreparedFile);
+  if (candidates.length === 0) {
+    return [...files];
+  }
+
+  const pierreDiffs = await loadPierreDiffs();
+  const languages = collectLanguages(candidates, pierreDiffs);
+  const highlighter = await pierreDiffs.getSharedHighlighter({
+    themes: [themeName],
+    langs: [...languages],
+  });
+  const resolveSegmentColor = createPierreSegmentColorResolver(themeName, theme, syntaxPalette);
+
+  return files.map((file) =>
+    shouldHydratePreparedFile(file)
+      ? renderPreparedFile(
+          file,
+          pierreDiffs,
+          highlighter,
+          themeName,
+          resolveSegmentColor,
+          prepareOptions.initialDiffView ?? "both",
+        )
+      : file,
+  );
+}
+
 async function prepareDeferredReviewSession(
   session: ReviewSession,
   themeName: PierreThemeName,
@@ -155,7 +189,7 @@ async function prepareDeferredReviewSession(
       finalizeDeferredFiles: Math.round((deferredFilesReadyAt - deferredFilesCreatedAt) * 10) / 10,
       loadPierreDiffs: Math.round((pierreDiffsLoadedAt - pierreDiffsLoadStartedAt) * 10) / 10,
     },
-    deferredPreviewStrategy: "on-demand-file-card-render",
+    deferredPreviewStrategy: "near-viewport-hydration",
     fileCount: files.length,
     previewableFileCount,
     themeName,
@@ -166,6 +200,16 @@ async function prepareDeferredReviewSession(
     files,
     themeName,
   };
+}
+
+function shouldHydratePreparedFile(file: PreparedReviewFile): boolean {
+  return (
+    !file.isBinary &&
+    file.diff != null &&
+    file.renderError == null &&
+    file.patch.trim() !== "" &&
+    (file.unifiedLines.length === 0 || file.sideBySideRows.length === 0)
+  );
 }
 
 function collectLanguages(

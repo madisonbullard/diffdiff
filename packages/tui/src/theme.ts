@@ -94,8 +94,8 @@ export const DARK_THEME: UiTheme = {
   success: "#3fb950",
   danger: "#ff7b72",
   warning: "#d4a72c",
-  additionBg: "#0f2619",
-  additionLineNumberBg: "#163526",
+  additionBg: "#0d2216",
+  additionLineNumberBg: "#143024",
   deletionBg: "#2a1718",
   deletionLineNumberBg: "#3a2021",
   contextBg: "#0d1822",
@@ -120,8 +120,8 @@ export const LIGHT_THEME: UiTheme = {
   success: "#177245",
   danger: "#a93a32",
   warning: "#8a6200",
-  additionBg: "#e8f5ec",
-  additionLineNumberBg: "#dceee3",
+  additionBg: "#edf7f0",
+  additionLineNumberBg: "#e5f2e9",
   deletionBg: "#f9ebeb",
   deletionLineNumberBg: "#f4dddd",
   contextBg: "#f5f9fb",
@@ -215,7 +215,8 @@ export function createTerminalUiTheme(colors: TerminalColors, mode: ThemeMode): 
   const success = boostSaturation(ansiColors.green, isDark ? 0.16 : 0.12);
   const danger = boostSaturation(ansiColors.red, isDark ? 0.16 : 0.12);
   const warning = boostSaturation(ansiColors.yellow, isDark ? 0.12 : 0.08);
-  const diffAlpha = isDark ? 0.24 : 0.16;
+  const additionDiffAlpha = isDark ? 0.2 : 0.12;
+  const deletionDiffAlpha = isDark ? 0.24 : 0.16;
 
   return {
     appBackground: "transparent",
@@ -231,10 +232,10 @@ export function createTerminalUiTheme(colors: TerminalColors, mode: ThemeMode): 
     success: toHex(success),
     danger: toHex(danger),
     warning: toHex(warning),
-    additionBg: toHex(tint(background, success, diffAlpha)),
-    additionLineNumberBg: toHex(tint(grays[3], success, diffAlpha)),
-    deletionBg: toHex(tint(background, danger, diffAlpha)),
-    deletionLineNumberBg: toHex(tint(grays[3], danger, diffAlpha)),
+    additionBg: toHex(tint(background, success, additionDiffAlpha)),
+    additionLineNumberBg: toHex(tint(grays[3], success, additionDiffAlpha)),
+    deletionBg: toHex(tint(background, danger, deletionDiffAlpha)),
+    deletionLineNumberBg: toHex(tint(grays[3], danger, deletionDiffAlpha)),
     contextBg: toHex(grays[1]),
     hunkBg: toHex(tint(grays[1], warning, isDark ? 0.16 : 0.12)),
     modalBg: toHex(grays[2]),
