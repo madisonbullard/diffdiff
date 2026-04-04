@@ -20,12 +20,6 @@ export default defineConfig({
           ],
         },
       },
-      {
-        files: ["packages/tui/src/app/DiffdiffApp.tsx"],
-        rules: {
-          "max-lines": "off",
-        },
-      },
     ],
   },
 });

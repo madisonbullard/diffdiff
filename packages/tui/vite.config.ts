@@ -38,12 +38,6 @@ export default defineConfig({
           ],
         },
       },
-      {
-        files: ["src/app/DiffdiffApp.tsx"],
-        rules: {
-          "max-lines": "off",
-        },
-      },
     ],
   },
   fmt: {},
