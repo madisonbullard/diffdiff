@@ -1,4 +1,5 @@
 import type {
+  GitHubDashboardPullRequest,
   GitHubCleanupPreferences,
   GitHubMergeMethod,
   GitHubRefCleanupCandidate,
@@ -22,7 +23,6 @@ import type {
   CommitListItem,
   ListModalView,
   PreparedReviewSession,
-  PullRequestListItem,
 } from "../types.ts";
 import type { UiTheme } from "../theme.ts";
 
@@ -57,7 +57,7 @@ interface DiffdiffAppDialogsProps {
   pullRequestSearchActive: boolean;
   pullRequestSearchQuery: string;
   reviewRequestedPrCount: number;
-  filteredPullRequestItems: readonly PullRequestListItem[];
+  filteredPullRequests: readonly GitHubDashboardPullRequest[];
   isPullRequestListLoading: boolean;
   remoteBranchCount: number;
   reviewComposerBody: string;
@@ -104,7 +104,7 @@ export function DiffdiffAppDialogs({
   pullRequestSearchActive,
   pullRequestSearchQuery,
   reviewRequestedPrCount,
-  filteredPullRequestItems,
+  filteredPullRequests,
   isPullRequestListLoading,
   remoteBranchCount,
   reviewComposerBody,
@@ -153,7 +153,7 @@ export function DiffdiffAppDialogs({
     return (
       <PullRequestListModal
         isLoading={isPullRequestListLoading}
-        pullRequests={filteredPullRequestItems}
+        pullRequests={filteredPullRequests}
         reviewRequestedCount={reviewRequestedPrCount}
         searchActive={pullRequestSearchActive}
         searchQuery={pullRequestSearchQuery}

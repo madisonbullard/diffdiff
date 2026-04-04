@@ -248,24 +248,21 @@ test("renders a pull request list modal with truncated titles", () => {
       isLoading={false}
       pullRequests={[
         {
-          key: "github.com/diffdiff/diffdiff#42",
-          pullRequest: {
-            author: { login: "madison" },
-            isAuthor: true,
-            isDraft: false,
-            isReviewRequested: false,
-            number: 42,
-            repository: {
-              forge: "github",
-              host: "github.com",
-              owner: "diffdiff",
-              repo: "diffdiff",
-            },
-            title:
-              "Add a pull request dashboard modal with fuzzy search, cross-repo selection, and keyboard navigation",
-            updatedAt: "2026-04-03T14:00:00Z",
-            url: "https://github.com/diffdiff/diffdiff/pull/42",
+          author: { login: "madison" },
+          isAuthor: true,
+          isDraft: false,
+          isReviewRequested: false,
+          number: 42,
+          repository: {
+            forge: "github",
+            host: "github.com",
+            owner: "diffdiff",
+            repo: "diffdiff",
           },
+          title:
+            "Add a pull request dashboard modal with fuzzy search, cross-repo selection, and keyboard navigation",
+          updatedAt: "2026-04-03T14:00:00Z",
+          url: "https://github.com/diffdiff/diffdiff/pull/42",
         },
       ]}
       reviewRequestedCount={0}
@@ -287,23 +284,20 @@ test("shows more pull requests at once in the pull request list modal", () => {
     <PullRequestListModal
       isLoading={false}
       pullRequests={Array.from({ length: 12 }, (_, index) => ({
-        key: `github.com/diffdiff/diffdiff#${index + 1}`,
-        pullRequest: {
-          author: { login: "madison" },
-          isAuthor: true,
-          isDraft: false,
-          isReviewRequested: false,
-          number: index + 1,
-          repository: {
-            forge: "github",
-            host: "github.com",
-            owner: "diffdiff",
-            repo: "diffdiff",
-          },
-          title: `Visible PR ${index + 1}`,
-          updatedAt: `2026-04-03T${String(index).padStart(2, "0")}:00:00Z`,
-          url: `https://github.com/diffdiff/diffdiff/pull/${index + 1}`,
+        author: { login: "madison" },
+        isAuthor: true,
+        isDraft: false,
+        isReviewRequested: false,
+        number: index + 1,
+        repository: {
+          forge: "github",
+          host: "github.com",
+          owner: "diffdiff",
+          repo: "diffdiff",
         },
+        title: `Visible PR ${index + 1}`,
+        updatedAt: `2026-04-03T${String(index).padStart(2, "0")}:00:00Z`,
+        url: `https://github.com/diffdiff/diffdiff/pull/${index + 1}`,
       }))}
       reviewRequestedCount={0}
       searchActive={false}

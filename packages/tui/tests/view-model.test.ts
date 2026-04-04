@@ -4,13 +4,12 @@ import {
   buildFileTreeNodes,
   buildBranchListItems,
   buildCommitListItems,
-  buildPullRequestListItems,
   DEFAULT_BRANCH_LIST_FILTERS,
   FILE_TREE_SIDEBAR_MAX_WIDTH,
   FILE_TREE_SIDEBAR_MIN_WIDTH,
   clampIndex,
   filterCommitListItems,
-  filterPullRequestListItems,
+  filterPullRequests,
   formatCommitListEntry,
   formatAuthorList,
   formatChangeSummary,
@@ -298,8 +297,8 @@ test("filterCommitListItems supports non-contiguous fuzzy matching", () => {
   expect(result.map((r) => r.commit.shortSha)).toEqual(["aaa"]);
 });
 
-test("filterPullRequestListItems fuzzy matches repo, title, and author", () => {
-  const items = buildPullRequestListItems([
+test("filterPullRequests fuzzy matches repo, title, and author", () => {
+  const items = [
     {
       author: { login: "madison" },
       isAuthor: true,
@@ -332,56 +331,53 @@ test("filterPullRequestListItems fuzzy matches repo, title, and author", () => {
       updatedAt: "2026-04-03T15:00:00Z",
       url: "https://github.com/acme/widgets/pull/7",
     },
-  ]);
+  ];
 
-  expect(filterPullRequestListItems(items, "ddpr").map((item) => item.pullRequest.number)).toEqual([
-    42,
-  ]);
-  expect(filterPullRequestListItems(items, "nry").map((item) => item.pullRequest.number)).toEqual([
-    7,
-  ]);
-  expect(filterPullRequestListItems(items, "oct").map((item) => item.pullRequest.number)).toEqual([
-    7,
-  ]);
+  expect(filterPullRequests(items, "ddpr").map((item) => item.number)).toEqual([42]);
+  expect(filterPullRequests(items, "nry").map((item) => item.number)).toEqual([7]);
+  expect(filterPullRequests(items, "oct").map((item) => item.number)).toEqual([7]);
 });
 
-test("buildPullRequestListItems preserves the pull request order it is given", () => {
-  const items = buildPullRequestListItems([
-    {
-      author: { login: "octocat" },
-      isAuthor: false,
-      isDraft: true,
-      isReviewRequested: true,
-      number: 7,
-      repository: {
-        forge: "github",
-        host: "github.com",
-        owner: "acme",
-        repo: "widgets",
+test("filterPullRequests preserves the given order among matches", () => {
+  const items = filterPullRequests(
+    [
+      {
+        author: { login: "octocat" },
+        isAuthor: false,
+        isDraft: true,
+        isReviewRequested: true,
+        number: 7,
+        repository: {
+          forge: "github",
+          host: "github.com",
+          owner: "acme",
+          repo: "widgets",
+        },
+        title: "Need reviewer eyes",
+        updatedAt: "2026-04-03T15:00:00Z",
+        url: "https://github.com/acme/widgets/pull/7",
       },
-      title: "Need reviewer eyes",
-      updatedAt: "2026-04-03T15:00:00Z",
-      url: "https://github.com/acme/widgets/pull/7",
-    },
-    {
-      author: { login: "madison" },
-      isAuthor: true,
-      isDraft: false,
-      isReviewRequested: false,
-      number: 42,
-      repository: {
-        forge: "github",
-        host: "github.com",
-        owner: "diffdiff",
-        repo: "diffdiff",
+      {
+        author: { login: "madison" },
+        isAuthor: true,
+        isDraft: false,
+        isReviewRequested: false,
+        number: 42,
+        repository: {
+          forge: "github",
+          host: "github.com",
+          owner: "diffdiff",
+          repo: "diffdiff",
+        },
+        title: "Need reviewer eyes later",
+        updatedAt: "2026-04-03T14:00:00Z",
+        url: "https://github.com/diffdiff/diffdiff/pull/42",
       },
-      title: "Ship the PR dashboard",
-      updatedAt: "2026-04-03T14:00:00Z",
-      url: "https://github.com/diffdiff/diffdiff/pull/42",
-    },
-  ]);
+    ],
+    "review",
+  );
 
-  expect(items.map((item) => item.pullRequest.number)).toEqual([7, 42]);
+  expect(items.map((item) => item.number)).toEqual([7, 42]);
 });
 
 test("sortFilesInTreeOrder sorts files to match tree sidebar order", () => {

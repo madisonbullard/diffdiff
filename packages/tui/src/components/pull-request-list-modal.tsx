@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { PullRequestListItem } from "../types.ts";
+import type { GitHubDashboardPullRequest } from "@diffdiff/core";
 import type { UiTheme } from "../theme.ts";
 import { KeyCap, ModalFrame, SPLIT_BORDER, selectItem, tintHex } from "./shared.tsx";
 
@@ -16,7 +16,7 @@ export function PullRequestListModal({
   theme,
 }: {
   isLoading: boolean;
-  pullRequests: readonly PullRequestListItem[];
+  pullRequests: readonly GitHubDashboardPullRequest[];
   reviewRequestedCount: number;
   searchActive: boolean;
   searchQuery: string;
@@ -99,7 +99,7 @@ export function PullRequestListModal({
         <box width="100%" flexDirection="column" gap={0}>
           {getPullRequestListWindow(pullRequests, selectedIndex).map(({ item, index }) => {
             const isSelected = index === selectedIndex;
-            const pullRequest = item.pullRequest;
+            const pullRequest = item;
             const repoLabel = `${pullRequest.repository.owner}/${pullRequest.repository.repo}`;
             const authorLabel = pullRequest.author.login;
             const titleLabel = truncateTitle(
@@ -111,7 +111,7 @@ export function PullRequestListModal({
             );
 
             return (
-              <ListRow key={item.key} isSelected={isSelected} theme={theme}>
+              <ListRow key={pullRequest.url} isSelected={isSelected} theme={theme}>
                 <text wrapMode="none">
                   <span fg={isSelected ? theme.accent : theme.warning}>{repoLabel}</span>
                   <span fg={theme.textMuted}>{"  │  "}</span>
@@ -140,12 +140,12 @@ export function PullRequestListModal({
       >
         {selectedPullRequest != null ? (
           <>
-            <text fg={theme.text}>{selectedPullRequest.pullRequest.title}</text>
+            <text fg={theme.text}>{selectedPullRequest.title}</text>
             <text fg={theme.textMuted} wrapMode="none">
-              <span>{`${selectedPullRequest.pullRequest.repository.owner}/${selectedPullRequest.pullRequest.repository.repo}`}</span>
+              <span>{`${selectedPullRequest.repository.owner}/${selectedPullRequest.repository.repo}`}</span>
               <span fg={theme.border}>{"  │  "}</span>
-              <span>{selectedPullRequest.pullRequest.author.login}</span>
-              {selectedPullRequest.pullRequest.isReviewRequested ? (
+              <span>{selectedPullRequest.author.login}</span>
+              {selectedPullRequest.isReviewRequested ? (
                 <>
                   <span fg={theme.border}>{"  │  "}</span>
                   <span fg={theme.warning}>review requested</span>
@@ -172,9 +172,9 @@ export function PullRequestListModal({
 }
 
 function getPullRequestListWindow(
-  items: readonly PullRequestListItem[],
+  items: readonly GitHubDashboardPullRequest[],
   selectedIndex: number,
-): { item: PullRequestListItem; index: number }[] {
+): { item: GitHubDashboardPullRequest; index: number }[] {
   if (items.length <= PULL_REQUEST_LIST_MAX_VISIBLE) {
     return items.map((item, index) => ({ item, index }));
   }

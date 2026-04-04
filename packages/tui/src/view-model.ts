@@ -6,7 +6,6 @@ import type {
   ComparisonInfo,
   GitHubDashboardPullRequest,
 } from "@diffdiff/core";
-import { getRepositoryIdentityKey } from "@diffdiff/core";
 import type {
   BranchListFilters,
   BranchListItem,
@@ -14,7 +13,6 @@ import type {
   DiffView,
   DiffViewPreference,
   FileTreeNode,
-  PullRequestListItem,
   TextSegment,
 } from "./types.ts";
 
@@ -113,15 +111,6 @@ export function buildCommitListItems(commits: readonly ComparisonCommit[]): Comm
   }));
 }
 
-export function buildPullRequestListItems(
-  pullRequests: readonly GitHubDashboardPullRequest[],
-): PullRequestListItem[] {
-  return pullRequests.map((pullRequest) => ({
-    key: `${getRepositoryIdentityKey(pullRequest.repository)}#${pullRequest.number}`,
-    pullRequest,
-  }));
-}
-
 export function filterCommitListItems(
   items: readonly CommitListItem[],
   query: string,
@@ -133,16 +122,15 @@ export function filterCommitListItems(
   return items.filter((item) => fuzzyMatch(query, item.commit.subject));
 }
 
-export function filterPullRequestListItems(
-  items: readonly PullRequestListItem[],
+export function filterPullRequests(
+  items: readonly GitHubDashboardPullRequest[],
   query: string,
-): PullRequestListItem[] {
+): GitHubDashboardPullRequest[] {
   if (query === "") {
     return [...items];
   }
 
-  return items.filter((item) => {
-    const { pullRequest } = item;
+  return items.filter((pullRequest) => {
     return fuzzyMatch(
       query,
       `${pullRequest.repository.owner}/${pullRequest.repository.repo} ${pullRequest.title} ${pullRequest.author.login}`,

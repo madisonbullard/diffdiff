@@ -3,7 +3,6 @@ import type {
   ChangeSummary,
   ChangedFile,
   ComparisonCommit,
-  GitHubDashboardPullRequest,
   ReviewSession,
   StartupOptions,
 } from "@diffdiff/core";
@@ -38,11 +37,6 @@ export interface BranchListItem {
 export interface CommitListItem {
   key: string;
   commit: ComparisonCommit;
-}
-
-export interface PullRequestListItem {
-  key: string;
-  pullRequest: GitHubDashboardPullRequest;
 }
 
 export interface LaunchOptions extends StartupOptions {

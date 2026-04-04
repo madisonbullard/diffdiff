@@ -78,7 +78,6 @@ import type {
   LaunchOptions,
   ListModalView,
   PreparedReviewSession,
-  PullRequestListItem,
 } from "../types.ts";
 import {
   filterCommands,
@@ -99,11 +98,10 @@ import {
   buildFileTreeNodes,
   buildBranchListItems,
   buildCommitListItems,
-  buildPullRequestListItems,
   clampIndex,
   DEFAULT_BRANCH_LIST_FILTERS,
   filterCommitListItems,
-  filterPullRequestListItems,
+  filterPullRequests,
   findInitialBranchListSelection,
   getDiffPaneWidth,
   getDiffViewLabel,
@@ -953,20 +951,16 @@ export function DiffdiffApp({
     () => sortDashboardPullRequests(pullRequestList, session.repository.currentForgeRepository),
     [pullRequestList, session.repository.currentForgeRepository],
   );
-  const pullRequestItems = useMemo<PullRequestListItem[]>(
-    () => buildPullRequestListItems(orderedPullRequests),
-    [orderedPullRequests],
-  );
-  const filteredPullRequestItems = useMemo(
-    () => filterPullRequestListItems(pullRequestItems, pullRequestSearchQuery),
-    [pullRequestItems, pullRequestSearchQuery],
+  const filteredPullRequests = useMemo(
+    () => filterPullRequests(orderedPullRequests, pullRequestSearchQuery),
+    [orderedPullRequests, pullRequestSearchQuery],
   );
   const stickyFile = session.files[activeFileIndex];
   const selectedBranchItem = branchItems[clampIndex(branchListIndex, branchItems.length)];
   const selectedCommitItem =
     filteredCommitItems[clampIndex(commitListIndex, filteredCommitItems.length)];
-  const selectedPullRequestItem =
-    filteredPullRequestItems[clampIndex(pullRequestListIndex, filteredPullRequestItems.length)];
+  const selectedPullRequest =
+    filteredPullRequests[clampIndex(pullRequestListIndex, filteredPullRequests.length)];
   const selectedTreeNode =
     selectedTreePath === "" ? undefined : fileTreeNodeByPath.get(selectedTreePath);
   const selectedFilePath = session.files[selectedFileIndex]?.path;
@@ -1267,9 +1261,9 @@ export function DiffdiffApp({
 
   useEffect(() => {
     setPullRequestListIndex((currentIndex) =>
-      clampIndex(currentIndex, filteredPullRequestItems.length),
+      clampIndex(currentIndex, filteredPullRequests.length),
     );
-  }, [filteredPullRequestItems.length]);
+  }, [filteredPullRequests.length]);
 
   useEffect(() => {
     if (launchInPullRequestList) {
@@ -2719,7 +2713,7 @@ export function DiffdiffApp({
         pullRequestSearchActive={pullRequestSearchActive}
         pullRequestSearchQuery={pullRequestSearchQuery}
         reviewRequestedPrCount={reviewRequestedPrCount}
-        filteredPullRequestItems={filteredPullRequestItems}
+        filteredPullRequests={filteredPullRequests}
         isPullRequestListLoading={isPullRequestListLoading}
         remoteBranchCount={remoteBranchCount}
         reviewComposerBody={reviewComposerBody}
@@ -3385,14 +3379,14 @@ export function DiffdiffApp({
 
       if (key.name === "j" || key.name === "down") {
         setPullRequestListIndex((currentIndex) =>
-          clampIndex(currentIndex + 1, filteredPullRequestItems.length),
+          clampIndex(currentIndex + 1, filteredPullRequests.length),
         );
         return;
       }
 
       if (key.name === "k" || key.name === "up") {
         setPullRequestListIndex((currentIndex) =>
-          clampIndex(currentIndex - 1, filteredPullRequestItems.length),
+          clampIndex(currentIndex - 1, filteredPullRequests.length),
         );
         return;
       }
@@ -3422,14 +3416,14 @@ export function DiffdiffApp({
 
     if (key.name === "j" || key.name === "down") {
       setPullRequestListIndex((currentIndex) =>
-        clampIndex(currentIndex + 1, filteredPullRequestItems.length),
+        clampIndex(currentIndex + 1, filteredPullRequests.length),
       );
       return;
     }
 
     if (key.name === "k" || key.name === "up") {
       setPullRequestListIndex((currentIndex) =>
-        clampIndex(currentIndex - 1, filteredPullRequestItems.length),
+        clampIndex(currentIndex - 1, filteredPullRequests.length),
       );
       return;
     }
@@ -3440,7 +3434,7 @@ export function DiffdiffApp({
     }
 
     if (key.name === "g" && key.shift) {
-      setPullRequestListIndex(Math.max(filteredPullRequestItems.length - 1, 0));
+      setPullRequestListIndex(Math.max(filteredPullRequests.length - 1, 0));
       return;
     }
 
@@ -3449,8 +3443,8 @@ export function DiffdiffApp({
       return;
     }
 
-    if (key.name === "return" && selectedPullRequestItem != null) {
-      void applyDashboardPullRequestSelection(selectedPullRequestItem.pullRequest);
+    if (key.name === "return" && selectedPullRequest != null) {
+      void applyDashboardPullRequestSelection(selectedPullRequest);
     }
   }
 
