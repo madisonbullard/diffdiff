@@ -261,7 +261,7 @@ describe("GitHubPullRequestService", () => {
       isAuthor: false,
       isReviewRequested: true,
       number: 7,
-      repository: { owner: "acme", repo: "widgets" },
+      repository: { host: "github.com", owner: "acme", repo: "widgets" },
       title: "Need reviewer eyes",
     });
     expect(pullRequests[1]).toMatchObject({
@@ -269,7 +269,7 @@ describe("GitHubPullRequestService", () => {
       isAuthor: true,
       isReviewRequested: true,
       number: 42,
-      repository: { owner: "diffdiff", repo: "diffdiff" },
+      repository: { host: "github.com", owner: "diffdiff", repo: "diffdiff" },
       title: "Ship the PR dashboard",
     });
   });

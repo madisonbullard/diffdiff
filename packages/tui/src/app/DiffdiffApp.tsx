@@ -1,4 +1,5 @@
 import type {
+  DiffdiffPreferences,
   ReviewSessionFreshnessResult,
   BranchInfo,
   GitHubCleanupPreferences,
@@ -127,6 +128,7 @@ interface DiffdiffAppProps {
   ) => Promise<void>;
   addPullRequestComment?: (reviewSession: GitHubReviewSession, body: string) => Promise<void>;
   initialGitHubPreferences?: GitHubUserPreferences;
+  initialShowKeyLegend?: boolean;
   isGitHubAuthenticated?: boolean;
   initialReviewCache?: ReviewCacheState;
   initialSession: PreparedReviewSession;
@@ -544,6 +546,7 @@ export function DiffdiffApp({
   addPullRequestComment,
   addReviewThread,
   initialGitHubPreferences,
+  initialShowKeyLegend,
   isGitHubAuthenticated = false,
   initialReviewCache,
   initialSession,
@@ -609,6 +612,7 @@ export function DiffdiffApp({
   const gitHubPreferencesRef = useRef<GitHubUserPreferences>(
     initialGitHubPreferences ?? getDefaultGitHubPreferences(),
   );
+  const showKeyLegendRef = useRef(initialShowKeyLegend ?? true);
   const leaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestSessionLoadIdRef = useRef(0);
   const [dialogStack, setDialogStack] = useState<readonly AppDialogStackEntry[]>(() =>
@@ -619,7 +623,7 @@ export function DiffdiffApp({
   const [commentCollapseStates, setCommentCollapseStates] = useState<Record<string, boolean>>(
     () => initialReviewCache?.commentCollapseStates ?? {},
   );
-  const [showKeyLegend, setShowKeyLegend] = useState(true);
+  const [showKeyLegend, setShowKeyLegend] = useState(() => initialShowKeyLegend ?? true);
   const [activeListView, setActiveListView] = useState<ListModalView>("branch");
   const [branchListFilters, setBranchListFilters] = useState<BranchListFilters>({
     ...(launchInPullRequestList
@@ -945,8 +949,8 @@ export function DiffdiffApp({
     [commitItems, commitSearchQuery],
   );
   const pullRequestItems = useMemo<PullRequestListItem[]>(
-    () => buildPullRequestListItems(pullRequestList),
-    [pullRequestList],
+    () => buildPullRequestListItems(pullRequestList, session.repository.remotes),
+    [pullRequestList, session.repository.remotes],
   );
   const filteredPullRequestItems = useMemo(
     () => filterPullRequestListItems(pullRequestItems, pullRequestSearchQuery),
@@ -1339,11 +1343,10 @@ export function DiffdiffApp({
     [resolvedLogFilePath, showErrorToast],
   );
 
-  const persistGitHubPreferences = useCallback(
-    async (nextPreferences: GitHubUserPreferences) => {
-      setGitHubPreferences(nextPreferences);
+  const persistDiffdiffPreferences = useCallback(
+    async (nextPreferences: DiffdiffPreferences) => {
       try {
-        await saveDiffdiffPreferences({ github: nextPreferences });
+        await saveDiffdiffPreferences(nextPreferences);
       } catch (error) {
         handleAppError(error, "Unable to save diffdiff preferences.", {
           action: "save-preferences",
@@ -1352,6 +1355,20 @@ export function DiffdiffApp({
       }
     },
     [handleAppError],
+  );
+
+  const persistGitHubPreferences = useCallback(
+    async (nextPreferences: GitHubUserPreferences) => {
+      setGitHubPreferences(nextPreferences);
+      gitHubPreferencesRef.current = nextPreferences;
+      await persistDiffdiffPreferences({
+        github: nextPreferences,
+        ui: {
+          showKeyLegend: showKeyLegendRef.current,
+        },
+      });
+    },
+    [persistDiffdiffPreferences],
   );
 
   const updateCleanupSelection = useCallback(
@@ -3077,6 +3094,13 @@ export function DiffdiffApp({
   function toggleKeyLegend(): void {
     setShowKeyLegend((currentValue) => {
       const nextValue = !currentValue;
+      showKeyLegendRef.current = nextValue;
+      void persistDiffdiffPreferences({
+        github: gitHubPreferencesRef.current,
+        ui: {
+          showKeyLegend: nextValue,
+        },
+      });
       setStatusMessage(nextValue ? "Key legend shown." : "Key legend hidden.");
       return nextValue;
     });

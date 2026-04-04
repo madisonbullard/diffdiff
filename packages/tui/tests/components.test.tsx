@@ -282,6 +282,42 @@ test("renders a pull request list modal with truncated titles", () => {
   expect(collectText(tree.toJSON())).toContain("...");
 });
 
+test("shows more pull requests at once in the pull request list modal", () => {
+  const tree = render(
+    <PullRequestListModal
+      isLoading={false}
+      pullRequests={Array.from({ length: 12 }, (_, index) => ({
+        key: `github.com/diffdiff/diffdiff#${index + 1}`,
+        pullRequest: {
+          author: { login: "madison" },
+          isAuthor: true,
+          isDraft: false,
+          isReviewRequested: false,
+          number: index + 1,
+          repository: {
+            forge: "github",
+            host: "github.com",
+            owner: "diffdiff",
+            repo: "diffdiff",
+          },
+          title: `Visible PR ${index + 1}`,
+          updatedAt: `2026-04-03T${String(index).padStart(2, "0")}:00:00Z`,
+          url: `https://github.com/diffdiff/diffdiff/pull/${index + 1}`,
+        },
+      }))}
+      reviewRequestedCount={0}
+      searchActive={false}
+      searchQuery=""
+      selectedIndex={0}
+      theme={theme}
+    />,
+  );
+
+  const text = collectText(tree.toJSON());
+  expect(text).toContain("Visible PR 10");
+  expect(text).not.toContain("Visible PR 11");
+});
+
 test("shows binary, reviewed, and collapsed states clearly", () => {
   const tree = render(
     <FileCard
@@ -506,6 +542,37 @@ test("groups suggested commands under a dedicated heading in the palette", () =>
   expect(text).toContain("Suggested");
   expect(text).toContain("Comparison");
   expect(text.indexOf("Suggested")).toBeLessThan(text.indexOf("Comparison"));
+});
+
+test("renders palette command descriptions on an indented second line", () => {
+  const description =
+    "Browse the working tree, branches, pull requests, and commits from one list.";
+  const palette = render(
+    <CommandPaletteModal
+      commands={[
+        {
+          category: "Suggested",
+          description,
+          keybind: "ctrl+p",
+          suggested: true,
+          title: "Open comparison list",
+          value: "comparison.list",
+        },
+      ]}
+      leaderKeybind="ctrl+x"
+      query=""
+      selectedIndex={0}
+      theme={theme}
+    />,
+  );
+
+  const descriptionNode = palette.root.find(
+    (node) =>
+      String(node.type) === "text" && collectText(node.props.children).trim() === description,
+  );
+
+  expect(descriptionNode.props.wrapMode).toBe("word");
+  expect(descriptionNode.parent?.props.paddingLeft).toBe(2);
 });
 
 test("uses the native diff renderer when Pierre segments are unavailable", () => {

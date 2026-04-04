@@ -345,6 +345,48 @@ test("filterPullRequestListItems fuzzy matches repo, title, and author", () => {
   ]);
 });
 
+test("buildPullRequestListItems prioritizes pull requests for the current repository", () => {
+  const items = buildPullRequestListItems(
+    [
+      {
+        author: { login: "octocat" },
+        isAuthor: false,
+        isDraft: true,
+        isReviewRequested: true,
+        number: 7,
+        repository: {
+          forge: "github",
+          host: "github.com",
+          owner: "acme",
+          repo: "widgets",
+        },
+        title: "Need reviewer eyes",
+        updatedAt: "2026-04-03T15:00:00Z",
+        url: "https://github.com/acme/widgets/pull/7",
+      },
+      {
+        author: { login: "madison" },
+        isAuthor: true,
+        isDraft: false,
+        isReviewRequested: false,
+        number: 42,
+        repository: {
+          forge: "github",
+          host: "github.com",
+          owner: "diffdiff",
+          repo: "diffdiff",
+        },
+        title: "Ship the PR dashboard",
+        updatedAt: "2026-04-03T14:00:00Z",
+        url: "https://github.com/diffdiff/diffdiff/pull/42",
+      },
+    ],
+    [{ name: "origin", fetchUrl: "git@github.com:diffdiff/diffdiff.git" }],
+  );
+
+  expect(items.map((item) => item.pullRequest.number)).toEqual([42, 7]);
+});
+
 test("sortFilesInTreeOrder sorts files to match tree sidebar order", () => {
   const files = [
     { path: "README.md" },

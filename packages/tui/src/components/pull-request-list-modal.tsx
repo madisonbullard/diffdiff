@@ -3,7 +3,7 @@ import type { PullRequestListItem } from "../types.ts";
 import type { UiTheme } from "../theme.ts";
 import { KeyCap, ModalFrame, SPLIT_BORDER, selectItem, tintHex } from "./shared.tsx";
 
-const PULL_REQUEST_LIST_MAX_VISIBLE = 7;
+const PULL_REQUEST_LIST_MAX_VISIBLE = 10;
 const PULL_REQUEST_LIST_CONTENT_WIDTH = 96;
 
 export function PullRequestListModal({

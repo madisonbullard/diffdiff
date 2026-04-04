@@ -112,7 +112,9 @@ function parseSearchResultRepository(repositoryUrl: string, hostFallback: string
 
   return {
     forge: "github",
-    host: url.hostname || hostFallback,
+    // Search results return API URLs like api.github.com, but the rest of diffdiff
+    // uses the forge host from git remotes (for example github.com).
+    host: hostFallback,
     owner: match[1]!,
     repo: match[2]!,
   };
