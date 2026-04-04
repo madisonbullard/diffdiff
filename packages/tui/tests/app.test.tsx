@@ -185,6 +185,15 @@ test("keeps command-palette typing isolated from global shortcuts", () => {
   expect(getAppText(tree)).toContain('Filtering commands for "?".');
 });
 
+test("treats j as query text inside the command palette", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ ctrl: true, name: "p" });
+  emitKey({ name: "j", sequence: "j" });
+
+  expect(getAppText(tree)).toContain('Filtering commands for "j".');
+});
+
 test("closes nested list filters back to the list modal", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 
@@ -203,6 +212,20 @@ test("closes nested list filters back to the list modal", () => {
   expect(getAppText(tree)).toContain(
     "Browse working tree changes, branches, and open pull requests.",
   );
+});
+
+test("uses modifier shortcuts to enable and disable all list filters", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ name: "l" });
+  emitKey({ name: "f", sequence: "f" });
+  emitKey({ shift: true, name: "space", sequence: " " });
+
+  expect(getAppText(tree)).toContain("Enabled all list filters.");
+
+  emitKey({ meta: true, name: "space", sequence: " " });
+
+  expect(getAppText(tree)).toContain("Disabled all list filters.");
 });
 
 test("runs leader key commands with ctrl+x", () => {
@@ -920,6 +943,41 @@ test("starts commit browsing at the top of the commit list", () => {
   expect(getAppText(tree)).toContain("Newest commit");
   expect(getAppText(tree)).toContain("Top Author");
   expect(getAppText(tree)).not.toContain("Bottom Author");
+});
+
+test("uses leader+j to move through commits while commit search stays focused", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({
+          commits: [
+            {
+              sha: "1111111111111111",
+              shortSha: "1111111",
+              subject: "Newest commit",
+              author: "Top Author",
+            },
+            {
+              sha: "2222222222222222",
+              shortSha: "2222222",
+              subject: "Older commit",
+              author: "Bottom Author",
+            },
+          ],
+        }),
+      })}
+    />,
+  );
+
+  emitKey({ name: "l" });
+  emitKey({ name: "l" });
+  emitKey({ name: "/", sequence: "/" });
+
+  emitKey({ ctrl: true, name: "x" });
+  emitKey({ name: "j", sequence: "j" });
+
+  expect(getAppText(tree)).toContain("Bottom Author");
+  expect(getAppText(tree)).toMatch(/\/\s*_+/u);
 });
 
 test("shows an animated event log entry while loading a new base branch", async () => {
@@ -1793,12 +1851,12 @@ test("opens the submit review modal and submits the pending review", async () =>
     />,
   );
 
-  emitKey({ name: "s" });
+  emitKey({ name: "a", sequence: "A", shift: true });
 
   expect(getAppText(tree)).toContain("Submit Review");
   expect(getAppText(tree)).toContain("Comment");
 
-  emitKey({ name: "j" });
+  emitKey({ name: "down" });
   emitText("Ship it");
   await emitAsyncKey({ name: "return" });
 
@@ -1854,6 +1912,10 @@ test("opens the merge modal and merges with the selected method", async () => {
   expect(getAppText(tree)).toContain("Adds PR review mode.");
 
   emitKey({ name: "j" });
+  await emitAsyncKey({ name: "return" });
+
+  expect(getAppText(tree)).toContain("Confirm Merge");
+
   await emitAsyncKey({ name: "return" });
 
   expect(mergePullRequestSpy).toHaveBeenCalledWith(
@@ -1961,6 +2023,10 @@ test("opens cleanup automatically after merge and removes the selected refs", as
   );
 
   emitKey({ name: "m" });
+  await emitAsyncKey({ name: "return" });
+
+  expect(getAppText(tree)).toContain("Confirm Merge");
+
   await emitAsyncKey({ name: "return" });
 
   expect(getAppText(tree)).toContain("Post-Merge Cleanup");

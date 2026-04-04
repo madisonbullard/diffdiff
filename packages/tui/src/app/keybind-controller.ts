@@ -5,7 +5,11 @@ const LEADER_TIMEOUT_MS = 2_000;
 export interface KeybindController {
   clearLeaderMode(status?: string): void;
   dispose(): void;
-  enterLeaderMode(options: { status: string; timeoutStatus: string }): void;
+  enterLeaderMode(options: {
+    preserveFocus?: boolean;
+    status: string;
+    timeoutStatus: string;
+  }): void;
   globalKeybindsSuspended(): boolean;
   isLeaderActive(): boolean;
   resumeGlobalKeybinds(): void;
@@ -70,11 +74,15 @@ export function createKeybindController({
     }
   }
 
-  function enterLeaderMode(options: { status: string; timeoutStatus: string }): void {
+  function enterLeaderMode(options: {
+    preserveFocus?: boolean;
+    status: string;
+    timeoutStatus: string;
+  }): void {
     clearLeaderTimeout();
 
     if (!leaderActive) {
-      leaderFocus = getFocusedRenderable() ?? null;
+      leaderFocus = options.preserveFocus ? null : (getFocusedRenderable() ?? null);
       leaderFocus?.blur();
     }
 

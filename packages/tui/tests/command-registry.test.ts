@@ -122,7 +122,7 @@ describe("command registry", () => {
     expect(findAppCommandByValue(commands, "review.next-unreviewed")).toMatchObject({
       disabledReason: "All files are already reviewed.",
       enabled: false,
-      keybind: "u",
+      keybind: "u,<leader>u",
     });
     expect(findAppCommandByValue(commands, "view.open-selected-file")).toMatchObject({
       disabledReason: "Select a file in the tree first.",

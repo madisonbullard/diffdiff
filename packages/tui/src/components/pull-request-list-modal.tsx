@@ -157,7 +157,7 @@ export function PullRequestListModal({
               <span>{" open  "}</span>
               <KeyCap label="/" theme={theme} />
               <span>{" search  "}</span>
-              <KeyCap label="j / k" theme={theme} />
+              <KeyCap label="j / k / home / end" theme={theme} />
               <span>{" move"}</span>
             </text>
           </>

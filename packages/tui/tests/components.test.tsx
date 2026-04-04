@@ -200,7 +200,7 @@ test("renders a commit view snapshot", () => {
   expect(tree.toJSON()).toMatchSnapshot();
   expect(collectText(tree.toJSON())).toContain("2 commits in the current comparison");
   expect(collectText(tree.toJSON())).toContain("abcdef0 (origin/main) Polish branch categories");
-  expect(collectText(tree.toJSON())).toContain("enter / h");
+  expect(collectText(tree.toJSON())).toContain("h / l / tab");
 });
 
 test("shows commit history in working tree commit view", () => {

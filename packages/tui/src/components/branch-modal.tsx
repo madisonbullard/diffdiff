@@ -61,6 +61,8 @@ export function BranchModal({
         <text fg={theme.textMuted} wrapMode="none">
           <KeyCap label="tab" theme={theme} />
           <span>{" switch view  "}</span>
+          <KeyCap label="h / l" theme={theme} />
+          <span>{" panes  "}</span>
           {activeView === "branch" ? (
             <>
               <KeyCap label="f" theme={theme} />
@@ -195,11 +197,9 @@ export function BranchModal({
             )}
             <text fg={theme.textMuted} wrapMode="none">
               <KeyCap label="enter" theme={theme} />
-              <span>{selectedBranchItem?.kind === "open-pr" ? " review PR  " : " select  "}</span>
+              <span>{selectedBranchItem?.kind === "open-pr" ? " review PR  " : " set head  "}</span>
               <KeyCap label="b" theme={theme} />
               <span>{" set base  "}</span>
-              <KeyCap label="h" theme={theme} />
-              <span>{" set head  "}</span>
               <span fg={theme.border}>{"\u2502  "}</span>
               <KeyCap label="w" theme={theme} />
               <span>{" working tree  "}</span>
@@ -218,17 +218,15 @@ export function BranchModal({
               <span>{selectedCommitItem.commit.author}</span>
             </text>
             <text fg={theme.textMuted} wrapMode="none">
-              <KeyCap label="enter / h" theme={theme} />
+              <KeyCap label="enter" theme={theme} />
               <span>{" set head  "}</span>
               <KeyCap label="b" theme={theme} />
               <span>{" set base  "}</span>
               <span fg={theme.border}>{"\u2502  "}</span>
               <KeyCap label="/" theme={theme} />
               <span>{" search  "}</span>
-              <KeyCap label="j / k" theme={theme} />
-              <span>{" move  "}</span>
-              <KeyCap label="tab" theme={theme} />
-              <span>{" branch view"}</span>
+              <KeyCap label="h / l / tab" theme={theme} />
+              <span>{" switch view"}</span>
             </text>
           </>
         ) : (

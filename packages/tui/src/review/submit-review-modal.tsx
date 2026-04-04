@@ -46,9 +46,13 @@ export function SubmitReviewModal({
           </box>
           <text fg={theme.textMuted} wrapMode="none">
             <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" j/k "}
+              {" up/down "}
             </span>
             <span>{" choose event  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" leader+j/k "}
+            </span>
+            <span>{" move while typing  "}</span>
             <span fg={theme.accent} bg={theme.surfaceMuted}>
               {" enter "}
             </span>

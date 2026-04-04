@@ -53,6 +53,15 @@ exports[`renders a branch modal snapshot 1`] = `
             bg="#152838"
             fg="#9cdcfe"
           >
+             h / l 
+          </span>
+          <span>
+             panes  
+          </span>
+          <span
+            bg="#152838"
+            fg="#9cdcfe"
+          >
              f 
           </span>
           <span>
@@ -575,7 +584,7 @@ exports[`renders a branch modal snapshot 1`] = `
            enter 
         </span>
         <span>
-           select  
+           set head  
         </span>
         <span
           bg="#152838"
@@ -585,15 +594,6 @@ exports[`renders a branch modal snapshot 1`] = `
         </span>
         <span>
            set base  
-        </span>
-        <span
-          bg="#152838"
-          fg="#9cdcfe"
-        >
-           h 
-        </span>
-        <span>
-           set head  
         </span>
         <span
           fg="#29475c"
@@ -681,6 +681,15 @@ exports[`renders a commit view snapshot 1`] = `
           </span>
           <span>
              switch view  
+          </span>
+          <span
+            bg="#152838"
+            fg="#9cdcfe"
+          >
+             h / l 
+          </span>
+          <span>
+             panes  
           </span>
           <span
             bg="#152838"
@@ -1000,7 +1009,7 @@ exports[`renders a commit view snapshot 1`] = `
           bg="#152838"
           fg="#9cdcfe"
         >
-           enter / h 
+           enter 
         </span>
         <span>
            set head  
@@ -1032,19 +1041,10 @@ exports[`renders a commit view snapshot 1`] = `
           bg="#152838"
           fg="#9cdcfe"
         >
-           j / k 
+           h / l / tab 
         </span>
         <span>
-           move  
-        </span>
-        <span
-          bg="#152838"
-          fg="#9cdcfe"
-        >
-           tab 
-        </span>
-        <span>
-           branch view
+           switch view
         </span>
       </text>
     </box>

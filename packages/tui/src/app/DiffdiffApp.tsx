@@ -167,6 +167,11 @@ interface DiffdiffAppProps {
 type MergeModalField = "method" | "title" | "body";
 type SessionActivityUpdate = Parameters<typeof updateDiffdiffSessionActivity>[0];
 
+interface TextInputLeaderOptions {
+  onLeaderDown?: () => void;
+  onLeaderUp?: () => void;
+}
+
 interface RenderSurfaceMetrics {
   collapsedFileCount: number;
   deferredPreviewCount: number;
@@ -766,6 +771,7 @@ export function DiffdiffApp({
   const [mergeModalField, setMergeModalField] = useState<MergeModalField>(
     initialGitHubPreferences?.defaultMergeMethod == null ? "method" : "title",
   );
+  const [mergeConfirmOpen, setMergeConfirmOpen] = useState(false);
   const [reviewComposerTarget, setReviewComposerTarget] = useState<ReviewComposerTarget | null>(
     null,
   );
@@ -1240,6 +1246,7 @@ export function DiffdiffApp({
   ).length;
   const keyLegendToggleLabel = showKeyLegend ? "hide keys" : "show keys";
   const showMergeModal = activeOverlay === "merge";
+  const showMergeConfirmModal = showMergeModal && mergeConfirmOpen;
   const commands = useMemo<AppCommand[]>(
     () =>
       buildAppCommands({
@@ -1663,6 +1670,7 @@ export function DiffdiffApp({
   useEffect(() => {
     if (session.github == null) {
       setCleanupCandidates([]);
+      setMergeConfirmOpen(false);
       setReviewComposerTarget(null);
       setReviewComposerBody("");
       setDialogStack((currentStack) => {
@@ -2285,13 +2293,14 @@ export function DiffdiffApp({
     }
 
     if (activePane === "tree") {
-      const treeCommand = findCommandByKey(key);
-      if (treeCommand != null) {
-        runCommand(treeCommand);
+      if (handleTreePaneKey(key)) {
         return;
       }
 
-      handleTreePaneKey(key);
+      const treeCommand = findCommandByKey(key);
+      if (treeCommand != null) {
+        runCommand(treeCommand);
+      }
       return;
     }
 
@@ -2301,17 +2310,17 @@ export function DiffdiffApp({
       return;
     }
 
-    if (key.name === "j" || key.name === "down" || key.name === "n") {
+    if (key.name === "j" || key.name === "down") {
       moveSelectedFile(1);
       return;
     }
 
-    if (key.name === "k" || key.name === "up" || key.name === "p") {
+    if (key.name === "k" || key.name === "up") {
       moveSelectedFile(-1);
       return;
     }
 
-    if (key.name === "g" && !key.shift) {
+    if (key.name === "home") {
       const firstFilePath = session.files[0]?.path;
       if (firstFilePath != null) {
         startInteraction("file_selection", {
@@ -2329,7 +2338,7 @@ export function DiffdiffApp({
       return;
     }
 
-    if (key.name === "g" && key.shift) {
+    if (key.name === "end") {
       const lastFileIndex = Math.max(session.files.length - 1, 0);
       const lastFilePath = session.files[lastFileIndex]?.path;
       if (lastFilePath != null) {
@@ -2348,8 +2357,13 @@ export function DiffdiffApp({
       return;
     }
 
-    if (key.name === "return") {
-      toggleCollapsed(selectedFileIndex);
+    if (key.name === "[") {
+      moveSelectedReviewAnchor(-1);
+      return;
+    }
+
+    if (key.name === "]") {
+      moveSelectedReviewAnchor(1);
       return;
     }
   };
@@ -2986,6 +3000,7 @@ export function DiffdiffApp({
         mergeBodyScrollRef={mergeBodyScrollRef}
         mergeCommitMessage={mergeCommitMessage}
         mergeCommitTitle={mergeCommitTitle}
+        mergeConfirmOpen={showMergeConfirmModal}
         mergeMethod={mergeMethod}
         mergeModalField={mergeModalField}
         openPrCount={openPrCount}
@@ -3111,6 +3126,22 @@ export function DiffdiffApp({
         ...currentIndexes,
         [selectedReviewThread.id]: nextIndex,
       };
+    });
+  }
+
+  function moveSelectedReviewAnchor(delta: number): void {
+    if (selectedReviewAnchors.length === 0) {
+      setStatusMessage("No commentable lines are available in the selected file.");
+      return;
+    }
+
+    setSelectedReviewAnchorIndex((currentIndex) => {
+      const nextIndex = clampIndex(currentIndex + delta, selectedReviewAnchors.length);
+      const nextAnchor = selectedReviewAnchors[nextIndex];
+      if (nextAnchor != null) {
+        setStatusMessage(`Focused ${nextAnchor.path}:${nextAnchor.line}.`);
+      }
+      return nextIndex;
     });
   }
 
@@ -3312,11 +3343,52 @@ export function DiffdiffApp({
     keybindController.clearLeaderMode(status);
   }
 
-  function enterLeaderMode(): void {
+  function enterLeaderMode(options: { preserveFocus?: boolean } = {}): void {
     keybindController.enterLeaderMode({
+      preserveFocus: options.preserveFocus,
       status: `Leader key active. Awaiting a ${leaderKeyLabel} command.`,
       timeoutStatus: "Leader key timed out.",
     });
+  }
+
+  function handleTextInputLeaderKey(
+    key: KeyboardInput,
+    options: TextInputLeaderOptions = {},
+  ): boolean {
+    if (matchCommandKeybind(LEADER_KEYBIND, key)) {
+      enterLeaderMode({ preserveFocus: true });
+      return true;
+    }
+
+    if (!keybindController.isLeaderActive()) {
+      return false;
+    }
+
+    if (key.name === "escape") {
+      clearLeaderMode("Canceled leader key.");
+      return true;
+    }
+
+    if (key.name === "j" && options.onLeaderDown != null) {
+      clearLeaderMode();
+      options.onLeaderDown();
+      return true;
+    }
+
+    if (key.name === "k" && options.onLeaderUp != null) {
+      clearLeaderMode();
+      options.onLeaderUp();
+      return true;
+    }
+
+    const command = findCommandByKey(key, true);
+    if (command != null) {
+      runCommand(command);
+      return true;
+    }
+
+    clearLeaderMode(`No command is bound to ${leaderKeyLabel} ${key.name}.`);
+    return true;
   }
 
   function openCommandModal(): void {
@@ -3477,31 +3549,31 @@ export function DiffdiffApp({
     }
   }
 
-  function handleTreePaneKey(key: KeyboardInput): void {
-    if (key.name === "j" || key.name === "down" || key.name === "n") {
+  function handleTreePaneKey(key: KeyboardInput): boolean {
+    if (key.name === "j" || key.name === "down") {
       moveTreeSelection(1);
-      return;
+      return true;
     }
 
-    if (key.name === "k" || key.name === "up" || key.name === "p") {
+    if (key.name === "k" || key.name === "up") {
       moveTreeSelection(-1);
-      return;
+      return true;
     }
 
-    if (key.name === "g" && !key.shift) {
+    if (key.name === "home") {
       const firstNode = visibleTreeNodes[0];
       if (firstNode != null) {
         selectTreeNode(firstNode);
       }
-      return;
+      return true;
     }
 
-    if (key.name === "g" && key.shift) {
+    if (key.name === "end") {
       const lastNode = visibleTreeNodes[Math.max(visibleTreeNodes.length - 1, 0)];
       if (lastNode != null) {
         selectTreeNode(lastNode);
       }
-      return;
+      return true;
     }
 
     const currentNode =
@@ -3509,13 +3581,13 @@ export function DiffdiffApp({
       visibleTreeNodes.find((node) => node.kind === "file") ??
       visibleTreeNodes[0];
     if (currentNode == null) {
-      return;
+      return false;
     }
 
-    if (key.name === "left") {
+    if (key.name === "left" || key.name === "h") {
       if (currentNode.kind === "directory" && !collapsedDirectories.has(currentNode.path)) {
         setFileTreeDirectoryCollapsed(currentNode.path, true);
-        return;
+        return true;
       }
 
       if (currentNode.parentPath != null) {
@@ -3524,25 +3596,25 @@ export function DiffdiffApp({
           selectTreeNode(parentNode);
         }
       }
-      return;
+      return true;
     }
 
-    if (key.name === "right") {
+    if (key.name === "right" || key.name === "l") {
       if (currentNode.kind === "directory") {
         if (collapsedDirectories.has(currentNode.path)) {
           setFileTreeDirectoryCollapsed(currentNode.path, false);
-          return;
+          return true;
         }
 
         const childNode = visibleTreeNodes.find((node) => node.parentPath === currentNode.path);
         if (childNode != null) {
           selectTreeNode(childNode);
         }
-        return;
+        return true;
       }
 
       selectTreeNode(currentNode, { openDiff: true });
-      return;
+      return true;
     }
 
     if (key.name === "return" || key.name === "space") {
@@ -3554,7 +3626,10 @@ export function DiffdiffApp({
       } else {
         selectTreeNode(currentNode, { openDiff: true });
       }
+      return true;
     }
+
+    return false;
   }
 
   function handleFileTreeMouseUp(node: FileTreeNode): void {
@@ -3630,7 +3705,31 @@ export function DiffdiffApp({
 
   function handlePullRequestListModalKey(key: KeyboardInput): void {
     if (pullRequestSearchActive) {
-      if (key.name === "escape" || key.name === "return") {
+      if (
+        handleTextInputLeaderKey(key, {
+          onLeaderDown: () => {
+            setPullRequestListIndex((currentIndex) =>
+              clampIndex(currentIndex + 1, filteredPullRequests.length),
+            );
+          },
+          onLeaderUp: () => {
+            setPullRequestListIndex((currentIndex) =>
+              clampIndex(currentIndex - 1, filteredPullRequests.length),
+            );
+          },
+        })
+      ) {
+        return;
+      }
+
+      if (key.name === "escape") {
+        setPullRequestSearchActive(false);
+        setPullRequestSearchQuery("");
+        setPullRequestListIndex(0);
+        return;
+      }
+
+      if (key.name === "return") {
         setPullRequestSearchActive(false);
         return;
       }
@@ -3641,14 +3740,14 @@ export function DiffdiffApp({
         return;
       }
 
-      if (key.name === "j" || key.name === "down") {
+      if (key.name === "down") {
         setPullRequestListIndex((currentIndex) =>
           clampIndex(currentIndex + 1, filteredPullRequests.length),
         );
         return;
       }
 
-      if (key.name === "k" || key.name === "up") {
+      if (key.name === "up") {
         setPullRequestListIndex((currentIndex) =>
           clampIndex(currentIndex - 1, filteredPullRequests.length),
         );
@@ -3692,12 +3791,12 @@ export function DiffdiffApp({
       return;
     }
 
-    if (key.name === "g" && !key.shift) {
+    if (key.name === "home") {
       setPullRequestListIndex(0);
       return;
     }
 
-    if (key.name === "g" && key.shift) {
+    if (key.name === "end") {
       setPullRequestListIndex(Math.max(filteredPullRequests.length - 1, 0));
       return;
     }
@@ -3731,8 +3830,27 @@ export function DiffdiffApp({
   function handleBranchModalKey(key: KeyboardInput): void {
     // When commit search is active, intercept typing keys first.
     if (commitSearchActive && activeListView === "commit") {
+      if (
+        handleTextInputLeaderKey(key, {
+          onLeaderDown: () => {
+            setCommitListIndex((currentIndex) =>
+              clampIndex(currentIndex + 1, filteredCommitItems.length),
+            );
+          },
+          onLeaderUp: () => {
+            setCommitListIndex((currentIndex) =>
+              clampIndex(currentIndex - 1, filteredCommitItems.length),
+            );
+          },
+        })
+      ) {
+        return;
+      }
+
       if (key.name === "escape") {
+        setCommitSearchQuery("");
         setCommitSearchActive(false);
+        setCommitListIndex(0);
         return;
       }
 
@@ -3772,7 +3890,7 @@ export function DiffdiffApp({
       return;
     }
 
-    if (key.name === "escape" || key.name === "q" || key.name === "l") {
+    if (key.name === "escape" || key.name === "q") {
       setDialogStack((currentStack) => closeAppDialog(currentStack, "branch", "dismiss"));
       setCommitSearchQuery("");
       setCommitSearchActive(false);
@@ -3780,8 +3898,20 @@ export function DiffdiffApp({
       return;
     }
 
-    if (key.name === "tab" || key.name === "left" || key.name === "right") {
+    if (key.name === "tab") {
       setActiveListView((currentView) => (currentView === "branch" ? "commit" : "branch"));
+      setCommitSearchActive(false);
+      return;
+    }
+
+    if (key.name === "left" || key.name === "h") {
+      setActiveListView("branch");
+      setCommitSearchActive(false);
+      return;
+    }
+
+    if (key.name === "right" || key.name === "l") {
+      setActiveListView("commit");
       setCommitSearchActive(false);
       return;
     }
@@ -3815,7 +3945,7 @@ export function DiffdiffApp({
       return;
     }
 
-    if (key.name === "g" && !key.shift) {
+    if (key.name === "home") {
       if (activeListView === "branch") {
         setBranchListIndex(0);
       } else {
@@ -3824,7 +3954,7 @@ export function DiffdiffApp({
       return;
     }
 
-    if (key.name === "g" && key.shift) {
+    if (key.name === "end") {
       if (activeListView === "branch") {
         setBranchListIndex(Math.max(branchItems.length - 1, 0));
       } else {
@@ -3847,14 +3977,7 @@ export function DiffdiffApp({
         } else if (selectedBranchItem?.kind === "working-tree") {
           void applyWorkingTreeSelection();
         } else if (selectedBranchItem?.branch != null) {
-          void applyBranchSelection("base", selectedBranchItem.branch);
-        }
-        return;
-      }
-
-      if (key.name === "h") {
-        if (selectedBranchItem?.branch != null) {
-          void applyBranchSelection("head", selectedBranchItem.branch);
+          void applyBranchSelection(key.name === "b" ? "base" : "head", selectedBranchItem.branch);
         }
         return;
       }
@@ -3872,7 +3995,7 @@ export function DiffdiffApp({
       return;
     }
 
-    if (key.name === "return" || key.name === "h") {
+    if (key.name === "return") {
       if (selectedCommitItem != null) {
         void applyCommitSelection(
           "head",
@@ -3911,13 +4034,35 @@ export function DiffdiffApp({
       return;
     }
 
-    if (key.name === "g" && !key.shift) {
+    if (key.name === "home") {
       setFilterIndex(0);
       return;
     }
 
-    if (key.name === "g" && key.shift) {
+    if (key.name === "end") {
       setFilterIndex(Math.max(LIST_FILTER_KEYS.length - 1, 0));
+      return;
+    }
+
+    if ((key.name === "return" || key.name === "space") && key.shift) {
+      setBranchListFilters({
+        workingTree: true,
+        localBranch: true,
+        openPr: true,
+        remoteBranch: true,
+      });
+      setStatusMessage("Enabled all list filters.");
+      return;
+    }
+
+    if ((key.name === "return" || key.name === "space") && key.meta) {
+      setBranchListFilters({
+        workingTree: false,
+        localBranch: false,
+        openPr: false,
+        remoteBranch: false,
+      });
+      setStatusMessage("Disabled all list filters.");
       return;
     }
 
@@ -3956,17 +4101,30 @@ export function DiffdiffApp({
   }
 
   function handleCommandModalKey(key: KeyboardInput): void {
-    if (key.name === "escape" || key.name === "q") {
+    if (
+      handleTextInputLeaderKey(key, {
+        onLeaderDown: () => {
+          setCommandIndex((currentIndex) => clampIndex(currentIndex + 1, filteredCommands.length));
+        },
+        onLeaderUp: () => {
+          setCommandIndex((currentIndex) => clampIndex(currentIndex - 1, filteredCommands.length));
+        },
+      })
+    ) {
+      return;
+    }
+
+    if (key.name === "escape") {
       closeCommandModal();
       return;
     }
 
-    if (key.name === "j" || key.name === "down" || (key.ctrl && key.name === "n")) {
+    if (key.name === "down") {
       setCommandIndex((currentIndex) => clampIndex(currentIndex + 1, filteredCommands.length));
       return;
     }
 
-    if (key.name === "k" || key.name === "up" || (key.ctrl && key.name === "p")) {
+    if (key.name === "up") {
       setCommandIndex((currentIndex) => clampIndex(currentIndex - 1, filteredCommands.length));
       return;
     }
@@ -4012,6 +4170,10 @@ export function DiffdiffApp({
   }
 
   function handleCommentComposerKey(key: KeyboardInput): void {
+    if (handleTextInputLeaderKey(key)) {
+      return;
+    }
+
     if (key.name === "escape") {
       setDialogStack((currentStack) => closeAppDialog(currentStack, "comment-composer", "dismiss"));
       setReviewComposerTarget(null);
@@ -4072,6 +4234,19 @@ export function DiffdiffApp({
   }
 
   function handleSubmitReviewModalKey(key: KeyboardInput): void {
+    if (
+      handleTextInputLeaderKey(key, {
+        onLeaderDown: () => {
+          setReviewSubmissionEventIndex((currentIndex) => clampIndex(currentIndex + 1, 3));
+        },
+        onLeaderUp: () => {
+          setReviewSubmissionEventIndex((currentIndex) => clampIndex(currentIndex - 1, 3));
+        },
+      })
+    ) {
+      return;
+    }
+
     if (key.name === "escape") {
       setDialogStack((currentStack) => closeAppDialog(currentStack, "submit-review", "dismiss"));
       setReviewSubmissionBody("");
@@ -4079,12 +4254,12 @@ export function DiffdiffApp({
       return;
     }
 
-    if (key.name === "j" || key.name === "down") {
+    if (key.name === "down") {
       setReviewSubmissionEventIndex((currentIndex) => clampIndex(currentIndex + 1, 3));
       return;
     }
 
-    if (key.name === "k" || key.name === "up") {
+    if (key.name === "up") {
       setReviewSubmissionEventIndex((currentIndex) => clampIndex(currentIndex - 1, 3));
       return;
     }
@@ -4109,8 +4284,46 @@ export function DiffdiffApp({
     }
   }
 
+  function openMergeConfirmModal(): void {
+    if (
+      session.github == null ||
+      mergeMethod == null ||
+      !session.github.pullRequest.merge.canMerge
+    ) {
+      return;
+    }
+
+    setMergeConfirmOpen(true);
+    setStatusMessage(`Press enter again to confirm the ${mergeMethod} merge.`);
+  }
+
+  function handleMergeConfirmModalKey(key: KeyboardInput): void {
+    if (key.name === "escape" || key.name === "q") {
+      setMergeConfirmOpen(false);
+      setStatusMessage("Returned to the merge form.");
+      return;
+    }
+
+    if (key.name === "return") {
+      void submitMergeFromModal();
+    }
+  }
+
   function handleMergeModalKey(key: KeyboardInput): void {
+    if (mergeConfirmOpen) {
+      handleMergeConfirmModalKey(key);
+      return;
+    }
+
+    if (
+      (mergeModalField === "title" || mergeModalField === "body") &&
+      handleTextInputLeaderKey(key)
+    ) {
+      return;
+    }
+
     if (key.name === "escape") {
+      setMergeConfirmOpen(false);
       setDialogStack((currentStack) => closeAppDialog(currentStack, "merge", "dismiss"));
       setStatusMessage("Closed merge modal.");
       return;
@@ -4142,7 +4355,7 @@ export function DiffdiffApp({
         setStatusMessage(`Default merge method set to ${nextMethod}.`);
       }
       if (key.name === "return") {
-        void submitMergeFromModal();
+        openMergeConfirmModal();
       }
       return;
     }
@@ -4154,7 +4367,7 @@ export function DiffdiffApp({
       }
 
       if (key.name === "return") {
-        void submitMergeFromModal();
+        openMergeConfirmModal();
         return;
       }
 
@@ -4175,7 +4388,7 @@ export function DiffdiffApp({
     }
 
     if (key.name === "return") {
-      void submitMergeFromModal();
+      openMergeConfirmModal();
       return;
     }
 
@@ -4355,6 +4568,7 @@ export function DiffdiffApp({
     setMergeCommitTitle(session.github.pullRequest.title);
     setMergeCommitMessage(session.github.pullRequest.body ?? "");
     setMergeMethod(gitHubPreferencesRef.current.defaultMergeMethod);
+    setMergeConfirmOpen(false);
     setMergeModalField(
       gitHubPreferencesRef.current.defaultMergeMethod == null ? "method" : "title",
     );
@@ -4481,6 +4695,7 @@ export function DiffdiffApp({
       return;
     }
 
+    setMergeConfirmOpen(false);
     setIsSubmittingReviewAction(true);
     setStatusMessage(`Merging pull request with ${mergeMethod}...`);
     const sessionLoadId = beginSessionLoad();

@@ -83,9 +83,9 @@ export function ListFilterModal({
         <text fg={theme.textMuted} wrapMode="none">
           <KeyCap label="space / enter" theme={theme} />
           <span>{" toggle  "}</span>
-          <KeyCap label="a" theme={theme} />
+          <KeyCap label="shift+space / shift+enter" theme={theme} />
           <span>{" all on  "}</span>
-          <KeyCap label="n" theme={theme} />
+          <KeyCap label="alt+space / alt+enter" theme={theme} />
           <span>{" all off"}</span>
         </text>
       </box>

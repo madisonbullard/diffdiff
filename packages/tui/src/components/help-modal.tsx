@@ -26,9 +26,9 @@ function buildHelpSections(
       title: "Navigation",
       rows: [
         { keybind: "j / k", text: "move in the active pane" },
-        { keybind: "g / G", text: "jump to the first or last item" },
+        { keybind: "home / end", text: "jump to the first or last item" },
         { keybind: "tab", text: "switch between the tree and diff panes" },
-        { keybind: "left / right", text: "collapse, expand, or open from the tree" },
+        { keybind: "h / l / left / right", text: "collapse, expand, or open from the tree" },
       ],
     },
     {
@@ -36,7 +36,7 @@ function buildHelpSections(
       title: "Review Navigation",
       rows: [
         { keybind: "i / o", text: "focus the previous or next inline thread" },
-        { keybind: "[ / ]", text: "focus the previous or next comment in the active thread" },
+        { keybind: "[ / ]", text: "move between diff lines or comments in the focused thread" },
       ],
     },
   ];

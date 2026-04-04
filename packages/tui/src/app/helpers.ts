@@ -7,6 +7,10 @@ export const TERMINAL_BLUR_EVENT = "blur";
 export const LEADER_KEYBIND = "ctrl+x";
 export const COMMAND_LIST_KEYBIND = "ctrl+p";
 
+export function withLeaderKeybind(keybind: string, ...additionalKeybinds: string[]): string {
+  return [keybind, `<leader>${keybind}`, ...additionalKeybinds].join(",");
+}
+
 export function haveSamePaths(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
   if (left.size !== right.size) {
     return false;

@@ -12,6 +12,7 @@ import { ListFilterModal } from "../components/list-filter-modal.tsx";
 import { PullRequestListModal } from "../components/pull-request-list-modal.tsx";
 import type { AppDialog } from "./dialog-stack.ts";
 import { PullRequestCommentsModal } from "../review/comments-modal.tsx";
+import { MergeConfirmModal } from "../review/merge-confirm-modal.tsx";
 import { MergePullRequestModal } from "../review/merge-pull-request-modal.tsx";
 import { PostMergeCleanupModal } from "../review/post-merge-cleanup-modal.tsx";
 import { ReviewComposerModal } from "../review/review-composer-modal.tsx";
@@ -50,6 +51,7 @@ interface DiffdiffAppDialogsProps {
   mergeBodyScrollRef: React.MutableRefObject<ScrollBoxRenderable | null>;
   mergeCommitMessage: string;
   mergeCommitTitle: string;
+  mergeConfirmOpen: boolean;
   mergeMethod: GitHubMergeMethod | undefined;
   mergeModalField: "method" | "title" | "body";
   openPrCount: number;
@@ -97,6 +99,7 @@ export function DiffdiffAppDialogs({
   mergeBodyScrollRef,
   mergeCommitMessage,
   mergeCommitTitle,
+  mergeConfirmOpen,
   mergeMethod,
   mergeModalField,
   openPrCount,
@@ -203,17 +206,20 @@ export function DiffdiffAppDialogs({
 
   if (activeDialog === "merge" && session.github != null) {
     return (
-      <MergePullRequestModal
-        body={mergeCommitMessage}
-        bodyScrollRef={mergeBodyScrollRef}
-        canSubmit={session.github.pullRequest.merge.canMerge && mergeMethod != null}
-        field={mergeModalField}
-        isSubmitting={isSubmittingReviewAction}
-        method={mergeMethod}
-        pullRequest={session.github.pullRequest}
-        theme={theme}
-        title={mergeCommitTitle}
-      />
+      <>
+        <MergePullRequestModal
+          body={mergeCommitMessage}
+          bodyScrollRef={mergeBodyScrollRef}
+          canSubmit={session.github.pullRequest.merge.canMerge && mergeMethod != null}
+          field={mergeModalField}
+          isSubmitting={isSubmittingReviewAction}
+          method={mergeMethod}
+          pullRequest={session.github.pullRequest}
+          theme={theme}
+          title={mergeCommitTitle}
+        />
+        {mergeConfirmOpen ? <MergeConfirmModal method={mergeMethod} theme={theme} /> : null}
+      </>
     );
   }
 

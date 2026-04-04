@@ -1,7 +1,7 @@
 import type { GitHubReviewSession } from "@diffdiff/core";
 import { matchCommandKeybind, type CommandDefinition, type KeyboardInput } from "../commands.ts";
 import type { AppPane, FileTreeNode } from "../types.ts";
-import { COMMAND_LIST_KEYBIND } from "./helpers.ts";
+import { COMMAND_LIST_KEYBIND, withLeaderKeybind } from "./helpers.ts";
 
 export type AppCommand = CommandDefinition & {
   keybindingContexts?: readonly AppPane[];
@@ -169,7 +169,7 @@ export function buildAppCommands({
     {
       category: "System",
       description: "Show keyboard shortcuts and usage help.",
-      keybind: "shift+/,<leader>h",
+      keybind: withLeaderKeybind("shift+/", "<leader>h"),
       keywords: ["?", "shortcuts"],
       suggested: true,
       title: "Open help",
@@ -179,7 +179,7 @@ export function buildAppCommands({
     {
       category: "System",
       description: "Show or hide the shortcut legend in the sidebar.",
-      keybind: "<leader>z,z",
+      keybind: withLeaderKeybind("z"),
       title: showKeyLegend ? "Hide key legend" : "Show key legend",
       value: "system.key-legend",
       run: () => toggleKeyLegend(),
@@ -187,7 +187,7 @@ export function buildAppCommands({
     {
       category: "System",
       description: "Close diffdiff.",
-      keybind: "<leader>q,q",
+      keybind: withLeaderKeybind("q"),
       title: "Quit",
       value: "system.quit",
       run: () => onExit(),
@@ -195,7 +195,7 @@ export function buildAppCommands({
     {
       category: "Comparison",
       description: "Reload refs, branches, and pull request metadata.",
-      keybind: "shift+f",
+      keybind: withLeaderKeybind("shift+f"),
       title: "Refresh comparison",
       value: "comparison.refresh",
       run: () => refreshComparison(),
@@ -203,7 +203,7 @@ export function buildAppCommands({
     {
       category: "View",
       description: "Move focus between the file tree and diff panes.",
-      keybind: "<leader>p,tab",
+      keybind: withLeaderKeybind("p", "tab"),
       suggested: true,
       title: "Switch active pane",
       value: "view.pane-toggle",
@@ -212,7 +212,7 @@ export function buildAppCommands({
     {
       category: "View",
       description: "Toggle between unified and side-by-side diffs.",
-      keybind: "<leader>v,v",
+      keybind: withLeaderKeybind("v"),
       suggested: true,
       title: "Toggle diff view",
       value: "view.diff-toggle",
@@ -238,7 +238,7 @@ export function buildAppCommands({
     {
       category: "Comparison",
       description: "Browse the working tree, branches, PRs, and commits.",
-      keybind: "<leader>l,l",
+      keybind: withLeaderKeybind("l"),
       suggested: true,
       title: "Open comparison list",
       value: "comparison.list",
@@ -249,7 +249,7 @@ export function buildAppCommands({
       description: "Mark the selected file as reviewed or not reviewed.",
       disabledReason: hasFiles ? undefined : "No files are available to review.",
       enabled: hasFiles,
-      keybind: "<leader>r,r",
+      keybind: withLeaderKeybind("r"),
       keybindingContexts: ["diff"],
       suggested: true,
       title: "Toggle reviewed",
@@ -265,7 +265,7 @@ export function buildAppCommands({
           : "No files are available to review."
         : undefined,
       enabled: canMoveToNextUnreviewed,
-      keybind: "u",
+      keybind: withLeaderKeybind("u"),
       suggested: canMoveToNextUnreviewed,
       title: "Jump to next unreviewed file",
       value: "review.next-unreviewed",
@@ -276,7 +276,7 @@ export function buildAppCommands({
       description: "Mark every file in the current comparison as reviewed.",
       disabledReason: hasFiles ? undefined : "No files are available to review.",
       enabled: hasFiles,
-      keybind: "shift+r",
+      keybind: withLeaderKeybind("shift+r"),
       title: "Mark all reviewed",
       value: "review.mark-all-reviewed",
       run: () => markAllReviewed(),
@@ -286,7 +286,7 @@ export function buildAppCommands({
       description: "Clear the reviewed state from every file in the current comparison.",
       disabledReason: canClearReviewed ? undefined : "No files are marked reviewed.",
       enabled: canClearReviewed,
-      keybind: "alt+r",
+      keybind: withLeaderKeybind("alt+r"),
       title: "Unmark all reviewed",
       value: "review.clear-reviewed",
       run: () => clearReviewed(),
@@ -296,7 +296,7 @@ export function buildAppCommands({
       description: "Collapse or expand the selected file diff.",
       disabledReason: hasFiles ? undefined : "No files are available to review.",
       enabled: hasFiles,
-      keybind: "<leader>c,c,return",
+      keybind: withLeaderKeybind("c"),
       keybindingContexts: ["diff"],
       title: "Toggle collapsed",
       value: "review.toggle-collapsed",
@@ -309,6 +309,7 @@ export function buildAppCommands({
         ? undefined
         : "GitHub auth is required. Run `diffdiff auth login --token-stdin` first.",
       enabled: isGitHubAuthenticated,
+      keybind: withLeaderKeybind("shift+p"),
       keywords: ["pr", "pull request", "review requested", "inbox"],
       suggested: isGitHubAuthenticated,
       title: "Open GitHub PR list",
@@ -320,7 +321,7 @@ export function buildAppCommands({
       description: "Show the pull request conversation timeline.",
       disabledReason: gitHubDisabledReason,
       enabled: sessionGitHub != null,
-      keybind: "<leader>t,t",
+      keybind: withLeaderKeybind("t"),
       suggested: sessionGitHub != null,
       title: "Open PR comments",
       value: "github.comments",
@@ -331,7 +332,7 @@ export function buildAppCommands({
       description: "Copy the current pull request URL to the clipboard.",
       disabledReason: gitHubDisabledReason,
       enabled: sessionGitHub != null,
-      keybind: "<leader>y,y",
+      keybind: withLeaderKeybind("y"),
       title: "Copy PR URL",
       value: "github.copy-url",
       run: () => {
@@ -395,7 +396,7 @@ export function buildAppCommands({
       description: "Create a review comment on the selected diff line.",
       disabledReason: gitHubWriteDisabledReason,
       enabled: sessionGitHub != null && isGitHubAuthenticated,
-      keybind: "<leader>a,a",
+      keybind: withLeaderKeybind("a"),
       suggested: sessionGitHub != null && isGitHubAuthenticated,
       title: "Add review comment",
       value: "github.add-comment",
@@ -444,7 +445,7 @@ export function buildAppCommands({
       description: "Submit the pending review to GitHub.",
       disabledReason: gitHubWriteDisabledReason,
       enabled: sessionGitHub != null && isGitHubAuthenticated,
-      keybind: "<leader>s,s",
+      keybind: withLeaderKeybind("shift+a"),
       suggested: sessionGitHub != null && isGitHubAuthenticated,
       title: "Submit review",
       value: "github.submit-review",
@@ -455,7 +456,7 @@ export function buildAppCommands({
       description: "Merge the pull request with the selected merge strategy.",
       disabledReason: gitHubWriteDisabledReason,
       enabled: sessionGitHub != null && isGitHubAuthenticated,
-      keybind: "<leader>m,m",
+      keybind: withLeaderKeybind("m"),
       suggested: sessionGitHub != null && isGitHubAuthenticated,
       title: "Merge pull request",
       value: "github.merge",

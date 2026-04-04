@@ -72,6 +72,28 @@ describe("keybind controller", () => {
     expect(onLeaderActiveChange).toHaveBeenNthCalledWith(1, true);
     expect(onLeaderActiveChange).toHaveBeenNthCalledWith(2, false);
   });
+
+  test("keeps the current focus when leader mode preserves text-input focus", () => {
+    vi.useFakeTimers();
+
+    const { blurSpy, focusSpy, renderable } = createRenderable();
+    const controller = createKeybindController({
+      getFocusedRenderable: () => renderable,
+      onLeaderActiveChange: vi.fn(),
+    });
+
+    controller.enterLeaderMode({
+      preserveFocus: true,
+      status: "Leader key active.",
+      timeoutStatus: "Leader key timed out.",
+    });
+
+    expect(blurSpy).not.toHaveBeenCalled();
+
+    controller.clearLeaderMode();
+
+    expect(focusSpy).not.toHaveBeenCalled();
+  });
 });
 
 function createRenderable(): {

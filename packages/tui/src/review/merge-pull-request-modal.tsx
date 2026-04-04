@@ -69,7 +69,7 @@ export function MergePullRequestModal({
             <span fg={theme.accent} bg={theme.surfaceMuted}>
               {" enter "}
             </span>
-            <span>{" merge  "}</span>
+            <span>{" confirm  "}</span>
             <span fg={theme.accent} bg={theme.surfaceMuted}>
               {" shift+enter "}
             </span>
@@ -168,7 +168,7 @@ export function MergePullRequestModal({
           {isSubmitting
             ? "Merging pull request and refreshing local refs..."
             : canSubmit
-              ? "Edit the merge title/body, then press enter to merge."
+              ? "Edit the merge title/body, then press enter to open the confirmation step."
               : mergeBlockedReason}
         </text>
       </box>

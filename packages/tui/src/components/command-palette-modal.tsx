@@ -153,10 +153,12 @@ export function CommandPaletteModal({
           gap={2}
         >
           <text fg={theme.textMuted} wrapMode="none">
-            <KeyCap label="j / k" theme={theme} />
+            <KeyCap label="up / down" theme={theme} />
             <span>{" move  "}</span>
             <KeyCap label="enter" theme={theme} />
             <span>{" run  "}</span>
+            <KeyCap label="leader+j/k" theme={theme} />
+            <span>{" move while typing  "}</span>
             <KeyCap label="backspace" theme={theme} />
             <span>{" edit query"}</span>
           </text>
