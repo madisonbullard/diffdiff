@@ -44,7 +44,12 @@ import {
   type AppDialogStackEntry,
 } from "./dialog-stack.ts";
 import { createKeybindController } from "./keybind-controller.ts";
-import { resolveFooterModeBadge } from "./footer-mode.ts";
+import {
+  getKeymapModeBadge,
+  keymapModeSuspendsGlobalKeybinds,
+  resolveActiveKeymapMode,
+  type KeymapMode,
+} from "./keymap-mode.ts";
 import { hydratePreparedReviewFiles } from "../diff/prepare-review-session.ts";
 import { DiffdiffAppDialogs } from "./layout.tsx";
 import {
@@ -231,12 +236,6 @@ const GITHUB_DIALOGS = new Set<AppDialog>([
   "cleanup",
   "comment-composer",
   "comments",
-  "merge",
-  "submit-review",
-]);
-const KEYBIND_SUSPENDING_DIALOGS = new Set<AppDialog>([
-  "command-palette",
-  "comment-composer",
   "merge",
   "submit-review",
 ]);
@@ -1233,6 +1232,7 @@ export function DiffdiffApp({
   const selectedReviewAnchor =
     selectedReviewAnchors[clampIndex(selectedReviewAnchorIndex, selectedReviewAnchors.length)];
   const hasSelectedReviewThread = selectedReviewThread != null && selectedReviewComment != null;
+  const hasThreadKeymap = selectedReviewThread != null;
   const hasNextUnreviewedFile = useMemo(
     () =>
       session.files.some(
@@ -1338,38 +1338,38 @@ export function DiffdiffApp({
     () => filterCommands(paletteCommands, commandQuery),
     [commandQuery, paletteCommands],
   );
-  const activeDialogSuspendsKeybinds =
-    activeOverlay != null && KEYBIND_SUSPENDING_DIALOGS.has(activeOverlay);
-  const branchCommitSearchSuspendsKeybinds =
-    activeOverlay === "branch" && activeListView === "commit" && commitSearchActive;
-  const pullRequestSearchSuspendsKeybinds =
-    activeOverlay === "pull-request-list" && pullRequestSearchActive;
-  const footerModeBadge = useMemo(
+  const activeKeymapMode = useMemo(
     () =>
-      resolveFooterModeBadge({
+      resolveActiveKeymapMode({
         activeDialog: activeOverlay,
         activeListView,
         activePane,
         commitSearchActive,
-        hasSelectedReviewThread: selectedReviewThread != null,
-        leaderActive,
+        hasSelectedReviewThread: hasThreadKeymap,
+        leaderActive: false,
         mergeConfirmOpen,
         mergeModalField,
         pullRequestSearchActive,
-        theme,
       }),
     [
       activeListView,
       activeOverlay,
       activePane,
       commitSearchActive,
-      leaderActive,
+      hasThreadKeymap,
       mergeConfirmOpen,
       mergeModalField,
       pullRequestSearchActive,
-      selectedReviewThread,
-      theme,
     ],
+  );
+  const displayKeymapMode: KeymapMode = leaderActive ? "leader" : activeKeymapMode;
+  const footerModeBadge = useMemo(
+    () => getKeymapModeBadge(displayKeymapMode, theme),
+    [displayKeymapMode, theme],
+  );
+  const activeKeymapModeSuspendsGlobalKeybinds = useMemo(
+    () => keymapModeSuspendsGlobalKeybinds(activeKeymapMode),
+    [activeKeymapMode],
   );
   const footerEvent = useMemo(() => {
     if (errorToastMessage != null) {
@@ -1564,28 +1564,12 @@ export function DiffdiffApp({
   }, [launchInPullRequestList]);
 
   useEffect(() => {
-    if (!activeDialogSuspendsKeybinds) {
+    if (!activeKeymapModeSuspendsGlobalKeybinds) {
       return;
     }
 
     return keybindController.suspendGlobalKeybinds();
-  }, [activeDialogSuspendsKeybinds, keybindController]);
-
-  useEffect(() => {
-    if (!branchCommitSearchSuspendsKeybinds) {
-      return;
-    }
-
-    return keybindController.suspendGlobalKeybinds();
-  }, [branchCommitSearchSuspendsKeybinds, keybindController]);
-
-  useEffect(() => {
-    if (!pullRequestSearchSuspendsKeybinds) {
-      return;
-    }
-
-    return keybindController.suspendGlobalKeybinds();
-  }, [keybindController, pullRequestSearchSuspendsKeybinds]);
+  }, [activeKeymapModeSuspendsGlobalKeybinds, keybindController]);
 
   useEffect(() => {
     return () => {
@@ -2220,6 +2204,17 @@ export function DiffdiffApp({
   keyboardHandlerRef.current = (key) => {
     const leaderModeActive = keybindController.isLeaderActive();
     const globalKeybindsSuspended = keybindController.globalKeybindsSuspended();
+    const keymapMode = resolveActiveKeymapMode({
+      activeDialog: activeOverlay,
+      activeListView,
+      activePane,
+      commitSearchActive,
+      hasSelectedReviewThread: hasThreadKeymap,
+      leaderActive: false,
+      mergeConfirmOpen,
+      mergeModalField,
+      pullRequestSearchActive,
+    });
 
     logDiffdiffVerbose("app", "key_pressed", {
       activeOverlay,
@@ -2227,13 +2222,13 @@ export function DiffdiffApp({
       errorToastVisible: errorToastMessage != null,
       globalKeybindsSuspended,
       key,
+      keymapMode,
       leaderActive: leaderModeActive,
       selectedFilePath: session.files[selectedFileIndex]?.path,
     });
 
     if (
-      activeOverlay == null &&
-      !leaderModeActive &&
+      isPaneKeymapMode(keymapMode) &&
       errorToastMessage != null &&
       (key.name === "escape" || key.name === "x")
     ) {
@@ -2241,166 +2236,12 @@ export function DiffdiffApp({
       return;
     }
 
-    if (activeOverlay === "command-palette") {
-      handleCommandModalKey(key);
+    if (leaderModeActive && isPaneKeymapMode(keymapMode)) {
+      handleLeaderModeKey(key);
       return;
     }
 
-    if (activeOverlay === "pull-request-list") {
-      handlePullRequestListModalKey(key);
-      return;
-    }
-
-    if (activeOverlay === "help") {
-      if (key.name === "escape" || key.name === "q" || key.sequence === "?") {
-        setDialogStack((currentStack) => closeAppDialog(currentStack, "help", "dismiss"));
-      }
-      return;
-    }
-
-    if (activeOverlay === "comment-composer") {
-      handleCommentComposerKey(key);
-      return;
-    }
-
-    if (activeOverlay === "comments") {
-      handlePullRequestCommentsModalKey(key);
-      return;
-    }
-
-    if (activeOverlay === "submit-review") {
-      handleSubmitReviewModalKey(key);
-      return;
-    }
-
-    if (activeOverlay === "merge") {
-      handleMergeModalKey(key);
-      return;
-    }
-
-    if (activeOverlay === "cleanup") {
-      handleCleanupModalKey(key);
-      return;
-    }
-
-    if (activeOverlay === "list-filter") {
-      handleListFilterModalKey(key);
-      return;
-    }
-
-    if (activeOverlay === "branch") {
-      handleBranchModalKey(key);
-      return;
-    }
-
-    if (globalKeybindsSuspended) {
-      return;
-    }
-
-    if (matchCommandKeybind(LEADER_KEYBIND, key)) {
-      enterLeaderMode();
-      return;
-    }
-
-    if (leaderModeActive) {
-      if (key.name === "escape") {
-        clearLeaderMode("Canceled leader key.");
-        return;
-      }
-
-      const command = findCommandByKey(key, true);
-      if (command != null) {
-        runCommand(command);
-      } else {
-        clearLeaderMode(`No command is bound to ${leaderKeyLabel} ${key.name}.`);
-      }
-      return;
-    }
-
-    if (matchCommandKeybind(COMMAND_LIST_KEYBIND, key)) {
-      runCommandByValue("system.command-palette");
-      return;
-    }
-
-    if (key.sequence === "?") {
-      runCommandByValue("system.help");
-      return;
-    }
-
-    if (activePane === "tree") {
-      if (handleTreePaneKey(key)) {
-        return;
-      }
-
-      const treeCommand = findCommandByKey(key);
-      if (treeCommand != null) {
-        runCommand(treeCommand);
-      }
-      return;
-    }
-
-    const command = findCommandByKey(key);
-    if (command != null) {
-      runCommand(command);
-      return;
-    }
-
-    if (key.name === "j" || key.name === "down") {
-      moveSelectedFile(1);
-      return;
-    }
-
-    if (key.name === "k" || key.name === "up") {
-      moveSelectedFile(-1);
-      return;
-    }
-
-    if (key.name === "home") {
-      const firstFilePath = session.files[0]?.path;
-      if (firstFilePath != null) {
-        startInteraction("file_selection", {
-          details: {
-            fromFilePath: selectedFilePath,
-            toFilePath: firstFilePath,
-            trigger: "first-file",
-          },
-          expectedSelectedFilePath: firstFilePath,
-        });
-      }
-
-      setSelectedFileIndex(0);
-      setStatusMessage("Jumped to the first file.");
-      return;
-    }
-
-    if (key.name === "end") {
-      const lastFileIndex = Math.max(session.files.length - 1, 0);
-      const lastFilePath = session.files[lastFileIndex]?.path;
-      if (lastFilePath != null) {
-        startInteraction("file_selection", {
-          details: {
-            fromFilePath: selectedFilePath,
-            toFilePath: lastFilePath,
-            trigger: "last-file",
-          },
-          expectedSelectedFilePath: lastFilePath,
-        });
-      }
-
-      setSelectedFileIndex(lastFileIndex);
-      setStatusMessage("Jumped to the last file.");
-      return;
-    }
-
-    if (key.name === "[") {
-      moveSelectedReviewAnchor(-1);
-      return;
-    }
-
-    if (key.name === "]") {
-      moveSelectedReviewAnchor(1);
-      return;
-    }
+    handleKeyForMode(keymapMode, key, globalKeybindsSuspended);
   };
 
   useKeyboard(
@@ -3425,6 +3266,178 @@ export function DiffdiffApp({
 
     clearLeaderMode(`No command is bound to ${leaderKeyLabel} ${key.name}.`);
     return true;
+  }
+
+  function isPaneKeymapMode(mode: KeymapMode): boolean {
+    return mode === "diff" || mode === "thread" || mode === "tree";
+  }
+
+  function handleHelpModalKey(key: KeyboardInput): void {
+    if (key.name === "escape" || key.name === "q" || key.sequence === "?") {
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "help", "dismiss"));
+    }
+  }
+
+  function handleLeaderModeKey(key: KeyboardInput): void {
+    if (key.name === "escape") {
+      clearLeaderMode("Canceled leader key.");
+      return;
+    }
+
+    const command = findCommandByKey(key, true);
+    if (command != null) {
+      runCommand(command);
+      return;
+    }
+
+    clearLeaderMode(`No command is bound to ${leaderKeyLabel} ${key.name}.`);
+  }
+
+  function handleMainPaneKey(key: KeyboardInput, globalKeybindsSuspended: boolean): void {
+    if (globalKeybindsSuspended) {
+      return;
+    }
+
+    if (matchCommandKeybind(LEADER_KEYBIND, key)) {
+      enterLeaderMode();
+      return;
+    }
+
+    if (matchCommandKeybind(COMMAND_LIST_KEYBIND, key)) {
+      runCommandByValue("system.command-palette");
+      return;
+    }
+
+    if (key.sequence === "?") {
+      runCommandByValue("system.help");
+      return;
+    }
+
+    if (activePane === "tree") {
+      if (handleTreePaneKey(key)) {
+        return;
+      }
+
+      const treeCommand = findCommandByKey(key);
+      if (treeCommand != null) {
+        runCommand(treeCommand);
+      }
+      return;
+    }
+
+    const command = findCommandByKey(key);
+    if (command != null) {
+      runCommand(command);
+      return;
+    }
+
+    if (key.name === "j" || key.name === "down") {
+      moveSelectedFile(1);
+      return;
+    }
+
+    if (key.name === "k" || key.name === "up") {
+      moveSelectedFile(-1);
+      return;
+    }
+
+    if (key.name === "home") {
+      const firstFilePath = session.files[0]?.path;
+      if (firstFilePath != null) {
+        startInteraction("file_selection", {
+          details: {
+            fromFilePath: selectedFilePath,
+            toFilePath: firstFilePath,
+            trigger: "first-file",
+          },
+          expectedSelectedFilePath: firstFilePath,
+        });
+      }
+
+      setSelectedFileIndex(0);
+      setStatusMessage("Jumped to the first file.");
+      return;
+    }
+
+    if (key.name === "end") {
+      const lastFileIndex = Math.max(session.files.length - 1, 0);
+      const lastFilePath = session.files[lastFileIndex]?.path;
+      if (lastFilePath != null) {
+        startInteraction("file_selection", {
+          details: {
+            fromFilePath: selectedFilePath,
+            toFilePath: lastFilePath,
+            trigger: "last-file",
+          },
+          expectedSelectedFilePath: lastFilePath,
+        });
+      }
+
+      setSelectedFileIndex(lastFileIndex);
+      setStatusMessage("Jumped to the last file.");
+      return;
+    }
+
+    if (key.name === "[") {
+      moveSelectedReviewAnchor(-1);
+      return;
+    }
+
+    if (key.name === "]") {
+      moveSelectedReviewAnchor(1);
+    }
+  }
+
+  function handleKeyForMode(
+    mode: KeymapMode,
+    key: KeyboardInput,
+    globalKeybindsSuspended: boolean,
+  ): void {
+    switch (mode) {
+      case "leader":
+        handleLeaderModeKey(key);
+        return;
+      case "commands":
+        handleCommandModalKey(key);
+        return;
+      case "pull-request-list":
+      case "pull-request-search":
+        handlePullRequestListModalKey(key);
+        return;
+      case "help":
+        handleHelpModalKey(key);
+        return;
+      case "comment":
+        handleCommentComposerKey(key);
+        return;
+      case "conversation":
+        handlePullRequestCommentsModalKey(key);
+        return;
+      case "submit-review":
+        handleSubmitReviewModalKey(key);
+        return;
+      case "merge-method":
+      case "merge-title":
+      case "merge-body":
+      case "confirm-merge":
+        handleMergeModalKey(key);
+        return;
+      case "cleanup":
+        handleCleanupModalKey(key);
+        return;
+      case "filters":
+        handleListFilterModalKey(key);
+        return;
+      case "compare-branches":
+      case "compare-commits":
+      case "commit-search":
+        handleBranchModalKey(key);
+        return;
+      case "tree":
+      case "thread":
+      case "diff":
+        handleMainPaneKey(key, globalKeybindsSuspended);
+    }
   }
 
   function openCommandModal(): void {

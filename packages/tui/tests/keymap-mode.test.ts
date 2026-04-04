@@ -1,11 +1,15 @@
 import { describe, expect, test } from "vite-plus/test";
+import {
+  getKeymapModeBadge,
+  keymapModeSuspendsGlobalKeybinds,
+  resolveActiveKeymapMode,
+} from "../src/app/keymap-mode.ts";
 import { DARK_THEME } from "../src/theme.ts";
-import { resolveFooterModeBadge } from "../src/app/footer-mode.ts";
 
-describe("resolveFooterModeBadge", () => {
+describe("keymap mode", () => {
   test("prioritizes leader mode over every other keymap", () => {
     expect(
-      resolveFooterModeBadge({
+      resolveActiveKeymapMode({
         activeDialog: "merge",
         activeListView: "branch",
         activePane: "diff",
@@ -15,28 +19,25 @@ describe("resolveFooterModeBadge", () => {
         mergeConfirmOpen: true,
         mergeModalField: "body",
         pullRequestSearchActive: false,
-        theme: DARK_THEME,
       }),
-    ).toMatchObject({
-      label: "LEADER",
-    });
+    ).toBe("leader");
   });
 
   test("returns thread mode when an inline review thread is focused", () => {
-    expect(
-      resolveFooterModeBadge({
-        activeDialog: null,
-        activeListView: "branch",
-        activePane: "diff",
-        commitSearchActive: false,
-        hasSelectedReviewThread: true,
-        leaderActive: false,
-        mergeConfirmOpen: false,
-        mergeModalField: "method",
-        pullRequestSearchActive: false,
-        theme: DARK_THEME,
-      }),
-    ).toMatchObject({
+    const mode = resolveActiveKeymapMode({
+      activeDialog: null,
+      activeListView: "branch",
+      activePane: "diff",
+      commitSearchActive: false,
+      hasSelectedReviewThread: true,
+      leaderActive: false,
+      mergeConfirmOpen: false,
+      mergeModalField: "method",
+      pullRequestSearchActive: false,
+    });
+
+    expect(mode).toBe("thread");
+    expect(getKeymapModeBadge(mode, DARK_THEME)).toMatchObject({
       bg: DARK_THEME.commentBg,
       fg: DARK_THEME.commentAnnotation,
       label: "THREAD",
@@ -45,7 +46,7 @@ describe("resolveFooterModeBadge", () => {
 
   test("distinguishes browse and search states in modal lists", () => {
     expect(
-      resolveFooterModeBadge({
+      resolveActiveKeymapMode({
         activeDialog: "pull-request-list",
         activeListView: "branch",
         activePane: "diff",
@@ -55,12 +56,11 @@ describe("resolveFooterModeBadge", () => {
         mergeConfirmOpen: false,
         mergeModalField: "method",
         pullRequestSearchActive: false,
-        theme: DARK_THEME,
-      }).label,
-    ).toBe("PR LIST");
+      }),
+    ).toBe("pull-request-list");
 
     expect(
-      resolveFooterModeBadge({
+      resolveActiveKeymapMode({
         activeDialog: "pull-request-list",
         activeListView: "branch",
         activePane: "diff",
@@ -70,14 +70,13 @@ describe("resolveFooterModeBadge", () => {
         mergeConfirmOpen: false,
         mergeModalField: "method",
         pullRequestSearchActive: true,
-        theme: DARK_THEME,
-      }).label,
-    ).toBe("PR SEARCH");
+      }),
+    ).toBe("pull-request-search");
   });
 
   test("distinguishes comparison branches, commits, and commit search", () => {
     expect(
-      resolveFooterModeBadge({
+      resolveActiveKeymapMode({
         activeDialog: "branch",
         activeListView: "branch",
         activePane: "diff",
@@ -87,12 +86,11 @@ describe("resolveFooterModeBadge", () => {
         mergeConfirmOpen: false,
         mergeModalField: "method",
         pullRequestSearchActive: false,
-        theme: DARK_THEME,
-      }).label,
-    ).toBe("BRANCHES");
+      }),
+    ).toBe("compare-branches");
 
     expect(
-      resolveFooterModeBadge({
+      resolveActiveKeymapMode({
         activeDialog: "branch",
         activeListView: "commit",
         activePane: "diff",
@@ -102,12 +100,11 @@ describe("resolveFooterModeBadge", () => {
         mergeConfirmOpen: false,
         mergeModalField: "method",
         pullRequestSearchActive: false,
-        theme: DARK_THEME,
-      }).label,
-    ).toBe("COMMITS");
+      }),
+    ).toBe("compare-commits");
 
     expect(
-      resolveFooterModeBadge({
+      resolveActiveKeymapMode({
         activeDialog: "branch",
         activeListView: "commit",
         activePane: "diff",
@@ -117,14 +114,13 @@ describe("resolveFooterModeBadge", () => {
         mergeConfirmOpen: false,
         mergeModalField: "method",
         pullRequestSearchActive: false,
-        theme: DARK_THEME,
-      }).label,
-    ).toBe("COMMIT SEARCH");
+      }),
+    ).toBe("commit-search");
   });
 
   test("distinguishes merge editing states from confirmation", () => {
     expect(
-      resolveFooterModeBadge({
+      resolveActiveKeymapMode({
         activeDialog: "merge",
         activeListView: "branch",
         activePane: "diff",
@@ -134,12 +130,11 @@ describe("resolveFooterModeBadge", () => {
         mergeConfirmOpen: false,
         mergeModalField: "title",
         pullRequestSearchActive: false,
-        theme: DARK_THEME,
-      }).label,
-    ).toBe("MERGE TITLE");
+      }),
+    ).toBe("merge-title");
 
     expect(
-      resolveFooterModeBadge({
+      resolveActiveKeymapMode({
         activeDialog: "merge",
         activeListView: "branch",
         activePane: "diff",
@@ -149,8 +144,16 @@ describe("resolveFooterModeBadge", () => {
         mergeConfirmOpen: true,
         mergeModalField: "title",
         pullRequestSearchActive: false,
-        theme: DARK_THEME,
-      }).label,
-    ).toBe("CONFIRM");
+      }),
+    ).toBe("confirm-merge");
+  });
+
+  test("marks text-input and confirmation modes as global-keybind suspending", () => {
+    expect(keymapModeSuspendsGlobalKeybinds("commands")).toBe(true);
+    expect(keymapModeSuspendsGlobalKeybinds("commit-search")).toBe(true);
+    expect(keymapModeSuspendsGlobalKeybinds("merge-body")).toBe(true);
+    expect(keymapModeSuspendsGlobalKeybinds("confirm-merge")).toBe(true);
+    expect(keymapModeSuspendsGlobalKeybinds("diff")).toBe(false);
+    expect(keymapModeSuspendsGlobalKeybinds("tree")).toBe(false);
   });
 });
