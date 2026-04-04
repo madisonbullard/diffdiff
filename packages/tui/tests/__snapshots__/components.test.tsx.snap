@@ -1085,30 +1085,6 @@ exports[`renders a compact sticky file card header snapshot 1`] = `
   width="100%"
 >
   <box
-    width="100%"
-  >
-    <text
-      fg="#8ea4b5"
-      wrapMode="none"
-    >
-      <span
-        bg="#9cdcfe"
-        fg="#0b1b26"
-      >
-         CHANGED 
-      </span>
-      <span>
-         
-      </span>
-      <span
-        bg="#0d2634"
-        fg="#3fb950"
-      >
-         REVIEWED 
-      </span>
-    </text>
-  </box>
-  <box
     flexDirection="column"
     width="100%"
   >
@@ -1336,6 +1312,24 @@ exports[`renders a sticky file header for the active viewport file 1`] = `
           wrapMode="none"
         >
           <span
+            bg="#9cdcfe"
+            fg="#0b1b26"
+          >
+             CHANGED 
+          </span>
+          <span>
+             
+          </span>
+          <span
+            bg="#0d2634"
+            fg="#3fb950"
+          >
+             REVIEWED 
+          </span>
+          <span>
+              
+          </span>
+          <span
             fg="#3fb950"
           >
             +3
@@ -1418,6 +1412,15 @@ exports[`renders an expanded file card snapshot 1`] = `
         wrapMode="none"
       >
         <span
+          bg="#9cdcfe"
+          fg="#0b1b26"
+        >
+           CHANGED 
+        </span>
+        <span>
+            
+        </span>
+        <span
           fg="#3fb950"
         >
           +3
@@ -1435,17 +1438,6 @@ exports[`renders an expanded file card snapshot 1`] = `
       </text>
     </box>
   </box>
-  <text
-    fg="#8ea4b5"
-    wrapMode="none"
-  >
-    <span
-      bg="#9cdcfe"
-      fg="#0b1b26"
-    >
-       CHANGED 
-    </span>
-  </text>
   <box
     flexDirection="column"
     width="100%"

@@ -308,10 +308,6 @@ test("hydrates deferred files into syntax-highlighted previews", async () => {
   expect(renderDiffWithHighlighter).toHaveBeenCalledTimes(1);
   expect(hydratedFiles[0]?.unifiedLines).toEqual([
     {
-      kind: "hunk",
-      segments: [{ text: "@@ -1 +1 @@\n" }],
-    },
-    {
       kind: "deletion",
       oldLineNumber: 1,
       segments: [
@@ -333,6 +329,82 @@ test("hydrates deferred files into syntax-highlighted previews", async () => {
     },
   ]);
   expect(hydratedFiles[0]?.sideBySideRows).not.toEqual([]);
+});
+
+test("keeps the first hunk header when the first change is not at the top of the file", async () => {
+  const actualPierreInternals = await vi.importActual<
+    typeof import("../src/diff/pierre-internals.ts")
+  >("../src/diff/pierre-internals.ts");
+  const actualPierreDiffs = await actualPierreInternals.loadPierreDiffs();
+  const getSharedHighlighter = vi.fn(async () => ({ mocked: true }));
+  const renderDiffWithHighlighter = vi.fn(
+    (diff: Parameters<PierreDiffsModule["renderDiffWithHighlighter"]>[0]) => ({
+      themeStyles: "--mock-token: #48bcca;",
+      code: {
+        deletionLines: diff.deletionLines.map((line) => ({ type: "text", value: line })),
+        additionLines: diff.additionLines.map((line) => ({ type: "text", value: line })),
+      },
+    }),
+  );
+
+  pierreInternalsState.loadPierreDiffsOverride = async () => ({
+    ...actualPierreDiffs,
+    getSharedHighlighter,
+    renderDiffWithHighlighter,
+  });
+
+  const prepared = await prepareReviewSession(
+    createReviewSession({
+      files: [
+        {
+          path: "src/app.ts",
+          status: "modified",
+          additions: 1,
+          deletions: 1,
+          isBinary: false,
+          patch: [
+            "diff --git a/src/app.ts b/src/app.ts",
+            "index 1111111..2222222 100644",
+            "--- a/src/app.ts",
+            "+++ b/src/app.ts",
+            "@@ -1,4 +1,4 @@",
+            " export function run() {",
+            "-  return oldValue();",
+            "+  return nextValue();",
+            " }",
+          ].join("\n"),
+        },
+      ],
+    }),
+    "pierre-dark",
+    undefined,
+    undefined,
+    {
+      deferSyntaxRendering: true,
+      initialDiffView: "unified",
+    },
+  );
+
+  const hydratedFiles = await hydratePreparedReviewFiles(
+    prepared.files,
+    "pierre-dark",
+    getUiTheme("pierre-dark"),
+    getSyntaxPalette("pierre-dark"),
+    {
+      initialDiffView: "both",
+    },
+  );
+
+  expect(getSharedHighlighter).toHaveBeenCalledTimes(1);
+  expect(renderDiffWithHighlighter).toHaveBeenCalledTimes(1);
+  expect(hydratedFiles[0]?.unifiedLines[0]).toEqual({
+    kind: "hunk",
+    segments: [{ text: "@@ -1,4 +1,4 @@\n" }],
+  });
+  expect(hydratedFiles[0]?.sideBySideRows[0]).toEqual({
+    kind: "hunk",
+    segments: [{ text: "@@ -1,4 +1,4 @@\n" }],
+  });
 });
 
 test("startup session loading defers syntax rendering until viewport hydration", async () => {

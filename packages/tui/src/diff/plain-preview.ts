@@ -9,6 +9,7 @@ import type {
   UnifiedDiffLine,
 } from "../types.ts";
 import type { PierreDiffsModule } from "./pierre-internals.ts";
+import { shouldHideLeadingHunkHeader } from "./hunk-header-visibility.ts";
 
 export function createDeferredPreparedFile(
   file: ChangedFile,
@@ -122,13 +123,15 @@ export function buildPlainUnifiedLines(diff: FileDiffMetadata): UnifiedDiffLine[
       });
     }
 
-    const hunkHeader = sanitizePlainText(
-      [hunk.hunkSpecs, hunk.hunkContext].filter(Boolean).join(" "),
-    );
-    lines.push({
-      kind: "hunk",
-      segments: [{ text: hunkHeader || "@@" }],
-    });
+    if (!shouldHideLeadingHunkHeader(hunkIndex, hunk)) {
+      const hunkHeader = sanitizePlainText(
+        [hunk.hunkSpecs, hunk.hunkContext].filter(Boolean).join(" "),
+      );
+      lines.push({
+        kind: "hunk",
+        segments: [{ text: hunkHeader || "@@" }],
+      });
+    }
 
     let oldLineNumber = hunk.deletionStart;
     let newLineNumber = hunk.additionStart;
@@ -191,13 +194,15 @@ export function buildPlainSideBySideRows(diff: FileDiffMetadata): SideBySideDiff
       });
     }
 
-    const hunkHeader = sanitizePlainText(
-      [hunk.hunkSpecs, hunk.hunkContext].filter(Boolean).join(" "),
-    );
-    rows.push({
-      kind: "hunk",
-      segments: [{ text: hunkHeader || "@@" }],
-    });
+    if (!shouldHideLeadingHunkHeader(hunkIndex, hunk)) {
+      const hunkHeader = sanitizePlainText(
+        [hunk.hunkSpecs, hunk.hunkContext].filter(Boolean).join(" "),
+      );
+      rows.push({
+        kind: "hunk",
+        segments: [{ text: hunkHeader || "@@" }],
+      });
+    }
 
     let oldLineNumber = hunk.deletionStart;
     let newLineNumber = hunk.additionStart;

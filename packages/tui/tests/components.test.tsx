@@ -66,8 +66,6 @@ test("renders a compact sticky file card header snapshot", () => {
   );
 
   expect(tree.toJSON()).toMatchSnapshot();
-  expect(collectText(tree.toJSON())).toContain("CHANGED");
-  expect(collectText(tree.toJSON())).toContain("REVIEWED");
   expect(collectText(tree.toJSON())).not.toContain("src/app.ts");
 });
 
@@ -88,7 +86,7 @@ test("removes top padding for the first compact file card", () => {
   );
 
   expect(tree.toJSON()).toMatchObject({ props: { paddingTop: 0 } });
-  expect(collectText(tree.toJSON())).toContain("CHANGED");
+  expect(collectText(tree.toJSON())).toContain("const count = 1");
 });
 
 test("renders a branch modal snapshot", () => {
@@ -370,6 +368,8 @@ test("renders a sticky file header for the active viewport file", () => {
 
   expect(tree.toJSON()).toMatchSnapshot();
   expect(collectText(tree.toJSON())).toContain("src/app.ts");
+  expect(collectText(tree.toJSON())).toContain("CHANGED");
+  expect(collectText(tree.toJSON())).toContain("REVIEWED");
   expect(collectText(tree.toJSON())).toContain("+3");
   expect(collectText(tree.toJSON())).toContain("-1");
 });
@@ -671,6 +671,43 @@ test("renders inline GitHub review threads under matching diff lines", () => {
   expect(text).toContain("Please rename this variable.");
   expect(text).toContain("src/app.ts:1");
   expect(text.match(/octocat/g)).toHaveLength(1);
+});
+
+test("shows an empty file placeholder for empty added files", () => {
+  const tree = render(
+    <FileCard
+      file={createPreparedFile({
+        additions: 0,
+        deletions: 0,
+        diff: {
+          additionLines: [],
+          deletionLines: [],
+          hunks: [],
+          lang: "text",
+        } as unknown as PreparedReviewFile["diff"],
+        patch: [
+          "diff --git a/src/empty.ts b/src/empty.ts",
+          "new file mode 100644",
+          "index 0000000..e69de29",
+        ].join("\n"),
+        path: "src/empty.ts",
+        sideBySideRows: [],
+        status: "added",
+        unifiedLines: [],
+      })}
+      diffView="unified"
+      isCollapsed={false}
+      isReviewed={false}
+      isSelected={false}
+      syntaxStyle={syntaxStyle}
+      terminalWidth={160}
+      theme={theme}
+    />,
+  );
+
+  expect(collectText(tree.toJSON())).toContain("empty file");
+  expect(collectText(tree.toJSON())).not.toContain("No textual diff available for this file.");
+  expect(tree.root.findAll((node) => String(node.type) === "diff")).toHaveLength(0);
 });
 
 function createPreparedFile(overrides: Partial<PreparedReviewFile> = {}): PreparedReviewFile {

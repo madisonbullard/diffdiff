@@ -68,9 +68,11 @@ const MemoizedFileCard = memo(function FileCard({
   const { statusColor, statusLabel } = getFileStatusChrome(file.status, theme);
   const { borderColor, fileBackground } = getFileCardChrome(isSelected, isReviewed, theme);
   const usesCompactHeader = headerVariant === "sticky-compact";
+  const showsEmptyFilePlaceholder = shouldRenderBody && isEmptyFileDiff(file);
 
   const usesFallbackRenderer =
     shouldRenderBody &&
+    !showsEmptyFilePlaceholder &&
     !file.isBinary &&
     file.renderError == null &&
     file.patch.trim() !== "" &&
@@ -116,28 +118,16 @@ const MemoizedFileCard = memo(function FileCard({
       paddingBottom={isCollapsed ? 0 : 1}
       gap={1}
     >
-      {usesCompactHeader ? (
-        <FileCardStatusRow
+      {usesCompactHeader ? null : (
+        <FileCardTitleRow
+          file={file}
+          isCollapsed={isCollapsed}
           isReviewed={isReviewed}
+          isSelected={isSelected}
           statusColor={statusColor}
           statusLabel={statusLabel}
           theme={theme}
         />
-      ) : (
-        <>
-          <FileCardTitleRow
-            file={file}
-            isCollapsed={isCollapsed}
-            isSelected={isSelected}
-            theme={theme}
-          />
-          <FileCardStatusTags
-            isReviewed={isReviewed}
-            statusColor={statusColor}
-            statusLabel={statusLabel}
-            theme={theme}
-          />
-        </>
       )}
 
       {file.previousPath != null ? (
@@ -200,6 +190,7 @@ const MemoizedFileCardBody = memo(function FileCardBody({
   theme: UiTheme;
 }) {
   const filetype = getDiffFiletype(file.path);
+  const showsEmptyFilePlaceholder = isEmptyFileDiff(file);
 
   return (
     <box width="100%" flexDirection="column">
@@ -215,12 +206,23 @@ const MemoizedFileCardBody = memo(function FileCardBody({
           <text fg={theme.warning}>{file.renderError}</text>
         </box>
       ) : null}
-      {!file.isBinary && file.renderError == null && file.patch.trim() === "" ? (
+      {showsEmptyFilePlaceholder ? (
+        <box paddingLeft={1}>
+          <text fg={theme.textMuted}>empty file</text>
+        </box>
+      ) : null}
+      {!showsEmptyFilePlaceholder &&
+      !file.isBinary &&
+      file.renderError == null &&
+      file.patch.trim() === "" ? (
         <box paddingLeft={1}>
           <text fg={theme.textMuted}>No textual diff available for this file.</text>
         </box>
       ) : null}
-      {!file.isBinary && file.renderError == null && file.patch.trim() !== "" ? (
+      {!showsEmptyFilePlaceholder &&
+      !file.isBinary &&
+      file.renderError == null &&
+      file.patch.trim() !== "" ? (
         <box width="100%">
           {diffView === "unified" && file.unifiedLines.length > 0 ? (
             <UnifiedDiffPreview
@@ -280,6 +282,26 @@ const MemoizedFileCardBody = memo(function FileCardBody({
   );
 });
 
+function isEmptyFileDiff(file: PreparedReviewFile): boolean {
+  if (file.isBinary || file.renderError != null) {
+    return false;
+  }
+
+  if (file.additions !== 0 || file.deletions !== 0) {
+    return false;
+  }
+
+  if (file.status !== "added" && file.status !== "deleted") {
+    return false;
+  }
+
+  if (file.diff != null) {
+    return file.diff.hunks.length === 0;
+  }
+
+  return !/^@@ /mu.test(file.patch);
+}
+
 export function StickyFileHeader(props: {
   file: PreparedReviewFile;
   isCollapsed: boolean;
@@ -304,6 +326,7 @@ const MemoizedStickyFileHeader = memo(function StickyFileHeader({
   theme: UiTheme;
 }) {
   const { borderColor, fileBackground } = getFileCardChrome(isSelected, isReviewed, theme);
+  const { statusColor, statusLabel } = getFileStatusChrome(file.status, theme);
 
   return (
     <box
@@ -323,7 +346,10 @@ const MemoizedStickyFileHeader = memo(function StickyFileHeader({
         <FileCardTitleRow
           file={file}
           isCollapsed={isCollapsed}
+          isReviewed={isReviewed}
           isSelected={isSelected}
+          statusColor={statusColor}
+          statusLabel={statusLabel}
           theme={theme}
         />
       </box>
@@ -334,12 +360,18 @@ const MemoizedStickyFileHeader = memo(function StickyFileHeader({
 function FileCardTitleRow({
   file,
   isCollapsed,
+  isReviewed,
   isSelected,
+  statusColor,
+  statusLabel,
   theme,
 }: {
   file: PreparedReviewFile;
   isCollapsed: boolean;
+  isReviewed: boolean;
   isSelected: boolean;
+  statusColor: ColorInput;
+  statusLabel: string;
   theme: UiTheme;
 }) {
   return (
@@ -348,25 +380,9 @@ function FileCardTitleRow({
         <span fg={theme.textMuted}>{`${getCollapseToggleGlyph(isCollapsed)} `}</span>
         <span fg={isSelected ? theme.accent : theme.text}>{file.path}</span>
       </text>
-      <FileCardChangeCounts file={file} theme={theme} />
-    </box>
-  );
-}
-
-function FileCardStatusRow({
-  isReviewed,
-  statusColor,
-  statusLabel,
-  theme,
-}: {
-  isReviewed: boolean;
-  statusColor: ColorInput;
-  statusLabel: string;
-  theme: UiTheme;
-}) {
-  return (
-    <box width="100%">
-      <FileCardStatusTags
+      <FileCardHeaderMeta
+        additions={file.additions}
+        deletions={file.deletions}
         isReviewed={isReviewed}
         statusColor={statusColor}
         statusLabel={statusLabel}
@@ -376,37 +392,35 @@ function FileCardStatusRow({
   );
 }
 
-function FileCardStatusTags({
+function FileCardHeaderMeta({
+  additions,
+  deletions,
   isReviewed,
   statusColor,
   statusLabel,
   theme,
 }: {
+  additions: number;
+  deletions: number;
   isReviewed: boolean;
   statusColor: ColorInput;
   statusLabel: string;
   theme: UiTheme;
 }) {
   return (
-    <text fg={theme.textMuted} wrapMode="none">
-      <Tag label={statusLabel.toUpperCase()} fg={theme.inverseText} bg={statusColor} />
-      {isReviewed ? (
-        <>
-          <span> </span>
-          <Tag label="REVIEWED" fg={theme.success} bg={theme.reviewedBg} />
-        </>
-      ) : null}
-    </text>
-  );
-}
-
-function FileCardChangeCounts({ file, theme }: { file: PreparedReviewFile; theme: UiTheme }) {
-  return (
     <box paddingRight={2}>
       <text fg={theme.textMuted} wrapMode="none">
-        <span fg={theme.success}>{`+${file.additions}`}</span>
+        <Tag label={statusLabel.toUpperCase()} fg={theme.inverseText} bg={statusColor} />
+        {isReviewed ? (
+          <>
+            <span> </span>
+            <Tag label="REVIEWED" fg={theme.success} bg={theme.reviewedBg} />
+          </>
+        ) : null}
+        <span> </span>
+        <span fg={theme.success}>{`+${additions}`}</span>
         <span fg={theme.border}>{" / "}</span>
-        <span fg={theme.danger}>{`-${file.deletions}`}</span>
+        <span fg={theme.danger}>{`-${deletions}`}</span>
       </text>
     </box>
   );
@@ -423,7 +437,7 @@ function getFileCardBodyViewport({
   previewViewport: FileCardPreviewViewport;
   removeTopPadding: boolean;
 }): FileCardPreviewViewport {
-  const headerBlockCount = headerVariant === "sticky-compact" ? 1 : 2;
+  const headerBlockCount = headerVariant === "sticky-compact" ? 0 : 1;
   const blocksBeforeBody = headerBlockCount + (file.previousPath != null ? 1 : 0);
   const bodyTopOffset = (removeTopPadding ? 0 : 1) + blocksBeforeBody + blocksBeforeBody;
 

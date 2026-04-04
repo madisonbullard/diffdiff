@@ -7,6 +7,7 @@ import type {
 } from "../types.ts";
 import type { SegmentColorResolver } from "../pierre-colors.ts";
 import type { HastNode, SegmentStyle } from "./pierre-internals.ts";
+import { shouldHideLeadingHunkHeader } from "./hunk-header-visibility.ts";
 
 export function buildUnifiedLines(
   diff: FileDiffMetadata,
@@ -29,8 +30,10 @@ export function buildUnifiedLines(
       });
     }
 
-    const hunkHeader = [hunk.hunkSpecs, hunk.hunkContext].filter(Boolean).join(" ");
-    lines.push({ kind: "hunk", segments: [{ text: hunkHeader || "@@" }] });
+    if (!shouldHideLeadingHunkHeader(hunkIndex, hunk)) {
+      const hunkHeader = [hunk.hunkSpecs, hunk.hunkContext].filter(Boolean).join(" ");
+      lines.push({ kind: "hunk", segments: [{ text: hunkHeader || "@@" }] });
+    }
 
     let oldLineNumber = hunk.deletionStart;
     let newLineNumber = hunk.additionStart;
@@ -110,8 +113,10 @@ export function buildSideBySideRows(
       });
     }
 
-    const hunkHeader = [hunk.hunkSpecs, hunk.hunkContext].filter(Boolean).join(" ");
-    rows.push({ kind: "hunk", segments: [{ text: hunkHeader || "@@" }] });
+    if (!shouldHideLeadingHunkHeader(hunkIndex, hunk)) {
+      const hunkHeader = [hunk.hunkSpecs, hunk.hunkContext].filter(Boolean).join(" ");
+      rows.push({ kind: "hunk", segments: [{ text: hunkHeader || "@@" }] });
+    }
 
     let oldLineNumber = hunk.deletionStart;
     let newLineNumber = hunk.additionStart;

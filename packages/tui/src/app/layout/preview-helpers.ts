@@ -1,5 +1,6 @@
 import type { FileCardPreviewViewport } from "../../components/file-card.tsx";
 import type { PreparedReviewSession } from "../../types.ts";
+import { shouldHideLeadingHunkHeader } from "../../diff/hunk-header-visibility.ts";
 import {
   FILE_PREVIEW_HYDRATION_DISTANCE,
   INITIAL_FILE_BODY_RENDER_COUNT,
@@ -50,7 +51,9 @@ function countEstimatedUnifiedLines(
       lineCount += 1;
     }
 
-    lineCount += 1;
+    if (!shouldHideLeadingHunkHeader(hunkIndex, hunk)) {
+      lineCount += 1;
+    }
     for (const content of hunk.hunkContent) {
       if (content.type === "context") {
         lineCount += content.lines;
@@ -75,7 +78,9 @@ function countEstimatedSideBySideRows(
       rowCount += 1;
     }
 
-    rowCount += 1;
+    if (!shouldHideLeadingHunkHeader(hunkIndex, hunk)) {
+      rowCount += 1;
+    }
     for (const content of hunk.hunkContent) {
       if (content.type === "context") {
         rowCount += content.lines;
