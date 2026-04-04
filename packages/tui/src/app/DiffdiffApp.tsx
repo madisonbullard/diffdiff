@@ -216,6 +216,7 @@ const EMPTY_REVIEW_THREADS: readonly import("@diffdiff/core").GitHubPullRequestR
 const EMPTY_CONVERSATION_ITEMS: readonly GitHubPullRequestConversationItem[] = [];
 const REVIEWED_NEXT_FILE_SCROLL_OFFSET = 3;
 const LIVE_REFRESH_INTERVAL_MS = 5_000;
+const INITIAL_FILE_BODY_RENDER_COUNT = 8;
 const GITHUB_DIALOGS = new Set<AppDialog>([
   "cleanup",
   "comment-composer",
@@ -227,6 +228,110 @@ const GITHUB_DIALOGS = new Set<AppDialog>([
 function getMonotonicNow(): number {
   const now = globalThis.performance?.now?.();
   return typeof now === "number" ? now : Date.now();
+}
+
+function getEstimatedFileCardBodyHeight(
+  file: PreparedReviewSession["files"][number],
+  diffView: "unified" | "split",
+): number {
+  if (file.isBinary || file.renderError != null || file.patch.trim() === "") {
+    return 1;
+  }
+
+  if (diffView === "split") {
+    if (file.sideBySideRows.length > 0) {
+      return file.sideBySideRows.length;
+    }
+
+    if (file.diff != null) {
+      return countEstimatedSideBySideRows(file.diff);
+    }
+  } else {
+    if (file.unifiedLines.length > 0) {
+      return file.unifiedLines.length;
+    }
+
+    if (file.diff != null) {
+      return countEstimatedUnifiedLines(file.diff);
+    }
+  }
+
+  return Math.max(file.additions + file.deletions + 3, 4);
+}
+
+function countEstimatedUnifiedLines(
+  diff: NonNullable<PreparedReviewSession["files"][number]["diff"]>,
+): number {
+  let lineCount = 0;
+
+  for (let hunkIndex = 0; hunkIndex < diff.hunks.length; hunkIndex += 1) {
+    const hunk = diff.hunks[hunkIndex];
+    if (hunk.collapsedBefore > 0 && hunkIndex > 0) {
+      lineCount += 1;
+    }
+
+    lineCount += 1;
+    for (const content of hunk.hunkContent) {
+      if (content.type === "context") {
+        lineCount += content.lines;
+        continue;
+      }
+
+      lineCount += content.deletions + content.additions;
+    }
+  }
+
+  return Math.max(lineCount, 1);
+}
+
+function countEstimatedSideBySideRows(
+  diff: NonNullable<PreparedReviewSession["files"][number]["diff"]>,
+): number {
+  let rowCount = 0;
+
+  for (let hunkIndex = 0; hunkIndex < diff.hunks.length; hunkIndex += 1) {
+    const hunk = diff.hunks[hunkIndex];
+    if (hunk.collapsedBefore > 0 && hunkIndex > 0) {
+      rowCount += 1;
+    }
+
+    rowCount += 1;
+    for (const content of hunk.hunkContent) {
+      if (content.type === "context") {
+        rowCount += content.lines;
+        continue;
+      }
+
+      rowCount += Math.max(content.deletions, content.additions);
+    }
+  }
+
+  return Math.max(rowCount, 1);
+}
+
+function shouldRenderFileCardBody({
+  estimatedBodyHeight,
+  index,
+  isSelected,
+  previewViewport,
+}: {
+  estimatedBodyHeight: number;
+  index: number;
+  isSelected: boolean;
+  previewViewport?: FileCardPreviewViewport;
+}): boolean {
+  if (isSelected) {
+    return true;
+  }
+
+  if (previewViewport == null) {
+    return index < INITIAL_FILE_BODY_RENDER_COUNT;
+  }
+
+  return (
+    previewViewport.bottom > -previewViewport.overscan &&
+    previewViewport.top < estimatedBodyHeight + previewViewport.overscan
+  );
 }
 
 function haveSamePaths(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
@@ -587,6 +692,7 @@ export function DiffdiffApp({
   );
   const pendingSessionActivityRef = useRef<SessionActivityUpdate | null>(null);
   const pendingInteractionTokenRef = useRef(0);
+  const initialRenderSurfaceLoggedRef = useRef(false);
   const reviewCacheTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionActivityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -709,8 +815,35 @@ export function DiffdiffApp({
       };
     });
   }, [diffViewportMetrics.height, diffViewportMetrics.scrollTop, session.files]);
+  const estimatedFileCardBodyHeights = useMemo(
+    () => session.files.map((file) => getEstimatedFileCardBodyHeight(file, diffView)),
+    [diffView, session.files],
+  );
+  const fileCardBodyVisibility = useMemo(
+    () =>
+      session.files.map((file, index) => {
+        if (collapsedPaths.has(file.path)) {
+          return false;
+        }
+
+        return shouldRenderFileCardBody({
+          estimatedBodyHeight: estimatedFileCardBodyHeights[index] ?? 1,
+          index,
+          isSelected: index === selectedFileIndex,
+          previewViewport: fileCardPreviewViewports[index],
+        });
+      }),
+    [
+      collapsedPaths,
+      estimatedFileCardBodyHeights,
+      fileCardPreviewViewports,
+      selectedFileIndex,
+      session.files,
+    ],
+  );
   const diffRenderSurface = useMemo<RenderSurfaceMetrics>(() => {
     let collapsedFileCount = 0;
+    let deferredPreviewCount = 0;
     let expandedFileCount = 0;
     let renderedPreviewFileCount = 0;
     let renderedUnifiedLineCount = 0;
@@ -724,6 +857,11 @@ export function DiffdiffApp({
       }
 
       expandedFileCount += 1;
+      if (!fileCardBodyVisibility[index]) {
+        deferredPreviewCount += 1;
+        continue;
+      }
+
       const reviewThreads = reviewThreadsByPath.get(file.path) ?? EMPTY_REVIEW_THREADS;
       const previewViewport = fileCardPreviewViewports[index];
       const hasSelectedReviewAnchor = index === selectedFileIndex && selectedFileHasReviewAnchors;
@@ -767,7 +905,7 @@ export function DiffdiffApp({
 
     return {
       collapsedFileCount,
-      deferredPreviewCount: 0,
+      deferredPreviewCount,
       expandedFileCount,
       fileCount: session.files.length,
       renderedPreviewFileCount,
@@ -779,6 +917,7 @@ export function DiffdiffApp({
     collapsedPaths,
     diffPaneWidth,
     diffView,
+    fileCardBodyVisibility,
     fileCardPreviewViewports,
     reviewThreadsByPath,
     selectedFileHasReviewAnchors,
@@ -2052,6 +2191,20 @@ export function DiffdiffApp({
   ]);
 
   useEffect(() => {
+    if (initialRenderSurfaceLoggedRef.current) {
+      return;
+    }
+
+    initialRenderSurfaceLoggedRef.current = true;
+    logDiffdiffInfo("app", "initial_render_surface_profile", {
+      diffView,
+      renderSurface: diffRenderSurface,
+      selectedFilePath,
+      visibleTreeNodeCount: visibleTreeNodes.length,
+    });
+  }, [diffRenderSurface, diffView, selectedFilePath, visibleTreeNodes.length]);
+
+  useEffect(() => {
     logDiffdiffInfo("app", "session_updated", {
       comparison: session.comparison,
       fileCount: session.files.length,
@@ -2463,9 +2616,11 @@ export function DiffdiffApp({
                     isReviewed={isReviewed}
                     isSelected={isSelected}
                     onToggleReviewThreadCollapsed={toggleReviewThreadCollapsed}
+                    placeholderHeight={estimatedFileCardBodyHeights[index]}
                     previewViewport={fileCardPreviewViewports[index]}
                     reviewThreads={reviewThreadsByPath.get(file.path) ?? EMPTY_REVIEW_THREADS}
                     rootRef={fileCardRootRefs[index]}
+                    shouldRenderBody={fileCardBodyVisibility[index]}
                     selectedReviewCommentId={isSelected ? selectedReviewComment?.id : undefined}
                     selectedReviewThreadId={isSelected ? selectedReviewThread?.id : undefined}
                     selectedReviewAnchor={

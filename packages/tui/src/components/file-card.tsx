@@ -26,11 +26,13 @@ export interface FileCardProps {
   isReviewed: boolean;
   isSelected: boolean;
   onToggleReviewThreadCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
+  placeholderHeight?: number;
   previewViewport?: FileCardPreviewViewport;
   selectedReviewCommentId?: number;
   reviewThreads?: readonly GitHubPullRequestReviewThread[];
   selectedReviewThreadId?: string;
   rootRef?: Ref<BoxRenderable>;
+  shouldRenderBody?: boolean;
   selectedReviewAnchor?: SelectedReviewAnchor;
   syntaxStyle: SyntaxStyle;
   terminalWidth: number;
@@ -51,11 +53,13 @@ const MemoizedFileCard = memo(function FileCard({
   isReviewed,
   isSelected,
   onToggleReviewThreadCollapsed,
+  placeholderHeight,
   previewViewport,
   selectedReviewCommentId,
   reviewThreads = [],
   selectedReviewThreadId,
   rootRef,
+  shouldRenderBody = true,
   selectedReviewAnchor,
   syntaxStyle,
   terminalWidth,
@@ -66,6 +70,7 @@ const MemoizedFileCard = memo(function FileCard({
   const usesCompactHeader = headerVariant === "sticky-compact";
 
   const usesFallbackRenderer =
+    shouldRenderBody &&
     !file.isBinary &&
     file.renderError == null &&
     file.patch.trim() !== "" &&
@@ -94,7 +99,7 @@ const MemoizedFileCard = memo(function FileCard({
     if (!usesFallbackRenderer) {
       loggedFallbackRef.current = false;
     }
-  }, [diffView, file.path, usesFallbackRenderer]);
+  }, [diffView, file.path, shouldRenderBody, usesFallbackRenderer]);
 
   return (
     <box
@@ -145,7 +150,7 @@ const MemoizedFileCard = memo(function FileCard({
         </text>
       ) : null}
 
-      {!isCollapsed ? (
+      {!isCollapsed && shouldRenderBody ? (
         <MemoizedFileCardBody
           collapsedCommentStates={collapsedCommentStates}
           diffView={diffView}
@@ -160,6 +165,8 @@ const MemoizedFileCard = memo(function FileCard({
           terminalWidth={terminalWidth}
           theme={theme}
         />
+      ) : !isCollapsed && (placeholderHeight ?? 0) > 0 ? (
+        <box width="100%" height={placeholderHeight} />
       ) : null}
     </box>
   );

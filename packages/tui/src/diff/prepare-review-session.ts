@@ -1,23 +1,15 @@
 import type { FileDiffMetadata } from "@pierre/diffs";
 import type { ReviewSession, StartupOptions } from "@diffdiff/core";
-import {
-  loadReviewSession,
-  logDiffdiffError,
-  logDiffdiffInfo,
-  logDiffdiffWarn,
-} from "@diffdiff/core";
+import { loadReviewSession, logDiffdiffError, logDiffdiffInfo } from "@diffdiff/core";
 import { createPierreSegmentColorResolver } from "../pierre-colors.ts";
 import { getSyntaxPalette, type SyntaxPalette } from "../syntax-palette.ts";
 import { getUiTheme, type UiTheme } from "../theme.ts";
 import type { PierreThemeName, PreparedReviewFile, PreparedReviewSession } from "../types.ts";
 import { sortFilesInTreeOrder } from "../view-model.ts";
 import {
-  buildPlainSideBySideRows,
-  buildPlainUnifiedLines,
   createDeferredPreparedFile,
   getLineNumberWidth,
   parseReviewFile,
-  requiresPlainDeferredPreview,
 } from "./plain-preview.ts";
 import { loadPierreDiffs, type PrepareReviewSessionOptions } from "./pierre-internals.ts";
 import { buildSideBySideRows, buildUnifiedLines, parseThemeVariables } from "./rich-preview.ts";
@@ -140,9 +132,9 @@ export async function prepareReviewSession(
 async function prepareDeferredReviewSession(
   session: ReviewSession,
   themeName: PierreThemeName,
-  theme: UiTheme,
-  syntaxPalette: SyntaxPalette,
-  initialDiffView: PrepareReviewSessionOptions["initialDiffView"] = "both",
+  _theme: UiTheme,
+  _syntaxPalette: SyntaxPalette,
+  _initialDiffView: PrepareReviewSessionOptions["initialDiffView"] = "both",
 ): Promise<PreparedReviewSession> {
   const startedAt = getMonotonicNow();
   const pierreDiffsLoadStartedAt = getMonotonicNow();
@@ -151,168 +143,27 @@ async function prepareDeferredReviewSession(
   const createDeferredFilesStartedAt = getMonotonicNow();
   const files = session.files.map((file) => createDeferredPreparedFile(file, pierreDiffs));
   const deferredFilesCreatedAt = getMonotonicNow();
-  const deferredPreviewFiles = files.filter(
-    (file): file is PreparedReviewFile & { diff: FileDiffMetadata } =>
-      file.diff != null && requiresPlainDeferredPreview(file.patch),
-  );
-  const deferredPreviewFilesCollectedAt = getMonotonicNow();
-
-  if (deferredPreviewFiles.length === 0) {
-    logDiffdiffInfo("perf", "prepare_review_session_completed", {
-      deferredSyntaxRendering: true,
-      durationMs: Math.round((deferredPreviewFilesCollectedAt - startedAt) * 10) / 10,
-      durationBreakdownMs: {
-        collectDeferredPreviewFiles:
-          Math.round((deferredPreviewFilesCollectedAt - deferredFilesCreatedAt) * 10) / 10,
-        createDeferredFiles:
-          Math.round((deferredFilesCreatedAt - createDeferredFilesStartedAt) * 10) / 10,
-        loadPierreDiffs: Math.round((pierreDiffsLoadedAt - pierreDiffsLoadStartedAt) * 10) / 10,
-      },
-      fileCount: files.length,
-      themeName,
-    });
-    return { ...session, files, themeName };
-  }
-
-  const collectLanguagesStartedAt = getMonotonicNow();
-  const languages = collectLanguages(deferredPreviewFiles, pierreDiffs);
-  const languagesCollectedAt = getMonotonicNow();
-
-  let highlighter: unknown;
-  const highlighterStartedAt = getMonotonicNow();
-
-  try {
-    highlighter = await pierreDiffs.getSharedHighlighter({
-      themes: [themeName],
-      langs: [...languages],
-    });
-  } catch (error) {
-    logDiffdiffWarn("render", "shared_highlighter_unavailable", {
-      deferredSyntaxRendering: true,
-      error,
-      languages: [...languages],
-      themeName,
-    });
-    const fallbackCompletedAt = getMonotonicNow();
-    logDiffdiffInfo("perf", "prepare_review_session_completed", {
-      deferredSyntaxRendering: true,
-      durationMs: Math.round((fallbackCompletedAt - startedAt) * 10) / 10,
-      durationBreakdownMs: {
-        collectDeferredPreviewFiles:
-          Math.round((deferredPreviewFilesCollectedAt - deferredFilesCreatedAt) * 10) / 10,
-        collectLanguages: Math.round((languagesCollectedAt - collectLanguagesStartedAt) * 10) / 10,
-        createDeferredFiles:
-          Math.round((deferredFilesCreatedAt - createDeferredFilesStartedAt) * 10) / 10,
-        loadPierreDiffs: Math.round((pierreDiffsLoadedAt - pierreDiffsLoadStartedAt) * 10) / 10,
-        sharedHighlighter: Math.round((fallbackCompletedAt - highlighterStartedAt) * 10) / 10,
-      },
-      fileCount: files.length,
-      plainFallback: true,
-      themeName,
-    });
-    return {
-      ...session,
-      files: files.map((file) => {
-        if (file.diff == null || !requiresPlainDeferredPreview(file.patch)) {
-          return file;
-        }
-
-        return {
-          ...file,
-          sideBySideRows:
-            initialDiffView === "split" || initialDiffView === "both"
-              ? buildPlainSideBySideRows(file.diff)
-              : [],
-          unifiedLines:
-            initialDiffView === "unified" || initialDiffView === "both"
-              ? buildPlainUnifiedLines(file.diff)
-              : [],
-        };
-      }),
-      themeName,
-    };
-  }
-  const highlighterReadyAt = getMonotonicNow();
-
-  const resolveSegmentColor = createPierreSegmentColorResolver(themeName, theme, syntaxPalette);
-  const renderDeferredFilesStartedAt = getMonotonicNow();
-  const renderedFiles = files.map((file) => {
-    if (file.diff == null || !requiresPlainDeferredPreview(file.patch)) {
-      return file;
-    }
-
-    try {
-      const rendered = pierreDiffs.renderDiffWithHighlighter(file.diff, highlighter, {
-        theme: themeName,
-        tokenizeMaxLineLength: 500,
-        lineDiffType: "word",
-      });
-      const themeVariables = parseThemeVariables(rendered.themeStyles);
-
-      return {
-        ...file,
-        sideBySideRows:
-          initialDiffView === "split" || initialDiffView === "both"
-            ? buildSideBySideRows(
-                file.diff,
-                rendered.code.deletionLines as never[],
-                rendered.code.additionLines as never[],
-                themeVariables,
-                resolveSegmentColor,
-              )
-            : [],
-        unifiedLines:
-          initialDiffView === "unified" || initialDiffView === "both"
-            ? buildUnifiedLines(
-                file.diff,
-                rendered.code.deletionLines as never[],
-                rendered.code.additionLines as never[],
-                themeVariables,
-                resolveSegmentColor,
-              )
-            : [],
-      };
-    } catch (error) {
-      logDiffdiffWarn("render", "deferred_diff_render_fallback", {
-        error,
-        path: file.path,
-        themeName,
-      });
-      return {
-        ...file,
-        sideBySideRows:
-          initialDiffView === "split" || initialDiffView === "both"
-            ? buildPlainSideBySideRows(file.diff)
-            : [],
-        unifiedLines:
-          initialDiffView === "unified" || initialDiffView === "both"
-            ? buildPlainUnifiedLines(file.diff)
-            : [],
-      };
-    }
-  });
-  const renderedFilesAt = getMonotonicNow();
+  const previewableFileCount = files.filter((file) => file.diff != null).length;
+  const deferredFilesReadyAt = getMonotonicNow();
 
   logDiffdiffInfo("perf", "prepare_review_session_completed", {
     deferredSyntaxRendering: true,
-    durationMs: Math.round((renderedFilesAt - startedAt) * 10) / 10,
+    durationMs: Math.round((deferredFilesReadyAt - startedAt) * 10) / 10,
     durationBreakdownMs: {
-      collectDeferredPreviewFiles:
-        Math.round((deferredPreviewFilesCollectedAt - deferredFilesCreatedAt) * 10) / 10,
-      collectLanguages: Math.round((languagesCollectedAt - collectLanguagesStartedAt) * 10) / 10,
       createDeferredFiles:
         Math.round((deferredFilesCreatedAt - createDeferredFilesStartedAt) * 10) / 10,
+      finalizeDeferredFiles: Math.round((deferredFilesReadyAt - deferredFilesCreatedAt) * 10) / 10,
       loadPierreDiffs: Math.round((pierreDiffsLoadedAt - pierreDiffsLoadStartedAt) * 10) / 10,
-      renderDeferredFiles: Math.round((renderedFilesAt - renderDeferredFilesStartedAt) * 10) / 10,
-      sharedHighlighter: Math.round((highlighterReadyAt - highlighterStartedAt) * 10) / 10,
     },
-    fileCount: renderedFiles.length,
+    deferredPreviewStrategy: "on-demand-file-card-render",
+    fileCount: files.length,
+    previewableFileCount,
     themeName,
   });
 
   return {
     ...session,
-    files: renderedFiles,
+    files,
     themeName,
   };
 }

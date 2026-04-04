@@ -79,7 +79,7 @@ test("can defer eager syntax rendering during startup", async () => {
   expect(prepared.files[0].sideBySideRows).toEqual([]);
 });
 
-test("deferred rendering handles blank added lines without surfacing parser errors", async () => {
+test("deferred rendering keeps blank-line diffs parsed without pre-rendering previews", async () => {
   const prepared = await prepareReviewSession(
     createReviewSession({
       files: [
@@ -114,16 +114,12 @@ test("deferred rendering handles blank added lines without surfacing parser erro
   );
 
   expect(prepared.files[0]?.renderError).toBeUndefined();
-  expect(prepared.files[0]?.unifiedLines.some((line) => line.kind === "addition")).toBe(true);
-  expect(prepared.files[0]?.sideBySideRows.some((row) => row.kind === "line")).toBe(true);
-  expect(
-    prepared.files[0]?.unifiedLines
-      .flatMap((line) => line.segments)
-      .some((segment) => segment.text.includes("\n")),
-  ).toBe(false);
+  expect(prepared.files[0]?.diff).toBeDefined();
+  expect(prepared.files[0]?.unifiedLines).toEqual([]);
+  expect(prepared.files[0]?.sideBySideRows).toEqual([]);
 });
 
-test("deferred rendering preserves syntax highlighting for blank context lines", async () => {
+test("deferred rendering preserves blank-context diffs for on-demand rendering", async () => {
   const prepared = await prepareReviewSession(
     createReviewSession({
       files: [
@@ -157,10 +153,11 @@ test("deferred rendering preserves syntax highlighting for blank context lines",
   );
 
   expect(prepared.files[0]?.renderError).toBeUndefined();
-  expect(prepared.files[0]?.unifiedLines.some((line) => line.kind === "context")).toBe(true);
+  expect(prepared.files[0]?.diff).toBeDefined();
+  expect(prepared.files[0]?.unifiedLines).toEqual([]);
 });
 
-test("deferred startup rendering still uses Pierre highlighting for blank-line diffs", async () => {
+test("deferred startup rendering skips eager highlighting work", async () => {
   const actualPierreInternals = await vi.importActual<
     typeof import("../src/diff/pierre-internals.ts")
   >("../src/diff/pierre-internals.ts");
@@ -216,8 +213,8 @@ test("deferred startup rendering still uses Pierre highlighting for blank-line d
   );
 
   expect(prepared.files[0]?.renderError).toBeUndefined();
-  expect(getSharedHighlighter).toHaveBeenCalledTimes(1);
-  expect(renderDiffWithHighlighter).toHaveBeenCalledTimes(1);
+  expect(getSharedHighlighter).not.toHaveBeenCalled();
+  expect(renderDiffWithHighlighter).not.toHaveBeenCalled();
 });
 
 function createDarkPalette(): TerminalColors {
