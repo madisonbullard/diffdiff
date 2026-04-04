@@ -174,6 +174,17 @@ test("opens the command palette with ctrl+p and runs the selected command", () =
   expect(getAppText(tree)).toContain("Working tree");
 });
 
+test("keeps command-palette typing isolated from global shortcuts", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ ctrl: true, name: "p" });
+  emitKey({ shift: true, name: "/", sequence: "?" });
+
+  expect(getAppText(tree)).toContain("Commands");
+  expect(getAppText(tree)).not.toContain("Keyboard Shortcuts");
+  expect(getAppText(tree)).toContain('Filtering commands for "?".');
+});
+
 test("closes nested list filters back to the list modal", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 

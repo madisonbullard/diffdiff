@@ -43,6 +43,7 @@ import {
   type AppDialog,
   type AppDialogStackEntry,
 } from "./dialog-stack.ts";
+import { createKeybindController } from "./keybind-controller.ts";
 import { hydratePreparedReviewFiles } from "../diff/prepare-review-session.ts";
 import { DiffdiffAppDialogs } from "./layout.tsx";
 import {
@@ -224,6 +225,12 @@ const GITHUB_DIALOGS = new Set<AppDialog>([
   "cleanup",
   "comment-composer",
   "comments",
+  "merge",
+  "submit-review",
+]);
+const KEYBIND_SUSPENDING_DIALOGS = new Set<AppDialog>([
+  "command-palette",
+  "comment-composer",
   "merge",
   "submit-review",
 ]);
@@ -691,7 +698,6 @@ export function DiffdiffApp({
     initialGitHubPreferences ?? getDefaultGitHubPreferences(),
   );
   const showKeyLegendRef = useRef(initialShowKeyLegend ?? true);
-  const leaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestSessionLoadIdRef = useRef(0);
   const [dialogStack, setDialogStack] = useState<readonly AppDialogStackEntry[]>(() =>
     launchInPullRequestList ? openAppDialog([], "pull-request-list", { clear: true }) : [],
@@ -782,6 +788,15 @@ export function DiffdiffApp({
   const terminalFocusedRef = useRef(true);
   const pullRequestListLoadIdRef = useRef(0);
   const renderer = useRenderer();
+  const keybindController = useMemo(
+    () =>
+      createKeybindController({
+        getFocusedRenderable: () => renderer.currentFocusedRenderable,
+        onLeaderActiveChange: setLeaderActive,
+        onStatusMessage: setStatusMessage,
+      }),
+    [renderer],
+  );
   const terminalDimensions = useTerminalDimensions();
   const sidebarWidth = useMemo(
     () => getFileTreeSidebarWidth(terminalDimensions.width),
@@ -1290,6 +1305,12 @@ export function DiffdiffApp({
     () => filterCommands(paletteCommands, commandQuery),
     [commandQuery, paletteCommands],
   );
+  const activeDialogSuspendsKeybinds =
+    activeOverlay != null && KEYBIND_SUSPENDING_DIALOGS.has(activeOverlay);
+  const branchCommitSearchSuspendsKeybinds =
+    activeOverlay === "branch" && activeListView === "commit" && commitSearchActive;
+  const pullRequestSearchSuspendsKeybinds =
+    activeOverlay === "pull-request-list" && pullRequestSearchActive;
   const footerEvent = useMemo(() => {
     if (errorToastMessage != null) {
       return {
@@ -1458,10 +1479,32 @@ export function DiffdiffApp({
   }, [launchInPullRequestList]);
 
   useEffect(() => {
+    if (!activeDialogSuspendsKeybinds) {
+      return;
+    }
+
+    return keybindController.suspendGlobalKeybinds();
+  }, [activeDialogSuspendsKeybinds, keybindController]);
+
+  useEffect(() => {
+    if (!branchCommitSearchSuspendsKeybinds) {
+      return;
+    }
+
+    return keybindController.suspendGlobalKeybinds();
+  }, [branchCommitSearchSuspendsKeybinds, keybindController]);
+
+  useEffect(() => {
+    if (!pullRequestSearchSuspendsKeybinds) {
+      return;
+    }
+
+    return keybindController.suspendGlobalKeybinds();
+  }, [keybindController, pullRequestSearchSuspendsKeybinds]);
+
+  useEffect(() => {
     return () => {
-      if (leaderTimeoutRef.current != null) {
-        clearTimeout(leaderTimeoutRef.current);
-      }
+      keybindController.dispose();
 
       if (reviewCacheTimeoutRef.current != null) {
         clearTimeout(reviewCacheTimeoutRef.current);
@@ -1474,7 +1517,7 @@ export function DiffdiffApp({
       void flushPendingReviewCache();
       void flushPendingSessionActivity();
     };
-  }, [flushPendingReviewCache, flushPendingSessionActivity]);
+  }, [flushPendingReviewCache, flushPendingSessionActivity, keybindController]);
 
   const showErrorToast = useCallback(
     (contextMessage?: string) => {
@@ -2089,18 +2132,22 @@ export function DiffdiffApp({
   }, [renderer, syncGitStateOnFocus]);
 
   keyboardHandlerRef.current = (key) => {
+    const leaderModeActive = keybindController.isLeaderActive();
+    const globalKeybindsSuspended = keybindController.globalKeybindsSuspended();
+
     logDiffdiffVerbose("app", "key_pressed", {
       activeOverlay,
       activeOverlayTrigger: activeDialogEntry?.triggeredBy ?? undefined,
       errorToastVisible: errorToastMessage != null,
+      globalKeybindsSuspended,
       key,
-      leaderActive,
+      leaderActive: leaderModeActive,
       selectedFilePath: session.files[selectedFileIndex]?.path,
     });
 
     if (
       activeOverlay == null &&
-      !leaderActive &&
+      !leaderModeActive &&
       errorToastMessage != null &&
       (key.name === "escape" || key.name === "x")
     ) {
@@ -2160,12 +2207,16 @@ export function DiffdiffApp({
       return;
     }
 
+    if (globalKeybindsSuspended) {
+      return;
+    }
+
     if (matchCommandKeybind(LEADER_KEYBIND, key)) {
       enterLeaderMode();
       return;
     }
 
-    if (leaderActive) {
+    if (leaderModeActive) {
       if (key.name === "escape") {
         clearLeaderMode("Canceled leader key.");
         return;
@@ -3215,30 +3266,14 @@ export function DiffdiffApp({
   }
 
   function clearLeaderMode(status?: string): void {
-    if (leaderTimeoutRef.current != null) {
-      clearTimeout(leaderTimeoutRef.current);
-      leaderTimeoutRef.current = null;
-    }
-
-    setLeaderActive(false);
-
-    if (status != null) {
-      setStatusMessage(status);
-    }
+    keybindController.clearLeaderMode(status);
   }
 
   function enterLeaderMode(): void {
-    if (leaderTimeoutRef.current != null) {
-      clearTimeout(leaderTimeoutRef.current);
-    }
-
-    setLeaderActive(true);
-    setStatusMessage(`Leader key active. Awaiting a ${leaderKeyLabel} command.`);
-    leaderTimeoutRef.current = setTimeout(() => {
-      leaderTimeoutRef.current = null;
-      setLeaderActive(false);
-      setStatusMessage("Leader key timed out.");
-    }, 2000);
+    keybindController.enterLeaderMode({
+      status: `Leader key active. Awaiting a ${leaderKeyLabel} command.`,
+      timeoutStatus: "Leader key timed out.",
+    });
   }
 
   function openCommandModal(): void {
