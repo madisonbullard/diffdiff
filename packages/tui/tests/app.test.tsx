@@ -1,6 +1,7 @@
 import {
   buildReviewedFileFingerprint,
   buildReviewSessionFingerprint,
+  type GitHubDashboardPullRequest,
   type GitHubUserPreferences,
 } from "@diffdiff/core";
 import type { ComponentProps, ReactNode } from "react";
@@ -162,13 +163,17 @@ test("closes nested list filters back to the list modal", () => {
   emitKey({ name: "f", sequence: "f" });
 
   expect(getAppText(tree)).toContain("Filters");
-  expect(getAppText(tree)).toContain("Working tree");
+  expect(getAppText(tree)).not.toContain(
+    "Browse working tree changes, branches, and open pull requests.",
+  );
 
   emitKey({ name: "escape" });
 
   expect(getAppText(tree)).not.toContain("Filters");
   expect(getAppText(tree)).toContain("List");
-  expect(getAppText(tree)).toContain("Working tree");
+  expect(getAppText(tree)).toContain(
+    "Browse working tree changes, branches, and open pull requests.",
+  );
 });
 
 test("runs leader key commands with ctrl+x", () => {
@@ -184,7 +189,7 @@ test("runs leader key commands with ctrl+x", () => {
   expect(getAppText(tree)).toContain("Working tree");
 });
 
-test("opens the PR-only list on launch when requested", () => {
+test("opens the GitHub PR list on launch when requested", async () => {
   const tree = render(
     <DiffdiffApp
       {...createAppProps({
@@ -197,10 +202,81 @@ test("opens the PR-only list on launch when requested", () => {
     />,
   );
 
-  expect(getAppText(tree)).toContain("Opened list modal.");
-  expect(getAppText(tree)).toContain("review PR");
-  expect(getAppText(tree)).toContain("Build TUI reviewer");
-  expect(getAppText(tree)).not.toContain("Working tree 1 file");
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(getAppText(tree)).toContain("GitHub PRs");
+  expect(getAppText(tree)).toContain("diffdiff/diffdiff");
+  expect(getAppText(tree)).toContain("Ship the PR dashboard");
+  expect(getAppText(tree)).toContain("madison");
+});
+
+test("fuzzy searches and opens a selected GitHub pull request", async () => {
+  const baseSession = createPreparedSession();
+  const nextSession = createPreparedSession({
+    comparison: {
+      base: "origin/main",
+      baseSha: "fedcba0",
+      head: "origin/feature/pr-dashboard",
+      headSha: "7654321",
+      mode: "range",
+      range: "origin/main...origin/feature/pr-dashboard",
+      usesMergeBase: true,
+    },
+    github: {
+      ...createGitHubReviewSession(),
+      pullRequest: {
+        ...createGitHubReviewSession()!.pullRequest,
+        number: 52,
+        title: "Ship the PR dashboard",
+      },
+    },
+    repository: {
+      ...baseSession.repository,
+      name: "widgets",
+      rootPath: "/tmp/widgets",
+    },
+  });
+  const loadSession = vi.fn(async () => nextSession);
+  const resolveLaunchTarget = vi.fn(async () => ({
+    base: "origin/main",
+    head: "origin/feature/pr-dashboard",
+    repoPath: "/tmp/widgets",
+  }));
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialOptions: {
+          base: "origin/main",
+          head: "feature/tui",
+          initialListMode: "pull-requests",
+        },
+        loadSession,
+        resolveLaunchTarget,
+      })}
+    />,
+  );
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  emitKey({ name: "/", sequence: "/" });
+  emitText("widg");
+  await emitAsyncKey({ name: "return" });
+  await emitAsyncKey({ name: "return" });
+
+  expect(resolveLaunchTarget).toHaveBeenCalledWith(
+    "acme/widgets/52",
+    expect.objectContaining({ initialListMode: "pull-requests" }),
+  );
+  expect(loadSession).toHaveBeenLastCalledWith({
+    base: "origin/main",
+    head: "origin/feature/pr-dashboard",
+    repoPath: "/tmp/widgets",
+  });
+  expect(getAppText(tree)).toContain("Opened acme/widgets#52.");
 });
 
 test("tab switches to the file tree and tree navigation opens files", () => {
@@ -1369,6 +1445,7 @@ test("closes a nested PR reply composer back to the conversation modal", () => {
   emitKey({ name: "r", sequence: "r" });
 
   expect(getAppText(tree)).toContain("Reply to PR Comment");
+  expect(getAppText(tree)).not.toContain("PR Conversation");
 
   emitKey({ name: "escape" });
 
@@ -1627,6 +1704,7 @@ test("opens cleanup automatically after merge and removes the selected refs", as
   await emitAsyncKey({ name: "return" });
 
   expect(getAppText(tree)).toContain("Post-Merge Cleanup");
+  expect(getAppText(tree)).not.toContain("Merge Pull Request");
   expect(getAppText(tree)).toContain("Local branch feature/tui");
   expect(getAppText(tree)).toContain("Remote-tracking ref origin/feature/tui");
 
@@ -1661,8 +1739,10 @@ function createAppPropsBase(): DiffdiffAppProps {
     addPullRequestComment: vi.fn(async () => undefined),
     addReviewThread: vi.fn(async () => undefined),
     initialGitHubPreferences: createGitHubPreferences(),
+    isGitHubAuthenticated: true,
     initialOptions,
     initialSession,
+    listGitHubPullRequests: vi.fn(async () => createDashboardPullRequests()),
     loadSession: vi.fn(async () => initialSession),
     logFilePath: "/Users/test/.diffdiff/logs/log-test.jsonl",
     mergePullRequest: async () => ({
@@ -1672,6 +1752,7 @@ function createAppPropsBase(): DiffdiffAppProps {
       sha: "mergedsha",
     }),
     onExit: vi.fn(),
+    resolveLaunchTarget: vi.fn(async (_target, options) => options),
     replyToReviewComment: vi.fn(async () => undefined),
     removeCleanupRefs: async () => undefined,
     submitPendingReview: vi.fn(async () => undefined),
@@ -1692,6 +1773,43 @@ function createGitHubPreferences(
     },
     defaultMergeMethod: overrides.defaultMergeMethod,
   };
+}
+
+function createDashboardPullRequests(): GitHubDashboardPullRequest[] {
+  return [
+    {
+      author: { login: "madison", url: "https://github.com/madison" },
+      isAuthor: true,
+      isDraft: false,
+      isReviewRequested: false,
+      number: 42,
+      repository: {
+        forge: "github",
+        host: "github.com",
+        owner: "diffdiff",
+        repo: "diffdiff",
+      },
+      title: "Ship the PR dashboard",
+      updatedAt: "2026-04-03T14:00:00Z",
+      url: "https://github.com/diffdiff/diffdiff/pull/42",
+    },
+    {
+      author: { login: "octocat", url: "https://github.com/octocat" },
+      isAuthor: false,
+      isDraft: true,
+      isReviewRequested: true,
+      number: 52,
+      repository: {
+        forge: "github",
+        host: "github.com",
+        owner: "acme",
+        repo: "widgets",
+      },
+      title: "Widget review request for dashboard follow-up",
+      updatedAt: "2026-04-03T15:00:00Z",
+      url: "https://github.com/acme/widgets/pull/52",
+    },
+  ];
 }
 
 function createPreparedSession(
@@ -1798,7 +1916,7 @@ function createPreparedSession(
 
 function createGitHubReviewSession(
   overrides: Partial<NonNullable<PreparedReviewSession["github"]>> = {},
-): PreparedReviewSession["github"] {
+): NonNullable<PreparedReviewSession["github"]> {
   return {
     auth: {
       host: "github.com",

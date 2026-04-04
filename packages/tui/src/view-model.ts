@@ -4,6 +4,7 @@ import type {
   ChangedFile,
   ComparisonCommit,
   ComparisonInfo,
+  GitHubDashboardPullRequest,
 } from "@diffdiff/core";
 import type {
   BranchListFilters,
@@ -12,6 +13,7 @@ import type {
   DiffView,
   DiffViewPreference,
   FileTreeNode,
+  PullRequestListItem,
   TextSegment,
 } from "./types.ts";
 
@@ -110,6 +112,15 @@ export function buildCommitListItems(commits: readonly ComparisonCommit[]): Comm
   }));
 }
 
+export function buildPullRequestListItems(
+  pullRequests: readonly GitHubDashboardPullRequest[],
+): PullRequestListItem[] {
+  return pullRequests.map((pullRequest) => ({
+    key: `${pullRequest.repository.host}/${pullRequest.repository.owner}/${pullRequest.repository.repo}#${pullRequest.number}`,
+    pullRequest,
+  }));
+}
+
 export function filterCommitListItems(
   items: readonly CommitListItem[],
   query: string,
@@ -119,6 +130,23 @@ export function filterCommitListItems(
   }
 
   return items.filter((item) => fuzzyMatch(query, item.commit.subject));
+}
+
+export function filterPullRequestListItems(
+  items: readonly PullRequestListItem[],
+  query: string,
+): PullRequestListItem[] {
+  if (query === "") {
+    return [...items];
+  }
+
+  return items.filter((item) => {
+    const { pullRequest } = item;
+    return fuzzyMatch(
+      query,
+      `${pullRequest.repository.owner}/${pullRequest.repository.repo} ${pullRequest.title} ${pullRequest.author.login}`,
+    );
+  });
 }
 
 /**

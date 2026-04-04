@@ -8,6 +8,8 @@ import { BranchModal } from "../components/branch-modal.tsx";
 import { CommandPaletteModal } from "../components/command-palette-modal.tsx";
 import { HelpModal } from "../components/help-modal.tsx";
 import { ListFilterModal } from "../components/list-filter-modal.tsx";
+import { PullRequestListModal } from "../components/pull-request-list-modal.tsx";
+import type { AppDialog } from "./dialog-stack.ts";
 import { PullRequestCommentsModal } from "../review/comments-modal.tsx";
 import { MergePullRequestModal } from "../review/merge-pull-request-modal.tsx";
 import { PostMergeCleanupModal } from "../review/post-merge-cleanup-modal.tsx";
@@ -20,10 +22,12 @@ import type {
   CommitListItem,
   ListModalView,
   PreparedReviewSession,
+  PullRequestListItem,
 } from "../types.ts";
 import type { UiTheme } from "../theme.ts";
 
 interface DiffdiffAppDialogsProps {
+  activeDialog: AppDialog | null;
   activeListView: ListModalView;
   branchItems: readonly BranchListItem[];
   branchListFilters: BranchListFilters;
@@ -38,6 +42,7 @@ interface DiffdiffAppDialogsProps {
   commitSearchActive: boolean;
   commitSearchQuery: string;
   filteredCommands: readonly CommandDefinition[];
+  helpCommands: readonly CommandDefinition[];
   filteredCommitItems: readonly CommitListItem[];
   filterIndex: number;
   isSubmittingReviewAction: boolean;
@@ -48,6 +53,12 @@ interface DiffdiffAppDialogsProps {
   mergeMethod: GitHubMergeMethod | undefined;
   mergeModalField: "method" | "title" | "body";
   openPrCount: number;
+  pullRequestListIndex: number;
+  pullRequestSearchActive: boolean;
+  pullRequestSearchQuery: string;
+  reviewRequestedPrCount: number;
+  filteredPullRequestItems: readonly PullRequestListItem[];
+  isPullRequestListLoading: boolean;
   remoteBranchCount: number;
   reviewComposerBody: string;
   reviewComposerContext: {
@@ -59,19 +70,11 @@ interface DiffdiffAppDialogsProps {
   reviewSubmissionEventIndex: number;
   selectedPullRequestConversationItemId?: string;
   session: PreparedReviewSession;
-  showBranchModal: boolean;
-  showCleanupModal: boolean;
-  showCommandModal: boolean;
-  showCommentComposer: boolean;
-  showCommentsModal: boolean;
-  showHelp: boolean;
-  showListFilterModal: boolean;
-  showMergeModal: boolean;
-  showSubmitReviewModal: boolean;
   theme: UiTheme;
 }
 
 export function DiffdiffAppDialogs({
+  activeDialog,
   activeListView,
   branchItems,
   branchListFilters,
@@ -86,6 +89,7 @@ export function DiffdiffAppDialogs({
   commitSearchActive,
   commitSearchQuery,
   filteredCommands,
+  helpCommands,
   filteredCommitItems,
   filterIndex,
   isSubmittingReviewAction,
@@ -96,6 +100,12 @@ export function DiffdiffAppDialogs({
   mergeMethod,
   mergeModalField,
   openPrCount,
+  pullRequestListIndex,
+  pullRequestSearchActive,
+  pullRequestSearchQuery,
+  reviewRequestedPrCount,
+  filteredPullRequestItems,
+  isPullRequestListLoading,
   remoteBranchCount,
   reviewComposerBody,
   reviewComposerContext,
@@ -103,105 +113,126 @@ export function DiffdiffAppDialogs({
   reviewSubmissionEventIndex,
   selectedPullRequestConversationItemId,
   session,
-  showBranchModal,
-  showCleanupModal,
-  showCommandModal,
-  showCommentComposer,
-  showCommentsModal,
-  showHelp,
-  showListFilterModal,
-  showMergeModal,
-  showSubmitReviewModal,
   theme,
 }: DiffdiffAppDialogsProps) {
-  return (
-    <>
-      {showBranchModal ? (
-        <BranchModal
-          activeView={activeListView}
-          base={session.comparison.base}
-          branchItems={branchItems}
-          branchIndex={branchListIndex}
-          commitItems={filteredCommitItems}
-          commitIndex={commitListIndex}
-          commitSearchQuery={commitSearchQuery}
-          commitSearchActive={commitSearchActive}
-          comparisonMode={session.comparison.mode}
-          filters={branchListFilters}
-          head={session.comparison.head}
-          localBranchCount={session.branches.local.length}
-          openPrCount={openPrCount}
-          remoteBranchCount={remoteBranchCount}
-          theme={theme}
-        />
-      ) : null}
+  if (activeDialog === "branch") {
+    return (
+      <BranchModal
+        activeView={activeListView}
+        base={session.comparison.base}
+        branchItems={branchItems}
+        branchIndex={branchListIndex}
+        commitItems={filteredCommitItems}
+        commitIndex={commitListIndex}
+        commitSearchQuery={commitSearchQuery}
+        commitSearchActive={commitSearchActive}
+        comparisonMode={session.comparison.mode}
+        filters={branchListFilters}
+        head={session.comparison.head}
+        localBranchCount={session.branches.local.length}
+        openPrCount={openPrCount}
+        remoteBranchCount={remoteBranchCount}
+        theme={theme}
+      />
+    );
+  }
 
-      {showCommandModal ? (
-        <CommandPaletteModal
-          commands={filteredCommands}
-          leaderKeybind={leaderKeybind}
-          query={commandQuery}
-          selectedIndex={commandIndex}
-          theme={theme}
-        />
-      ) : null}
+  if (activeDialog === "command-palette") {
+    return (
+      <CommandPaletteModal
+        commands={filteredCommands}
+        leaderKeybind={leaderKeybind}
+        query={commandQuery}
+        selectedIndex={commandIndex}
+        theme={theme}
+      />
+    );
+  }
 
-      {showBranchModal && showListFilterModal ? (
-        <ListFilterModal filters={branchListFilters} selectedIndex={filterIndex} theme={theme} />
-      ) : null}
+  if (activeDialog === "pull-request-list") {
+    return (
+      <PullRequestListModal
+        isLoading={isPullRequestListLoading}
+        pullRequests={filteredPullRequestItems}
+        reviewRequestedCount={reviewRequestedPrCount}
+        searchActive={pullRequestSearchActive}
+        searchQuery={pullRequestSearchQuery}
+        selectedIndex={pullRequestListIndex}
+        theme={theme}
+      />
+    );
+  }
 
-      {showCommentComposer && reviewComposerContext != null ? (
-        <ReviewComposerModal
-          body={reviewComposerBody}
-          context={reviewComposerContext}
-          isSubmitting={isSubmittingReviewAction}
-          theme={theme}
-        />
-      ) : null}
+  if (activeDialog === "list-filter") {
+    return (
+      <ListFilterModal filters={branchListFilters} selectedIndex={filterIndex} theme={theme} />
+    );
+  }
 
-      {showCommentsModal && session.github != null ? (
-        <PullRequestCommentsModal
-          pullRequest={session.github.pullRequest}
-          selectedItemId={selectedPullRequestConversationItemId}
-          theme={theme}
-        />
-      ) : null}
+  if (activeDialog === "comment-composer" && reviewComposerContext != null) {
+    return (
+      <ReviewComposerModal
+        body={reviewComposerBody}
+        context={reviewComposerContext}
+        isSubmitting={isSubmittingReviewAction}
+        theme={theme}
+      />
+    );
+  }
 
-      {showSubmitReviewModal ? (
-        <SubmitReviewModal
-          body={reviewSubmissionBody}
-          eventIndex={reviewSubmissionEventIndex}
-          isSubmitting={isSubmittingReviewAction}
-          theme={theme}
-        />
-      ) : null}
+  if (activeDialog === "comments" && session.github != null) {
+    return (
+      <PullRequestCommentsModal
+        pullRequest={session.github.pullRequest}
+        selectedItemId={selectedPullRequestConversationItemId}
+        theme={theme}
+      />
+    );
+  }
 
-      {showMergeModal && session.github != null ? (
-        <MergePullRequestModal
-          body={mergeCommitMessage}
-          bodyScrollRef={mergeBodyScrollRef}
-          canSubmit={session.github.pullRequest.merge.canMerge && mergeMethod != null}
-          field={mergeModalField}
-          isSubmitting={isSubmittingReviewAction}
-          method={mergeMethod}
-          pullRequest={session.github.pullRequest}
-          theme={theme}
-          title={mergeCommitTitle}
-        />
-      ) : null}
+  if (activeDialog === "submit-review") {
+    return (
+      <SubmitReviewModal
+        body={reviewSubmissionBody}
+        eventIndex={reviewSubmissionEventIndex}
+        isSubmitting={isSubmittingReviewAction}
+        theme={theme}
+      />
+    );
+  }
 
-      {showCleanupModal ? (
-        <PostMergeCleanupModal
-          canApply={canApplyCleanup}
-          candidates={cleanupCandidates}
-          isSubmitting={isSubmittingReviewAction}
-          selectedIndex={cleanupCandidateIndex}
-          selection={cleanupSelection}
-          theme={theme}
-        />
-      ) : null}
+  if (activeDialog === "merge" && session.github != null) {
+    return (
+      <MergePullRequestModal
+        body={mergeCommitMessage}
+        bodyScrollRef={mergeBodyScrollRef}
+        canSubmit={session.github.pullRequest.merge.canMerge && mergeMethod != null}
+        field={mergeModalField}
+        isSubmitting={isSubmittingReviewAction}
+        method={mergeMethod}
+        pullRequest={session.github.pullRequest}
+        theme={theme}
+        title={mergeCommitTitle}
+      />
+    );
+  }
 
-      {showHelp ? <HelpModal theme={theme} /> : null}
-    </>
-  );
+  if (activeDialog === "cleanup") {
+    return (
+      <PostMergeCleanupModal
+        canApply={canApplyCleanup}
+        candidates={cleanupCandidates}
+        isSubmitting={isSubmittingReviewAction}
+        selectedIndex={cleanupCandidateIndex}
+        selection={cleanupSelection}
+        theme={theme}
+      />
+    );
+  }
+
+  if (activeDialog === "help") {
+    return <HelpModal commands={helpCommands} leaderKeybind={leaderKeybind} theme={theme} />;
+  }
+
+  return null;
 }

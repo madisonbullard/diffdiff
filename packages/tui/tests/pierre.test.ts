@@ -1,10 +1,31 @@
 import { buildReviewSessionFingerprint, type ReviewSession } from "@diffdiff/core";
 import type { TerminalColors } from "@opentui/core";
-import { expect, test } from "vite-plus/test";
+import type { PierreDiffsModule } from "../src/diff/pierre-internals.ts";
+import { afterEach, expect, test, vi } from "vite-plus/test";
 import { createPierreSegmentColorResolver } from "../src/pierre-colors.ts";
 import { prepareReviewSession } from "../src/diff/prepare-review-session.ts";
 import { createTerminalSyntaxPalette } from "../src/syntax-palette.ts";
 import { createTerminalUiTheme } from "../src/theme.ts";
+
+const pierreInternalsState = vi.hoisted(() => ({
+  loadPierreDiffsOverride: undefined as undefined | (() => Promise<PierreDiffsModule>),
+}));
+
+vi.mock("../src/diff/pierre-internals.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/diff/pierre-internals.ts")>();
+
+  return {
+    ...actual,
+    loadPierreDiffs: () => {
+      const override = pierreInternalsState.loadPierreDiffsOverride;
+      return override == null ? actual.loadPierreDiffs() : override();
+    },
+  };
+});
+
+afterEach(() => {
+  pierreInternalsState.loadPierreDiffsOverride = undefined;
+});
 
 test("remaps Pierre dark syntax colors to the terminal palette", async () => {
   const colors = createDarkPalette();
@@ -120,8 +141,8 @@ test("deferred rendering preserves syntax highlighting for blank context lines",
             "@@ -1,4 +1,4 @@",
             " export function run() {",
             " ",
-            "-  return oldValue();",
-            "+  return nextValue();",
+            "-  const count = oldValue();",
+            "+  const count = 1;",
             " }",
           ].join("\n"),
         },
@@ -137,6 +158,66 @@ test("deferred rendering preserves syntax highlighting for blank context lines",
 
   expect(prepared.files[0]?.renderError).toBeUndefined();
   expect(prepared.files[0]?.unifiedLines.some((line) => line.kind === "context")).toBe(true);
+});
+
+test("deferred startup rendering still uses Pierre highlighting for blank-line diffs", async () => {
+  const actualPierreInternals = await vi.importActual<
+    typeof import("../src/diff/pierre-internals.ts")
+  >("../src/diff/pierre-internals.ts");
+  const actualPierreDiffs = await actualPierreInternals.loadPierreDiffs();
+  const getSharedHighlighter = vi.fn(async () => ({ mocked: true }));
+  const renderDiffWithHighlighter = vi.fn(
+    (diff: Parameters<PierreDiffsModule["renderDiffWithHighlighter"]>[0]) => ({
+      themeStyles: "--mock-token: #48bcca;",
+      code: {
+        deletionLines: diff.deletionLines.map((line) => ({ type: "text", value: line })),
+        additionLines: diff.additionLines.map((line) => ({ type: "text", value: line })),
+      },
+    }),
+  );
+
+  pierreInternalsState.loadPierreDiffsOverride = async () => ({
+    ...actualPierreDiffs,
+    getSharedHighlighter,
+    renderDiffWithHighlighter,
+  });
+
+  const prepared = await prepareReviewSession(
+    createReviewSession({
+      files: [
+        {
+          path: "src/app.ts",
+          status: "modified",
+          additions: 1,
+          deletions: 1,
+          isBinary: false,
+          patch: [
+            "diff --git a/src/app.ts b/src/app.ts",
+            "index 1111111..2222222 100644",
+            "--- a/src/app.ts",
+            "+++ b/src/app.ts",
+            "@@ -1,4 +1,4 @@",
+            " export function run() {",
+            " ",
+            "-  const count = oldValue();",
+            "+  const count = 1;",
+            " }",
+          ].join("\n"),
+        },
+      ],
+    }),
+    "pierre-dark",
+    undefined,
+    undefined,
+    {
+      deferSyntaxRendering: true,
+      initialDiffView: "unified",
+    },
+  );
+
+  expect(prepared.files[0]?.renderError).toBeUndefined();
+  expect(getSharedHighlighter).toHaveBeenCalledTimes(1);
+  expect(renderDiffWithHighlighter).toHaveBeenCalledTimes(1);
 });
 
 function createDarkPalette(): TerminalColors {

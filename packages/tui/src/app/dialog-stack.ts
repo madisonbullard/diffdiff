@@ -4,48 +4,129 @@ export type AppDialog =
   | "command-palette"
   | "comment-composer"
   | "comments"
+  | "pull-request-list"
   | "help"
   | "list-filter"
   | "merge"
   | "submit-review";
 
-export function getActiveDialog(stack: readonly AppDialog[]): AppDialog | null {
+export type AppDialogExitReason = "dismiss" | "complete";
+export type AppDialogExitAction = "close-all" | "restore-parent";
+
+export interface AppDialogStackEntry {
+  dialog: AppDialog;
+  triggeredBy: AppDialog | null;
+}
+
+const APP_DIALOG_EXIT_ACTIONS: Record<
+  AppDialog,
+  Partial<Record<AppDialogExitReason, AppDialogExitAction>>
+> = {
+  branch: {
+    dismiss: "close-all",
+  },
+  cleanup: {
+    complete: "close-all",
+    dismiss: "close-all",
+  },
+  "command-palette": {
+    dismiss: "restore-parent",
+  },
+  "comment-composer": {
+    complete: "restore-parent",
+    dismiss: "restore-parent",
+  },
+  comments: {
+    dismiss: "restore-parent",
+  },
+  help: {
+    dismiss: "restore-parent",
+  },
+  "list-filter": {
+    dismiss: "restore-parent",
+  },
+  merge: {
+    complete: "close-all",
+    dismiss: "restore-parent",
+  },
+  "pull-request-list": {
+    dismiss: "close-all",
+  },
+  "submit-review": {
+    complete: "close-all",
+    dismiss: "restore-parent",
+  },
+};
+
+export function getActiveDialog(stack: readonly AppDialogStackEntry[]): AppDialog | null {
+  return stack.at(-1)?.dialog ?? null;
+}
+
+export function getActiveDialogEntry(
+  stack: readonly AppDialogStackEntry[],
+): AppDialogStackEntry | null {
   return stack.at(-1) ?? null;
 }
 
-export function hasOpenDialog(stack: readonly AppDialog[], dialog: AppDialog): boolean {
-  return stack.includes(dialog);
-}
-
 export function openDialog(
-  stack: readonly AppDialog[],
+  stack: readonly AppDialogStackEntry[],
   dialog: AppDialog,
-  options: { clear?: boolean; replace?: boolean } = {},
-): readonly AppDialog[] {
+  options: { clear?: boolean; replace?: boolean; triggeredBy?: AppDialog | null } = {},
+): readonly AppDialogStackEntry[] {
+  const nextEntry: AppDialogStackEntry = {
+    dialog,
+    triggeredBy: options.clear ? null : (options.triggeredBy ?? getActiveDialog(stack)),
+  };
+
   if (options.clear) {
-    return stack.length === 1 && stack[0] === dialog ? stack : [dialog];
+    const currentEntry = stack[0];
+    return stack.length === 1 && currentEntry?.dialog === dialog && currentEntry.triggeredBy == null
+      ? stack
+      : [nextEntry];
   }
 
   if (options.replace) {
     if (stack.length === 0) {
-      return [dialog];
+      return [nextEntry];
     }
 
-    if (stack[stack.length - 1] === dialog) {
+    const currentEntry = stack[stack.length - 1];
+    if (currentEntry?.dialog === dialog && currentEntry.triggeredBy === nextEntry.triggeredBy) {
       return stack;
     }
 
-    return [...stack.slice(0, -1), dialog];
+    return [...stack.slice(0, -1), nextEntry];
   }
 
-  if (stack[stack.length - 1] === dialog) {
+  const currentEntry = stack[stack.length - 1];
+  if (currentEntry?.dialog === dialog && currentEntry.triggeredBy === nextEntry.triggeredBy) {
     return stack;
   }
 
-  return [...stack, dialog];
+  return [...stack, nextEntry];
 }
 
-export function closeDialog(stack: readonly AppDialog[], dialog: AppDialog): readonly AppDialog[] {
-  const index = stack.lastIndexOf(dialog);
-  return index < 0 ? stack : stack.slice(0, index);
+export function closeDialog(
+  stack: readonly AppDialogStackEntry[],
+  dialog: AppDialog,
+  reason: AppDialogExitReason = "dismiss",
+): readonly AppDialogStackEntry[] {
+  const activeEntry = stack.at(-1);
+  if (activeEntry?.dialog !== dialog) {
+    return stack;
+  }
+
+  const exitAction = getDialogExitAction(dialog, reason);
+  if (exitAction === "restore-parent" && stack.length > 1) {
+    return stack.slice(0, -1);
+  }
+
+  return [];
+}
+
+export function getDialogExitAction(
+  dialog: AppDialog,
+  reason: AppDialogExitReason,
+): AppDialogExitAction {
+  return APP_DIALOG_EXIT_ACTIONS[dialog][reason] ?? "close-all";
 }

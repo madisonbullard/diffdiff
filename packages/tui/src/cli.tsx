@@ -14,6 +14,7 @@ import {
   markDiffdiffSessionEnded,
   removeAllDiffdiffSessions,
   removeDiffdiffSession,
+  resolveGitHubAuth,
   resolveStartupOptions,
   startDiffdiffLogging,
   storeGitHubToken,
@@ -235,6 +236,7 @@ async function launchTui(options: LaunchOptions): Promise<void> {
         initialDiffView: "unified",
       });
     const gitHubPullRequestService = new GitHubPullRequestService();
+    const isGitHubAuthenticated = (await resolveGitHubAuth({ host: "github.com" })) != null;
     const initialSession = await loadSession(options);
     startupInstrumentation = logStartupPhase(startupInstrumentation, "sessionPreparedAt");
     const initialPreferences = await loadDiffdiffPreferences();
@@ -259,9 +261,11 @@ async function launchTui(options: LaunchOptions): Promise<void> {
             .then(() => undefined)
         }
         initialGitHubPreferences={initialPreferences.github}
+        isGitHubAuthenticated={isGitHubAuthenticated}
         initialReviewCache={initialReviewCache}
         initialOptions={options}
         initialSession={initialSession}
+        listGitHubPullRequests={() => gitHubPullRequestService.listDashboardPullRequests()}
         loadSession={loadSession}
         logFilePath={logSession?.logFilePath}
         mergePullRequest={(reviewSession, input) =>
@@ -278,6 +282,11 @@ async function launchTui(options: LaunchOptions): Promise<void> {
             });
           });
         }}
+        resolveLaunchTarget={(target, startupOptions) =>
+          resolveLaunchOptionsFromTarget(target, startupOptions, {
+            promptForRepositoryPath: async () => undefined,
+          })
+        }
         replyToReviewComment={(reviewSession, commentId, body) =>
           gitHubPullRequestService.replyToReviewComment(reviewSession, commentId, body)
         }

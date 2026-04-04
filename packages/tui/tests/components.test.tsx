@@ -4,11 +4,14 @@ import type { ReactTestRenderer } from "react-test-renderer";
 import { act, create } from "react-test-renderer";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 import { BranchModal } from "../src/components/branch-modal.tsx";
+import { CommandPaletteModal } from "../src/components/command-palette-modal.tsx";
 import { FileCard, StickyFileHeader } from "../src/components/file-card.tsx";
 import { FileTreeSidebar } from "../src/components/file-tree-sidebar.tsx";
 import { HelpModal } from "../src/components/help-modal.tsx";
 import { ListFilterModal } from "../src/components/list-filter-modal.tsx";
+import { PullRequestListModal } from "../src/components/pull-request-list-modal.tsx";
 import { getUiTheme } from "../src/theme.ts";
+import type { CommandDefinition } from "../src/commands.ts";
 import type { BranchListFilters, PreparedReviewFile } from "../src/types.ts";
 import {
   buildBranchListItems,
@@ -239,6 +242,46 @@ test("shows commit history in working tree commit view", () => {
   expect(collectText(tree.toJSON())).not.toContain("Working tree changes are not committed yet.");
 });
 
+test("renders a pull request list modal with truncated titles", () => {
+  const tree = render(
+    <PullRequestListModal
+      isLoading={false}
+      pullRequests={[
+        {
+          key: "github.com/diffdiff/diffdiff#42",
+          pullRequest: {
+            author: { login: "madison" },
+            isAuthor: true,
+            isDraft: false,
+            isReviewRequested: false,
+            number: 42,
+            repository: {
+              forge: "github",
+              host: "github.com",
+              owner: "diffdiff",
+              repo: "diffdiff",
+            },
+            title:
+              "Add a pull request dashboard modal with fuzzy search, cross-repo selection, and keyboard navigation",
+            updatedAt: "2026-04-03T14:00:00Z",
+            url: "https://github.com/diffdiff/diffdiff/pull/42",
+          },
+        },
+      ]}
+      reviewRequestedCount={0}
+      searchActive={false}
+      searchQuery=""
+      selectedIndex={0}
+      theme={theme}
+    />,
+  );
+
+  expect(collectText(tree.toJSON())).toContain("GitHub PRs");
+  expect(collectText(tree.toJSON())).toContain("diffdiff/diffdiff");
+  expect(collectText(tree.toJSON())).toContain("madison");
+  expect(collectText(tree.toJSON())).toContain("...");
+});
+
 test("shows binary, reviewed, and collapsed states clearly", () => {
   const tree = render(
     <FileCard
@@ -391,17 +434,78 @@ test("renders empty branch columns and help copy", () => {
     />,
   );
   const filterModal = render(<ListFilterModal filters={filters} selectedIndex={0} theme={theme} />);
-  const helpModal = render(<HelpModal theme={theme} />);
+  const helpCommands: CommandDefinition[] = [
+    {
+      category: "System",
+      keybind: "ctrl+p",
+      title: "Open command palette",
+      value: "system.command-palette",
+    },
+    {
+      category: "Comparison",
+      keybind: "<leader>l,l",
+      title: "Open comparison list",
+      value: "comparison.list",
+    },
+    {
+      category: "GitHub",
+      keybind: "<leader>y,y",
+      title: "Copy PR URL",
+      value: "github.copy-url",
+    },
+  ];
+  const helpModal = render(
+    <HelpModal commands={helpCommands} leaderKeybind="ctrl+x" theme={theme} />,
+  );
 
   expect(collectText(branchModal.toJSON())).toContain("Working tree");
   expect(collectText(branchModal.toJSON())).toContain("ACTIVE");
   expect(collectText(filterModal.toJSON())).toContain("Remote branches");
   expect(collectText(helpModal.toJSON())).toContain("ctrl+p");
   expect(collectText(helpModal.toJSON())).toContain("ctrl+x");
-  expect(collectText(helpModal.toJSON())).toContain("list modal");
-  expect(collectText(helpModal.toJSON())).toContain("working tree");
-  expect(collectText(helpModal.toJSON())).toContain("switch tree/diff pane");
+  expect(collectText(helpModal.toJSON())).toContain("open comparison list");
+  expect(collectText(helpModal.toJSON())).toContain("switch between the tree and diff panes");
   expect(collectText(helpModal.toJSON())).toContain("copy PR URL");
+});
+
+test("groups suggested commands under a dedicated heading in the palette", () => {
+  const commands: CommandDefinition[] = [
+    {
+      category: "System",
+      keybind: "ctrl+p",
+      suggested: true,
+      title: "Open command palette",
+      value: "system.command-palette",
+    },
+    {
+      category: "Review",
+      keybind: "u",
+      suggested: true,
+      title: "Jump to next unreviewed file",
+      value: "review.next-unreviewed",
+    },
+    {
+      category: "Comparison",
+      keybind: "<leader>l,l",
+      title: "Open comparison list",
+      value: "comparison.list",
+    },
+  ];
+
+  const palette = render(
+    <CommandPaletteModal
+      commands={commands}
+      leaderKeybind="ctrl+x"
+      query=""
+      selectedIndex={0}
+      theme={theme}
+    />,
+  );
+
+  const text = collectText(palette.toJSON());
+  expect(text).toContain("Suggested");
+  expect(text).toContain("Comparison");
+  expect(text.indexOf("Suggested")).toBeLessThan(text.indexOf("Comparison"));
 });
 
 test("uses the native diff renderer when Pierre segments are unavailable", () => {

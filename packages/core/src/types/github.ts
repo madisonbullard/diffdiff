@@ -13,6 +13,18 @@ export interface GitHubActor {
   url?: string;
 }
 
+export interface GitHubDashboardPullRequest {
+  author: GitHubActor;
+  isAuthor: boolean;
+  isDraft: boolean;
+  isReviewRequested: boolean;
+  number: number;
+  repository: ForgeRepository;
+  title: string;
+  updatedAt: string;
+  url: string;
+}
+
 export type GitHubTokenSource = "env" | "secure-store" | "config";
 
 export interface GitHubAuthSession {

@@ -4,6 +4,7 @@ import { logDiffdiffError, logDiffdiffInfo, logDiffdiffWarn } from "../logging.t
 import type { PullRequestFingerprint } from "../types/session.ts";
 import type {
   ForgeRepository,
+  GitHubDashboardPullRequest,
   GitHubPendingReview,
   GitHubPullRequestDetail,
   GitHubPullRequestMergeRequest,
@@ -15,7 +16,7 @@ import type {
   PullRequestInfo,
 } from "../types/github.ts";
 import type { GitHubApiClient, GitHubClientFactory } from "../types/providers.ts";
-import type { ReviewSession, ReviewWarning } from "../types/session.ts";
+import type { ReviewSession } from "../types/session.ts";
 import { OctokitGitHubClientFactory } from "./client.ts";
 import { loadPullRequestDetail, loadPullRequestFingerprint } from "./pull-request-detail.ts";
 import {
@@ -23,6 +24,10 @@ import {
   findActivePullRequestCandidate,
   mapPullRequestSummary,
 } from "./pull-request-mappers.ts";
+import {
+  buildPullRequestWarnings,
+  upsertDashboardPullRequest,
+} from "./pull-request-service-helpers.ts";
 import {
   buildCleanupCandidates,
   dedupeCleanupCandidates,
@@ -33,6 +38,7 @@ import type {
   GitHubGraphqlAddPullRequestReviewThreadResponse,
   GitHubMergeResponse,
   GitHubPullRequestListResponse,
+  GitHubSearchIssuePullRequestResponse,
 } from "./pull-request-types.ts";
 
 export class GitHubPullRequestService {
@@ -68,6 +74,87 @@ export class GitHubPullRequestService {
         repository,
       });
       return null;
+    }
+  }
+
+  async listDashboardPullRequests(host = "github.com"): Promise<GitHubDashboardPullRequest[]> {
+    const client = await this.clientFactory.create({
+      forge: "github",
+      host,
+      owner: "viewer",
+      repo: "dashboard",
+    });
+    if (client?.auth == null) {
+      throw new DiffdiffError(
+        "GitHub auth is required. Run `diffdiff auth login --token-stdin` first.",
+      );
+    }
+
+    try {
+      const [authoredPullRequests, reviewRequestedPullRequests] = await Promise.all([
+        client.paginate("GET /search/issues", {
+          order: "desc",
+          per_page: 100,
+          q: "is:pr state:open archived:false author:@me",
+          sort: "updated",
+        }) as Promise<GitHubSearchIssuePullRequestResponse[]>,
+        client.paginate("GET /search/issues", {
+          order: "desc",
+          per_page: 100,
+          q: "is:pr state:open archived:false review-requested:@me",
+          sort: "updated",
+        }) as Promise<GitHubSearchIssuePullRequestResponse[]>,
+      ]);
+
+      const pullRequestsByKey = new Map<string, GitHubDashboardPullRequest>();
+
+      for (const pullRequest of authoredPullRequests) {
+        upsertDashboardPullRequest(pullRequestsByKey, pullRequest, host, {
+          isAuthor: true,
+          isReviewRequested: false,
+        });
+      }
+
+      for (const pullRequest of reviewRequestedPullRequests) {
+        upsertDashboardPullRequest(pullRequestsByKey, pullRequest, host, {
+          isAuthor: false,
+          isReviewRequested: true,
+        });
+      }
+
+      const pullRequests = [...pullRequestsByKey.values()].sort((left, right) => {
+        if (left.isReviewRequested !== right.isReviewRequested) {
+          return left.isReviewRequested ? -1 : 1;
+        }
+
+        const updatedResult = right.updatedAt.localeCompare(left.updatedAt);
+        if (updatedResult !== 0) {
+          return updatedResult;
+        }
+
+        const leftRepoLabel = `${left.repository.owner}/${left.repository.repo}`;
+        const rightRepoLabel = `${right.repository.owner}/${right.repository.repo}`;
+        const repoResult = leftRepoLabel.localeCompare(rightRepoLabel);
+        if (repoResult !== 0) {
+          return repoResult;
+        }
+
+        return left.number - right.number;
+      });
+
+      logDiffdiffInfo("github", "list_dashboard_pull_requests_completed", {
+        authoredCount: authoredPullRequests.length,
+        count: pullRequests.length,
+        host,
+        reviewRequestedCount: reviewRequestedPullRequests.length,
+      });
+
+      return pullRequests;
+    } catch (error) {
+      logDiffdiffError("github", "list_dashboard_pull_requests_failed", error, {
+        host,
+      });
+      throw error;
     }
   }
 
@@ -361,67 +448,5 @@ export class GitHubPullRequestService {
     }
 
     return client;
-  }
-}
-
-async function buildPullRequestWarnings(
-  session: ReviewSession,
-  pullRequest: GitHubPullRequestDetail,
-  remoteName: string,
-): Promise<ReviewWarning[]> {
-  const warnings: ReviewWarning[] = [];
-  const comparisonBaseMatches =
-    session.comparison.base === pullRequest.baseRefName ||
-    session.comparison.base.endsWith(`/${pullRequest.baseRefName}`);
-
-  if (!comparisonBaseMatches) {
-    warnings.push({
-      code: "github-pr-base-mismatch",
-      message: `Current comparison base (${session.comparison.base}) does not match the PR base (${pullRequest.baseRefName}); inline anchors may not line up exactly.`,
-    });
-  }
-
-  const [hasLocalBaseRef, hasLocalHeadRef] = await Promise.all([
-    hasRemoteTrackingRef(session.repository.rootPath, remoteName, pullRequest.baseRefName),
-    hasRemoteTrackingRef(session.repository.rootPath, remoteName, pullRequest.headRefName),
-  ]);
-
-  if (!hasLocalBaseRef) {
-    warnings.push({
-      code: "github-pr-base-local-ref-missing",
-      message: `PR base ref refs/remotes/${remoteName}/${pullRequest.baseRefName} is not available locally, so diffdiff cannot build the exact PR comparison from local refs only.`,
-    });
-  }
-
-  if (!hasLocalHeadRef) {
-    warnings.push({
-      code: "github-pr-head-local-ref-missing",
-      message: `PR head ref refs/remotes/${remoteName}/${pullRequest.headRefName} is not available locally, so diffdiff cannot build the exact PR comparison from local refs only.`,
-    });
-  }
-
-  if (!hasLocalBaseRef || !hasLocalHeadRef) {
-    warnings.push({
-      code: "github-inline-anchoring-unavailable",
-      message:
-        "Inline comment anchoring is unavailable because diffdiff cannot build the exact PR comparison from local refs only.",
-    });
-  }
-
-  return warnings;
-}
-
-async function hasRemoteTrackingRef(
-  repositoryRootPath: string,
-  remoteName: string,
-  branchName: string,
-): Promise<boolean> {
-  try {
-    await runCommand("git", ["rev-parse", "--verify", `refs/remotes/${remoteName}/${branchName}`], {
-      cwd: repositoryRootPath,
-    });
-    return true;
-  } catch {
-    return false;
   }
 }

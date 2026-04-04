@@ -80,18 +80,29 @@ export function CommandPaletteModal({
             </text>
           ) : (
             commands.map((command, index) => {
-              const showCategory = command.category !== activeCategory;
-              activeCategory = command.category;
+              const categoryLabel =
+                normalizedQuery === "" && command.suggested ? "Suggested" : command.category;
+              const showCategory = categoryLabel !== activeCategory;
+              activeCategory = categoryLabel;
               const isSelected = index === selectedIndex;
+              const isEnabled = command.enabled !== false;
               const backgroundColor = isSelected ? theme.accent : theme.surface;
-              const foreground = isSelected ? theme.appBackground : theme.text;
+              const foreground = isSelected
+                ? theme.appBackground
+                : isEnabled
+                  ? theme.text
+                  : theme.textMuted;
               const detail = isSelected ? theme.appBackground : theme.textMuted;
+              const detailText =
+                command.enabled === false && command.disabledReason != null
+                  ? command.disabledReason
+                  : command.description;
 
               return (
                 <box key={command.value} width="100%" flexDirection="column" gap={0}>
                   {showCategory ? (
                     <text fg={theme.success} wrapMode="none">
-                      {command.category}
+                      {categoryLabel}
                     </text>
                   ) : null}
                   <box
@@ -106,9 +117,7 @@ export function CommandPaletteModal({
                     <text fg={foreground} wrapMode="none">
                       <span>{isSelected ? "› " : "  "}</span>
                       <span>{command.title}</span>
-                      {command.description != null ? (
-                        <span fg={detail}>{`  ${command.description}`}</span>
-                      ) : null}
+                      {detailText != null ? <span fg={detail}>{`  ${detailText}`}</span> : null}
                     </text>
                     <text fg={detail} wrapMode="none">
                       {formatCommandKeybind(command.keybind, leaderKeybind) ?? ""}

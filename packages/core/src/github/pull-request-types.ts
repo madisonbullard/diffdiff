@@ -11,6 +11,17 @@ export interface GitHubPullRequestListResponse {
   base: { ref: string };
 }
 
+export interface GitHubSearchIssuePullRequestResponse {
+  draft?: boolean;
+  html_url: string;
+  number: number;
+  repository_url: string;
+  state: "open" | "closed";
+  title: string;
+  updated_at: string;
+  user: GitHubUserResponse | null;
+}
+
 export interface GitHubPullRequestDetailResponse extends GitHubPullRequestListResponse {
   body: string | null;
   state: "open" | "closed";

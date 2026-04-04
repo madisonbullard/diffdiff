@@ -1,7 +1,95 @@
+import { formatCommandKeybind, type CommandDefinition } from "../commands.ts";
 import type { UiTheme } from "../theme.ts";
 import { KeyCap, ModalFrame, SPLIT_BORDER } from "./shared.tsx";
 
-export function HelpModal({ theme }: { theme: UiTheme }) {
+interface HelpSection {
+  color: string;
+  rows: {
+    keybind: string;
+    text: string;
+  }[];
+  title: string;
+}
+
+function formatHelpText(command: CommandDefinition): string {
+  return command.title.charAt(0).toLowerCase() + command.title.slice(1);
+}
+
+function buildHelpSections(
+  commands: readonly CommandDefinition[],
+  leaderKeybind: string,
+  theme: UiTheme,
+): HelpSection[] {
+  const sections: HelpSection[] = [
+    {
+      color: theme.accent,
+      title: "Navigation",
+      rows: [
+        { keybind: "j / k", text: "move in the active pane" },
+        { keybind: "g / G", text: "jump to the first or last item" },
+        { keybind: "tab", text: "switch between the tree and diff panes" },
+        { keybind: "left / right", text: "collapse, expand, or open from the tree" },
+      ],
+    },
+    {
+      color: theme.success,
+      title: "Review Navigation",
+      rows: [
+        { keybind: "i / o", text: "focus the previous or next inline thread" },
+        { keybind: "[ / ]", text: "focus the previous or next comment in the active thread" },
+      ],
+    },
+  ];
+
+  const categoryColors = new Map<string, string>([
+    ["System", theme.accent],
+    ["View", theme.accent],
+    ["Review", theme.success],
+    ["Comparison", theme.warning],
+    ["GitHub", theme.warning],
+  ]);
+  const rowsByCategory = new Map<string, HelpSection["rows"]>();
+
+  for (const command of commands) {
+    if (command.hidden === true || command.keybind == null) {
+      continue;
+    }
+
+    const keybind = formatCommandKeybind(command.keybind, leaderKeybind);
+    if (keybind == null) {
+      continue;
+    }
+
+    const rows = rowsByCategory.get(command.category) ?? [];
+    rows.push({
+      keybind,
+      text: formatHelpText(command),
+    });
+    rowsByCategory.set(command.category, rows);
+  }
+
+  for (const [category, rows] of rowsByCategory) {
+    sections.push({
+      color: categoryColors.get(category) ?? theme.textMuted,
+      rows,
+      title: category,
+    });
+  }
+
+  return sections;
+}
+
+export function HelpModal({
+  commands,
+  leaderKeybind,
+  theme,
+}: {
+  commands: readonly CommandDefinition[];
+  leaderKeybind: string;
+  theme: UiTheme;
+}) {
+  const sections = buildHelpSections(commands, leaderKeybind, theme);
+
   return (
     <ModalFrame
       title="Help"
@@ -16,56 +104,7 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
         </text>
       }
     >
-      {[
-        {
-          color: theme.accent,
-          title: "Commands",
-          rows: [
-            ["ctrl+p", "open the command palette", "ctrl+x", "leader shortcuts"],
-            ["z", "show or hide the key legend"],
-          ],
-        },
-        {
-          color: theme.accent,
-          title: "Navigation",
-          rows: [
-            ["j / k", "move in the active pane", "g / G", "first / last item"],
-            [
-              "tab",
-              "switch tree/diff pane",
-              "left / right",
-              "collapse, expand, or open from the tree",
-            ],
-          ],
-        },
-        {
-          color: theme.success,
-          title: "Review",
-          rows: [
-            ["r", "toggle reviewed", "c / enter", "collapse file", "v", "toggle diff view"],
-            ["t", "PR comments", "u", "outdated threads", "y", "copy PR URL"],
-            ["a", "add comment", "s", "submit review", "m", "merge PR"],
-          ],
-        },
-        {
-          color: theme.warning,
-          title: "Comparison",
-          rows: [
-            ["l", "list modal", "b / h", "set base / head", "w", "working tree"],
-            [
-              "shift+f",
-              "refresh branches",
-              "o",
-              "remote toggle",
-              "f",
-              "list filters",
-              "/",
-              "search commits",
-            ],
-            ["q", "quit"],
-          ],
-        },
-      ].map((section) => (
+      {sections.map((section) => (
         <box
           key={section.title}
           width="100%"
@@ -83,31 +122,14 @@ export function HelpModal({ theme }: { theme: UiTheme }) {
           <text fg={section.color} wrapMode="none">
             {section.title}
           </text>
-          {section.rows.map((row, index) => (
-            <text key={index} fg={theme.textMuted} wrapMode="none">
-              <KeyCap label={row[0]!} theme={theme} />
-              <span>{` ${row[1]!}`}</span>
-              {row[2] != null ? (
-                <>
-                  <span>{"  "}</span>
-                  <KeyCap label={row[2]} theme={theme} />
-                  <span>{` ${row[3]!}`}</span>
-                </>
-              ) : null}
-              {row[4] != null ? (
-                <>
-                  <span>{"  "}</span>
-                  <KeyCap label={row[4]} theme={theme} />
-                  <span>{` ${row[5]!}`}</span>
-                </>
-              ) : null}
-              {row[6] != null ? (
-                <>
-                  <span>{"  "}</span>
-                  <KeyCap label={row[6]} theme={theme} />
-                  <span>{` ${row[7]!}`}</span>
-                </>
-              ) : null}
+          {section.rows.map((row) => (
+            <text
+              key={`${section.title}:${row.keybind}:${row.text}`}
+              fg={theme.textMuted}
+              wrapMode="none"
+            >
+              <KeyCap label={row.keybind} theme={theme} />
+              <span>{` ${row.text}`}</span>
             </text>
           ))}
         </box>

@@ -2,6 +2,7 @@ import type {
   ReviewSessionFreshnessResult,
   BranchInfo,
   GitHubCleanupPreferences,
+  GitHubDashboardPullRequest,
   GitHubMergeMethod,
   GitHubPullRequestComment,
   GitHubPullRequestConversationItem,
@@ -35,10 +36,10 @@ import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   closeDialog as closeAppDialog,
-  getActiveDialog,
-  hasOpenDialog,
+  getActiveDialogEntry,
   openDialog as openAppDialog,
   type AppDialog,
+  type AppDialogStackEntry,
 } from "./dialog-stack.ts";
 import { DiffdiffAppDialogs } from "./layout.tsx";
 import {
@@ -75,22 +76,32 @@ import type {
   LaunchOptions,
   ListModalView,
   PreparedReviewSession,
+  PullRequestListItem,
 } from "../types.ts";
 import {
   filterCommands,
   formatCommandKeybind,
   isPrintableKey,
   matchCommandKeybind,
-  type CommandDefinition,
   type KeyboardInput,
 } from "../commands.ts";
+import {
+  buildAppCommands,
+  findAppCommandByKey,
+  findAppCommandByValue,
+  getPaletteCommands,
+  type AppCommand,
+} from "./command-registry.ts";
+import { COMMAND_LIST_KEYBIND, LEADER_KEYBIND } from "./helpers.ts";
 import {
   buildFileTreeNodes,
   buildBranchListItems,
   buildCommitListItems,
+  buildPullRequestListItems,
   clampIndex,
   DEFAULT_BRANCH_LIST_FILTERS,
   filterCommitListItems,
+  filterPullRequestListItems,
   findInitialBranchListSelection,
   getDiffPaneWidth,
   getDiffViewLabel,
@@ -116,9 +127,11 @@ interface DiffdiffAppProps {
   ) => Promise<void>;
   addPullRequestComment?: (reviewSession: GitHubReviewSession, body: string) => Promise<void>;
   initialGitHubPreferences?: GitHubUserPreferences;
+  isGitHubAuthenticated?: boolean;
   initialReviewCache?: ReviewCacheState;
   initialSession: PreparedReviewSession;
   initialOptions: LaunchOptions;
+  listGitHubPullRequests?: () => Promise<GitHubDashboardPullRequest[]>;
   loadSession: (options: LaunchOptions) => Promise<PreparedReviewSession>;
   logFilePath?: string;
   mergePullRequest?: (
@@ -126,6 +139,7 @@ interface DiffdiffAppProps {
     input: GitHubPullRequestMergeRequest,
   ) => Promise<GitHubPullRequestMergeResult>;
   onExit: () => void;
+  resolveLaunchTarget?: (target: string, options: LaunchOptions) => Promise<LaunchOptions>;
   replyToReviewComment?: (
     reviewSession: GitHubReviewSession,
     commentId: number,
@@ -148,9 +162,6 @@ interface DiffdiffAppProps {
 }
 
 type MergeModalField = "method" | "title" | "body";
-type AppCommand = CommandDefinition & {
-  run: () => void;
-};
 type SessionActivityUpdate = Parameters<typeof updateDiffdiffSessionActivity>[0];
 
 interface RenderSurfaceMetrics {
@@ -201,8 +212,6 @@ const LIST_FILTER_KEYS = ["workingTree", "localBranch", "openPr", "remoteBranch"
 const LOADING_INDICATOR_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
 const TERMINAL_FOCUS_EVENT = "focus";
 const TERMINAL_BLUR_EVENT = "blur";
-const LEADER_KEYBIND = "ctrl+x";
-const COMMAND_LIST_KEYBIND = "ctrl+p";
 const EMPTY_REVIEW_THREADS: readonly import("@diffdiff/core").GitHubPullRequestReviewThread[] = [];
 const EMPTY_CONVERSATION_ITEMS: readonly GitHubPullRequestConversationItem[] = [];
 const REVIEWED_NEXT_FILE_SCROLL_OFFSET = 3;
@@ -430,14 +439,17 @@ export function DiffdiffApp({
   addPullRequestComment,
   addReviewThread,
   initialGitHubPreferences,
+  isGitHubAuthenticated = false,
   initialReviewCache,
   initialSession,
   initialOptions,
+  listGitHubPullRequests,
   loadSession,
   logFilePath,
   mergePullRequest,
   onExit,
   probeFreshness = probeReviewSessionFreshness,
+  resolveLaunchTarget,
   replyToReviewComment,
   removeCleanupRefs,
   startupInstrumentation,
@@ -476,7 +488,7 @@ export function DiffdiffApp({
     return baseline;
   });
   const [statusMessage, setStatusMessage] = useState<string>(
-    launchInPullRequestList ? "Opened list modal." : "Ready.",
+    launchInPullRequestList ? "Opened pull request list." : "Ready.",
   );
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [errorToastMessage, setErrorToastMessage] = useState<string | null>(null);
@@ -494,22 +506,15 @@ export function DiffdiffApp({
   );
   const leaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestSessionLoadIdRef = useRef(0);
-  const [dialogStack, setDialogStack] = useState<readonly AppDialog[]>(() =>
-    launchInPullRequestList ? ["branch"] : [],
+  const [dialogStack, setDialogStack] = useState<readonly AppDialogStackEntry[]>(() =>
+    launchInPullRequestList ? openAppDialog([], "pull-request-list", { clear: true }) : [],
   );
+  const activeDialogEntry = getActiveDialogEntry(dialogStack);
+  const activeOverlay = activeDialogEntry?.dialog ?? null;
   const [commentCollapseStates, setCommentCollapseStates] = useState<Record<string, boolean>>(
     () => initialReviewCache?.commentCollapseStates ?? {},
   );
   const [showKeyLegend, setShowKeyLegend] = useState(true);
-  const showHelp = hasOpenDialog(dialogStack, "help");
-  const showBranchModal = hasOpenDialog(dialogStack, "branch");
-  const showCleanupModal = hasOpenDialog(dialogStack, "cleanup");
-  const showCommentComposer = hasOpenDialog(dialogStack, "comment-composer");
-  const showCommandModal = hasOpenDialog(dialogStack, "command-palette");
-  const showCommentsModal = hasOpenDialog(dialogStack, "comments");
-  const showListFilterModal = hasOpenDialog(dialogStack, "list-filter");
-  const showMergeModal = hasOpenDialog(dialogStack, "merge");
-  const showSubmitReviewModal = hasOpenDialog(dialogStack, "submit-review");
   const [activeListView, setActiveListView] = useState<ListModalView>("branch");
   const [branchListFilters, setBranchListFilters] = useState<BranchListFilters>({
     ...(launchInPullRequestList
@@ -528,6 +533,7 @@ export function DiffdiffApp({
   const [commitSearchQuery, setCommitSearchQuery] = useState("");
   const [commitSearchActive, setCommitSearchActive] = useState(false);
   const [filterIndex, setFilterIndex] = useState(0);
+  const [isPullRequestListLoading, setIsPullRequestListLoading] = useState(false);
   const [isReloading, setIsReloading] = useState(false);
   const [isCheckingForUpdates, setIsCheckingForUpdates] = useState(false);
   const [isSubmittingReviewAction, setIsSubmittingReviewAction] = useState(false);
@@ -546,6 +552,10 @@ export function DiffdiffApp({
     null,
   );
   const [reviewComposerBody, setReviewComposerBody] = useState("");
+  const [pullRequestList, setPullRequestList] = useState<GitHubDashboardPullRequest[]>([]);
+  const [pullRequestListIndex, setPullRequestListIndex] = useState(0);
+  const [pullRequestSearchActive, setPullRequestSearchActive] = useState(false);
+  const [pullRequestSearchQuery, setPullRequestSearchQuery] = useState("");
   const [pullRequestConversationIndex, setPullRequestConversationIndex] = useState(0);
   const [selectedReviewCommentIndexByThreadId, setSelectedReviewCommentIndexByThreadId] = useState<
     Record<string, number>
@@ -581,6 +591,7 @@ export function DiffdiffApp({
   const sessionActivityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const terminalFocusedRef = useRef(true);
+  const pullRequestListLoadIdRef = useRef(0);
   const renderer = useRenderer();
   const terminalDimensions = useTerminalDimensions();
   const sidebarWidth = useMemo(
@@ -794,10 +805,20 @@ export function DiffdiffApp({
     () => filterCommitListItems(commitItems, commitSearchQuery),
     [commitItems, commitSearchQuery],
   );
+  const pullRequestItems = useMemo<PullRequestListItem[]>(
+    () => buildPullRequestListItems(pullRequestList),
+    [pullRequestList],
+  );
+  const filteredPullRequestItems = useMemo(
+    () => filterPullRequestListItems(pullRequestItems, pullRequestSearchQuery),
+    [pullRequestItems, pullRequestSearchQuery],
+  );
   const stickyFile = session.files[activeFileIndex];
   const selectedBranchItem = branchItems[clampIndex(branchListIndex, branchItems.length)];
   const selectedCommitItem =
     filteredCommitItems[clampIndex(commitListIndex, filteredCommitItems.length)];
+  const selectedPullRequestItem =
+    filteredPullRequestItems[clampIndex(pullRequestListIndex, filteredPullRequestItems.length)];
   const selectedTreeNode =
     selectedTreePath === "" ? undefined : fileTreeNodeByPath.get(selectedTreePath);
   const selectedFilePath = session.files[selectedFileIndex]?.path;
@@ -837,211 +858,88 @@ export function DiffdiffApp({
   const selectedReviewAnchor =
     selectedReviewAnchors[clampIndex(selectedReviewAnchorIndex, selectedReviewAnchors.length)];
   const hasSelectedReviewThread = selectedReviewThread != null && selectedReviewComment != null;
+  const hasNextUnreviewedFile = useMemo(
+    () =>
+      session.files.some(
+        (file, index) => index !== selectedFileIndex && !reviewedPaths.has(file.path),
+      ),
+    [reviewedPaths, selectedFileIndex, session.files],
+  );
   const openPrCount = session.branches.remote.filter((branch) => branch.pullRequest != null).length;
   const remoteBranchCount = session.branches.remote.length - openPrCount;
-  const commandListLabel = formatCommandKeybind(COMMAND_LIST_KEYBIND, LEADER_KEYBIND) ?? "ctrl+p";
-  const leaderKeyLabel = formatCommandKeybind(LEADER_KEYBIND, LEADER_KEYBIND) ?? "ctrl+x";
+  const reviewRequestedPrCount = pullRequestList.filter(
+    (pullRequest) => pullRequest.isReviewRequested,
+  ).length;
   const keyLegendToggleLabel = showKeyLegend ? "hide keys" : "show keys";
+  const showMergeModal = activeOverlay === "merge";
   const commands = useMemo<AppCommand[]>(
-    () => [
-      {
-        category: "System",
-        description: "Open the searchable command palette.",
-        keybind: COMMAND_LIST_KEYBIND,
-        suggested: true,
-        title: "Open command palette",
-        value: "system.command-palette",
-        run: () => openCommandModal(),
-      },
-      {
-        category: "System",
-        description: "Show keyboard shortcuts and usage help.",
-        keybind: "<leader>h",
-        suggested: true,
-        title: "Open help",
-        value: "system.help",
-        run: () => {
-          openHelp();
-        },
-      },
-      {
-        category: "System",
-        description: "Show or hide the shortcut legend in the sidebar.",
-        keybind: "<leader>z,z",
-        title: showKeyLegend ? "Hide key legend" : "Show key legend",
-        value: "system.key-legend",
-        run: () => toggleKeyLegend(),
-      },
-      {
-        category: "System",
-        description: "Close diffdiff.",
-        keybind: "<leader>q,q",
-        title: "Quit",
-        value: "system.quit",
-        run: () => onExit(),
-      },
-      {
-        category: "View",
-        description: "Move focus between the file tree and diff panes.",
-        keybind: "<leader>p,tab",
-        suggested: true,
-        title: "Switch active pane",
-        value: "view.pane-toggle",
-        run: () => toggleActivePane(),
-      },
-      {
-        category: "View",
-        description: "Toggle between unified and side-by-side diffs.",
-        keybind: "<leader>v,v",
-        suggested: true,
-        title: "Toggle diff view",
-        value: "view.diff-toggle",
-        run: () => toggleDiffView(),
-      },
-      {
-        category: "Comparison",
-        description: "Browse the working tree, branches, PRs, and commits.",
-        keybind: "<leader>l,l",
-        suggested: true,
-        title: "Open comparison list",
-        value: "comparison.list",
-        run: () => openBranchModal(),
-      },
-      {
-        category: "Review",
-        description: "Mark the selected file as reviewed or not reviewed.",
-        keybind: "<leader>r,r",
-        suggested: true,
-        title: "Toggle reviewed",
-        value: "review.toggle-reviewed",
-        run: () => toggleReviewed(selectedFileIndex),
-      },
-      {
-        category: "Review",
-        description: "Mark every file in the current comparison as reviewed.",
-        keybind: "shift+r",
-        title: "Mark all reviewed",
-        value: "review.mark-all-reviewed",
-        run: () => markAllReviewed(),
-      },
-      {
-        category: "Review",
-        description: "Clear the reviewed state from every file in the current comparison.",
-        keybind: "alt+r",
-        title: "Unmark all reviewed",
-        value: "review.clear-reviewed",
-        run: () => clearReviewed(),
-      },
-      {
-        category: "Review",
-        description: "Collapse or expand the selected file diff.",
-        keybind: "<leader>c,c,return",
-        title: "Toggle collapsed",
-        value: "review.toggle-collapsed",
-        run: () => toggleCollapsed(selectedFileIndex),
-      },
-      {
-        category: "GitHub",
-        description: "Show the pull request conversation timeline.",
-        enabled: session.github != null,
-        keybind: "<leader>t,t",
-        suggested: session.github != null,
-        title: "Open PR comments",
-        value: "github.comments",
-        run: () => {
-          openPullRequestCommentsModal();
-        },
-      },
-      {
-        category: "GitHub",
-        description: "Copy the current pull request URL to the clipboard.",
-        enabled: session.github != null,
-        keybind: "<leader>y,y",
-        title: "Copy PR URL",
-        value: "github.copy-url",
-        run: () => {
-          void copyPullRequestUrl();
-        },
-      },
-      {
-        category: "GitHub",
-        description: "Reply to the focused inline review thread.",
-        enabled: hasSelectedReviewThread,
-        keybind: "r",
-        title: "Reply to focused thread",
-        value: "github.reply-thread",
-        run: () => openFocusedReviewThreadReplyComposer(),
-      },
-      {
-        category: "GitHub",
-        description: "Collapse or expand the focused inline review thread.",
-        enabled: selectedReviewThread != null,
-        keybind: "c",
-        title: "Toggle focused thread",
-        value: "github.toggle-thread",
-        run: () => toggleFocusedReviewThreadCollapsed(),
-      },
-      {
-        category: "GitHub",
-        description: "Copy the URL for the focused inline review comment.",
-        enabled: hasSelectedReviewThread,
-        keybind: "y",
-        title: "Copy focused comment URL",
-        value: "github.copy-comment-url",
-        run: () => {
-          void copyFocusedReviewCommentUrl();
-        },
-      },
-      {
-        category: "GitHub",
-        description: "Create a review comment on the selected diff line.",
-        enabled: session.github != null,
-        keybind: "<leader>a,a",
-        suggested: session.github != null,
-        title: "Add review comment",
-        value: "github.add-comment",
-        run: () => openCommentComposer(),
-      },
-      {
-        category: "GitHub",
-        description: "Submit the pending review to GitHub.",
-        enabled: session.github != null,
-        keybind: "<leader>s,s",
-        suggested: session.github != null,
-        title: "Submit review",
-        value: "github.submit-review",
-        run: () => openSubmitReviewModal(),
-      },
-      {
-        category: "GitHub",
-        description: "Merge the pull request with the selected merge strategy.",
-        enabled: session.github != null,
-        keybind: "<leader>m,m",
-        suggested: session.github != null,
-        title: "Merge pull request",
-        value: "github.merge",
-        run: () => openMergeModal(),
-      },
-    ],
+    () =>
+      buildAppCommands({
+        canClearReviewed: reviewedPaths.size > 0,
+        canMoveToNextUnreviewed: hasNextUnreviewedFile,
+        canOpenSelectedTreeFile: selectedTreeNode?.kind === "file",
+        clearReviewed,
+        copyFocusedReviewCommentUrl,
+        copyPullRequestUrl,
+        hasFiles: session.files.length > 0,
+        hasFocusedReviewComment: hasSelectedReviewThread,
+        hasSelectedReviewThread: selectedReviewThread != null,
+        isGitHubAuthenticated,
+        markAllReviewed,
+        moveFocusedReviewComment: moveSelectedReviewComment,
+        moveFocusedReviewThread: moveSelectedReviewThread,
+        moveToNextUnreviewed: jumpToNextUnreviewedFile,
+        onExit,
+        openBranchModal,
+        openCommandModal,
+        openCommentComposer,
+        openFocusedReviewThreadReplyComposer,
+        openGitHubPullRequestList,
+        openHelp,
+        openMergeModal,
+        openPullRequestCommentsModal,
+        openSelectedTreeFile,
+        openSubmitReviewModal,
+        refreshComparison,
+        selectedTreeNode,
+        sessionGitHub: session.github,
+        showKeyLegend,
+        toggleActivePane,
+        toggleCollapsedSelectedFile: () => toggleCollapsed(selectedFileIndex),
+        toggleDiffView,
+        toggleFocusedReviewThreadCollapsed,
+        toggleKeyLegend,
+        toggleReviewedSelectedFile: () => toggleReviewed(selectedFileIndex),
+      }),
     [
+      clearReviewed,
+      copyFocusedReviewCommentUrl,
       copyPullRequestUrl,
+      hasNextUnreviewedFile,
+      isGitHubAuthenticated,
+      jumpToNextUnreviewedFile,
+      markAllReviewed,
+      moveSelectedReviewComment,
+      moveSelectedReviewThread,
       openBranchModal,
       openCommandModal,
-      onExit,
       openCommentComposer,
-      hasSelectedReviewThread,
-      openMergeModal,
       openFocusedReviewThreadReplyComposer,
+      openGitHubPullRequestList,
       openHelp,
+      openMergeModal,
       openPullRequestCommentsModal,
+      openSelectedTreeFile,
       openSubmitReviewModal,
       selectedFileIndex,
       selectedReviewThread,
+      selectedTreeNode,
       session.github,
+      session.files.length,
       showKeyLegend,
-      clearReviewed,
-      copyFocusedReviewCommentUrl,
-      markAllReviewed,
+      onExit,
+      refreshComparison,
+      reviewedPaths.size,
       toggleCollapsed,
       toggleFocusedReviewThreadCollapsed,
       toggleActivePane,
@@ -1050,13 +948,19 @@ export function DiffdiffApp({
       toggleReviewed,
     ],
   );
-  const visibleCommands = useMemo(
-    () => commands.filter((command) => command.enabled !== false && command.hidden !== true),
+  const paletteCommands = useMemo(() => getPaletteCommands(commands), [commands]);
+  const commandPaletteCommand = useMemo(
+    () => findAppCommandByValue(commands, "system.command-palette"),
     [commands],
   );
+  const commandListLabel =
+    formatCommandKeybind(commandPaletteCommand?.keybind, LEADER_KEYBIND) ??
+    formatCommandKeybind(COMMAND_LIST_KEYBIND, LEADER_KEYBIND) ??
+    "ctrl+p";
+  const leaderKeyLabel = formatCommandKeybind(LEADER_KEYBIND, LEADER_KEYBIND) ?? "ctrl+x";
   const filteredCommands = useMemo(
-    () => filterCommands(visibleCommands, commandQuery),
-    [commandQuery, visibleCommands],
+    () => filterCommands(paletteCommands, commandQuery),
+    [commandQuery, paletteCommands],
   );
   const footerEvent = useMemo(() => {
     if (errorToastMessage != null) {
@@ -1109,7 +1013,6 @@ export function DiffdiffApp({
       cleanupSelection.removeLocal) ||
     (cleanupCandidates.some((candidate) => candidate.kind === "remote-tracking") &&
       cleanupSelection.removeRemote);
-  const activeOverlay = getActiveDialog(dialogStack);
   const keyboardHandlerRef = useRef<(key: KeyboardInput) => void>(() => undefined);
   const resolvedLogFilePath =
     logFilePath ?? getDiffdiffLogSession()?.logFilePath ?? "~/.diffdiff/logs/log-unknown.jsonl";
@@ -1213,6 +1116,18 @@ export function DiffdiffApp({
   useEffect(() => {
     setCommandIndex((currentIndex) => clampIndex(currentIndex, filteredCommands.length));
   }, [filteredCommands.length]);
+
+  useEffect(() => {
+    setPullRequestListIndex((currentIndex) =>
+      clampIndex(currentIndex, filteredPullRequestItems.length),
+    );
+  }, [filteredPullRequestItems.length]);
+
+  useEffect(() => {
+    if (launchInPullRequestList) {
+      void refreshGitHubPullRequestList();
+    }
+  }, [launchInPullRequestList]);
 
   useEffect(() => {
     return () => {
@@ -1324,7 +1239,7 @@ export function DiffdiffApp({
       setReviewComposerTarget(null);
       setReviewComposerBody("");
       setDialogStack((currentStack) => {
-        const nextStack = currentStack.filter((dialog) => !GITHUB_DIALOGS.has(dialog));
+        const nextStack = currentStack.filter((entry) => !GITHUB_DIALOGS.has(entry.dialog));
         return nextStack.length === currentStack.length ? currentStack : nextStack;
       });
     }
@@ -1691,6 +1606,10 @@ export function DiffdiffApp({
     syncRemoteState,
   ]);
 
+  function refreshComparison(): void {
+    void refreshGitState();
+  }
+
   const checkForUpdates = useCallback(async () => {
     if (isReloading || isCheckingForUpdates) {
       return;
@@ -1831,6 +1750,7 @@ export function DiffdiffApp({
   keyboardHandlerRef.current = (key) => {
     logDiffdiffVerbose("app", "key_pressed", {
       activeOverlay,
+      activeOverlayTrigger: activeDialogEntry?.triggeredBy ?? undefined,
       errorToastVisible: errorToastMessage != null,
       key,
       leaderActive,
@@ -1852,9 +1772,14 @@ export function DiffdiffApp({
       return;
     }
 
+    if (activeOverlay === "pull-request-list") {
+      handlePullRequestListModalKey(key);
+      return;
+    }
+
     if (activeOverlay === "help") {
       if (key.name === "escape" || key.name === "q" || key.sequence === "?") {
-        setDialogStack((currentStack) => closeAppDialog(currentStack, "help"));
+        setDialogStack((currentStack) => closeAppDialog(currentStack, "help", "dismiss"));
       }
       return;
     }
@@ -1894,8 +1819,8 @@ export function DiffdiffApp({
       return;
     }
 
-    if (activeOverlay == null && !leaderActive && key.name === "f" && key.shift) {
-      void refreshGitState();
+    if (matchCommandKeybind(LEADER_KEYBIND, key)) {
+      enterLeaderMode();
       return;
     }
 
@@ -1915,87 +1840,18 @@ export function DiffdiffApp({
     }
 
     if (matchCommandKeybind(COMMAND_LIST_KEYBIND, key)) {
-      openCommandModal();
-      return;
-    }
-
-    if (matchCommandKeybind(LEADER_KEYBIND, key)) {
-      enterLeaderMode();
+      runCommandByValue("system.command-palette");
       return;
     }
 
     if (key.sequence === "?") {
-      openHelp();
-      return;
-    }
-
-    if (
-      session.github != null &&
-      activePane === "diff" &&
-      selectedReviewThread != null &&
-      key.sequence === "["
-    ) {
-      moveSelectedReviewComment(-1);
-      return;
-    }
-
-    if (
-      session.github != null &&
-      activePane === "diff" &&
-      selectedReviewThread != null &&
-      key.sequence === "]"
-    ) {
-      moveSelectedReviewComment(1);
-      return;
-    }
-
-    if (session.github != null && activePane === "diff" && key.name === "i") {
-      moveSelectedReviewThread(-1);
-      return;
-    }
-
-    if (session.github != null && activePane === "diff" && key.name === "o") {
-      moveSelectedReviewThread(1);
-      return;
-    }
-
-    if (
-      session.github != null &&
-      activePane === "diff" &&
-      key.name === "r" &&
-      hasSelectedReviewThread
-    ) {
-      openFocusedReviewThreadReplyComposer();
-      return;
-    }
-
-    if (
-      session.github != null &&
-      activePane === "diff" &&
-      key.name === "c" &&
-      selectedReviewThread != null
-    ) {
-      toggleFocusedReviewThreadCollapsed();
-      return;
-    }
-
-    if (
-      session.github != null &&
-      activePane === "diff" &&
-      key.name === "y" &&
-      hasSelectedReviewThread
-    ) {
-      void copyFocusedReviewCommentUrl();
+      runCommandByValue("system.help");
       return;
     }
 
     if (activePane === "tree") {
       const treeCommand = findCommandByKey(key);
-      if (
-        treeCommand != null &&
-        treeCommand.value !== "review.toggle-collapsed" &&
-        treeCommand.value !== "review.toggle-reviewed"
-      ) {
+      if (treeCommand != null) {
         runCommand(treeCommand);
         return;
       }
@@ -2671,6 +2527,7 @@ export function DiffdiffApp({
         commitSearchActive={commitSearchActive}
         commitSearchQuery={commitSearchQuery}
         filteredCommands={filteredCommands}
+        helpCommands={commands}
         filteredCommitItems={filteredCommitItems}
         filterIndex={filterIndex}
         isSubmittingReviewAction={isSubmittingReviewAction}
@@ -2681,6 +2538,12 @@ export function DiffdiffApp({
         mergeMethod={mergeMethod}
         mergeModalField={mergeModalField}
         openPrCount={openPrCount}
+        pullRequestListIndex={pullRequestListIndex}
+        pullRequestSearchActive={pullRequestSearchActive}
+        pullRequestSearchQuery={pullRequestSearchQuery}
+        reviewRequestedPrCount={reviewRequestedPrCount}
+        filteredPullRequestItems={filteredPullRequestItems}
+        isPullRequestListLoading={isPullRequestListLoading}
         remoteBranchCount={remoteBranchCount}
         reviewComposerBody={reviewComposerBody}
         reviewComposerContext={reviewComposerContext}
@@ -2692,15 +2555,7 @@ export function DiffdiffApp({
             : String(selectedPullRequestConversationItem.id)
         }
         session={session}
-        showBranchModal={showBranchModal}
-        showCleanupModal={showCleanupModal}
-        showCommandModal={showCommandModal}
-        showCommentComposer={showCommentComposer}
-        showCommentsModal={showCommentsModal}
-        showHelp={showHelp}
-        showListFilterModal={showListFilterModal}
-        showMergeModal={showMergeModal}
-        showSubmitReviewModal={showSubmitReviewModal}
+        activeDialog={activeOverlay}
         theme={theme}
       />
     </box>
@@ -2727,6 +2582,37 @@ export function DiffdiffApp({
 
     setSelectedFileIndex(nextIndex);
     setStatusMessage(`Selected ${nextFilePath ?? "file"}.`);
+  }
+
+  function jumpToNextUnreviewedFile(): void {
+    if (session.files.length === 0) {
+      setStatusMessage("No files are available to review.");
+      return;
+    }
+
+    for (let offset = 1; offset <= session.files.length; offset += 1) {
+      const candidateIndex = (selectedFileIndex + offset) % session.files.length;
+      const candidate = session.files[candidateIndex];
+      if (candidate == null || reviewedPaths.has(candidate.path)) {
+        continue;
+      }
+
+      startInteraction("file_selection", {
+        details: {
+          fromFilePath: selectedFilePath,
+          toFilePath: candidate.path,
+          trigger: "next-unreviewed-file",
+        },
+        expectedSelectedFilePath: candidate.path,
+      });
+      pendingSelectedFileScrollOffsetRef.current = REVIEWED_NEXT_FILE_SCROLL_OFFSET;
+      setSelectedFileIndex(candidateIndex);
+      setActivePane("diff");
+      setStatusMessage(`Jumped to next unreviewed file: ${candidate.path}.`);
+      return;
+    }
+
+    setStatusMessage("All files are already reviewed.");
   }
 
   function moveSelectedReviewThread(delta: number): void {
@@ -3002,25 +2888,35 @@ export function DiffdiffApp({
     clearLeaderMode();
     setCommandQuery("");
     setCommandIndex(0);
-    setDialogStack((currentStack) =>
-      openAppDialog(currentStack, "command-palette", { clear: true }),
-    );
+    setDialogStack((currentStack) => openAppDialog(currentStack, "command-palette"));
     setStatusMessage("Opened command palette.");
   }
 
   function closeCommandModal(): void {
-    setDialogStack((currentStack) => closeAppDialog(currentStack, "command-palette"));
+    setDialogStack((currentStack) => closeAppDialog(currentStack, "command-palette", "dismiss"));
     setCommandQuery("");
     setCommandIndex(0);
     setStatusMessage("Closed command palette.");
   }
 
   function runCommand(command: AppCommand): void {
+    if (command.enabled === false) {
+      setStatusMessage(command.disabledReason ?? `${command.title} is not available right now.`);
+      return;
+    }
+
     clearLeaderMode();
     setDialogStack((currentStack) => closeAppDialog(currentStack, "command-palette"));
     setCommandQuery("");
     setCommandIndex(0);
     command.run();
+  }
+
+  function runCommandByValue(value: string): void {
+    const command = findAppCommandByValue(commands, value);
+    if (command != null) {
+      runCommand(command);
+    }
   }
 
   function toggleKeyLegend(): void {
@@ -3114,6 +3010,15 @@ export function DiffdiffApp({
     if (options?.openDiff) {
       setActivePane("diff");
     }
+  }
+
+  function openSelectedTreeFile(): void {
+    if (selectedTreeNode?.kind !== "file") {
+      setStatusMessage("Select a file in the tree first.");
+      return;
+    }
+
+    selectTreeNode(selectedTreeNode, { openDiff: true });
   }
 
   function moveTreeSelection(delta: number): void {
@@ -3221,6 +3126,150 @@ export function DiffdiffApp({
     selectTreeNode(node, { openDiff: true });
   }
 
+  function beginPullRequestListLoad(): number {
+    pullRequestListLoadIdRef.current += 1;
+    return pullRequestListLoadIdRef.current;
+  }
+
+  function isLatestPullRequestListLoad(loadId: number): boolean {
+    return loadId === pullRequestListLoadIdRef.current;
+  }
+
+  function openGitHubPullRequestList(): void {
+    setPullRequestListIndex(0);
+    setPullRequestSearchActive(false);
+    setPullRequestSearchQuery("");
+    setDialogStack((currentStack) =>
+      openAppDialog(currentStack, "pull-request-list", { clear: true }),
+    );
+    setStatusMessage("Opened pull request list.");
+    void refreshGitHubPullRequestList();
+  }
+
+  async function refreshGitHubPullRequestList(): Promise<void> {
+    if (listGitHubPullRequests == null) {
+      handleAppFailure("Unable to load GitHub pull requests.", {
+        action: "refresh-github-pull-request-list",
+        reason: "missing-list-handler",
+      });
+      return;
+    }
+
+    setIsPullRequestListLoading(true);
+    setStatusMessage("Loading GitHub pull requests...");
+    const loadId = beginPullRequestListLoad();
+
+    try {
+      const nextPullRequests = await listGitHubPullRequests();
+      if (!isLatestPullRequestListLoad(loadId)) {
+        return;
+      }
+
+      setPullRequestList(nextPullRequests);
+      setStatusMessage(
+        nextPullRequests.length === 0
+          ? "No open authored or review-requested pull requests were found."
+          : `Loaded ${nextPullRequests.length} GitHub pull request${nextPullRequests.length === 1 ? "" : "s"}.`,
+      );
+    } catch (error) {
+      if (!isLatestPullRequestListLoad(loadId)) {
+        return;
+      }
+
+      handleAppError(error, "Unable to load GitHub pull requests.", {
+        action: "refresh-github-pull-request-list",
+      });
+    } finally {
+      if (isLatestPullRequestListLoad(loadId)) {
+        setIsPullRequestListLoading(false);
+      }
+    }
+  }
+
+  function handlePullRequestListModalKey(key: KeyboardInput): void {
+    if (pullRequestSearchActive) {
+      if (key.name === "escape" || key.name === "return") {
+        setPullRequestSearchActive(false);
+        return;
+      }
+
+      if (key.name === "backspace") {
+        setPullRequestSearchQuery((query) => query.slice(0, -1));
+        setPullRequestListIndex(0);
+        return;
+      }
+
+      if (key.name === "j" || key.name === "down") {
+        setPullRequestListIndex((currentIndex) =>
+          clampIndex(currentIndex + 1, filteredPullRequestItems.length),
+        );
+        return;
+      }
+
+      if (key.name === "k" || key.name === "up") {
+        setPullRequestListIndex((currentIndex) =>
+          clampIndex(currentIndex - 1, filteredPullRequestItems.length),
+        );
+        return;
+      }
+
+      if (key.sequence != null && key.sequence.length === 1 && key.sequence >= " ") {
+        setPullRequestSearchQuery((query) => query + key.sequence);
+        setPullRequestListIndex(0);
+      }
+
+      return;
+    }
+
+    if (key.name === "escape" || key.name === "q") {
+      setDialogStack((currentStack) =>
+        closeAppDialog(currentStack, "pull-request-list", "dismiss"),
+      );
+      setPullRequestSearchActive(false);
+      setPullRequestSearchQuery("");
+      setStatusMessage("Closed pull request list.");
+      return;
+    }
+
+    if (key.name === "f" && key.shift) {
+      void refreshGitHubPullRequestList();
+      return;
+    }
+
+    if (key.name === "j" || key.name === "down") {
+      setPullRequestListIndex((currentIndex) =>
+        clampIndex(currentIndex + 1, filteredPullRequestItems.length),
+      );
+      return;
+    }
+
+    if (key.name === "k" || key.name === "up") {
+      setPullRequestListIndex((currentIndex) =>
+        clampIndex(currentIndex - 1, filteredPullRequestItems.length),
+      );
+      return;
+    }
+
+    if (key.name === "g" && !key.shift) {
+      setPullRequestListIndex(0);
+      return;
+    }
+
+    if (key.name === "g" && key.shift) {
+      setPullRequestListIndex(Math.max(filteredPullRequestItems.length - 1, 0));
+      return;
+    }
+
+    if (key.sequence === "/") {
+      setPullRequestSearchActive(true);
+      return;
+    }
+
+    if (key.name === "return" && selectedPullRequestItem != null) {
+      void applyDashboardPullRequestSelection(selectedPullRequestItem.pullRequest);
+    }
+  }
+
   function openBranchModal(): void {
     setBranchListIndex(
       findInitialBranchListSelection({
@@ -3233,7 +3282,7 @@ export function DiffdiffApp({
     setCommitSearchQuery("");
     setCommitSearchActive(false);
     setActiveListView("branch");
-    setDialogStack(["branch"]);
+    setDialogStack((currentStack) => openAppDialog(currentStack, "branch", { clear: true }));
     setStatusMessage("Opened list modal.");
   }
 
@@ -3282,7 +3331,7 @@ export function DiffdiffApp({
     }
 
     if (key.name === "escape" || key.name === "q" || key.name === "l") {
-      setDialogStack((currentStack) => closeAppDialog(currentStack, "branch"));
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "branch", "dismiss"));
       setCommitSearchQuery("");
       setCommitSearchActive(false);
       setStatusMessage("Closed list modal.");
@@ -3405,7 +3454,7 @@ export function DiffdiffApp({
 
   function handleListFilterModalKey(key: KeyboardInput): void {
     if (key.name === "escape" || key.name === "q" || key.name === "f") {
-      setDialogStack((currentStack) => closeAppDialog(currentStack, "list-filter"));
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "list-filter", "dismiss"));
       setStatusMessage("Closed list filters.");
       return;
     }
@@ -3461,7 +3510,7 @@ export function DiffdiffApp({
   }
 
   function findCommandByKey(key: KeyboardInput, leader = false): AppCommand | undefined {
-    return visibleCommands.find((command) => matchCommandKeybind(command.keybind, key, leader));
+    return findAppCommandByKey(commands, key, { activePane, leader });
   }
 
   function handleCommandModalKey(key: KeyboardInput): void {
@@ -3522,7 +3571,7 @@ export function DiffdiffApp({
 
   function handleCommentComposerKey(key: KeyboardInput): void {
     if (key.name === "escape") {
-      setDialogStack((currentStack) => closeAppDialog(currentStack, "comment-composer"));
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "comment-composer", "dismiss"));
       setReviewComposerTarget(null);
       setReviewComposerBody("");
       setStatusMessage("Closed comment composer.");
@@ -3551,7 +3600,7 @@ export function DiffdiffApp({
 
   function handlePullRequestCommentsModalKey(key: KeyboardInput): void {
     if (key.name === "escape" || key.name === "q" || key.name === "t") {
-      setDialogStack((currentStack) => closeAppDialog(currentStack, "comments"));
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "comments", "dismiss"));
       setStatusMessage("Closed PR conversation.");
       return;
     }
@@ -3582,7 +3631,7 @@ export function DiffdiffApp({
 
   function handleSubmitReviewModalKey(key: KeyboardInput): void {
     if (key.name === "escape") {
-      setDialogStack((currentStack) => closeAppDialog(currentStack, "submit-review"));
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "submit-review", "dismiss"));
       setReviewSubmissionBody("");
       setStatusMessage("Closed submit review modal.");
       return;
@@ -3620,7 +3669,7 @@ export function DiffdiffApp({
 
   function handleMergeModalKey(key: KeyboardInput): void {
     if (key.name === "escape") {
-      setDialogStack((currentStack) => closeAppDialog(currentStack, "merge"));
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "merge", "dismiss"));
       setStatusMessage("Closed merge modal.");
       return;
     }
@@ -3697,7 +3746,7 @@ export function DiffdiffApp({
     const entryCount = 2;
 
     if (key.name === "escape") {
-      setDialogStack((currentStack) => closeAppDialog(currentStack, "cleanup"));
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "cleanup", "dismiss"));
       setCleanupCandidates([]);
       setStatusMessage("Skipped post-merge cleanup.");
       return;
@@ -3830,7 +3879,7 @@ export function DiffdiffApp({
   }
 
   function openHelp(): void {
-    setDialogStack((currentStack) => openAppDialog(currentStack, "help", { clear: true }));
+    setDialogStack((currentStack) => openAppDialog(currentStack, "help"));
   }
 
   function openSubmitReviewModal(): void {
@@ -3919,7 +3968,9 @@ export function DiffdiffApp({
       if (isLatestSessionLoad(sessionLoadId, reviewComposerTarget.kind)) {
         applyLoadedSession(nextSession);
       }
-      setDialogStack((currentStack) => closeAppDialog(currentStack, "comment-composer"));
+      setDialogStack((currentStack) =>
+        closeAppDialog(currentStack, "comment-composer", "complete"),
+      );
       setReviewComposerTarget(null);
       setReviewComposerBody("");
       setStatusMessage(
@@ -3967,7 +4018,7 @@ export function DiffdiffApp({
         return;
       }
       applyLoadedSession(nextSession);
-      setDialogStack((currentStack) => closeAppDialog(currentStack, "submit-review"));
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "submit-review", "complete"));
       setReviewSubmissionBody("");
       setStatusMessage("Submitted review.");
     } catch (error) {
@@ -4004,15 +4055,17 @@ export function DiffdiffApp({
         return;
       }
       applyLoadedSession(nextSession);
-      setDialogStack((currentStack) => closeAppDialog(currentStack, "merge"));
-      setStatusMessage("Merged the pull request and refreshed local refs.");
-
       if (mergeResult.cleanupCandidates.length > 0) {
         setCleanupCandidateIndex(0);
         setCleanupCandidates(mergeResult.cleanupCandidates);
         setCleanupSelection(gitHubPreferencesRef.current.cleanup);
-        setDialogStack((currentStack) => openAppDialog(currentStack, "cleanup", { replace: true }));
+        setDialogStack((currentStack) =>
+          openAppDialog(currentStack, "cleanup", { replace: true, triggeredBy: "merge" }),
+        );
         setStatusMessage("Merged the pull request. Choose any stale refs to remove.");
+      } else {
+        setDialogStack((currentStack) => closeAppDialog(currentStack, "merge", "complete"));
+        setStatusMessage("Merged the pull request and refreshed local refs.");
       }
     } catch (error) {
       if (!isLatestSessionLoad(sessionLoadId, "merge-pull-request")) {
@@ -4054,7 +4107,7 @@ export function DiffdiffApp({
       }
       applyLoadedSession(nextSession);
       setCleanupCandidates([]);
-      setDialogStack((currentStack) => closeAppDialog(currentStack, "cleanup"));
+      setDialogStack((currentStack) => closeAppDialog(currentStack, "cleanup", "complete"));
       setStatusMessage("Removed selected refs and reloaded the current session.");
     } catch (error) {
       if (!isLatestSessionLoad(sessionLoadId, "remove-cleanup-refs")) {
@@ -4188,6 +4241,53 @@ export function DiffdiffApp({
       }
       handleAppError(error, "Unable to review working tree changes.", {
         action: "apply-working-tree-selection",
+      });
+    } finally {
+      setIsReloading(false);
+    }
+  }
+
+  async function applyDashboardPullRequestSelection(
+    pullRequest: GitHubDashboardPullRequest,
+  ): Promise<void> {
+    if (resolveLaunchTarget == null) {
+      handleAppFailure("Unable to open the selected pull request.", {
+        action: "apply-dashboard-pull-request-selection",
+        reason: "missing-launch-target-resolver",
+      });
+      return;
+    }
+
+    const target = `${pullRequest.repository.owner}/${pullRequest.repository.repo}/${pullRequest.number}`;
+    setIsReloading(true);
+    setStatusMessage(
+      `Opening ${pullRequest.repository.owner}/${pullRequest.repository.repo}#${pullRequest.number}...`,
+    );
+    const sessionLoadId = beginSessionLoad();
+
+    try {
+      const nextOptions = await resolveLaunchTarget(target, startupOptions);
+      const nextSession = await loadSession(nextOptions);
+      if (!isLatestSessionLoad(sessionLoadId, "apply-dashboard-pull-request-selection")) {
+        return;
+      }
+
+      applyLoadedSession(nextSession);
+      setStartupOptions(nextOptions);
+      setDialogStack([]);
+      setSelectedFileIndex(0);
+      setStatusMessage(
+        `Opened ${pullRequest.repository.owner}/${pullRequest.repository.repo}#${pullRequest.number}.`,
+      );
+    } catch (error) {
+      if (!isLatestSessionLoad(sessionLoadId, "apply-dashboard-pull-request-selection")) {
+        return;
+      }
+
+      handleAppError(error, "Unable to open the selected pull request.", {
+        action: "apply-dashboard-pull-request-selection",
+        pullRequestNumber: pullRequest.number,
+        repository: pullRequest.repository,
       });
     } finally {
       setIsReloading(false);

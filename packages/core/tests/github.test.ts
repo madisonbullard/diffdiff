@@ -211,6 +211,69 @@ describe("GitHubMetadataProvider", () => {
 });
 
 describe("GitHubPullRequestService", () => {
+  test("lists open authored and review-requested pull requests across repositories", async () => {
+    const clientFactory: GitHubClientFactory = {
+      create: vi.fn(async () =>
+        createGitHubApiClient({
+          searchPullRequests: {
+            authored: [
+              {
+                html_url: "https://github.com/diffdiff/diffdiff/pull/42",
+                number: 42,
+                repository_url: "https://api.github.com/repos/diffdiff/diffdiff",
+                state: "open",
+                title: "Ship the PR dashboard",
+                updated_at: "2026-04-03T14:00:00Z",
+                user: { html_url: "https://github.com/madison", login: "madison" },
+              },
+            ],
+            reviewRequested: [
+              {
+                html_url: "https://github.com/acme/widgets/pull/7",
+                number: 7,
+                repository_url: "https://api.github.com/repos/acme/widgets",
+                state: "open",
+                title: "Need reviewer eyes",
+                updated_at: "2026-04-03T15:00:00Z",
+                user: { html_url: "https://github.com/octocat", login: "octocat" },
+              },
+              {
+                html_url: "https://github.com/diffdiff/diffdiff/pull/42",
+                number: 42,
+                repository_url: "https://api.github.com/repos/diffdiff/diffdiff",
+                state: "open",
+                title: "Ship the PR dashboard",
+                updated_at: "2026-04-03T14:00:00Z",
+                user: { html_url: "https://github.com/madison", login: "madison" },
+              },
+            ],
+          },
+        }),
+      ),
+    };
+    const service = new GitHubPullRequestService(clientFactory);
+
+    const pullRequests = await service.listDashboardPullRequests();
+
+    expect(pullRequests).toHaveLength(2);
+    expect(pullRequests[0]).toMatchObject({
+      author: { login: "octocat" },
+      isAuthor: false,
+      isReviewRequested: true,
+      number: 7,
+      repository: { owner: "acme", repo: "widgets" },
+      title: "Need reviewer eyes",
+    });
+    expect(pullRequests[1]).toMatchObject({
+      author: { login: "madison" },
+      isAuthor: true,
+      isReviewRequested: true,
+      number: 42,
+      repository: { owner: "diffdiff", repo: "diffdiff" },
+      title: "Ship the PR dashboard",
+    });
+  });
+
   test("loads pull request details on demand", async () => {
     const client = createGitHubApiClient();
     const clientFactory: GitHubClientFactory = {
@@ -555,14 +618,38 @@ function createGitHubApiClient(
     checkRuns?: Array<{ conclusion: string | null; status: string }>;
     combinedStatusState?: string;
     commentPath?: string;
+    searchPullRequests?: {
+      authored?: Array<{
+        draft?: boolean;
+        html_url: string;
+        number: number;
+        repository_url: string;
+        state: "open" | "closed";
+        title: string;
+        updated_at: string;
+        user: { html_url?: string; login?: string } | null;
+      }>;
+      reviewRequested?: Array<{
+        draft?: boolean;
+        html_url: string;
+        number: number;
+        repository_url: string;
+        state: "open" | "closed";
+        title: string;
+        updated_at: string;
+        user: { html_url?: string; login?: string } | null;
+      }>;
+    };
   } = {},
 ): GitHubApiClient & {
   graphqlMock: ReturnType<typeof vi.fn>;
+  paginateMock: ReturnType<typeof vi.fn>;
   requestMock: ReturnType<typeof vi.fn>;
 } {
   const checkRuns = options.checkRuns ?? [{ conclusion: "success", status: "completed" }];
   const combinedStatusState = options.combinedStatusState ?? "success";
   const commentPath = options.commentPath ?? "src/app.ts";
+  const searchPullRequests = options.searchPullRequests ?? {};
   const graphql = vi.fn(async () => ({ addPullRequestReviewThread: { thread: { id: "PRRT_1" } } }));
   const request = vi.fn(async (route) => {
     if (route === "GET /repos/{owner}/{repo}/pulls/{pull_number}") {
@@ -648,6 +735,107 @@ function createGitHubApiClient(
 
     return undefined;
   });
+  const paginateMock = vi.fn(async (route, parameters) => {
+    if (route === "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews") {
+      return [
+        {
+          body: "Looks good.",
+          html_url: "https://github.com/diffdiff/diffdiff/pull/42#pullrequestreview-9001",
+          id: 9001,
+          node_id: "PRR_9001",
+          state: "APPROVED",
+          submitted_at: "2026-04-01T12:00:00Z",
+          user: { html_url: "https://github.com/octocat", login: "octocat" },
+        },
+        {
+          body: null,
+          html_url: "https://github.com/diffdiff/diffdiff/pull/42#pullrequestreview-9010",
+          id: 9010,
+          node_id: "PRR_pending_9010",
+          state: "PENDING",
+          submitted_at: null,
+          user: { html_url: "https://github.com/madison", login: "madison" },
+        },
+      ];
+    }
+
+    if (route === "GET /repos/{owner}/{repo}/pulls/{pull_number}/comments") {
+      return [
+        {
+          body: "Please rename this variable.",
+          commit_id: "headsha",
+          created_at: "2026-04-01T12:01:00Z",
+          diff_hunk: "@@ -1 +1 @@",
+          html_url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r1",
+          id: 101,
+          in_reply_to_id: null,
+          line: 1,
+          node_id: "PRRC_101",
+          original_commit_id: "basesha",
+          original_line: 1,
+          path: commentPath,
+          pull_request_review_id: 9001,
+          side: "RIGHT",
+          start_line: null,
+          original_start_line: null,
+          start_side: null,
+          updated_at: "2026-04-01T12:01:00Z",
+          user: { html_url: "https://github.com/octocat", login: "octocat" },
+        },
+        {
+          body: "Fixed.",
+          commit_id: "headsha",
+          created_at: "2026-04-01T12:02:00Z",
+          diff_hunk: "@@ -1 +1 @@",
+          html_url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r2",
+          id: 102,
+          in_reply_to_id: 101,
+          line: 1,
+          node_id: "PRRC_102",
+          original_commit_id: "basesha",
+          original_line: 1,
+          path: commentPath,
+          pull_request_review_id: 9001,
+          side: "RIGHT",
+          start_line: null,
+          original_start_line: null,
+          start_side: null,
+          updated_at: "2026-04-01T12:02:00Z",
+          user: { html_url: "https://github.com/diffdiff-bot", login: "diffdiff-bot" },
+        },
+      ];
+    }
+
+    if (route === "GET /repos/{owner}/{repo}/issues/{issue_number}/comments") {
+      return [
+        {
+          body: "Can we tighten the rollout copy?",
+          created_at: "2026-04-01T11:58:00Z",
+          html_url: "https://github.com/diffdiff/diffdiff/pull/42#issuecomment-501",
+          id: 501,
+          node_id: "PRIC_501",
+          updated_at: "2026-04-01T11:58:00Z",
+          user: { html_url: "https://github.com/octocat", login: "octocat" },
+        },
+      ];
+    }
+
+    if (route === "GET /repos/{owner}/{repo}/pulls") {
+      return [];
+    }
+
+    if (route === "GET /search/issues") {
+      if (parameters?.q === "is:pr state:open archived:false author:@me") {
+        return searchPullRequests.authored ?? [];
+      }
+
+      if (parameters?.q === "is:pr state:open archived:false review-requested:@me") {
+        return searchPullRequests.reviewRequested ?? [];
+      }
+    }
+
+    return [];
+  });
 
   return {
     auth: {
@@ -657,97 +845,8 @@ function createGitHubApiClient(
     },
     graphql: graphql as unknown as GitHubApiClient["graphql"],
     graphqlMock: graphql,
-    paginate: vi.fn(async (route) => {
-      if (route === "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews") {
-        return [
-          {
-            body: "Looks good.",
-            html_url: "https://github.com/diffdiff/diffdiff/pull/42#pullrequestreview-9001",
-            id: 9001,
-            node_id: "PRR_9001",
-            state: "APPROVED",
-            submitted_at: "2026-04-01T12:00:00Z",
-            user: { html_url: "https://github.com/octocat", login: "octocat" },
-          },
-          {
-            body: null,
-            html_url: "https://github.com/diffdiff/diffdiff/pull/42#pullrequestreview-9010",
-            id: 9010,
-            node_id: "PRR_pending_9010",
-            state: "PENDING",
-            submitted_at: null,
-            user: { html_url: "https://github.com/madison", login: "madison" },
-          },
-        ];
-      }
-
-      if (route === "GET /repos/{owner}/{repo}/pulls/{pull_number}/comments") {
-        return [
-          {
-            body: "Please rename this variable.",
-            commit_id: "headsha",
-            created_at: "2026-04-01T12:01:00Z",
-            diff_hunk: "@@ -1 +1 @@",
-            html_url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r1",
-            id: 101,
-            in_reply_to_id: null,
-            line: 1,
-            node_id: "PRRC_101",
-            original_commit_id: "basesha",
-            original_line: 1,
-            path: commentPath,
-            pull_request_review_id: 9001,
-            side: "RIGHT",
-            start_line: null,
-            original_start_line: null,
-            start_side: null,
-            updated_at: "2026-04-01T12:01:00Z",
-            user: { html_url: "https://github.com/octocat", login: "octocat" },
-          },
-          {
-            body: "Fixed.",
-            commit_id: "headsha",
-            created_at: "2026-04-01T12:02:00Z",
-            diff_hunk: "@@ -1 +1 @@",
-            html_url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r2",
-            id: 102,
-            in_reply_to_id: 101,
-            line: 1,
-            node_id: "PRRC_102",
-            original_commit_id: "basesha",
-            original_line: 1,
-            path: commentPath,
-            pull_request_review_id: 9001,
-            side: "RIGHT",
-            start_line: null,
-            original_start_line: null,
-            start_side: null,
-            updated_at: "2026-04-01T12:02:00Z",
-            user: { html_url: "https://github.com/diffdiff-bot", login: "diffdiff-bot" },
-          },
-        ];
-      }
-
-      if (route === "GET /repos/{owner}/{repo}/issues/{issue_number}/comments") {
-        return [
-          {
-            body: "Can we tighten the rollout copy?",
-            created_at: "2026-04-01T11:58:00Z",
-            html_url: "https://github.com/diffdiff/diffdiff/pull/42#issuecomment-501",
-            id: 501,
-            node_id: "PRIC_501",
-            updated_at: "2026-04-01T11:58:00Z",
-            user: { html_url: "https://github.com/octocat", login: "octocat" },
-          },
-        ];
-      }
-
-      if (route === "GET /repos/{owner}/{repo}/pulls") {
-        return [];
-      }
-
-      return [];
-    }),
+    paginate: paginateMock as unknown as GitHubApiClient["paginate"],
+    paginateMock,
     request,
     requestMock: request,
   };

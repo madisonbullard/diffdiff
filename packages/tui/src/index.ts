@@ -8,8 +8,10 @@ export { getUiTheme } from "./theme.ts";
 export {
   buildBranchListItems,
   buildCommitListItems,
+  buildPullRequestListItems,
   clampIndex,
   DEFAULT_BRANCH_LIST_FILTERS,
+  filterPullRequestListItems,
   findInitialBranchListSelection,
   formatAuthorList,
   formatChangeSummary,
@@ -29,6 +31,7 @@ export type {
   DiffViewPreference,
   ListModalView,
   PierreThemeName,
+  PullRequestListItem,
   PreparedReviewFile,
   PreparedReviewSession,
   SideBySideDiffCell,

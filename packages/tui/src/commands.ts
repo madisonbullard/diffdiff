@@ -12,9 +12,11 @@ export interface CommandDefinition {
   title: string;
   category: string;
   description?: string;
+  disabledReason?: string;
   keybind?: string;
   enabled?: boolean;
   hidden?: boolean;
+  keywords?: readonly string[];
   suggested?: boolean;
 }
 
@@ -117,6 +119,13 @@ function matchesKeybind(expected: KeybindInfo, actual: KeybindInfo): boolean {
 }
 
 function formatParsedKeybind(keybind: KeybindInfo, leaderLabel?: string): string {
+  const isQuestionMarkKeybind =
+    keybind.shift && keybind.name === "/" && !keybind.ctrl && !keybind.meta && !keybind.super;
+
+  if (isQuestionMarkKeybind) {
+    return keybind.leader ? `${leaderLabel ?? "leader"} ?` : "?";
+  }
+
   const parts: string[] = [];
 
   if (keybind.ctrl) {
@@ -156,30 +165,50 @@ function commandMatchesQuery(command: CommandDefinition, query: string): number 
   const title = command.title.toLowerCase();
   const category = command.category.toLowerCase();
   const description = command.description?.toLowerCase() ?? "";
+  const value = command.value.toLowerCase();
+  const keywords = command.keywords?.map((keyword) => keyword.toLowerCase()) ?? [];
   const words = title.split(/[^a-z0-9]+/u).filter(Boolean);
 
   if (title === normalizedQuery) {
     return 0;
   }
 
-  if (title.startsWith(normalizedQuery)) {
+  if (value === normalizedQuery || keywords.includes(normalizedQuery)) {
     return 1;
   }
 
-  if (words.some((word) => word.startsWith(normalizedQuery))) {
+  if (title.startsWith(normalizedQuery)) {
     return 2;
   }
 
-  if (title.includes(normalizedQuery)) {
+  if (words.some((word) => word.startsWith(normalizedQuery))) {
     return 3;
   }
 
-  if (description.includes(normalizedQuery)) {
+  if (
+    value.startsWith(normalizedQuery) ||
+    keywords.some((keyword) => keyword.startsWith(normalizedQuery))
+  ) {
     return 4;
   }
 
-  if (category.includes(normalizedQuery)) {
+  if (title.includes(normalizedQuery)) {
     return 5;
+  }
+
+  if (description.includes(normalizedQuery)) {
+    return 6;
+  }
+
+  if (
+    value.includes(normalizedQuery) ||
+    keywords.some((keyword) => keyword.includes(normalizedQuery))
+  ) {
+    return 7;
+  }
+
+  if (category.includes(normalizedQuery)) {
+    return 8;
   }
 
   let queryIndex = 0;
@@ -187,7 +216,7 @@ function commandMatchesQuery(command: CommandDefinition, query: string): number 
     if (character === normalizedQuery[queryIndex]) {
       queryIndex += 1;
       if (queryIndex === normalizedQuery.length) {
-        return 6;
+        return 9;
       }
     }
   }
@@ -241,10 +270,17 @@ export function filterCommands<T extends CommandDefinition>(
     .map((command) => ({ command, score: commandMatchesQuery(command, normalizedQuery) }))
     .filter((entry) => entry.score != null)
     .sort((left, right) => {
+      const leftEnabled = left.command.enabled !== false;
+      const rightEnabled = right.command.enabled !== false;
+
       if (normalizedQuery === "") {
         if (left.command.suggested !== right.command.suggested) {
           return left.command.suggested ? -1 : 1;
         }
+      }
+
+      if (leftEnabled !== rightEnabled) {
+        return leftEnabled ? -1 : 1;
       }
 
       if (left.score !== right.score) {
