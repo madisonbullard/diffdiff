@@ -1,0 +1,84 @@
+import type { AppCommand, BuildAppCommandsOptions } from "../registry.ts";
+import { withLeaderKeybind } from "../../shared/constants.ts";
+
+export function buildReviewCommands({
+  canClearReviewed,
+  canMoveToNextUnreviewed,
+  clearReviewed,
+  hasFiles,
+  markAllReviewed,
+  moveToNextUnreviewed,
+  toggleCollapsedSelectedFile,
+  toggleReviewedSelectedFile,
+}: Pick<
+  BuildAppCommandsOptions,
+  | "canClearReviewed"
+  | "canMoveToNextUnreviewed"
+  | "clearReviewed"
+  | "hasFiles"
+  | "markAllReviewed"
+  | "moveToNextUnreviewed"
+  | "toggleCollapsedSelectedFile"
+  | "toggleReviewedSelectedFile"
+>): AppCommand[] {
+  return [
+    {
+      category: "Review",
+      description: "Mark the selected file as reviewed or not reviewed.",
+      disabledReason: hasFiles ? undefined : "No files are available to review.",
+      enabled: hasFiles,
+      keybind: withLeaderKeybind("r"),
+      keybindingContexts: ["diff"],
+      suggested: true,
+      title: "Toggle reviewed",
+      value: "review.toggle-reviewed",
+      run: () => toggleReviewedSelectedFile(),
+    },
+    {
+      category: "Review",
+      description: "Jump to the next file that is not marked reviewed.",
+      disabledReason: !canMoveToNextUnreviewed
+        ? hasFiles
+          ? "All files are already reviewed."
+          : "No files are available to review."
+        : undefined,
+      enabled: canMoveToNextUnreviewed,
+      keybind: withLeaderKeybind("u"),
+      suggested: canMoveToNextUnreviewed,
+      title: "Jump to next unreviewed file",
+      value: "review.next-unreviewed",
+      run: () => moveToNextUnreviewed(),
+    },
+    {
+      category: "Review",
+      description: "Mark every file in the current comparison as reviewed.",
+      disabledReason: hasFiles ? undefined : "No files are available to review.",
+      enabled: hasFiles,
+      keybind: withLeaderKeybind("shift+r"),
+      title: "Mark all reviewed",
+      value: "review.mark-all-reviewed",
+      run: () => markAllReviewed(),
+    },
+    {
+      category: "Review",
+      description: "Clear the reviewed state from every file in the current comparison.",
+      disabledReason: canClearReviewed ? undefined : "No files are marked reviewed.",
+      enabled: canClearReviewed,
+      keybind: withLeaderKeybind("alt+r"),
+      title: "Unmark all reviewed",
+      value: "review.clear-reviewed",
+      run: () => clearReviewed(),
+    },
+    {
+      category: "Review",
+      description: "Collapse or expand the selected file diff.",
+      disabledReason: hasFiles ? undefined : "No files are available to review.",
+      enabled: hasFiles,
+      keybind: withLeaderKeybind("c"),
+      keybindingContexts: ["diff"],
+      title: "Toggle collapsed",
+      value: "review.toggle-collapsed",
+      run: () => toggleCollapsedSelectedFile(),
+    },
+  ];
+}

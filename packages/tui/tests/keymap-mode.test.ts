@@ -3,7 +3,7 @@ import {
   getKeymapModeBadge,
   keymapModeSuspendsGlobalKeybinds,
   resolveActiveKeymapMode,
-} from "../src/app/keymap-mode.ts";
+} from "../src/app/shell/keymap-mode.ts";
 import { DARK_THEME } from "../src/theme.ts";
 
 describe("keymap mode", () => {

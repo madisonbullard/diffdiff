@@ -4,7 +4,7 @@ import {
   getActiveDialog,
   getDialogExitAction,
   openDialog,
-} from "../src/app/dialog-stack.ts";
+} from "../src/app/dialogs/stack.ts";
 
 test("tracks which modal opened the active child modal", () => {
   const stack = openDialog(openDialog([], "branch", { clear: true }), "list-filter");

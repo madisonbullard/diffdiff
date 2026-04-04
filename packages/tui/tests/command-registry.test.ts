@@ -5,7 +5,7 @@ import {
   findAppCommandByKey,
   findAppCommandByValue,
   getPaletteCommands,
-} from "../src/app/command-registry.ts";
+} from "../src/app/commands/registry.ts";
 
 function createRegistryOptions(
   overrides: Partial<Parameters<typeof buildAppCommands>[0]> = {},

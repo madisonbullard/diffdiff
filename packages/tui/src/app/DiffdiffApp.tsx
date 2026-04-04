@@ -1,7 +1,7 @@
-import type { DiffdiffAppProps } from "./diffdiff-app-shared.ts";
-import { DiffdiffAppController } from "./diffdiff-app-controller.tsx";
+import type { DiffdiffAppProps } from "./state/app-props.ts";
+import { DiffdiffAppController } from "./shell/app-controller.tsx";
 
-export type { DiffdiffAppProps } from "./diffdiff-app-shared.ts";
+export type { DiffdiffAppProps } from "./state/app-props.ts";
 
 export function DiffdiffApp(props: DiffdiffAppProps) {
   return <DiffdiffAppController {...props} />;
