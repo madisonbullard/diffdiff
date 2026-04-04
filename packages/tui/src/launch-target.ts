@@ -3,8 +3,11 @@ import { readdir } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import {
+  formatRepositoryLabel,
   GitHubPullRequestService,
+  normalizeGitHubHost,
   parseGitHubRemote,
+  repositoriesMatch,
   runCommand,
   type ForgeRepository,
   type StartupOptions,
@@ -353,22 +356,6 @@ function selectPreferredGitHubRemote(
   remotes: readonly GitHubRemoteMatch[],
 ): GitHubRemoteMatch | undefined {
   return remotes.find((remote) => remote.name === "origin") ?? remotes[0];
-}
-
-function repositoriesMatch(left: ForgeRepository, right: ForgeRepository): boolean {
-  return (
-    normalizeGitHubHost(left.host) === normalizeGitHubHost(right.host) &&
-    left.owner.toLowerCase() === right.owner.toLowerCase() &&
-    left.repo.toLowerCase() === right.repo.toLowerCase()
-  );
-}
-
-function normalizeGitHubHost(host: string): string {
-  return host.toLowerCase().replace(/^www\./u, "");
-}
-
-function formatRepositoryLabel(repository: ForgeRepository): string {
-  return `${repository.owner}/${repository.repo}`;
 }
 
 async function defaultDetectGitRepositoryRoot(startPath: string): Promise<string | undefined> {

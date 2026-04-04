@@ -1,7 +1,7 @@
 import { basename } from "node:path";
 import { runCommand } from "../command.ts";
 import { DiffdiffError } from "../errors.ts";
-import { parseGitHubRemote } from "../github/index.ts";
+import { parseGitHubRemote, selectCurrentForgeRepository } from "../github/index.ts";
 import { logDiffdiffInfo } from "../logging.ts";
 import { buildReviewSessionFingerprint } from "../review-session-fingerprint.ts";
 import type { GitRemote } from "../types/github.ts";
@@ -178,6 +178,7 @@ class GitRepository implements RepositoryHandle {
       rootPath: this.rootPath,
       name: basename(this.rootPath),
       remotes,
+      currentForgeRepository: selectCurrentForgeRepository(remotes),
       currentBranch,
       defaultBranch,
     };

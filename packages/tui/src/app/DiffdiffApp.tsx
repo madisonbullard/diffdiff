@@ -29,6 +29,7 @@ import {
   probeReviewSessionFreshness,
   saveReviewCache,
   saveDiffdiffPreferences,
+  sortDashboardPullRequests,
   syncGitRemotes,
   updateDiffdiffSessionActivity,
 } from "@diffdiff/core";
@@ -948,9 +949,13 @@ export function DiffdiffApp({
     () => filterCommitListItems(commitItems, commitSearchQuery),
     [commitItems, commitSearchQuery],
   );
+  const orderedPullRequests = useMemo(
+    () => sortDashboardPullRequests(pullRequestList, session.repository.currentForgeRepository),
+    [pullRequestList, session.repository.currentForgeRepository],
+  );
   const pullRequestItems = useMemo<PullRequestListItem[]>(
-    () => buildPullRequestListItems(pullRequestList, session.repository.remotes),
-    [pullRequestList, session.repository.remotes],
+    () => buildPullRequestListItems(orderedPullRequests),
+    [orderedPullRequests],
   );
   const filteredPullRequestItems = useMemo(
     () => filterPullRequestListItems(pullRequestItems, pullRequestSearchQuery),

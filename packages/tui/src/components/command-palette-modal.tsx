@@ -110,15 +110,24 @@ export function CommandPaletteModal({
                     backgroundColor={backgroundColor}
                     paddingLeft={1}
                     paddingRight={1}
+                    minHeight={detailText == null ? 1 : 2}
                     flexDirection="row"
                     justifyContent="space-between"
                     gap={1}
                   >
-                    <text fg={foreground} wrapMode="none">
-                      <span>{isSelected ? "› " : "  "}</span>
-                      <span>{command.title}</span>
-                      {detailText != null ? <span fg={detail}>{`  ${detailText}`}</span> : null}
-                    </text>
+                    <box flexDirection="column" flexGrow={1} gap={0}>
+                      <text fg={foreground} wrapMode="none">
+                        <span>{isSelected ? "› " : "  "}</span>
+                        <span>{command.title}</span>
+                      </text>
+                      {detailText != null ? (
+                        <box width="100%" paddingLeft={2}>
+                          <text fg={detail} wrapMode="word">
+                            {detailText}
+                          </text>
+                        </box>
+                      ) : null}
+                    </box>
                     <text fg={detail} wrapMode="none">
                       {formatCommandKeybind(command.keybind, leaderKeybind) ?? ""}
                     </text>

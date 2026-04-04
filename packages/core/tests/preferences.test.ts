@@ -1,6 +1,6 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test } from "vite-plus/test";
 import {
   getDefaultDiffdiffPreferences,
@@ -46,6 +46,9 @@ describe("diffdiff preferences", () => {
           },
           defaultMergeMethod: "squash",
         },
+        ui: {
+          showKeyLegend: false,
+        },
       },
       filePath,
     );
@@ -59,6 +62,50 @@ describe("diffdiff preferences", () => {
           removeRemote: true,
         },
         defaultMergeMethod: "squash",
+      },
+      ui: {
+        showKeyLegend: false,
+      },
+    });
+  });
+
+  test("defaults the key legend preference when older files omit ui settings", async () => {
+    const homePath = await mkdtemp(join(tmpdir(), "diffdiff-preferences-"));
+    temporaryDirectories.push(homePath);
+    const filePath = getDiffdiffPreferencesFilePath(homePath);
+
+    await mkdir(dirname(filePath), { recursive: true });
+
+    await writeFile(
+      filePath,
+      `${JSON.stringify(
+        {
+          github: {
+            cleanup: {
+              removeLocal: false,
+              removeRemote: true,
+            },
+          },
+          version: 1,
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+
+    const preferences = await loadDiffdiffPreferences(filePath);
+
+    expect(preferences).toEqual({
+      github: {
+        cleanup: {
+          removeLocal: false,
+          removeRemote: true,
+        },
+        defaultMergeMethod: undefined,
+      },
+      ui: {
+        showKeyLegend: true,
       },
     });
   });
@@ -77,6 +124,9 @@ describe("diffdiff preferences", () => {
           },
           defaultMergeMethod: "merge",
         },
+        ui: {
+          showKeyLegend: false,
+        },
       },
       filePath,
     );
@@ -91,6 +141,9 @@ describe("diffdiff preferences", () => {
           removeRemote: false,
         },
         defaultMergeMethod: "merge",
+      },
+      ui: {
+        showKeyLegend: false,
       },
       version: 1,
     });

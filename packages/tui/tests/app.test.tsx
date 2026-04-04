@@ -4,6 +4,7 @@ import {
   type GitHubDashboardPullRequest,
   type GitHubUserPreferences,
 } from "@diffdiff/core";
+import * as diffdiffCore from "@diffdiff/core";
 import type { ComponentProps, ReactNode } from "react";
 import type {
   ReactTestInstance,
@@ -487,6 +488,31 @@ test("marks all files reviewed with shift+r", () => {
   expect(getAppText(tree)).toContain("2 / 2 reviewed");
 });
 
+test("starts with the key legend hidden when that preference is restored", () => {
+  const tree = render(<DiffdiffApp {...createAppProps({ initialShowKeyLegend: false })} />);
+
+  expect(getAppText(tree)).toContain("show keys");
+  expect(getAppText(tree)).not.toContain("j/k move");
+});
+
+test("persists key legend visibility when toggled", async () => {
+  const savePreferencesSpy = vi
+    .spyOn(diffdiffCore, "saveDiffdiffPreferences")
+    .mockResolvedValue(undefined);
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  await emitAsyncKey({ name: "z" });
+
+  expect(getAppText(tree)).toContain("show keys");
+  expect(getAppText(tree)).not.toContain("j/k move");
+  expect(savePreferencesSpy).toHaveBeenCalledWith({
+    github: createGitHubPreferences(),
+    ui: {
+      showKeyLegend: false,
+    },
+  });
+});
+
 test("clears all reviewed files with alt+r", () => {
   const files = [createPreparedFile(), createPreparedFile({ path: "src/utils.ts" })];
   const tree = render(
@@ -952,7 +978,24 @@ test("auto-refreshes working tree sessions when local changes are detected", asy
       kind: "git",
       rootPath: "/tmp/diffdiff",
       name: "diffdiff",
-      remotes: [{ name: "origin", fetchUrl: "git@github.com:diffdiff/diffdiff.git" }],
+      remotes: [
+        {
+          name: "origin",
+          fetchUrl: "git@github.com:diffdiff/diffdiff.git",
+          forge: {
+            forge: "github",
+            host: "github.com",
+            owner: "diffdiff",
+            repo: "diffdiff",
+          },
+        },
+      ],
+      currentForgeRepository: {
+        forge: "github",
+        host: "github.com",
+        owner: "diffdiff",
+        repo: "diffdiff",
+      },
       currentBranch: "feature/tui",
       defaultBranch: "main",
     },
@@ -972,7 +1015,24 @@ test("auto-refreshes working tree sessions when local changes are detected", asy
       kind: "git",
       rootPath: "/tmp/diffdiff",
       name: "diffdiff",
-      remotes: [{ name: "origin", fetchUrl: "git@github.com:diffdiff/diffdiff.git" }],
+      remotes: [
+        {
+          name: "origin",
+          fetchUrl: "git@github.com:diffdiff/diffdiff.git",
+          forge: {
+            forge: "github",
+            host: "github.com",
+            owner: "diffdiff",
+            repo: "diffdiff",
+          },
+        },
+      ],
+      currentForgeRepository: {
+        forge: "github",
+        host: "github.com",
+        owner: "diffdiff",
+        repo: "diffdiff",
+      },
       currentBranch: "feature/tui",
       defaultBranch: "main",
     },
@@ -1739,6 +1799,7 @@ function createAppPropsBase(): DiffdiffAppProps {
     addPullRequestComment: vi.fn(async () => undefined),
     addReviewThread: vi.fn(async () => undefined),
     initialGitHubPreferences: createGitHubPreferences(),
+    initialShowKeyLegend: true,
     isGitHubAuthenticated: true,
     initialOptions,
     initialSession,

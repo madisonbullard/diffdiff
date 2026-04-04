@@ -1,4 +1,4 @@
-import type { GitHubReviewSession, GitRemote, PullRequestInfo } from "./github.ts";
+import type { ForgeRepository, GitHubReviewSession, GitRemote, PullRequestInfo } from "./github.ts";
 
 export interface ReviewSession {
   repository: RepositoryInfo;
@@ -17,6 +17,7 @@ export interface RepositoryInfo {
   rootPath: string;
   name: string;
   remotes: GitRemote[];
+  currentForgeRepository?: ForgeRepository;
   currentBranch?: string;
   defaultBranch?: string;
 }

@@ -26,6 +26,9 @@ export function getDefaultGitHubPreferences(): GitHubUserPreferences {
 export function getDefaultDiffdiffPreferences(): DiffdiffPreferences {
   return {
     github: getDefaultGitHubPreferences(),
+    ui: {
+      showKeyLegend: true,
+    },
   };
 }
 
@@ -47,6 +50,7 @@ export async function loadDiffdiffPreferences(
     logDiffdiffInfo("preferences", "preferences_loaded", {
       filePath,
       hasDefaultMergeMethod: normalized.github.defaultMergeMethod != null,
+      showKeyLegend: normalized.ui.showKeyLegend,
     });
 
     return normalized;
@@ -75,6 +79,7 @@ export async function saveDiffdiffPreferences(
     logDiffdiffInfo("preferences", "preferences_saved", {
       filePath,
       hasDefaultMergeMethod: nextPreferences.github.defaultMergeMethod != null,
+      showKeyLegend: nextPreferences.ui.showKeyLegend,
     });
   } catch (error) {
     logDiffdiffError("preferences", "preferences_save_failed", error, {
@@ -92,6 +97,7 @@ function normalizePreferences(
   }
 
   const github = record.github;
+  const ui = record.ui;
   const cleanup = github?.cleanup;
   const defaultPreferences = getDefaultDiffdiffPreferences();
   const defaultMergeMethod =
@@ -112,6 +118,12 @@ function normalizePreferences(
             : defaultPreferences.github.cleanup.removeRemote,
       },
       defaultMergeMethod,
+    },
+    ui: {
+      showKeyLegend:
+        typeof ui?.showKeyLegend === "boolean"
+          ? ui.showKeyLegend
+          : defaultPreferences.ui.showKeyLegend,
     },
   };
 }

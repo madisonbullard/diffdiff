@@ -3,7 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import * as commandModule from "../src/command.ts";
-import { GitHubMetadataProvider } from "../src/github/index.ts";
+import {
+  GitHubMetadataProvider,
+  selectCurrentForgeRepository,
+  sortDashboardPullRequests,
+} from "../src/github/index.ts";
 import { resolveGitHubAuth, storeGitHubToken } from "../src/github/auth.ts";
 import { getGitHubAuthConfigPaths } from "../src/github/config.ts";
 import { GitHubPullRequestService } from "../src/github/pull-request-service.ts";
@@ -271,6 +275,85 @@ describe("GitHubPullRequestService", () => {
       number: 42,
       repository: { host: "github.com", owner: "diffdiff", repo: "diffdiff" },
       title: "Ship the PR dashboard",
+    });
+  });
+
+  test("sortDashboardPullRequests prioritizes the current repository before other buckets", () => {
+    const pullRequests = sortDashboardPullRequests(
+      [
+        {
+          author: { login: "octocat" },
+          isAuthor: false,
+          isDraft: true,
+          isReviewRequested: true,
+          number: 7,
+          repository: {
+            forge: "github",
+            host: "github.com",
+            owner: "acme",
+            repo: "widgets",
+          },
+          title: "Need reviewer eyes",
+          updatedAt: "2026-04-03T15:00:00Z",
+          url: "https://github.com/acme/widgets/pull/7",
+        },
+        {
+          author: { login: "madison" },
+          isAuthor: true,
+          isDraft: false,
+          isReviewRequested: false,
+          number: 42,
+          repository: {
+            forge: "github",
+            host: "github.com",
+            owner: "diffdiff",
+            repo: "diffdiff",
+          },
+          title: "Ship the PR dashboard",
+          updatedAt: "2026-04-03T14:00:00Z",
+          url: "https://github.com/diffdiff/diffdiff/pull/42",
+        },
+      ],
+      {
+        forge: "github",
+        host: "github.com",
+        owner: "diffdiff",
+        repo: "diffdiff",
+      },
+    );
+
+    expect(pullRequests.map((pullRequest) => pullRequest.number)).toEqual([42, 7]);
+  });
+
+  test("selectCurrentForgeRepository prefers origin before other forge remotes", () => {
+    expect(
+      selectCurrentForgeRepository([
+        {
+          name: "upstream",
+          fetchUrl: "git@github.com:diffdiff/diffdiff.git",
+          forge: {
+            forge: "github",
+            host: "github.com",
+            owner: "diffdiff",
+            repo: "diffdiff",
+          },
+        },
+        {
+          name: "origin",
+          fetchUrl: "git@github.com:madisonbullard/diffdiff.git",
+          forge: {
+            forge: "github",
+            host: "github.com",
+            owner: "madisonbullard",
+            repo: "diffdiff",
+          },
+        },
+      ]),
+    ).toEqual({
+      forge: "github",
+      host: "github.com",
+      owner: "madisonbullard",
+      repo: "diffdiff",
     });
   });
 

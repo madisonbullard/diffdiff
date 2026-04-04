@@ -25,9 +25,15 @@ export {
 } from "./repository/patch.ts";
 export { getRepositorySearchPath } from "./repository/path.ts";
 export {
+  formatRepositoryLabel,
   GitHubMetadataProvider,
+  getRepositoryIdentityKey,
+  normalizeGitHubHost,
   parseGitHubRemote,
   prioritizeRemoteBranches,
+  repositoriesMatch,
+  selectCurrentForgeRepository,
+  sortDashboardPullRequests,
 } from "./github/index.ts";
 export { clearGitHubToken, resolveGitHubAuth, storeGitHubToken } from "./github/auth.ts";
 export { OctokitGitHubClientFactory } from "./github/client.ts";
@@ -54,6 +60,7 @@ export type { ReviewCacheKey, ReviewCacheState } from "./review-cache.ts";
 export type { ReviewedFileState } from "./reviewed-file-fingerprint.ts";
 export type {
   DiffdiffPreferences,
+  DiffdiffUiPreferences,
   ForgeRepository,
   GitHubActor,
   GitHubAuthSession,

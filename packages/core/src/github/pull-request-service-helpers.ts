@@ -1,5 +1,6 @@
 import { runCommand } from "../command.ts";
 import { DiffdiffError } from "../errors.ts";
+import { getRepositoryIdentityKey } from "./repository-identity.ts";
 import type {
   ForgeRepository,
   GitHubDashboardPullRequest,
@@ -19,7 +20,7 @@ export function upsertDashboardPullRequest(
   },
 ): void {
   const repository = parseSearchResultRepository(pullRequest.repository_url, hostFallback);
-  const key = `${repository.host}/${repository.owner}/${repository.repo}#${pullRequest.number}`;
+  const key = `${getRepositoryIdentityKey(repository)}#${pullRequest.number}`;
   const existingPullRequest = pullRequestsByKey.get(key);
 
   if (existingPullRequest == null) {

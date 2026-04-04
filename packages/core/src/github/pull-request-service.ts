@@ -28,6 +28,7 @@ import {
   buildPullRequestWarnings,
   upsertDashboardPullRequest,
 } from "./pull-request-service-helpers.ts";
+import { sortDashboardPullRequests } from "./repository-identity.ts";
 import {
   buildCleanupCandidates,
   dedupeCleanupCandidates,
@@ -122,25 +123,7 @@ export class GitHubPullRequestService {
         });
       }
 
-      const pullRequests = [...pullRequestsByKey.values()].sort((left, right) => {
-        if (left.isReviewRequested !== right.isReviewRequested) {
-          return left.isReviewRequested ? -1 : 1;
-        }
-
-        const updatedResult = right.updatedAt.localeCompare(left.updatedAt);
-        if (updatedResult !== 0) {
-          return updatedResult;
-        }
-
-        const leftRepoLabel = `${left.repository.owner}/${left.repository.repo}`;
-        const rightRepoLabel = `${right.repository.owner}/${right.repository.repo}`;
-        const repoResult = leftRepoLabel.localeCompare(rightRepoLabel);
-        if (repoResult !== 0) {
-          return repoResult;
-        }
-
-        return left.number - right.number;
-      });
+      const pullRequests = sortDashboardPullRequests([...pullRequestsByKey.values()]);
 
       logDiffdiffInfo("github", "list_dashboard_pull_requests_completed", {
         authoredCount: authoredPullRequests.length,

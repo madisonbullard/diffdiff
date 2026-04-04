@@ -60,8 +60,13 @@ export interface GitHubUserPreferences {
   defaultMergeMethod?: GitHubMergeMethod;
 }
 
+export interface DiffdiffUiPreferences {
+  showKeyLegend: boolean;
+}
+
 export interface DiffdiffPreferences {
   github: GitHubUserPreferences;
+  ui: DiffdiffUiPreferences;
 }
 
 export interface GitHubReviewLineAnchor {

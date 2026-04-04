@@ -6,6 +6,14 @@ import type {
 } from "../types/providers.ts";
 import type { ForgeRepository, GitRemote, PullRequestInfo } from "../types/github.ts";
 import { GitHubPullRequestService } from "./pull-request-service.ts";
+export {
+  formatRepositoryLabel,
+  getRepositoryIdentityKey,
+  normalizeGitHubHost,
+  repositoriesMatch,
+  selectCurrentForgeRepository,
+  sortDashboardPullRequests,
+} from "./repository-identity.ts";
 
 export class GitHubMetadataProvider implements ForgeMetadataProvider {
   readonly kind = "github";

@@ -3,12 +3,10 @@ import type {
   ChangeSummary,
   ChangedFile,
   ComparisonCommit,
-  ForgeRepository,
-  GitRemote,
   ComparisonInfo,
   GitHubDashboardPullRequest,
 } from "@diffdiff/core";
-import { parseGitHubRemote } from "@diffdiff/core";
+import { getRepositoryIdentityKey } from "@diffdiff/core";
 import type {
   BranchListFilters,
   BranchListItem,
@@ -117,55 +115,11 @@ export function buildCommitListItems(commits: readonly ComparisonCommit[]): Comm
 
 export function buildPullRequestListItems(
   pullRequests: readonly GitHubDashboardPullRequest[],
-  remotes: readonly GitRemote[] = [],
 ): PullRequestListItem[] {
-  const currentRepositoryKeys = new Set(
-    remotes
-      .map((remote) => remote.forge ?? parseGitHubRemote(remote.fetchUrl))
-      .filter((repository): repository is ForgeRepository => repository != null)
-      .map(getRepositoryKey),
-  );
-
-  return [...pullRequests]
-    .sort((left, right) => compareDashboardPullRequests(left, right, currentRepositoryKeys))
-    .map((pullRequest) => ({
-      key: `${pullRequest.repository.host}/${pullRequest.repository.owner}/${pullRequest.repository.repo}#${pullRequest.number}`,
-      pullRequest,
-    }));
-}
-
-function compareDashboardPullRequests(
-  left: GitHubDashboardPullRequest,
-  right: GitHubDashboardPullRequest,
-  currentRepositoryKeys: ReadonlySet<string>,
-): number {
-  const leftIsCurrentRepository = currentRepositoryKeys.has(getRepositoryKey(left.repository));
-  const rightIsCurrentRepository = currentRepositoryKeys.has(getRepositoryKey(right.repository));
-  if (leftIsCurrentRepository !== rightIsCurrentRepository) {
-    return leftIsCurrentRepository ? -1 : 1;
-  }
-
-  if (left.isReviewRequested !== right.isReviewRequested) {
-    return left.isReviewRequested ? -1 : 1;
-  }
-
-  const updatedResult = right.updatedAt.localeCompare(left.updatedAt);
-  if (updatedResult !== 0) {
-    return updatedResult;
-  }
-
-  const repoResult = getRepositoryKey(left.repository).localeCompare(
-    getRepositoryKey(right.repository),
-  );
-  if (repoResult !== 0) {
-    return repoResult;
-  }
-
-  return left.number - right.number;
-}
-
-function getRepositoryKey(repository: ForgeRepository): string {
-  return `${repository.host}/${repository.owner}/${repository.repo}`;
+  return pullRequests.map((pullRequest) => ({
+    key: `${getRepositoryIdentityKey(pullRequest.repository)}#${pullRequest.number}`,
+    pullRequest,
+  }));
 }
 
 export function filterCommitListItems(
