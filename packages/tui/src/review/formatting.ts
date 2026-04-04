@@ -18,8 +18,13 @@ export function formatChecksSummary(pullRequest: GitHubPullRequestDetail): strin
     return "no checks";
   }
 
-  const displayedChecks =
-    pullRequest.checks.failed > 0 ? pullRequest.checks.failed : pullRequest.checks.successful;
+  if (pullRequest.checks.failed > 0) {
+    const label = pullRequest.checks.failed === 1 ? "check" : "checks";
+
+    return `${pullRequest.checks.failed} ${label} failed`;
+  }
+
+  const displayedChecks = pullRequest.checks.successful;
 
   return `${displayedChecks}/${pullRequest.checks.total} checks ${pullRequest.checks.state}`;
 }

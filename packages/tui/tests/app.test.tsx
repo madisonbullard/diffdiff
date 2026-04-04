@@ -241,6 +241,44 @@ test("opens the GitHub PR list on launch when requested", async () => {
   expect(getAppText(tree)).toContain("madison");
 });
 
+test("opens the branch list on launch for an empty working tree", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialOptions: {
+          base: "HEAD",
+          head: "working tree",
+        },
+        initialSession: createPreparedSession({
+          comparison: {
+            base: "HEAD",
+            baseSha: "1234567",
+            head: "working tree",
+            headSha: "1234567",
+            mode: "working-tree",
+            range: "HEAD...working tree",
+            usesMergeBase: false,
+          },
+          commits: [],
+          files: [],
+          workingTreeSummary: {
+            additions: 0,
+            deletions: 0,
+            filesChanged: 0,
+          },
+        }),
+      })}
+    />,
+  );
+
+  expect(getAppText(tree)).toContain("Opened list modal.");
+  expect(getAppText(tree)).toContain("List");
+  expect(getAppText(tree)).toContain(
+    "Browse working tree changes, branches, and open pull requests.",
+  );
+  expect(getAppText(tree)).toContain("Working tree");
+});
+
 test("fuzzy searches and opens a selected GitHub pull request", async () => {
   const baseSession = createPreparedSession();
   const nextSession = createPreparedSession({
@@ -661,6 +699,39 @@ test("clears all reviewed files with alt+r", () => {
 
   expect(getAppText(tree)).toContain("Cleared review marks from 2 files.");
   expect(getAppText(tree)).toContain("0 / 2 reviewed");
+});
+
+test("flushes reviewed state to the cache before quitting", async () => {
+  const saveReviewCacheSpy = vi.spyOn(diffdiffCore, "saveReviewCache").mockResolvedValue(undefined);
+  const onExit = vi.fn();
+  const tree = render(<DiffdiffApp {...createAppProps({ onExit })} />);
+
+  emitKey({ ctrl: true, name: "x" });
+  emitKey({ name: "r", sequence: "r" });
+
+  await emitAsyncKey({ ctrl: true, name: "x" });
+  await emitAsyncKey({ name: "q", sequence: "q" });
+
+  expect(getAppText(tree)).toContain("1 / 2 reviewed");
+  expect(saveReviewCacheSpy).toHaveBeenCalledWith(
+    {
+      repositoryRootPath: "/tmp/diffdiff",
+      base: "origin/main",
+      head: "feature/tui",
+    },
+    expect.objectContaining({
+      reviewedFiles: [
+        {
+          fingerprint: buildReviewedFileFingerprint(createPreparedSession().files[0]!),
+          path: "src/app.ts",
+        },
+      ],
+    }),
+  );
+  expect(saveReviewCacheSpy.mock.invocationCallOrder[0]).toBeLessThan(
+    onExit.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+  );
+  expect(onExit).toHaveBeenCalledTimes(1);
 });
 
 test("renders base and head as the header comparison tags", () => {

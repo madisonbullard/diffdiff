@@ -57,7 +57,18 @@ test("formatChecksSummary shows the failed count when checks fail", () => {
     total: 7,
   });
 
-  expect(formatChecksSummary(pullRequest)).toBe("2/7 checks failure");
+  expect(formatChecksSummary(pullRequest)).toBe("2 checks failed");
+});
+
+test("formatChecksSummary uses the singular label for one failed check", () => {
+  const pullRequest = createPullRequest({
+    failed: 1,
+    state: "failure",
+    successful: 10,
+    total: 11,
+  });
+
+  expect(formatChecksSummary(pullRequest)).toBe("1 check failed");
 });
 
 test("formatChecksSummary shows no checks when none ran", () => {

@@ -652,6 +652,24 @@ export function DiffdiffApp({
   theme,
 }: DiffdiffAppProps) {
   const launchInPullRequestList = initialOptions.initialListMode === "pull-requests";
+  const launchInBranchList =
+    !launchInPullRequestList &&
+    initialSession.comparison.mode === "working-tree" &&
+    initialSession.files.length === 0;
+  const initialBranchListFilters: BranchListFilters = launchInPullRequestList
+    ? {
+        workingTree: false,
+        localBranch: false,
+        openPr: true,
+        remoteBranch: false,
+      }
+    : DEFAULT_BRANCH_LIST_FILTERS;
+  const initialBranchItems = buildBranchListItems({
+    filters: initialBranchListFilters,
+    localBranches: initialSession.branches.local,
+    remoteBranches: initialSession.branches.remote,
+    workingTreeSummary: initialSession.workingTreeSummary,
+  });
   const [session, setSession] = useState(initialSession);
   const [startupOptions, setStartupOptions] = useState<LaunchOptions>({ ...initialOptions });
   const [selectedFileIndex, setSelectedFileIndex] = useState(() => {
@@ -681,7 +699,11 @@ export function DiffdiffApp({
     return baseline;
   });
   const [statusMessage, setStatusMessage] = useState<string>(
-    launchInPullRequestList ? "Opened pull request list." : "Ready.",
+    launchInPullRequestList
+      ? "Opened pull request list."
+      : launchInBranchList
+        ? "Opened list modal."
+        : "Ready.",
   );
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [errorToastMessage, setErrorToastMessage] = useState<string | null>(null);
@@ -700,7 +722,11 @@ export function DiffdiffApp({
   const showKeyLegendRef = useRef(initialShowKeyLegend ?? true);
   const latestSessionLoadIdRef = useRef(0);
   const [dialogStack, setDialogStack] = useState<readonly AppDialogStackEntry[]>(() =>
-    launchInPullRequestList ? openAppDialog([], "pull-request-list", { clear: true }) : [],
+    launchInPullRequestList
+      ? openAppDialog([], "pull-request-list", { clear: true })
+      : launchInBranchList
+        ? openAppDialog([], "branch", { clear: true })
+        : [],
   );
   const activeDialogEntry = getActiveDialogEntry(dialogStack);
   const activeOverlay = activeDialogEntry?.dialog ?? null;
@@ -710,16 +736,15 @@ export function DiffdiffApp({
   const [showKeyLegend, setShowKeyLegend] = useState(() => initialShowKeyLegend ?? true);
   const [activeListView, setActiveListView] = useState<ListModalView>("branch");
   const [branchListFilters, setBranchListFilters] = useState<BranchListFilters>({
-    ...(launchInPullRequestList
-      ? {
-          workingTree: false,
-          localBranch: false,
-          openPr: true,
-          remoteBranch: false,
-        }
-      : DEFAULT_BRANCH_LIST_FILTERS),
+    ...initialBranchListFilters,
   });
-  const [branchListIndex, setBranchListIndex] = useState(0);
+  const [branchListIndex, setBranchListIndex] = useState(() =>
+    findInitialBranchListSelection({
+      comparison: initialSession.comparison,
+      currentBranch: initialSession.repository.currentBranch,
+      items: initialBranchItems,
+    }),
+  );
   const [commandQuery, setCommandQuery] = useState("");
   const [commandIndex, setCommandIndex] = useState(0);
   const [commitListIndex, setCommitListIndex] = useState(0);
@@ -1232,7 +1257,7 @@ export function DiffdiffApp({
         moveFocusedReviewComment: moveSelectedReviewComment,
         moveFocusedReviewThread: moveSelectedReviewThread,
         moveToNextUnreviewed: jumpToNextUnreviewedFile,
-        onExit,
+        onExit: exitApp,
         openBranchModal,
         openCommandModal,
         openCommentComposer,
@@ -1280,7 +1305,7 @@ export function DiffdiffApp({
       session.github,
       session.files.length,
       showKeyLegend,
-      onExit,
+      exitApp,
       refreshComparison,
       reviewedPaths.size,
       toggleCollapsed,
@@ -1422,6 +1447,24 @@ export function DiffdiffApp({
     },
     [flushPendingReviewCache],
   );
+
+  function exitApp(): void {
+    if (reviewCacheTimeoutRef.current != null) {
+      clearTimeout(reviewCacheTimeoutRef.current);
+      reviewCacheTimeoutRef.current = null;
+    }
+
+    if (sessionActivityTimeoutRef.current != null) {
+      clearTimeout(sessionActivityTimeoutRef.current);
+      sessionActivityTimeoutRef.current = null;
+    }
+
+    void flushPendingReviewCache().finally(() => {
+      void flushPendingSessionActivity().finally(() => {
+        onExit();
+      });
+    });
+  }
 
   const startInteraction = useCallback(
     (
