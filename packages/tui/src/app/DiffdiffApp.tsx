@@ -44,6 +44,7 @@ import {
   type AppDialogStackEntry,
 } from "./dialog-stack.ts";
 import { createKeybindController } from "./keybind-controller.ts";
+import { resolveFooterModeBadge } from "./footer-mode.ts";
 import { hydratePreparedReviewFiles } from "../diff/prepare-review-session.ts";
 import { DiffdiffAppDialogs } from "./layout.tsx";
 import {
@@ -1343,6 +1344,33 @@ export function DiffdiffApp({
     activeOverlay === "branch" && activeListView === "commit" && commitSearchActive;
   const pullRequestSearchSuspendsKeybinds =
     activeOverlay === "pull-request-list" && pullRequestSearchActive;
+  const footerModeBadge = useMemo(
+    () =>
+      resolveFooterModeBadge({
+        activeDialog: activeOverlay,
+        activeListView,
+        activePane,
+        commitSearchActive,
+        hasSelectedReviewThread: selectedReviewThread != null,
+        leaderActive,
+        mergeConfirmOpen,
+        mergeModalField,
+        pullRequestSearchActive,
+        theme,
+      }),
+    [
+      activeListView,
+      activeOverlay,
+      activePane,
+      commitSearchActive,
+      leaderActive,
+      mergeConfirmOpen,
+      mergeModalField,
+      pullRequestSearchActive,
+      selectedReviewThread,
+      theme,
+    ],
+  );
   const footerEvent = useMemo(() => {
     if (errorToastMessage != null) {
       return {
@@ -1383,12 +1411,19 @@ export function DiffdiffApp({
     toastMessage,
   ]);
   const footerEventMessage = useMemo(() => {
-    const reservedWidth = commandListLabel.length + keyLegendToggleLabel.length + 28;
+    const reservedWidth =
+      footerModeBadge.label.length + commandListLabel.length + keyLegendToggleLabel.length + 34;
     return truncateInlineMessage(
       footerEvent.message,
       Math.max(terminalDimensions.width - reservedWidth, 0),
     );
-  }, [commandListLabel, footerEvent.message, keyLegendToggleLabel, terminalDimensions.width]);
+  }, [
+    commandListLabel,
+    footerEvent.message,
+    footerModeBadge.label.length,
+    keyLegendToggleLabel,
+    terminalDimensions.width,
+  ]);
   const canApplyCleanup =
     (cleanupCandidates.some((candidate) => candidate.kind === "local-branch") &&
       cleanupSelection.removeLocal) ||
@@ -2958,7 +2993,8 @@ export function DiffdiffApp({
         alignItems="center"
         gap={2}
       >
-        <box flexShrink={0}>
+        <box flexShrink={0} flexDirection="row" alignItems="center" gap={2}>
+          <Tag label={footerModeBadge.label} fg={footerModeBadge.fg} bg={footerModeBadge.bg} />
           <text fg={theme.textMuted} wrapMode="none">
             <span fg={theme.accent} bg={theme.surfaceMuted}>
               {` ${commandListLabel} `}
