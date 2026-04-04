@@ -1,3 +1,5 @@
+import { readdir } from "node:fs/promises";
+import { join, posix } from "node:path";
 import { runCommand } from "../command.ts";
 import type { ChangedFile, ChangeSummary } from "../types/session.ts";
 import {
@@ -93,7 +95,7 @@ export async function listWorkingTreeChanges(
   for (const path of paths) {
     const statusEntry = statusEntriesByPath.get(path);
     if (statusEntry?.status === "??") {
-      changedFiles.push(await diffUntrackedFile(rootPath, path));
+      changedFiles.push(...(await diffUntrackedPath(rootPath, path)));
       continue;
     }
 
@@ -116,10 +118,48 @@ async function listUntrackedFiles(
   const changedFiles: ChangedFile[] = [];
 
   for (const path of paths) {
-    changedFiles.push(await diffUntrackedFile(rootPath, path));
+    changedFiles.push(...(await diffUntrackedPath(rootPath, path)));
   }
 
   return changedFiles;
+}
+
+async function diffUntrackedPath(rootPath: string, path: string): Promise<ChangedFile[]> {
+  if (path.endsWith("/")) {
+    const filePaths = await listDirectoryFilesForDiff(rootPath, path);
+    const changedFiles: ChangedFile[] = [];
+
+    for (const filePath of filePaths) {
+      changedFiles.push(await diffUntrackedFile(rootPath, filePath));
+    }
+
+    return changedFiles;
+  }
+
+  return [await diffUntrackedFile(rootPath, path)];
+}
+
+async function listDirectoryFilesForDiff(rootPath: string, path: string): Promise<string[]> {
+  const directoryEntries = await readdir(join(rootPath, path), { withFileTypes: true });
+  const filePaths: string[] = [];
+
+  for (const entry of [...directoryEntries].sort((left, right) =>
+    left.name.localeCompare(right.name),
+  )) {
+    if (entry.name === ".git") {
+      continue;
+    }
+
+    const childPath = posix.join(path, entry.name);
+    if (entry.isDirectory()) {
+      filePaths.push(...(await listDirectoryFilesForDiff(rootPath, childPath)));
+      continue;
+    }
+
+    filePaths.push(childPath);
+  }
+
+  return filePaths;
 }
 
 async function diffUntrackedFile(rootPath: string, path: string): Promise<ChangedFile> {

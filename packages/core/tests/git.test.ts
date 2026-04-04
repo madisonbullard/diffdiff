@@ -138,6 +138,29 @@ describe("loadReviewSession", () => {
     );
   });
 
+  test("expands untracked nested repositories into file diffs", async () => {
+    const repositoryPath = await createTemporaryRepository();
+
+    await writeFile(join(repositoryPath, "README.md"), "# diffdiff\n");
+    await runGit(repositoryPath, ["add", "README.md"]);
+    await commitAll(repositoryPath, "Initial commit");
+
+    const nestedRepositoryPath = join(repositoryPath, "nested-repo");
+    await mkdir(join(nestedRepositoryPath, "src"), { recursive: true });
+    await execFileAsync("git", ["init", nestedRepositoryPath]);
+    await writeFile(join(nestedRepositoryPath, "README.md"), "# nested\n");
+    await writeFile(join(nestedRepositoryPath, "src", "index.ts"), "export const nested = true;\n");
+
+    const session = await loadReviewSession({ repoPath: repositoryPath });
+
+    expect(session.files.map((file) => file.path).sort()).toEqual([
+      "nested-repo/README.md",
+      "nested-repo/src/index.ts",
+    ]);
+    expect(session.files.every((file) => file.status === "added")).toBe(true);
+    expect(session.files.every((file) => !file.path.includes(".git/"))).toBe(true);
+  });
+
   test("warns when unborn repositories receive explicit refs", async () => {
     const repositoryPath = await createTemporaryRepository();
 
