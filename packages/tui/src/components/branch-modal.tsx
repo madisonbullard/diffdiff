@@ -61,7 +61,7 @@ export function BranchModal({
         <text fg={theme.textMuted} wrapMode="none">
           <KeyCap label="tab" theme={theme} />
           <span>{" switch view  "}</span>
-          <KeyCap label="h / l" theme={theme} />
+          <KeyCap label="left / right" theme={theme} />
           <span>{" panes  "}</span>
           {activeView === "branch" ? (
             <>
@@ -196,10 +196,19 @@ export function BranchModal({
               </text>
             )}
             <text fg={theme.textMuted} wrapMode="none">
-              <KeyCap label="enter" theme={theme} />
-              <span>{selectedBranchItem?.kind === "open-pr" ? " review PR  " : " set head  "}</span>
-              <KeyCap label="b" theme={theme} />
-              <span>{" set base  "}</span>
+              {selectedBranchItem?.kind === "open-pr" ? (
+                <>
+                  <KeyCap label="enter" theme={theme} />
+                  <span>{" open PR review  "}</span>
+                </>
+              ) : (
+                <>
+                  <KeyCap label="h" theme={theme} />
+                  <span>{" set head  "}</span>
+                  <KeyCap label="b" theme={theme} />
+                  <span>{" set base  "}</span>
+                </>
+              )}
               <span fg={theme.border}>{"\u2502  "}</span>
               <KeyCap label="w" theme={theme} />
               <span>{" working tree  "}</span>
@@ -218,14 +227,14 @@ export function BranchModal({
               <span>{selectedCommitItem.commit.author}</span>
             </text>
             <text fg={theme.textMuted} wrapMode="none">
-              <KeyCap label="enter" theme={theme} />
+              <KeyCap label="h" theme={theme} />
               <span>{" set head  "}</span>
               <KeyCap label="b" theme={theme} />
               <span>{" set base  "}</span>
               <span fg={theme.border}>{"\u2502  "}</span>
               <KeyCap label="/" theme={theme} />
               <span>{" search  "}</span>
-              <KeyCap label="h / l / tab" theme={theme} />
+              <KeyCap label="left / right / tab" theme={theme} />
               <span>{" switch view"}</span>
             </text>
           </>

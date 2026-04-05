@@ -104,7 +104,7 @@ export function createBranchListKeyHandler({
       return;
     }
 
-    if (key.name === "left" || key.name === "h") {
+    if (key.name === "left") {
       state.setActiveListView("branch");
       state.setCommitSearchActive(false);
       return;
@@ -170,12 +170,15 @@ export function createBranchListKeyHandler({
         return;
       }
 
-      if (key.name === "return" || key.name === "b") {
-        if (key.name === "return" && derived.selectedBranchItem?.kind === "open-pr") {
-          if (derived.selectedBranchItem.branch != null) {
-            void applyPullRequestSelection(derived.selectedBranchItem.branch);
-          }
-        } else if (derived.selectedBranchItem?.kind === "working-tree") {
+      if (key.name === "return" && derived.selectedBranchItem?.kind === "open-pr") {
+        if (derived.selectedBranchItem.branch != null) {
+          void applyPullRequestSelection(derived.selectedBranchItem.branch);
+        }
+        return;
+      }
+
+      if (key.name === "h" || key.name === "b") {
+        if (derived.selectedBranchItem?.kind === "working-tree") {
           void applyWorkingTreeSelection();
         } else if (derived.selectedBranchItem?.branch != null) {
           void applyBranchSelection(
@@ -197,7 +200,7 @@ export function createBranchListKeyHandler({
       return;
     }
 
-    if (key.name === "return" && derived.selectedCommitItem != null) {
+    if (key.name === "h" && derived.selectedCommitItem != null) {
       void applyCommitSelection(
         "head",
         derived.selectedCommitItem.commit.sha,

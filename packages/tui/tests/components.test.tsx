@@ -147,7 +147,7 @@ test("renders a branch modal snapshot", () => {
   expect(collectText(tree.toJSON())).toContain("feature/tui");
 });
 
-test("shows the review PR action when a PR entry is selected", () => {
+test("shows the PR review action when a PR entry is selected", () => {
   const filters: BranchListFilters = {
     workingTree: true,
     localBranch: true,
@@ -179,7 +179,11 @@ test("shows the review PR action when a PR entry is selected", () => {
     />,
   );
 
-  expect(collectText(tree.toJSON())).toContain("review PR");
+  const text = collectText(tree.toJSON());
+
+  expect(text).toContain("open PR review");
+  expect(text).not.toContain("set head");
+  expect(text).not.toContain("set base");
 });
 
 test("renders a commit view snapshot", () => {
@@ -217,7 +221,7 @@ test("renders a commit view snapshot", () => {
   expect(tree.toJSON()).toMatchSnapshot();
   expect(collectText(tree.toJSON())).toContain("2 commits in the current comparison");
   expect(collectText(tree.toJSON())).toContain("abcdef0 (origin/main) Polish branch categories");
-  expect(collectText(tree.toJSON())).toContain("h / l / tab");
+  expect(collectText(tree.toJSON())).toContain("left / right / tab");
 });
 
 test("shows commit history in working tree commit view", () => {

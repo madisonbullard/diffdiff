@@ -53,7 +53,7 @@ exports[`renders a branch modal snapshot 1`] = `
             bg="#152838"
             fg="#9cdcfe"
           >
-             h / l 
+             left / right 
           </span>
           <span>
              panes  
@@ -581,7 +581,7 @@ exports[`renders a branch modal snapshot 1`] = `
           bg="#152838"
           fg="#9cdcfe"
         >
-           enter 
+           h 
         </span>
         <span>
            set head  
@@ -686,7 +686,7 @@ exports[`renders a commit view snapshot 1`] = `
             bg="#152838"
             fg="#9cdcfe"
           >
-             h / l 
+             left / right 
           </span>
           <span>
              panes  
@@ -1009,7 +1009,7 @@ exports[`renders a commit view snapshot 1`] = `
           bg="#152838"
           fg="#9cdcfe"
         >
-           enter 
+           h 
         </span>
         <span>
            set head  
@@ -1041,7 +1041,7 @@ exports[`renders a commit view snapshot 1`] = `
           bg="#152838"
           fg="#9cdcfe"
         >
-           h / l / tab 
+           left / right / tab 
         </span>
         <span>
            switch view

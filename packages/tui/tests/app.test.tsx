@@ -1612,6 +1612,23 @@ test("opens PR review mode from the list modal", () => {
   });
 });
 
+test("does not open a branch review from the list modal on enter", () => {
+  const loadSession = vi.fn(async () => createPreparedSession());
+  render(
+    <DiffdiffApp
+      {...createAppProps({
+        loadSession,
+      })}
+    />,
+  );
+
+  emitKey({ name: "l" });
+  emitKey({ name: "j" });
+  emitKey({ name: "return" });
+
+  expect(loadSession).not.toHaveBeenCalled();
+});
+
 test("restores reviewed files from the cache when opening a branch review from the list modal", async () => {
   const nextSession = createPreparedSession();
   const loadSession = vi.fn(async () => nextSession);
@@ -1652,7 +1669,7 @@ test("restores reviewed files from the cache when opening a branch review from t
   );
 
   emitKey({ name: "j" });
-  await emitAsyncKey({ name: "return" });
+  await emitAsyncKey({ name: "h" });
 
   expect(loadSession).toHaveBeenCalledWith({ head: "feature/tui" });
   expect(loadReviewCacheSpy).toHaveBeenCalledWith({
