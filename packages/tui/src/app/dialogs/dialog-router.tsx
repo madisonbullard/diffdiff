@@ -18,7 +18,9 @@ import { PostMergeCleanupModal } from "../../review/post-merge-cleanup-modal.tsx
 import { ReviewComposerModal } from "../../review/review-composer-modal.tsx";
 import { SubmitReviewModal } from "../../review/submit-review-modal.tsx";
 import type { CommandDefinition } from "../../commands.ts";
+import type { AppCommand } from "../commands/registry.ts";
 import type {
+  AppPane,
   BranchListFilters,
   BranchListItem,
   CommitListItem,
@@ -30,6 +32,7 @@ import type { UiTheme } from "../../theme.ts";
 interface DiffdiffAppDialogsProps {
   activeDialog: AppDialog | null;
   activeListView: ListModalView;
+  activePane: AppPane;
   branchItems: readonly BranchListItem[];
   branchListFilters: BranchListFilters;
   branchListIndex: number;
@@ -43,7 +46,7 @@ interface DiffdiffAppDialogsProps {
   commitSearchActive: boolean;
   commitSearchQuery: string;
   filteredCommands: readonly CommandDefinition[];
-  helpCommands: readonly CommandDefinition[];
+  helpCommands: readonly AppCommand[];
   filteredCommitItems: readonly CommitListItem[];
   filterIndex: number;
   isSubmittingReviewAction: boolean;
@@ -61,6 +64,7 @@ interface DiffdiffAppDialogsProps {
   reviewRequestedPrCount: number;
   filteredPullRequests: readonly GitHubDashboardPullRequest[];
   isPullRequestListLoading: boolean;
+  localBranchCount: number;
   remoteBranchCount: number;
   reviewComposerBody: string;
   reviewComposerContext: {
@@ -78,6 +82,7 @@ interface DiffdiffAppDialogsProps {
 export function DiffdiffAppDialogs({
   activeDialog,
   activeListView,
+  activePane,
   branchItems,
   branchListFilters,
   branchListIndex,
@@ -95,6 +100,7 @@ export function DiffdiffAppDialogs({
   filteredCommitItems,
   filterIndex,
   isSubmittingReviewAction,
+  localBranchCount,
   leaderKeybind,
   mergeBodyScrollRef,
   mergeCommitMessage,
@@ -132,7 +138,7 @@ export function DiffdiffAppDialogs({
         comparisonMode={session.comparison.mode}
         filters={branchListFilters}
         head={session.comparison.head}
-        localBranchCount={session.branches.local.length}
+        localBranchCount={localBranchCount}
         openPrCount={openPrCount}
         remoteBranchCount={remoteBranchCount}
         theme={theme}
@@ -237,7 +243,14 @@ export function DiffdiffAppDialogs({
   }
 
   if (activeDialog === "help") {
-    return <HelpModal commands={helpCommands} leaderKeybind={leaderKeybind} theme={theme} />;
+    return (
+      <HelpModal
+        activePane={activePane}
+        commands={helpCommands}
+        leaderKeybind={leaderKeybind}
+        theme={theme}
+      />
+    );
   }
 
   return null;

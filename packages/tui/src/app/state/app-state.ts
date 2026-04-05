@@ -25,6 +25,12 @@ import type {
 } from "./app-props.ts";
 import type { ReviewComposerTarget } from "../review/review-composer.ts";
 
+export interface ComparisonBrowserData {
+  branches: PreparedReviewSession["branches"];
+  commits: PreparedReviewSession["commits"];
+  workingTreeSummary: PreparedReviewSession["workingTreeSummary"];
+}
+
 export interface DiffdiffAppState {
   activeFileIndex: number;
   activeOverlay: import("../dialogs/stack.ts").AppDialog | null;
@@ -39,6 +45,7 @@ export interface DiffdiffAppState {
   collapsedDirectories: Set<string>;
   collapsedPaths: Set<string>;
   commentCollapseStates: Record<string, boolean>;
+  comparisonBrowserData: ComparisonBrowserData;
   commandIndex: number;
   commandQuery: string;
   commitListIndex: number;
@@ -121,6 +128,7 @@ export interface DiffdiffAppState {
   setCollapsedDirectories: Dispatch<SetStateAction<Set<string>>>;
   setCollapsedPaths: Dispatch<SetStateAction<Set<string>>>;
   setCommentCollapseStates: Dispatch<SetStateAction<Record<string, boolean>>>;
+  setComparisonBrowserData: Dispatch<SetStateAction<ComparisonBrowserData>>;
   setCommandIndex: Dispatch<SetStateAction<number>>;
   setCommandQuery: Dispatch<SetStateAction<string>>;
   setCommitListIndex: Dispatch<SetStateAction<number>>;

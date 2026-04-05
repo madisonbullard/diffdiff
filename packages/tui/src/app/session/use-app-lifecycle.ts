@@ -17,9 +17,9 @@ import type { DiffdiffAppState } from "../state/use-app-state.ts";
 interface UseLifecycleOptions {
   activeKeymapModeSuspendsGlobalKeybinds: boolean;
   derived: DiffdiffAppDerived;
-  launchInPullRequestList: boolean;
   persistence: DiffdiffAppPersistence;
-  refreshGitHubPullRequestList: () => Promise<void>;
+  prefetchComparisonBrowserData: () => Promise<void>;
+  refreshGitHubPullRequestList: (options?: { announce?: boolean }) => Promise<void>;
   state: DiffdiffAppState;
   startupInstrumentation?: DiffdiffAppProps["startupInstrumentation"];
 }
@@ -27,19 +27,18 @@ interface UseLifecycleOptions {
 export function useDiffdiffAppLifecycle({
   activeKeymapModeSuspendsGlobalKeybinds,
   derived,
-  launchInPullRequestList,
   persistence,
+  prefetchComparisonBrowserData,
   refreshGitHubPullRequestList,
   startupInstrumentation,
   state,
 }: UseLifecycleOptions) {
   useEffect(() => {
-    if (launchInPullRequestList) {
-      void refreshGitHubPullRequestList();
-    }
-    // Launch behavior should only run once for the initial session.
+    void prefetchComparisonBrowserData();
+    void refreshGitHubPullRequestList({ announce: false });
+    // Startup prefetch should only run once for the initial session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [launchInPullRequestList]);
+  }, []);
 
   useEffect(() => {
     if (!activeKeymapModeSuspendsGlobalKeybinds) {

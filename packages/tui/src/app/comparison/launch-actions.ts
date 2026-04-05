@@ -198,12 +198,12 @@ export function createLaunchActions({
       return;
     }
 
-    const baseRemoteBranch = state.session.branches.remote.find(
+    const baseRemoteBranch = state.comparisonBrowserData.branches.remote.find(
       (candidateBranch) =>
         candidateBranch.remoteName === branch.remoteName &&
         candidateBranch.name.endsWith(`/${branch.pullRequest!.baseRefName}`),
     );
-    const baseLocalBranch = state.session.branches.local.find(
+    const baseLocalBranch = state.comparisonBrowserData.branches.local.find(
       (candidateBranch) => candidateBranch.name === branch.pullRequest?.baseRefName,
     );
     const nextOptions = {

@@ -91,9 +91,35 @@ export function useSessionActions({
           }),
         );
       }
+      state.setComparisonBrowserData({
+        branches: nextSession.branches,
+        commits: nextSession.commits,
+        workingTreeSummary: nextSession.workingTreeSummary,
+      });
       state.setSession(nextSession);
     },
     [getFileTopOffsets, state],
+  );
+
+  const applyComparisonBrowserData = useCallback(
+    (nextData: Pick<PreparedReviewSession, "branches" | "commits" | "workingTreeSummary">) => {
+      state.setComparisonBrowserData((currentData) => {
+        if (
+          currentData.branches === nextData.branches &&
+          currentData.commits === nextData.commits &&
+          currentData.workingTreeSummary === nextData.workingTreeSummary
+        ) {
+          return currentData;
+        }
+
+        return {
+          branches: nextData.branches,
+          commits: nextData.commits,
+          workingTreeSummary: nextData.workingTreeSummary,
+        };
+      });
+    },
+    [state],
   );
 
   const syncRemoteState = useCallback(async () => {
@@ -101,6 +127,7 @@ export function useSessionActions({
   }, [state.session.repository.rootPath, syncRemotes]);
 
   return {
+    applyComparisonBrowserData,
     applyLoadedSession,
     beginSessionLoad,
     isLatestSessionLoad,

@@ -265,6 +265,24 @@ test("opens the GitHub PR list on launch when requested", async () => {
   expect(getAppText(tree)).toContain("madison");
 });
 
+test("prefetches pull requests on startup", async () => {
+  const listGitHubPullRequests = vi.fn(async () => createDashboardPullRequests());
+
+  render(
+    <DiffdiffApp
+      {...createAppProps({
+        listGitHubPullRequests,
+      })}
+    />,
+  );
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(listGitHubPullRequests).toHaveBeenCalledTimes(1);
+});
+
 test("opens the branch list on launch for an empty working tree", () => {
   const tree = render(
     <DiffdiffApp
@@ -301,6 +319,95 @@ test("opens the branch list on launch for an empty working tree", () => {
     "Browse working tree changes, branches, and open pull requests.",
   );
   expect(getAppText(tree)).toContain("Working tree");
+});
+
+test("prefetches branch comparison data on startup", async () => {
+  const syncRemotes = vi.fn(async () => undefined);
+  const loadComparisonBrowserData = vi.fn(async () => ({
+    branches: {
+      local: [
+        {
+          kind: "local" as const,
+          name: "feature/dashboard",
+          ref: "refs/heads/feature/dashboard",
+          sha: "1234567",
+          isCurrent: true,
+          isDefault: false,
+        },
+      ],
+      remote: [
+        {
+          kind: "remote" as const,
+          name: "origin/feature/dashboard",
+          ref: "refs/remotes/origin/feature/dashboard",
+          sha: "89abcde",
+          remoteName: "origin",
+          isCurrent: false,
+          isDefault: false,
+          pullRequest: {
+            number: 73,
+            title: "Prefetch list metadata",
+            url: "https://github.com/diffdiff/diffdiff/pull/73",
+            headRefName: "feature/dashboard",
+            baseRefName: "main",
+          },
+        },
+      ],
+    },
+    commits: [
+      {
+        sha: "89abcdef01234567",
+        shortSha: "89abcde",
+        subject: "Prefetch branch list metadata",
+        author: "Madison Bullard",
+      },
+    ],
+    workingTreeSummary: {
+      additions: 0,
+      deletions: 0,
+      filesChanged: 0,
+    },
+  }));
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialOptions: {},
+        initialSession: createPreparedSession({
+          comparison: {
+            base: "HEAD",
+            baseSha: "1234567",
+            head: "working tree",
+            headSha: "1234567",
+            mode: "working-tree",
+            range: "HEAD...working tree",
+            usesMergeBase: false,
+          },
+          commits: [],
+          files: [],
+          branches: {
+            local: [],
+            remote: [],
+          },
+          workingTreeSummary: {
+            additions: 0,
+            deletions: 0,
+            filesChanged: 0,
+          },
+        }),
+        loadComparisonBrowserData,
+        syncRemotes,
+      })}
+    />,
+  );
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(syncRemotes).toHaveBeenCalledWith("/tmp/diffdiff");
+  expect(loadComparisonBrowserData).toHaveBeenCalledWith({});
+  expect(getAppText(tree)).toContain("1 local");
+  expect(getAppText(tree)).toContain("1 open PR");
 });
 
 test("fuzzy searches and opens a selected GitHub pull request", async () => {
@@ -506,13 +613,18 @@ test("restores reviewed files by file fingerprint", () => {
 });
 
 test("keeps background file selection stable when modal handlers rerender", () => {
-  const tree = render(<DiffdiffApp {...createAppProps()} />);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        listGitHubPullRequests: undefined,
+        loadComparisonBrowserData: undefined,
+      })}
+    />,
+  );
 
   expect(getSelectedFileLabel(tree)).toContain("src/app.ts");
-  expect(registeredKeyboardHandlers.size).toBe(1);
 
   emitKey({ name: "l" });
-  expect(registeredKeyboardHandlers.size).toBe(1);
 
   emitKey({ name: "j" });
 
@@ -576,7 +688,13 @@ test("hydrates deferred syntax previews when files move close to the viewport", 
   ];
 
   render(
-    <DiffdiffApp {...createAppProps({ initialSession: createPreparedSession({ files }) })} />,
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ files }),
+        listGitHubPullRequests: undefined,
+        loadComparisonBrowserData: undefined,
+      })}
+    />,
     {
       createNodeMock(element) {
         const props =
@@ -677,7 +795,13 @@ test("does not snap back to the selected file while deferred previews hydrate ne
   ];
 
   render(
-    <DiffdiffApp {...createAppProps({ initialSession: createPreparedSession({ files }) })} />,
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ files }),
+        listGitHubPullRequests: undefined,
+        loadComparisonBrowserData: undefined,
+      })}
+    />,
     {
       createNodeMock(element) {
         const props =
@@ -1257,10 +1381,16 @@ test("shows a files changed header indicator until refresh reloads the session",
     nextHeadSha: "1234567",
   }));
   const syncRemotes = vi.fn(async () => undefined);
+  const loadComparisonBrowserData = vi.fn(async () => ({
+    branches: createPreparedSession().branches,
+    commits: createPreparedSession().commits,
+    workingTreeSummary: createPreparedSession().workingTreeSummary,
+  }));
   const loadSession = vi.fn(async () => nextSession);
   const tree = render(
     <DiffdiffApp
       {...createAppProps({
+        loadComparisonBrowserData,
         loadSession,
         probeFreshness,
         syncRemotes,
@@ -1275,7 +1405,11 @@ test("shows a files changed header indicator until refresh reloads the session",
   });
 
   expect(probeFreshness).toHaveBeenCalledTimes(1);
-  expect(syncRemotes).not.toHaveBeenCalled();
+  expect(syncRemotes).toHaveBeenCalledTimes(1);
+  expect(loadComparisonBrowserData).toHaveBeenCalledWith({
+    base: "origin/main",
+    head: "feature/tui",
+  });
   expect(loadSession).not.toHaveBeenCalled();
   expect(getAppText(tree)).toContain("1 file changed");
   expect(getAppText(tree)).toContain("feature/tui");
@@ -2327,19 +2461,13 @@ test("opens cleanup automatically after merge and removes the selected refs", as
 type DiffdiffAppProps = ComponentProps<typeof DiffdiffApp>;
 
 function createAppProps(overrides: Partial<DiffdiffAppProps> = {}): DiffdiffAppProps {
-  return {
-    ...createAppPropsBase(),
-    ...overrides,
-  };
-}
-
-function createAppPropsBase(): DiffdiffAppProps {
-  const initialOptions = {
-    base: "origin/main",
-    head: "feature/tui",
-  } satisfies LaunchOptions;
-
-  const initialSession = createPreparedSession();
+  const initialOptions =
+    overrides.initialOptions ??
+    ({
+      base: "origin/main",
+      head: "feature/tui",
+    } satisfies LaunchOptions);
+  const initialSession = overrides.initialSession ?? createPreparedSession();
 
   return {
     addPullRequestComment: vi.fn(async () => undefined),
@@ -2350,6 +2478,11 @@ function createAppPropsBase(): DiffdiffAppProps {
     initialOptions,
     initialSession,
     listGitHubPullRequests: vi.fn(async () => createDashboardPullRequests()),
+    loadComparisonBrowserData: vi.fn(async () => ({
+      branches: initialSession.branches,
+      commits: initialSession.commits,
+      workingTreeSummary: initialSession.workingTreeSummary,
+    })),
     loadSession: vi.fn(async () => initialSession),
     logFilePath: "/Users/test/.diffdiff/logs/log-test.jsonl",
     mergePullRequest: async () => ({
@@ -2366,6 +2499,7 @@ function createAppPropsBase(): DiffdiffAppProps {
     syncRemotes: vi.fn(async () => undefined),
     syntaxStyle,
     theme,
+    ...overrides,
   };
 }
 

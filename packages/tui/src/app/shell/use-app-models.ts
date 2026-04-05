@@ -42,6 +42,7 @@ export interface DiffdiffAppDerived {
   hasNextUnreviewedFile: boolean;
   hasSelectedReviewThread: boolean;
   hasThreadKeymap: boolean;
+  localBranchCount: number;
   openPrCount: number;
   pullRequestConversationItems: readonly import("@diffdiff/core").GitHubPullRequestConversationItem[];
   remoteBranchCount: number;
@@ -162,20 +163,20 @@ export function useDiffdiffAppDerived(
     () =>
       buildBranchListItems({
         filters: state.branchListFilters,
-        localBranches: state.session.branches.local,
-        remoteBranches: state.session.branches.remote,
-        workingTreeSummary: state.session.workingTreeSummary,
+        localBranches: state.comparisonBrowserData.branches.local,
+        remoteBranches: state.comparisonBrowserData.branches.remote,
+        workingTreeSummary: state.comparisonBrowserData.workingTreeSummary,
       }),
     [
       state.branchListFilters,
-      state.session.branches.local,
-      state.session.branches.remote,
-      state.session.workingTreeSummary,
+      state.comparisonBrowserData.branches.local,
+      state.comparisonBrowserData.branches.remote,
+      state.comparisonBrowserData.workingTreeSummary,
     ],
   );
   const commitItems = useMemo(
-    () => buildCommitListItems(state.session.commits),
-    [state.session.commits],
+    () => buildCommitListItems(state.comparisonBrowserData.commits),
+    [state.comparisonBrowserData.commits],
   );
   const filteredCommitItems = useMemo(
     () => filterCommitListItems(commitItems, state.commitSearchQuery),
@@ -245,10 +246,11 @@ export function useDiffdiffAppDerived(
       ),
     [state.reviewedPaths, state.selectedFileIndex, state.session.files],
   );
-  const openPrCount = state.session.branches.remote.filter(
+  const localBranchCount = state.comparisonBrowserData.branches.local.length;
+  const openPrCount = state.comparisonBrowserData.branches.remote.filter(
     (branch) => branch.pullRequest != null,
   ).length;
-  const remoteBranchCount = state.session.branches.remote.length - openPrCount;
+  const remoteBranchCount = state.comparisonBrowserData.branches.remote.length - openPrCount;
   const reviewRequestedPrCount = state.pullRequestList.filter(
     (pullRequest) => pullRequest.isReviewRequested,
   ).length;
@@ -273,6 +275,7 @@ export function useDiffdiffAppDerived(
     hasNextUnreviewedFile,
     hasSelectedReviewThread,
     hasThreadKeymap,
+    localBranchCount,
     openPrCount,
     pullRequestConversationItems,
     remoteBranchCount,

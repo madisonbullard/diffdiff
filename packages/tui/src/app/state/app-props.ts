@@ -32,6 +32,11 @@ export interface DiffdiffAppProps {
   initialSession: PreparedReviewSession;
   initialOptions: LaunchOptions;
   listGitHubPullRequests?: () => Promise<GitHubDashboardPullRequest[]>;
+  loadComparisonBrowserData?: (options: LaunchOptions) => Promise<{
+    branches: PreparedReviewSession["branches"];
+    commits: PreparedReviewSession["commits"];
+    workingTreeSummary: PreparedReviewSession["workingTreeSummary"];
+  }>;
   loadSession: (options: LaunchOptions) => Promise<PreparedReviewSession>;
   logFilePath?: string;
   mergePullRequest?: (

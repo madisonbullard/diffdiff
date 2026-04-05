@@ -7,6 +7,7 @@ import {
   flushDiffdiffLogs,
   GitHubPullRequestService,
   loadDiffdiffPreferences,
+  loadReviewSession,
   listDiffdiffSessions,
   loadReviewCache,
   logDiffdiffError,
@@ -286,6 +287,14 @@ async function launchTui(options: LaunchOptions): Promise<void> {
         initialOptions={options}
         initialSession={initialSession}
         listGitHubPullRequests={() => gitHubPullRequestService.listDashboardPullRequests()}
+        loadComparisonBrowserData={async (nextOptions) => {
+          const session = await loadReviewSession(nextOptions);
+          return {
+            branches: session.branches,
+            commits: session.commits,
+            workingTreeSummary: session.workingTreeSummary,
+          };
+        }}
         loadSession={loadSession}
         logFilePath={logSession?.logFilePath}
         mergePullRequest={(reviewSession, input) =>

@@ -21,7 +21,7 @@ import type {
   MergeModalField,
   SessionActivityUpdate,
 } from "./app-props.ts";
-import type { DiffdiffAppState } from "./app-state.ts";
+import type { ComparisonBrowserData, DiffdiffAppState } from "./app-state.ts";
 import type { ReviewComposerTarget } from "../review/review-composer.ts";
 import {
   buildBranchListItems,
@@ -34,9 +34,18 @@ import type {
   DiffViewPreference,
   LaunchOptions,
   ListModalView,
+  PreparedReviewSession,
 } from "../../types.ts";
 
 export type { DiffdiffAppState } from "./app-state.ts";
+
+function getComparisonBrowserData(session: PreparedReviewSession): ComparisonBrowserData {
+  return {
+    branches: session.branches,
+    commits: session.commits,
+    workingTreeSummary: session.workingTreeSummary,
+  };
+}
 
 export function useDiffdiffAppState({
   initialGitHubPreferences,
@@ -115,6 +124,9 @@ export function useDiffdiffAppState({
   const activeOverlay = getActiveDialogEntry(dialogStack)?.dialog ?? null;
   const [commentCollapseStates, setCommentCollapseStates] = useState<Record<string, boolean>>(
     () => initialReviewCache?.commentCollapseStates ?? {},
+  );
+  const [comparisonBrowserData, setComparisonBrowserData] = useState<ComparisonBrowserData>(() =>
+    getComparisonBrowserData(initialSession),
   );
   const [showKeyLegend, setShowKeyLegend] = useState(() => initialShowKeyLegend ?? true);
   const [activeListView, setActiveListView] = useState<ListModalView>("branch");
@@ -223,6 +235,7 @@ export function useDiffdiffAppState({
     collapsedDirectories,
     collapsedPaths,
     commentCollapseStates,
+    comparisonBrowserData,
     commandIndex,
     commandQuery,
     commitListIndex,
@@ -292,6 +305,7 @@ export function useDiffdiffAppState({
     setCollapsedDirectories,
     setCollapsedPaths,
     setCommentCollapseStates,
+    setComparisonBrowserData,
     setCommandIndex,
     setCommandQuery,
     setCommitListIndex,

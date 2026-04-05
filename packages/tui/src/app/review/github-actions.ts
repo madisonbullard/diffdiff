@@ -1,3 +1,4 @@
+import { logDiffdiffError } from "@diffdiff/core";
 import { closeDialog as closeAppDialog, openDialog as openAppDialog } from "../dialogs/stack.ts";
 import { formatThreadAnchor } from "../../review/threads.tsx";
 import { getReviewSubmissionEvent } from "../../review/formatting.ts";
@@ -63,17 +64,26 @@ export function createGitHubReviewActions({
     return loadId === state.pullRequestListLoadIdRef.current;
   }
 
-  async function refreshGitHubPullRequestList(): Promise<void> {
+  async function refreshGitHubPullRequestList(options: { announce?: boolean } = {}): Promise<void> {
+    const announce = options.announce ?? true;
     if (props.listGitHubPullRequests == null) {
-      persistence.persistenceApi.handleAppFailure("Unable to load GitHub pull requests.", {
-        action: "refresh-github-pull-request-list",
-        reason: "missing-list-handler",
-      });
+      if (announce) {
+        persistence.persistenceApi.handleAppFailure("Unable to load GitHub pull requests.", {
+          action: "refresh-github-pull-request-list",
+          reason: "missing-list-handler",
+        });
+      }
+      return;
+    }
+
+    if (state.isPullRequestListLoading) {
       return;
     }
 
     state.setIsPullRequestListLoading(true);
-    state.setStatusMessage("Loading GitHub pull requests...");
+    if (announce) {
+      state.setStatusMessage("Loading GitHub pull requests...");
+    }
     const loadId = beginPullRequestListLoad();
 
     try {
@@ -83,16 +93,24 @@ export function createGitHubReviewActions({
       }
 
       state.setPullRequestList(nextPullRequests);
-      state.setStatusMessage(
-        nextPullRequests.length === 0
-          ? "No open authored or review-requested pull requests were found."
-          : `Loaded ${nextPullRequests.length} GitHub pull request${nextPullRequests.length === 1 ? "" : "s"}.`,
-      );
+      if (announce) {
+        state.setStatusMessage(
+          nextPullRequests.length === 0
+            ? "No open authored or review-requested pull requests were found."
+            : `Loaded ${nextPullRequests.length} GitHub pull request${nextPullRequests.length === 1 ? "" : "s"}.`,
+        );
+      }
     } catch (error) {
       if (isLatestPullRequestListLoad(loadId)) {
-        persistence.persistenceApi.handleAppError(error, "Unable to load GitHub pull requests.", {
-          action: "refresh-github-pull-request-list",
-        });
+        if (announce) {
+          persistence.persistenceApi.handleAppError(error, "Unable to load GitHub pull requests.", {
+            action: "refresh-github-pull-request-list",
+          });
+        } else {
+          logDiffdiffError("app", "startup_pull_request_prefetch_failed", error, {
+            action: "startup-prefetch-github-pull-request-list",
+          });
+        }
       }
     } finally {
       if (isLatestPullRequestListLoad(loadId)) {
