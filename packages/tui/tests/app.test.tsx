@@ -1953,8 +1953,7 @@ test("opens PR review mode from the list modal", () => {
   );
 
   emitKey({ name: "l" });
-  emitKey({ name: "j" });
-  emitKey({ name: "j" });
+  emitKey({ name: "k" });
   emitKey({ name: "return" });
 
   expect(loadSession).toHaveBeenCalledWith({
@@ -2019,6 +2018,7 @@ test("restores reviewed files from the cache when opening a branch review from t
     />,
   );
 
+  emitKey({ name: "j" });
   emitKey({ name: "j" });
   await emitAsyncKey({ name: "h" });
 
