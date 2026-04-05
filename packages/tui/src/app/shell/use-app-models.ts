@@ -26,6 +26,7 @@ export interface DiffdiffAppDerived {
   commitItems: ReturnType<typeof buildCommitListItems>;
   diffPaneWidth: number;
   diffRenderSurface: RenderSurfaceMetrics;
+  draftPrCount: number;
   diffView: "unified" | "split";
   estimatedFileCardBodyHeights: number[];
   fileCardBodyVisibility: boolean[];
@@ -251,6 +252,7 @@ export function useDiffdiffAppDerived(
     (branch) => branch.pullRequest != null,
   ).length;
   const remoteBranchCount = state.comparisonBrowserData.branches.remote.length - openPrCount;
+  const draftPrCount = state.pullRequestList.filter((pullRequest) => pullRequest.isDraft).length;
   const reviewRequestedPrCount = state.pullRequestList.filter(
     (pullRequest) => pullRequest.isReviewRequested,
   ).length;
@@ -263,6 +265,7 @@ export function useDiffdiffAppDerived(
     diffPaneWidth,
     diffRenderSurface: preview.diffRenderSurface,
     diffView,
+    draftPrCount,
     estimatedFileCardBodyHeights: preview.estimatedFileCardBodyHeights,
     fileCardBodyVisibility: preview.fileCardBodyVisibility,
     fileCardPreviewViewports: preview.fileCardPreviewViewports,

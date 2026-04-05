@@ -7,6 +7,7 @@ const PULL_REQUEST_LIST_MAX_VISIBLE = 10;
 const PULL_REQUEST_LIST_CONTENT_WIDTH = 96;
 
 export function PullRequestListModal({
+  draftPrCount,
   isLoading,
   pullRequests,
   reviewRequestedCount,
@@ -15,6 +16,7 @@ export function PullRequestListModal({
   selectedIndex,
   theme,
 }: {
+  draftPrCount: number;
   isLoading: boolean;
   pullRequests: readonly GitHubDashboardPullRequest[];
   reviewRequestedCount: number;
@@ -53,7 +55,14 @@ export function PullRequestListModal({
       >
         <text fg={theme.textMuted} wrapMode="none">
           <span>{`${pullRequests.length}`}</span>
-          <span>{" open / draft PRs"}</span>
+          <span>{" open PRs"}</span>
+          {draftPrCount > 0 ? (
+            <>
+              <span fg={theme.border}>{"  │  "}</span>
+              <span>{`${draftPrCount}`}</span>
+              <span>{" draft"}</span>
+            </>
+          ) : null}
           <span fg={theme.border}>{"  │  "}</span>
           <span>{`${reviewRequestedCount}`}</span>
           <span>{" review requested"}</span>
@@ -102,10 +111,15 @@ export function PullRequestListModal({
             const pullRequest = item;
             const repoLabel = `${pullRequest.repository.owner}/${pullRequest.repository.repo}`;
             const authorLabel = pullRequest.author.login;
+            const draftTag = pullRequest.isDraft ? " draft" : "";
             const titleLabel = truncateTitle(
               pullRequest.title,
               Math.max(
-                PULL_REQUEST_LIST_CONTENT_WIDTH - repoLabel.length - authorLabel.length - 6,
+                PULL_REQUEST_LIST_CONTENT_WIDTH -
+                  repoLabel.length -
+                  authorLabel.length -
+                  draftTag.length -
+                  6,
                 12,
               ),
             );
@@ -116,6 +130,7 @@ export function PullRequestListModal({
                   <span fg={isSelected ? theme.accent : theme.warning}>{repoLabel}</span>
                   <span fg={theme.textMuted}>{"  │  "}</span>
                   <span fg={isSelected ? theme.text : theme.textMuted}>{titleLabel}</span>
+                  {pullRequest.isDraft ? <span fg={theme.warning}>{" draft"}</span> : null}
                   <span fg={theme.textMuted}>{"  │  "}</span>
                   <span fg={theme.textMuted}>{authorLabel}</span>
                 </text>
@@ -145,6 +160,12 @@ export function PullRequestListModal({
               <span>{`${selectedPullRequest.repository.owner}/${selectedPullRequest.repository.repo}`}</span>
               <span fg={theme.border}>{"  │  "}</span>
               <span>{selectedPullRequest.author.login}</span>
+              {selectedPullRequest.isDraft ? (
+                <>
+                  <span fg={theme.border}>{"  │  "}</span>
+                  <span fg={theme.warning}>draft</span>
+                </>
+              ) : null}
               {selectedPullRequest.isReviewRequested ? (
                 <>
                   <span fg={theme.border}>{"  │  "}</span>

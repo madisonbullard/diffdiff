@@ -403,6 +403,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       currentBranchLabel={state.session.repository.currentBranch ?? "detached"}
       diffPaneWidth={derived.diffPaneWidth}
       diffView={derived.diffView}
+      draftPrCount={derived.draftPrCount}
       estimatedFileCardBodyHeights={derived.estimatedFileCardBodyHeights}
       fileCardBodyVisibility={derived.fileCardBodyVisibility}
       fileCardPreviewViewports={derived.fileCardPreviewViewports}

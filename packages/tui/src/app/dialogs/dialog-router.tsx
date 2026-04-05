@@ -45,6 +45,7 @@ interface DiffdiffAppDialogsProps {
   commitListIndex: number;
   commitSearchActive: boolean;
   commitSearchQuery: string;
+  draftPrCount: number;
   filteredCommands: readonly CommandDefinition[];
   helpCommands: readonly AppCommand[];
   filteredCommitItems: readonly CommitListItem[];
@@ -95,6 +96,7 @@ export function DiffdiffAppDialogs({
   commitListIndex,
   commitSearchActive,
   commitSearchQuery,
+  draftPrCount,
   filteredCommands,
   helpCommands,
   filteredCommitItems,
@@ -161,6 +163,7 @@ export function DiffdiffAppDialogs({
   if (activeDialog === "pull-request-list") {
     return (
       <PullRequestListModal
+        draftPrCount={draftPrCount}
         isLoading={isPullRequestListLoading}
         pullRequests={filteredPullRequests}
         reviewRequestedCount={reviewRequestedPrCount}

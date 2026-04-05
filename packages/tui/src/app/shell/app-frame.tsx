@@ -49,6 +49,7 @@ interface DiffdiffAppViewProps {
   currentBranchLabel: string;
   diffPaneWidth: number;
   diffView: "unified" | "split";
+  draftPrCount: number;
   estimatedFileCardBodyHeights: readonly number[];
   fileCardBodyVisibility: readonly boolean[];
   fileCardPreviewViewports: readonly (FileCardPreviewViewport | undefined)[];
@@ -145,6 +146,7 @@ export function DiffdiffAppView({
   currentBranchLabel,
   diffPaneWidth,
   diffView,
+  draftPrCount,
   estimatedFileCardBodyHeights,
   fileCardBodyVisibility,
   fileCardPreviewViewports,
@@ -290,6 +292,7 @@ export function DiffdiffAppView({
         commitListIndex={commitListIndex}
         commitSearchActive={commitSearchActive}
         commitSearchQuery={commitSearchQuery}
+        draftPrCount={draftPrCount}
         filteredCommands={filteredCommands}
         helpCommands={helpCommands}
         filteredCommitItems={filteredCommitItems}
