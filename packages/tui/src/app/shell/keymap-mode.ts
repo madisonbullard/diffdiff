@@ -5,8 +5,10 @@ import type { AppDialog } from "../dialogs/stack.ts";
 
 export type KeymapMode =
   | "leader"
+  | "clear-reviewed"
   | "diff"
   | "thread"
+  | "diagnostics"
   | "tree"
   | "help"
   | "commands"
@@ -61,6 +63,10 @@ export function resolveActiveKeymapMode({
   switch (activeDialog) {
     case "help":
       return "help";
+    case "diagnostics":
+      return "diagnostics";
+    case "clear-reviewed":
+      return "clear-reviewed";
     case "command-palette":
       return "commands";
     case "pull-request-list":
@@ -106,6 +112,7 @@ export function resolveActiveKeymapMode({
 
 export function keymapModeSuspendsGlobalKeybinds(mode: KeymapMode): boolean {
   return (
+    mode === "clear-reviewed" ||
     mode === "commands" ||
     mode === "comment" ||
     mode === "submit-review" ||
@@ -150,10 +157,14 @@ export function getKeymapModeBadge(mode: KeymapMode, theme: UiTheme): KeymapMode
         fg: theme.inverseText,
         label: "LEADER",
       };
+    case "clear-reviewed":
+      return actionMode("CONFIRM");
     case "diff":
       return navigationMode("DIFF");
     case "thread":
       return reviewThreadMode();
+    case "diagnostics":
+      return navigationMode("DIAGNOSTICS");
     case "tree":
       return navigationMode("TREE");
     case "help":

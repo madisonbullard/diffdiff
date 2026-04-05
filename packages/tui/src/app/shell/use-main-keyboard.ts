@@ -20,9 +20,11 @@ interface UseMainKeyboardOptions {
   dismissErrorToast: () => void;
   findCommandByKey: (key: KeyboardInput, leader?: boolean) => AppCommand | undefined;
   handleBranchModalKey: (key: KeyboardInput) => void;
+  handleClearReviewedModalKey: (key: KeyboardInput) => void;
   handleCleanupModalKey: (key: KeyboardInput) => void;
   handleCommandModalKey: (key: KeyboardInput) => void;
   handleCommentComposerKey: (key: KeyboardInput) => void;
+  handleDiagnosticsModalKey: (key: KeyboardInput) => void;
   handleListFilterModalKey: (key: KeyboardInput) => void;
   handlePullRequestCommentsModalKey: (key: KeyboardInput) => void;
   handlePullRequestListModalKey: (key: KeyboardInput) => void;
@@ -40,9 +42,11 @@ export function useMainKeyboard({
   dismissErrorToast,
   findCommandByKey,
   handleBranchModalKey,
+  handleClearReviewedModalKey,
   handleCleanupModalKey,
   handleCommandModalKey,
   handleCommentComposerKey,
+  handleDiagnosticsModalKey,
   handleListFilterModalKey,
   handlePullRequestCommentsModalKey,
   handlePullRequestListModalKey,
@@ -168,6 +172,12 @@ export function useMainKeyboard({
         return;
       case "help":
         handleHelpModalKey(key);
+        return;
+      case "diagnostics":
+        handleDiagnosticsModalKey(key);
+        return;
+      case "clear-reviewed":
+        handleClearReviewedModalKey(key);
         return;
       case "comment":
         handleCommentComposerKey(key);

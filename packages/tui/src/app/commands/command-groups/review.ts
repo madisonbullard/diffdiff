@@ -54,7 +54,6 @@ export function buildReviewCommands({
       description: "Mark every file in the current comparison as reviewed.",
       disabledReason: hasFiles ? undefined : "No files are available to review.",
       enabled: hasFiles,
-      keybind: withLeaderKeybind("shift+r"),
       title: "Mark all reviewed",
       value: "review.mark-all-reviewed",
       run: () => markAllReviewed(),

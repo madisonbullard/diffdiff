@@ -77,6 +77,7 @@ export interface BuildAppCommandsOptions {
   openBranchModal: () => void;
   openCommandModal: () => void;
   openCommentComposer: () => void;
+  openDiagnostics: () => void;
   openFocusedReviewThreadReplyComposer: () => void;
   openGitHubPullRequestList: () => void;
   openHelp: () => void;

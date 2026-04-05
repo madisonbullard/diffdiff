@@ -22,6 +22,7 @@ export const MODAL_OVERLAY = "#00000096";
 export function ModalFrame({
   children,
   headerRight,
+  maxHeight,
   maxWidth = 140,
   theme,
   title,
@@ -31,6 +32,7 @@ export function ModalFrame({
 }: {
   children: ReactNode;
   headerRight?: ReactNode;
+  maxHeight?: `${number}%` | number;
   maxWidth?: number;
   theme: UiTheme;
   title: string;
@@ -53,6 +55,7 @@ export function ModalFrame({
       <box
         width={width}
         maxWidth={maxWidth}
+        maxHeight={maxHeight}
         backgroundColor={theme.modalBg}
         padding={1}
         flexDirection="column"

@@ -29,6 +29,7 @@ function createRegistryOptions(
     openBranchModal: vi.fn(),
     openCommandModal: vi.fn(),
     openCommentComposer: vi.fn(),
+    openDiagnostics: vi.fn(),
     openFocusedReviewThreadReplyComposer: vi.fn(),
     openGitHubPullRequestList: vi.fn(),
     openHelp: vi.fn(),
@@ -129,5 +130,21 @@ describe("command registry", () => {
       enabled: false,
       keybind: "return,right,space",
     });
+  });
+
+  test("moves refresh to shift+r and leaves mark-all-reviewed palette-only", () => {
+    const commands = buildAppCommands(createRegistryOptions());
+
+    expect(findAppCommandByValue(commands, "comparison.refresh")).toMatchObject({
+      keybind: "shift+r,<leader>shift+r",
+    });
+    expect(
+      findAppCommandByKey(
+        commands,
+        { name: "r", sequence: "R", shift: true },
+        { activePane: "diff" },
+      )?.value,
+    ).toBe("comparison.refresh");
+    expect(findAppCommandByValue(commands, "review.mark-all-reviewed")?.keybind).toBeUndefined();
   });
 });

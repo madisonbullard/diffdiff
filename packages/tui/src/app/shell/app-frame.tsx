@@ -8,6 +8,7 @@ import type {
 import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
 import type { MutableRefObject } from "react";
 import type { FileCardPreviewViewport } from "../../components/file-card.tsx";
+import type { SessionDiagnosticEvent } from "../diagnostics/session-events.ts";
 import type { AppCommand } from "../commands/registry.ts";
 import { DiffdiffAppDialogs } from "../dialogs/dialog-router.tsx";
 import { AppDiffPane } from "./app-diff-pane.tsx";
@@ -47,6 +48,10 @@ interface DiffdiffAppViewProps {
   commitSearchActive: boolean;
   commitSearchQuery: string;
   currentBranchLabel: string;
+  diagnosticErrorMessage: string | null;
+  diagnosticEventIndex: number;
+  diagnosticEvents: readonly SessionDiagnosticEvent[];
+  diagnosticLogFilePath: string;
   diffPaneWidth: number;
   diffView: "unified" | "split";
   draftPrCount: number;
@@ -64,6 +69,7 @@ interface DiffdiffAppViewProps {
   handleFileTreeMouseUp: (node: FileTreeNode) => void;
   helpCommands: readonly AppCommand[];
   helpLabel: string;
+  isDiagnosticsLoading: boolean;
   isPullRequestListLoading: boolean;
   isSubmittingReviewAction: boolean;
   keyLegendToggleLabel: string;
@@ -89,6 +95,7 @@ interface DiffdiffAppViewProps {
     title: string;
   } | null;
   reviewedPaths: ReadonlySet<string>;
+  reviewedCount: number;
   reviewRequestedPrCount: number;
   reviewSubmissionBody: string;
   reviewSubmissionEventIndex: number;
@@ -108,6 +115,7 @@ interface DiffdiffAppViewProps {
   sidebarWidth: number;
   stickyFile?: PreparedReviewSession["files"][number];
   syntaxStyle: SyntaxStyle;
+  terminalWidth: number;
   theme: UiTheme;
   toggleReviewThreadCollapsed: (
     thread: import("@diffdiff/core").GitHubPullRequestReviewThread,
@@ -144,6 +152,10 @@ export function DiffdiffAppView({
   commitSearchActive,
   commitSearchQuery,
   currentBranchLabel,
+  diagnosticErrorMessage,
+  diagnosticEventIndex,
+  diagnosticEvents,
+  diagnosticLogFilePath,
   diffPaneWidth,
   diffView,
   draftPrCount,
@@ -161,6 +173,7 @@ export function DiffdiffAppView({
   handleFileTreeMouseUp,
   helpCommands,
   helpLabel,
+  isDiagnosticsLoading,
   isPullRequestListLoading,
   isSubmittingReviewAction,
   keyLegendToggleLabel,
@@ -182,6 +195,7 @@ export function DiffdiffAppView({
   reviewComposerBody,
   reviewComposerContext,
   reviewedPaths,
+  reviewedCount,
   reviewRequestedPrCount,
   reviewSubmissionBody,
   reviewSubmissionEventIndex,
@@ -198,6 +212,7 @@ export function DiffdiffAppView({
   sidebarWidth,
   stickyFile,
   syntaxStyle,
+  terminalWidth,
   theme,
   toggleReviewThreadCollapsed,
   treeRowRefCallbacks,
@@ -292,11 +307,16 @@ export function DiffdiffAppView({
         commitListIndex={commitListIndex}
         commitSearchActive={commitSearchActive}
         commitSearchQuery={commitSearchQuery}
+        diagnosticErrorMessage={diagnosticErrorMessage}
+        diagnosticEventIndex={diagnosticEventIndex}
+        diagnosticEvents={diagnosticEvents}
+        diagnosticLogFilePath={diagnosticLogFilePath}
         draftPrCount={draftPrCount}
         filteredCommands={filteredCommands}
         helpCommands={helpCommands}
         filteredCommitItems={filteredCommitItems}
         filterIndex={filterIndex}
+        isDiagnosticsLoading={isDiagnosticsLoading}
         isSubmittingReviewAction={isSubmittingReviewAction}
         localBranchCount={localBranchCount}
         leaderKeybind={leaderKeybind}
@@ -316,10 +336,12 @@ export function DiffdiffAppView({
         remoteBranchCount={remoteBranchCount}
         reviewComposerBody={reviewComposerBody}
         reviewComposerContext={reviewComposerContext}
+        reviewedCount={reviewedCount}
         reviewSubmissionBody={reviewSubmissionBody}
         reviewSubmissionEventIndex={reviewSubmissionEventIndex}
         selectedPullRequestConversationItemId={pullRequestConversationItemId}
         session={session}
+        terminalWidth={terminalWidth}
         theme={theme}
       />
     </box>

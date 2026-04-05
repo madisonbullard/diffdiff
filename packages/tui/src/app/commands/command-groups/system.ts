@@ -3,12 +3,18 @@ import type { AppCommand, BuildAppCommandsOptions } from "../registry.ts";
 export function buildSystemCommands({
   onExit,
   openCommandModal,
+  openDiagnostics,
   openHelp,
   showKeyLegend,
   toggleKeyLegend,
 }: Pick<
   BuildAppCommandsOptions,
-  "onExit" | "openCommandModal" | "openHelp" | "showKeyLegend" | "toggleKeyLegend"
+  | "onExit"
+  | "openCommandModal"
+  | "openDiagnostics"
+  | "openHelp"
+  | "showKeyLegend"
+  | "toggleKeyLegend"
 >): AppCommand[] {
   return [
     {
@@ -29,6 +35,15 @@ export function buildSystemCommands({
       title: "Open help",
       value: "system.help",
       run: () => openHelp(),
+    },
+    {
+      category: "System",
+      description: "Inspect the full event log for the current session.",
+      keybind: "d,<leader>d",
+      keywords: ["events", "logs"],
+      title: "Open diagnostics",
+      value: "system.diagnostics",
+      run: () => openDiagnostics(),
     },
     {
       category: "System",

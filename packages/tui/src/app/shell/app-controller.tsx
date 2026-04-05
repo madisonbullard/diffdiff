@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import { logDiffdiffError, syncGitRemotes } from "@diffdiff/core";
 import { buildAppCommands, getPaletteCommands, type AppCommand } from "../commands/registry.ts";
 import { filterCommands, formatCommandKeybind } from "../../commands.ts";
+import { useSessionDiagnostics } from "../diagnostics/use-session-diagnostics.ts";
 import {
   getKeymapModeBadge,
   keymapModeSuspendsGlobalKeybinds,
@@ -45,6 +46,11 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     actions: sessionActions,
     persistence,
     props: { loadSession: props.loadSession, probeFreshness: props.probeFreshness },
+    state,
+  });
+  const diagnostics = useSessionDiagnostics({
+    loadSessionDiagnostics: props.loadSessionDiagnostics,
+    logFilePath: persistence.resolvedLogFilePath,
     state,
   });
   const launchActions = createLaunchActions({ actions: sessionActions, persistence, props, state });
@@ -134,6 +140,16 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     });
   }
 
+  function openClearReviewedConfirmModal(): void {
+    if (state.reviewedPaths.size === 0) {
+      state.setStatusMessage("No files are marked reviewed.");
+      return;
+    }
+
+    state.setDialogStack((currentStack) => openAppDialog(currentStack, "clear-reviewed"));
+    state.setStatusMessage(`Confirm clearing review marks from ${state.reviewedPaths.size} files.`);
+  }
+
   function openMergeConfirmModal(): void {
     if (
       state.session.github == null ||
@@ -153,7 +169,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         canClearReviewed: state.reviewedPaths.size > 0,
         canMoveToNextUnreviewed: derived.hasNextUnreviewedFile,
         canOpenSelectedTreeFile: derived.selectedTreeNode?.kind === "file",
-        clearReviewed: reviewActions.clearReviewed,
+        clearReviewed: openClearReviewedConfirmModal,
         copyFocusedReviewCommentUrl: reviewActions.copyFocusedReviewCommentUrl,
         copyPullRequestUrl,
         hasFiles: state.session.files.length > 0,
@@ -168,6 +184,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         openBranchModal,
         openCommandModal: commandActions.openCommandModal,
         openCommentComposer: githubActions.openCommentComposer,
+        openDiagnostics: diagnostics.openDiagnostics,
         openFocusedReviewThreadReplyComposer: githubActions.openFocusedReviewThreadReplyComposer,
         openGitHubPullRequestList: githubActions.openGitHubPullRequestList,
         openHelp,
@@ -188,8 +205,10 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       }),
     [
       commandActions,
+      diagnostics.openDiagnostics,
       derived,
       githubActions,
+      openClearReviewedConfirmModal,
       openBranchModal,
       openHelp,
       persistence.persistenceApi,
@@ -241,6 +260,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   });
   const reviewModalHandlers = createReviewModalHandlers({
     applyCleanupSelection: githubActions.applyCleanupSelection,
+    clearReviewed: reviewActions.clearReviewed,
     copySelectedPullRequestConversationItemUrl:
       reviewActions.copySelectedPullRequestConversationItemUrl,
     handleTextInputLeaderKey: commandActions.handleTextInputLeaderKey,
@@ -348,9 +368,11 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     dismissErrorToast: persistence.persistenceApi.dismissErrorToast,
     findCommandByKey: listHandlers.findCommandByKey,
     handleBranchModalKey: listHandlers.handleBranchModalKey,
+    handleClearReviewedModalKey: reviewModalHandlers.handleClearReviewedModalKey,
     handleCleanupModalKey: reviewModalHandlers.handleCleanupModalKey,
     handleCommandModalKey: listHandlers.handleCommandModalKey,
     handleCommentComposerKey: reviewModalHandlers.handleCommentComposerKey,
+    handleDiagnosticsModalKey: diagnostics.handleDiagnosticsModalKey,
     handleListFilterModalKey: listHandlers.handleListFilterModalKey,
     handlePullRequestCommentsModalKey: reviewModalHandlers.handlePullRequestCommentsModalKey,
     handlePullRequestListModalKey: listHandlers.handlePullRequestListModalKey,
@@ -401,6 +423,10 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       commitSearchActive={state.commitSearchActive}
       commitSearchQuery={state.commitSearchQuery}
       currentBranchLabel={state.session.repository.currentBranch ?? "detached"}
+      diagnosticErrorMessage={diagnostics.diagnosticErrorMessage}
+      diagnosticEventIndex={diagnostics.diagnosticEventIndex}
+      diagnosticEvents={diagnostics.diagnosticEvents}
+      diagnosticLogFilePath={persistence.resolvedLogFilePath}
       diffPaneWidth={derived.diffPaneWidth}
       diffView={derived.diffView}
       draftPrCount={derived.draftPrCount}
@@ -418,6 +444,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       handleFileTreeMouseUp={treeActions.handleFileTreeMouseUp}
       helpCommands={commands}
       helpLabel={helpLabel}
+      isDiagnosticsLoading={diagnostics.isDiagnosticsLoading}
       isPullRequestListLoading={state.isPullRequestListLoading}
       isSubmittingReviewAction={state.isSubmittingReviewAction}
       keyLegendToggleLabel={keyLegendToggleLabel}
@@ -452,6 +479,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       reviewComposerBody={state.reviewComposerBody}
       reviewComposerContext={derived.reviewComposerContext}
       reviewedPaths={state.reviewedPaths}
+      reviewedCount={state.reviewedPaths.size}
       reviewRequestedPrCount={derived.reviewRequestedPrCount}
       reviewSubmissionBody={state.reviewSubmissionBody}
       reviewSubmissionEventIndex={state.reviewSubmissionEventIndex}
@@ -468,6 +496,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       sidebarWidth={derived.sidebarWidth}
       stickyFile={derived.stickyFile}
       syntaxStyle={props.syntaxStyle}
+      terminalWidth={state.terminalDimensions.width}
       theme={props.theme}
       toggleReviewThreadCollapsed={reviewActions.toggleReviewThreadCollapsed}
       treeRowRefCallbacks={derived.treeRowRefCallbacks}

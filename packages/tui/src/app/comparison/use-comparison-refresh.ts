@@ -128,7 +128,7 @@ export function useDiffdiffAppRefresh({ actions, persistence, props, state }: Us
         nextRefreshIndicatorLabel != null &&
         nextRefreshIndicatorLabel !== state.refreshIndicatorLabel
       ) {
-        state.setStatusMessage(`${nextRefreshIndicatorLabel}. Press Shift+F to refresh.`);
+        state.setStatusMessage(`${nextRefreshIndicatorLabel}. Press Shift+R to refresh.`);
       } else if (state.refreshIndicatorLabel != null) {
         state.setStatusMessage("Current comparison is up to date.");
       }

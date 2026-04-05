@@ -17,6 +17,7 @@ import type { SyntaxStyle } from "@opentui/core";
 import type { StartupInstrumentation } from "../../startup-tracing.ts";
 import type { UiTheme } from "../../theme.ts";
 import type { AppPane, LaunchOptions, PreparedReviewSession } from "../../types.ts";
+import type { SessionDiagnosticEvent } from "../diagnostics/session-events.ts";
 
 export interface DiffdiffAppProps {
   addReviewThread?: (
@@ -37,6 +38,7 @@ export interface DiffdiffAppProps {
     commits: PreparedReviewSession["commits"];
     workingTreeSummary: PreparedReviewSession["workingTreeSummary"];
   }>;
+  loadSessionDiagnostics?: (logFilePath: string) => Promise<SessionDiagnosticEvent[]>;
   loadSession: (options: LaunchOptions) => Promise<PreparedReviewSession>;
   logFilePath?: string;
   mergePullRequest?: (

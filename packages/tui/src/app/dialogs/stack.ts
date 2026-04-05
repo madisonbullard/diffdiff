@@ -1,9 +1,11 @@
 export type AppDialog =
   | "branch"
+  | "clear-reviewed"
   | "cleanup"
   | "command-palette"
   | "comment-composer"
   | "comments"
+  | "diagnostics"
   | "pull-request-list"
   | "help"
   | "list-filter"
@@ -25,6 +27,10 @@ const APP_DIALOG_EXIT_ACTIONS: Record<
   branch: {
     dismiss: "close-all",
   },
+  "clear-reviewed": {
+    complete: "restore-parent",
+    dismiss: "restore-parent",
+  },
   cleanup: {
     complete: "close-all",
     dismiss: "close-all",
@@ -38,6 +44,9 @@ const APP_DIALOG_EXIT_ACTIONS: Record<
   },
   comments: {
     dismiss: "restore-parent",
+  },
+  diagnostics: {
+    dismiss: "close-all",
   },
   help: {
     dismiss: "restore-parent",

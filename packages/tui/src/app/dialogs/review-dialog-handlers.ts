@@ -1,5 +1,6 @@
 import type { KeyboardInput } from "../../commands.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
+import { createClearReviewedKeyHandler } from "../review/handlers/clear-reviewed-keymap.ts";
 import { createCleanupKeyHandler } from "../review/handlers/cleanup-keymap.ts";
 import { createCommentComposerKeyHandler } from "../review/handlers/comment-composer-keymap.ts";
 import { createConversationKeyHandler } from "../review/handlers/conversation-keymap.ts";
@@ -8,6 +9,7 @@ import { createSubmitReviewKeyHandler } from "../review/handlers/submit-review-k
 
 interface CreateReviewModalHandlersOptions {
   applyCleanupSelection: () => Promise<void>;
+  clearReviewed: () => void;
   copySelectedPullRequestConversationItemUrl: () => Promise<void>;
   handleTextInputLeaderKey: (
     key: KeyboardInput,
@@ -24,6 +26,7 @@ interface CreateReviewModalHandlersOptions {
 
 export function createReviewModalHandlers({
   applyCleanupSelection,
+  clearReviewed,
   copySelectedPullRequestConversationItemUrl,
   handleTextInputLeaderKey,
   openMergeConfirmModal,
@@ -34,6 +37,10 @@ export function createReviewModalHandlers({
   submitMergeFromModal,
   submitReviewFromModal,
 }: CreateReviewModalHandlersOptions) {
+  const handleClearReviewedModalKey = createClearReviewedKeyHandler({
+    clearReviewed,
+    state,
+  });
   const handleCommentComposerKey = createCommentComposerKeyHandler({
     handleTextInputLeaderKey,
     state,
@@ -63,6 +70,7 @@ export function createReviewModalHandlers({
   });
 
   return {
+    handleClearReviewedModalKey,
     handleCleanupModalKey,
     handleCommentComposerKey,
     handleMergeModalKey,

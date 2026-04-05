@@ -937,13 +937,31 @@ test("scrolls farther past the next file when marking a file reviewed", () => {
   expect(scrollboxes[1]?.scrollTo).toHaveBeenLastCalledWith({ x: 0, y: 16 });
 });
 
-test("marks all files reviewed with shift+r", () => {
-  const tree = render(<DiffdiffApp {...createAppProps()} />);
+test("refreshes the comparison with shift+r", async () => {
+  const nextSession = createPreparedSession({
+    files: [createPreparedFile({ path: "src/next.ts" })],
+  });
+  const loadSession = vi.fn(async () => nextSession);
+  const syncRemotes = vi.fn(async () => undefined);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({
+          files: [createPreparedFile({ path: "src/current.ts" })],
+        }),
+        loadSession,
+        syncRemotes,
+      })}
+    />,
+  );
 
-  emitKey({ name: "r", sequence: "R", shift: true });
+  await emitAsyncKey({ name: "r", sequence: "R", shift: true });
 
-  expect(getAppText(tree)).toContain("Reviewed all 2 files.");
-  expect(getAppText(tree)).toContain("2 / 2 reviewed");
+  expect(syncRemotes).toHaveBeenCalled();
+  expect(loadSession).toHaveBeenCalled();
+  expect(getAppText(tree)).toContain("Refreshed branches and GitHub data.");
+  expect(getAppText(tree)).toContain("src/next.ts");
+  expect(getAppText(tree)).not.toContain("src/current.ts");
 });
 
 test("starts with the key legend hidden when that preference is restored", () => {
@@ -973,7 +991,7 @@ test("persists key legend visibility when toggled", async () => {
   });
 });
 
-test("clears all reviewed files with alt+r", () => {
+test("requires confirmation before clearing all reviewed files with alt+r", () => {
   const files = [createPreparedFile(), createPreparedFile({ path: "src/utils.ts" })];
   const tree = render(
     <DiffdiffApp
@@ -990,8 +1008,37 @@ test("clears all reviewed files with alt+r", () => {
 
   emitKey({ meta: true, name: "r", sequence: "r" });
 
+  expect(getAppText(tree)).toContain("Clear Review Marks");
+  expect(getAppText(tree)).toContain("Remove the reviewed state from 2 files?");
+  expect(getAppText(tree)).toContain("2 / 2 reviewed");
+
+  emitKey({ name: "return" });
+
   expect(getAppText(tree)).toContain("Cleared review marks from 2 files.");
   expect(getAppText(tree)).toContain("0 / 2 reviewed");
+});
+
+test("cancels clearing reviewed files from the confirmation modal", () => {
+  const files = [createPreparedFile(), createPreparedFile({ path: "src/utils.ts" })];
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ files }),
+        initialReviewCache: {
+          collapsedPaths: files.map((file) => file.path),
+          selectedFilePath: files[0]!.path,
+          reviewedPaths: files.map((file) => file.path),
+        },
+      })}
+    />,
+  );
+
+  emitKey({ meta: true, name: "r", sequence: "r" });
+  emitKey({ name: "escape" });
+
+  expect(getAppText(tree)).toContain("Canceled clearing review marks.");
+  expect(getAppText(tree)).toContain("2 / 2 reviewed");
+  expect(getAppText(tree)).not.toContain("Clear Review Marks");
 });
 
 test("flushes reviewed state to the cache before quitting", async () => {
@@ -1422,7 +1469,7 @@ test("shows a files changed header indicator until refresh reloads the session",
   expect(probeFreshness).toHaveBeenCalledTimes(2);
   expect(getAppText(tree)).toContain("1 file changed");
 
-  await emitAsyncKey({ name: "f", sequence: "F", shift: true });
+  await emitAsyncKey({ name: "r", sequence: "R", shift: true });
 
   expect(syncRemotes).toHaveBeenCalledWith("/tmp/diffdiff");
   expect(loadSession).toHaveBeenCalledWith({
@@ -1489,7 +1536,7 @@ test("preserves the selected file scroll position when refreshing", async () => 
 
   scrollboxes[1]!.scrollTop = 50;
 
-  await emitAsyncKey({ name: "f", sequence: "F", shift: true });
+  await emitAsyncKey({ name: "r", sequence: "R", shift: true });
 
   expect(syncRemotes).toHaveBeenCalledWith("/tmp/diffdiff");
   expect(loadSession).toHaveBeenCalledWith({
@@ -1555,7 +1602,7 @@ test("preserves the selected file alignment when refreshing with zero relative s
 
   scrollboxes[1]!.scrollTop = 10;
 
-  await emitAsyncKey({ name: "f", sequence: "F", shift: true });
+  await emitAsyncKey({ name: "r", sequence: "R", shift: true });
 
   expect(syncRemotes).toHaveBeenCalledWith("/tmp/diffdiff");
   expect(loadSession).toHaveBeenCalledWith({
@@ -1675,7 +1722,7 @@ test("auto-refreshes working tree sessions when local changes are detected", asy
   expect(loadSession).toHaveBeenCalledWith({});
   expect(getAppText(tree)).toContain("src/new.ts");
   expect(getAppText(tree)).not.toContain("src/old.ts");
-  expect(getAppText(tree)).not.toContain("Press Shift+F to refresh.");
+  expect(getAppText(tree)).not.toContain("Press Shift+R to refresh.");
 });
 
 test("keeps reviewed files across refresh when their diffs are unchanged", async () => {
@@ -1714,10 +1761,11 @@ test("keeps reviewed files across refresh when their diffs are unchanged", async
     />,
   );
 
-  emitKey({ name: "r", sequence: "R", shift: true });
+  emitKey({ name: "r", sequence: "r" });
+  emitKey({ name: "r", sequence: "r" });
   expect(getAppText(tree)).toContain("2 / 2 reviewed");
 
-  await emitAsyncKey({ name: "f", sequence: "F", shift: true });
+  await emitAsyncKey({ name: "r", sequence: "R", shift: true });
 
   expect(getAppText(tree)).toContain("1 / 2 reviewed");
   expect(getAppText(tree)).not.toContain("2 / 2 reviewed");

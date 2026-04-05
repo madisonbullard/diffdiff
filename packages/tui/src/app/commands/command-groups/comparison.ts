@@ -9,7 +9,7 @@ export function buildComparisonCommands({
     {
       category: "Comparison",
       description: "Reload refs, branches, and pull request metadata.",
-      keybind: withLeaderKeybind("shift+f"),
+      keybind: withLeaderKeybind("shift+r"),
       title: "Refresh comparison",
       value: "comparison.refresh",
       run: () => refreshComparison(),

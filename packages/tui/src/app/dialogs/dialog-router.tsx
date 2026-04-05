@@ -7,9 +7,11 @@ import type {
 import type { ScrollBoxRenderable } from "@opentui/core";
 import { BranchModal } from "../../components/branch-modal.tsx";
 import { CommandPaletteModal } from "../../components/command-palette-modal.tsx";
+import { DiagnosticsModal } from "../../components/diagnostics-modal.tsx";
 import { HelpModal } from "../../components/help-modal.tsx";
 import { ListFilterModal } from "../../components/list-filter-modal.tsx";
 import { PullRequestListModal } from "../../components/pull-request-list-modal.tsx";
+import { ClearReviewedConfirmModal } from "../../review/clear-reviewed-confirm-modal.tsx";
 import type { AppDialog } from "./stack.ts";
 import { PullRequestCommentsModal } from "../../review/comments-modal.tsx";
 import { MergeConfirmModal } from "../../review/merge-confirm-modal.tsx";
@@ -45,11 +47,16 @@ interface DiffdiffAppDialogsProps {
   commitListIndex: number;
   commitSearchActive: boolean;
   commitSearchQuery: string;
+  diagnosticErrorMessage: string | null;
+  diagnosticEventIndex: number;
+  diagnosticEvents: readonly import("../diagnostics/session-events.ts").SessionDiagnosticEvent[];
+  diagnosticLogFilePath: string;
   draftPrCount: number;
   filteredCommands: readonly CommandDefinition[];
   helpCommands: readonly AppCommand[];
   filteredCommitItems: readonly CommitListItem[];
   filterIndex: number;
+  isDiagnosticsLoading: boolean;
   isSubmittingReviewAction: boolean;
   leaderKeybind: string;
   mergeBodyScrollRef: React.MutableRefObject<ScrollBoxRenderable | null>;
@@ -63,6 +70,7 @@ interface DiffdiffAppDialogsProps {
   pullRequestSearchActive: boolean;
   pullRequestSearchQuery: string;
   reviewRequestedPrCount: number;
+  reviewedCount: number;
   filteredPullRequests: readonly GitHubDashboardPullRequest[];
   isPullRequestListLoading: boolean;
   localBranchCount: number;
@@ -77,6 +85,7 @@ interface DiffdiffAppDialogsProps {
   reviewSubmissionEventIndex: number;
   selectedPullRequestConversationItemId?: string;
   session: PreparedReviewSession;
+  terminalWidth: number;
   theme: UiTheme;
 }
 
@@ -96,11 +105,16 @@ export function DiffdiffAppDialogs({
   commitListIndex,
   commitSearchActive,
   commitSearchQuery,
+  diagnosticErrorMessage,
+  diagnosticEventIndex,
+  diagnosticEvents,
+  diagnosticLogFilePath,
   draftPrCount,
   filteredCommands,
   helpCommands,
   filteredCommitItems,
   filterIndex,
+  isDiagnosticsLoading,
   isSubmittingReviewAction,
   localBranchCount,
   leaderKeybind,
@@ -115,6 +129,7 @@ export function DiffdiffAppDialogs({
   pullRequestSearchActive,
   pullRequestSearchQuery,
   reviewRequestedPrCount,
+  reviewedCount,
   filteredPullRequests,
   isPullRequestListLoading,
   remoteBranchCount,
@@ -124,6 +139,7 @@ export function DiffdiffAppDialogs({
   reviewSubmissionEventIndex,
   selectedPullRequestConversationItemId,
   session,
+  terminalWidth,
   theme,
 }: DiffdiffAppDialogsProps) {
   if (activeDialog === "branch") {
@@ -173,6 +189,10 @@ export function DiffdiffAppDialogs({
         theme={theme}
       />
     );
+  }
+
+  if (activeDialog === "clear-reviewed") {
+    return <ClearReviewedConfirmModal reviewedCount={reviewedCount} theme={theme} />;
   }
 
   if (activeDialog === "list-filter") {
@@ -251,6 +271,20 @@ export function DiffdiffAppDialogs({
         activePane={activePane}
         commands={helpCommands}
         leaderKeybind={leaderKeybind}
+        theme={theme}
+      />
+    );
+  }
+
+  if (activeDialog === "diagnostics") {
+    return (
+      <DiagnosticsModal
+        errorMessage={diagnosticErrorMessage}
+        events={diagnosticEvents}
+        isLoading={isDiagnosticsLoading}
+        logFilePath={diagnosticLogFilePath}
+        selectedIndex={diagnosticEventIndex}
+        terminalWidth={terminalWidth}
         theme={theme}
       />
     );
