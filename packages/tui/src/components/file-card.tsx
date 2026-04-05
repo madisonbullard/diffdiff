@@ -189,7 +189,7 @@ const MemoizedFileCardBody = memo(function FileCardBody({
   terminalWidth: number;
   theme: UiTheme;
 }) {
-  const filetype = getDiffFiletype(file.path);
+  const filetype = getDiffFiletype(file.path, file.patch);
   const showsEmptyFilePlaceholder = isEmptyFileDiff(file);
 
   return (

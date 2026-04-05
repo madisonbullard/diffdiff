@@ -25,7 +25,6 @@ export interface PrepareReviewSessionOptions {
 }
 
 export interface PierreDiffsModule {
-  getFiletypeFromFileName(path: string): string | undefined;
   getSharedHighlighter(options: { themes: string[]; langs: string[] }): Promise<unknown>;
   parsePatchFiles(patch: string): Array<{ files?: FileDiffMetadata[] }>;
   renderDiffWithHighlighter(

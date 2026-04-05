@@ -221,6 +221,76 @@ test("deferred startup rendering skips eager highlighting work", async () => {
   expect(renderDiffWithHighlighter).not.toHaveBeenCalled();
 });
 
+test("uses the shared shell language resolver for Pierre highlighter preloading", async () => {
+  const actualPierreInternals = await vi.importActual<
+    typeof import("../src/diff/pierre-internals.ts")
+  >("../src/diff/pierre-internals.ts");
+  const actualPierreDiffs = await actualPierreInternals.loadPierreDiffs();
+  const getSharedHighlighter = vi.fn(async () => ({ mocked: true }));
+  const renderDiffWithHighlighter = vi.fn(
+    (diff: Parameters<PierreDiffsModule["renderDiffWithHighlighter"]>[0]) => ({
+      themeStyles: "--mock-token: #48bcca;",
+      code: {
+        deletionLines: diff.deletionLines.map((line) => ({ type: "text", value: line })),
+        additionLines: diff.additionLines.map((line) => ({ type: "text", value: line })),
+      },
+    }),
+  );
+
+  pierreInternalsState.loadPierreDiffsOverride = async () => ({
+    ...actualPierreDiffs,
+    getSharedHighlighter,
+    renderDiffWithHighlighter,
+  });
+
+  await prepareReviewSession(
+    createReviewSession({
+      files: [
+        {
+          path: ".bashrc",
+          status: "modified",
+          additions: 1,
+          deletions: 1,
+          isBinary: false,
+          patch: [
+            "diff --git a/.bashrc b/.bashrc",
+            "index 1111111..2222222 100644",
+            "--- a/.bashrc",
+            "+++ b/.bashrc",
+            "@@ -1 +1 @@",
+            "-alias ll='ls'",
+            "+alias ll='ls -lah'",
+          ].join("\n"),
+        },
+        {
+          path: "scripts/setup",
+          status: "added",
+          additions: 2,
+          deletions: 0,
+          isBinary: false,
+          patch: [
+            "diff --git a/scripts/setup b/scripts/setup",
+            "new file mode 100755",
+            "index 0000000..1111111",
+            "--- /dev/null",
+            "+++ b/scripts/setup",
+            "@@ -0,0 +1,2 @@",
+            "+#!/usr/bin/env bash",
+            "+echo ready",
+          ].join("\n"),
+        },
+      ],
+    }),
+    "pierre-dark",
+  );
+
+  expect(getSharedHighlighter).toHaveBeenCalledTimes(1);
+  expect(getSharedHighlighter).toHaveBeenCalledWith({
+    themes: ["pierre-dark"],
+    langs: ["shellscript"],
+  });
+});
+
 test("hydrates deferred files into syntax-highlighted previews", async () => {
   const actualPierreInternals = await vi.importActual<
     typeof import("../src/diff/pierre-internals.ts")

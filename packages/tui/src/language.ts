@@ -60,7 +60,13 @@ export const LANGUAGE_EXTENSIONS: Record<string, string> = {
   ".json": "json",
   ".json.erb": "erb",
   ".jsx": "javascriptreact",
+  ".bash": "shellscript",
+  ".bash_logout": "shellscript",
+  ".bash_profile": "shellscript",
+  ".bashrc": "shellscript",
+  ".envrc": "shellscript",
   ".ksh": "shellscript",
+  ".kshrc": "shellscript",
   ".kt": "kotlin",
   ".kts": "kotlin",
   ".latex": "latex",
@@ -117,13 +123,60 @@ export const LANGUAGE_EXTENSIONS: Record<string, string> = {
   ".yml": "yaml",
   ".zig": "zig",
   ".zon": "zig",
+  ".profile": "shellscript",
   ".zsh": "shellscript",
+  ".zlogin": "shellscript",
+  ".zlogout": "shellscript",
+  ".zprofile": "shellscript",
   makefile: "makefile",
+  ".zshenv": "shellscript",
+  ".zshrc": "shellscript",
 } as const;
 
-export function getDiffFiletype(input?: string): string | undefined {
-  if (!input) {
+const LANGUAGE_ALIASES: Record<string, string> = {
+  bash: "shellscript",
+  ksh: "shellscript",
+  sh: "shellscript",
+  shell: "shellscript",
+  zsh: "shellscript",
+};
+
+const SHELL_SHEBANG_PATTERN =
+  /^[ +-]?#!\s*(?:\/usr\/bin\/env(?:\s+-S)?\s+)?(?:\S*\/)?(?:bash|ksh|sh|zsh)\b/mu;
+
+export function resolveSyntaxLanguage(options: {
+  hintedLanguage?: string;
+  path?: string;
+  patch?: string;
+}): string | undefined {
+  const hintedLanguage = normalizeSyntaxLanguage(options.hintedLanguage);
+  if (hintedLanguage != null) {
+    return hintedLanguage;
+  }
+
+  const pathLanguage = getPathLanguage(options.path);
+  if (pathLanguage != null) {
+    return pathLanguage;
+  }
+
+  if (options.patch != null && SHELL_SHEBANG_PATTERN.test(options.patch)) {
+    return "shellscript";
+  }
+
+  return undefined;
+}
+
+export function getDiffFiletype(input?: string, patch?: string): string | undefined {
+  if (!input && !patch) {
     return "none";
+  }
+
+  return resolveSyntaxLanguage({ path: input, patch });
+}
+
+function getPathLanguage(input?: string): string | undefined {
+  if (!input) {
+    return undefined;
   }
 
   const normalizedPath = input.toLowerCase();
@@ -135,5 +188,13 @@ export function getDiffFiletype(input?: string): string | undefined {
     return undefined;
   }
 
-  return language;
+  return normalizeSyntaxLanguage(language);
+}
+
+function normalizeSyntaxLanguage(language?: string): string | undefined {
+  if (language == null || language.trim() === "") {
+    return undefined;
+  }
+
+  return LANGUAGE_ALIASES[language.toLowerCase()] ?? language;
 }

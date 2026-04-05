@@ -2,6 +2,7 @@ import type { FileDiffMetadata } from "@pierre/diffs";
 import type { ReviewSession, StartupOptions } from "@diffdiff/core";
 import { loadReviewSession, logDiffdiffError, logDiffdiffInfo } from "@diffdiff/core";
 import { createPierreSegmentColorResolver } from "../pierre-colors.ts";
+import { resolveSyntaxLanguage } from "../language.ts";
 import { getSyntaxPalette, type SyntaxPalette } from "../syntax-palette.ts";
 import { getUiTheme, type UiTheme } from "../theme.ts";
 import type { PierreThemeName, PreparedReviewFile, PreparedReviewSession } from "../types.ts";
@@ -85,7 +86,7 @@ export async function prepareReviewSession(
   const parsedFiles = sortedSession.files.map((file) => parseReviewFile(file, pierreDiffs));
   const parsedFilesCompletedAt = getMonotonicNow();
   const collectLanguagesStartedAt = getMonotonicNow();
-  const languages = collectLanguages(parsedFiles, pierreDiffs);
+  const languages = collectLanguages(parsedFiles);
   const languagesCollectedAt = getMonotonicNow();
   const highlighterStartedAt = getMonotonicNow();
   const highlighter = await pierreDiffs.getSharedHighlighter({
@@ -142,7 +143,7 @@ export async function hydratePreparedReviewFiles(
   }
 
   const pierreDiffs = await loadPierreDiffs();
-  const languages = collectLanguages(candidates, pierreDiffs);
+  const languages = collectLanguages(candidates);
   const highlighter = await pierreDiffs.getSharedHighlighter({
     themes: [themeName],
     langs: [...languages],
@@ -214,19 +215,17 @@ function shouldHydratePreparedFile(file: PreparedReviewFile): boolean {
 
 function collectLanguages(
   files: readonly (PreparedReviewFile & { diff?: FileDiffMetadata })[],
-  pierreDiffs: Awaited<ReturnType<typeof loadPierreDiffs>>,
 ): Set<string> {
   const languages = new Set<string>();
 
   for (const file of files) {
-    if (file.diff?.lang != null) {
-      languages.add(file.diff.lang);
-      continue;
-    }
-
-    const inferredLanguage = pierreDiffs.getFiletypeFromFileName(file.path);
-    if (inferredLanguage != null) {
-      languages.add(inferredLanguage);
+    const language = resolveSyntaxLanguage({
+      hintedLanguage: file.diff?.lang,
+      path: file.path,
+      patch: file.patch,
+    });
+    if (language != null) {
+      languages.add(language);
     }
   }
 

@@ -266,6 +266,7 @@ test("shows commit history in working tree commit view", () => {
 test("renders a pull request list modal with truncated titles", () => {
   const tree = render(
     <PullRequestListModal
+      draftPrCount={0}
       isLoading={false}
       pullRequests={[
         {
@@ -303,6 +304,7 @@ test("renders a pull request list modal with truncated titles", () => {
 test("shows more pull requests at once in the pull request list modal", () => {
   const tree = render(
     <PullRequestListModal
+      draftPrCount={0}
       isLoading={false}
       pullRequests={Array.from({ length: 12 }, (_, index) => ({
         author: { login: "madison" },
@@ -628,6 +630,38 @@ test("uses the native diff renderer when Pierre segments are unavailable", () =>
 
   expect(diff.props.filetype).toBe("typescriptreact");
   expect(diff.props.syntaxStyle).toBe(syntaxStyle);
+});
+
+test("uses shell filetype for shebang-driven native diff previews", () => {
+  const tree = render(
+    <FileCard
+      file={createPreparedFile({
+        path: "scripts/setup",
+        patch: [
+          "diff --git a/scripts/setup b/scripts/setup",
+          "new file mode 100755",
+          "index 0000000..1111111",
+          "--- /dev/null",
+          "+++ b/scripts/setup",
+          "@@ -0,0 +1,2 @@",
+          "+#!/usr/bin/env bash",
+          "+echo ready",
+        ].join("\n"),
+        unifiedLines: [],
+      })}
+      diffView="unified"
+      isCollapsed={false}
+      isReviewed={false}
+      isSelected={false}
+      syntaxStyle={syntaxStyle}
+      terminalWidth={160}
+      theme={theme}
+    />,
+  );
+
+  const diff = tree.root.find((node) => String(node.type) === "diff");
+
+  expect(diff.props.filetype).toBe("shellscript");
 });
 
 test("renders Pierre-highlighted segments when they are available", () => {
