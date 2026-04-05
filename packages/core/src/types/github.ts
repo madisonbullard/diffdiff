@@ -6,6 +6,7 @@ export interface PullRequestInfo {
   url: string;
   headRefName: string;
   baseRefName: string;
+  createdAt?: string;
 }
 
 export interface GitHubActor {

@@ -84,6 +84,7 @@ export async function loadPullRequestDetail(
     checks: checksSummary,
     changedFiles,
     conversationItems,
+    createdAt: pullRequestResponse.created_at,
     headRefName: pullRequestResponse.head.ref,
     headSha: pullRequestResponse.head.sha,
     isDraft: pullRequestResponse.draft,

@@ -99,6 +99,15 @@ export function prioritizeRemoteBranches(branches: BranchInfo[]): BranchInfo[] {
       return 1;
     }
 
+    if (left.pullRequest != null && right.pullRequest != null) {
+      const createdAtResult = (right.pullRequest.createdAt ?? "").localeCompare(
+        left.pullRequest.createdAt ?? "",
+      );
+      if (createdAtResult !== 0) {
+        return createdAtResult;
+      }
+    }
+
     if (left.remoteName !== right.remoteName) {
       return left.remoteName!.localeCompare(right.remoteName!);
     }

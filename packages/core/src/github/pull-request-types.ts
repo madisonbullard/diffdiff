@@ -9,6 +9,7 @@ export interface GitHubPullRequestListResponse {
   number: number;
   title: string;
   html_url: string;
+  created_at?: string;
   head: { ref: string };
   base: { ref: string };
 }

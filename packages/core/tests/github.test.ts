@@ -5,6 +5,7 @@ import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import * as commandModule from "../src/command.ts";
 import {
   GitHubMetadataProvider,
+  prioritizeRemoteBranches,
   selectCurrentForgeRepository,
   sortDashboardPullRequests,
 } from "../src/github/index.ts";
@@ -173,6 +174,7 @@ describe("GitHubMetadataProvider", () => {
       listOpenPullRequests: vi.fn(async () => [
         {
           baseRefName: "main",
+          createdAt: "2026-04-01T12:00:00Z",
           headRefName: "feature/ui",
           number: 42,
           title: "UI polish",
@@ -208,9 +210,64 @@ describe("GitHubMetadataProvider", () => {
 
     expect(result.warnings).toEqual([]);
     expect(result.branches[0]?.pullRequest).toMatchObject({
+      createdAt: "2026-04-01T12:00:00Z",
       number: 42,
       title: "UI polish",
     });
+  });
+
+  test("prioritizes open PR branches by most recent creation time", () => {
+    const branches = prioritizeRemoteBranches([
+      {
+        isCurrent: false,
+        isDefault: false,
+        kind: "remote",
+        name: "origin/older-pr",
+        pullRequest: {
+          baseRefName: "main",
+          createdAt: "2026-04-01T12:00:00Z",
+          headRefName: "older-pr",
+          number: 41,
+          title: "Older PR",
+          url: "https://github.com/diffdiff/diffdiff/pull/41",
+        },
+        ref: "refs/remotes/origin/older-pr",
+        remoteName: "origin",
+        sha: "aaa111",
+      },
+      {
+        isCurrent: false,
+        isDefault: false,
+        kind: "remote",
+        name: "origin/newer-pr",
+        pullRequest: {
+          baseRefName: "main",
+          createdAt: "2026-04-02T12:00:00Z",
+          headRefName: "newer-pr",
+          number: 42,
+          title: "Newer PR",
+          url: "https://github.com/diffdiff/diffdiff/pull/42",
+        },
+        ref: "refs/remotes/origin/newer-pr",
+        remoteName: "origin",
+        sha: "bbb222",
+      },
+      {
+        isCurrent: false,
+        isDefault: true,
+        kind: "remote",
+        name: "origin/main",
+        ref: "refs/remotes/origin/main",
+        remoteName: "origin",
+        sha: "ccc333",
+      },
+    ]);
+
+    expect(branches.map((branch) => branch.name)).toEqual([
+      "origin/newer-pr",
+      "origin/older-pr",
+      "origin/main",
+    ]);
   });
 });
 

@@ -178,6 +178,7 @@ export function findActivePullRequestCandidate(session: ReviewSession): {
 export function mapPullRequestSummary(pullRequest: GitHubPullRequestListResponse): PullRequestInfo {
   return {
     baseRefName: pullRequest.base.ref,
+    createdAt: pullRequest.created_at,
     headRefName: pullRequest.head.ref,
     number: pullRequest.number,
     title: pullRequest.title,
