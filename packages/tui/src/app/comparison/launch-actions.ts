@@ -1,11 +1,17 @@
-import type { BranchInfo } from "@diffdiff/core";
+import { loadReviewCache, type BranchInfo } from "@diffdiff/core";
 import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 
 interface CreateLaunchActionsOptions {
   actions: {
-    applyLoadedSession: (nextSession: import("../../types.ts").PreparedReviewSession) => void;
+    applyLoadedSession: (
+      nextSession: import("../../types.ts").PreparedReviewSession,
+      options?: {
+        resetReviewState?: boolean;
+        reviewCacheState?: import("@diffdiff/core").ReviewCacheState;
+      },
+    ) => void;
     beginSessionLoad: () => number;
     isLatestSessionLoad: (loadId: number) => boolean;
   };
@@ -28,6 +34,16 @@ export function createLaunchActions({
     });
   }
 
+  async function loadSessionReviewCache(
+    nextSession: import("../../types.ts").PreparedReviewSession,
+  ): Promise<import("@diffdiff/core").ReviewCacheState | undefined> {
+    return loadReviewCache({
+      repositoryRootPath: nextSession.repository.rootPath,
+      base: nextSession.comparison.base,
+      head: nextSession.comparison.head,
+    });
+  }
+
   async function applyBranchSelection(target: "base" | "head", branch: BranchInfo): Promise<void> {
     const nextOptions = {
       ...state.startupOptions,
@@ -43,13 +59,13 @@ export function createLaunchActions({
     const sessionLoadId = actions.beginSessionLoad();
     try {
       const nextSession = await props.loadSession(nextOptions);
+      const reviewCacheState = await loadSessionReviewCache(nextSession);
       if (!actions.isLatestSessionLoad(sessionLoadId)) {
         return;
       }
-      actions.applyLoadedSession(nextSession);
+      actions.applyLoadedSession(nextSession, { resetReviewState: true, reviewCacheState });
       state.setStartupOptions(nextOptions);
       state.setDialogStack([]);
-      state.setSelectedFileIndex(0);
       state.setStatusMessage(`Updated ${target} to ${branch.name}.`);
     } catch (error) {
       if (actions.isLatestSessionLoad(sessionLoadId)) {
@@ -81,13 +97,13 @@ export function createLaunchActions({
     const sessionLoadId = actions.beginSessionLoad();
     try {
       const nextSession = await props.loadSession(nextOptions);
+      const reviewCacheState = await loadSessionReviewCache(nextSession);
       if (!actions.isLatestSessionLoad(sessionLoadId)) {
         return;
       }
-      actions.applyLoadedSession(nextSession);
+      actions.applyLoadedSession(nextSession, { resetReviewState: true, reviewCacheState });
       state.setStartupOptions(nextOptions);
       state.setDialogStack([]);
-      state.setSelectedFileIndex(0);
       state.setStatusMessage(`Updated ${target} to commit ${shortSha}.`);
     } catch (error) {
       if (actions.isLatestSessionLoad(sessionLoadId)) {
@@ -111,13 +127,13 @@ export function createLaunchActions({
     const sessionLoadId = actions.beginSessionLoad();
     try {
       const nextSession = await props.loadSession(nextOptions);
+      const reviewCacheState = await loadSessionReviewCache(nextSession);
       if (!actions.isLatestSessionLoad(sessionLoadId)) {
         return;
       }
-      actions.applyLoadedSession(nextSession);
+      actions.applyLoadedSession(nextSession, { resetReviewState: true, reviewCacheState });
       state.setStartupOptions(nextOptions);
       state.setDialogStack([]);
-      state.setSelectedFileIndex(0);
       state.setStatusMessage("Showing working tree changes against HEAD.");
     } catch (error) {
       if (actions.isLatestSessionLoad(sessionLoadId)) {
@@ -150,13 +166,13 @@ export function createLaunchActions({
     try {
       const nextOptions = await props.resolveLaunchTarget(target, state.startupOptions);
       const nextSession = await props.loadSession(nextOptions);
+      const reviewCacheState = await loadSessionReviewCache(nextSession);
       if (!actions.isLatestSessionLoad(sessionLoadId)) {
         return;
       }
-      actions.applyLoadedSession(nextSession);
+      actions.applyLoadedSession(nextSession, { resetReviewState: true, reviewCacheState });
       state.setStartupOptions(nextOptions);
       state.setDialogStack([]);
-      state.setSelectedFileIndex(0);
       state.setStatusMessage(
         `Opened ${pullRequest.repository.owner}/${pullRequest.repository.repo}#${pullRequest.number}.`,
       );
@@ -201,13 +217,13 @@ export function createLaunchActions({
     const sessionLoadId = actions.beginSessionLoad();
     try {
       const nextSession = await props.loadSession(nextOptions);
+      const reviewCacheState = await loadSessionReviewCache(nextSession);
       if (!actions.isLatestSessionLoad(sessionLoadId)) {
         return;
       }
-      actions.applyLoadedSession(nextSession);
+      actions.applyLoadedSession(nextSession, { resetReviewState: true, reviewCacheState });
       state.setStartupOptions(nextOptions);
       state.setDialogStack([]);
-      state.setSelectedFileIndex(0);
       state.setStatusMessage(`Opened PR #${branch.pullRequest.number}.`);
     } catch (error) {
       if (actions.isLatestSessionLoad(sessionLoadId)) {

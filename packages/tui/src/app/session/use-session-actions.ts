@@ -1,9 +1,19 @@
+import type { ReviewCacheState } from "@diffdiff/core";
 import { useCallback } from "react";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import { getMonotonicNow } from "../layout/preview-helpers.ts";
-import { buildReviewedFiles, restoreReviewedPaths } from "../shared/collections.ts";
+import {
+  buildReviewedFiles,
+  restoreCollapsedPaths,
+  restoreReviewedPaths,
+} from "../shared/collections.ts";
 import type { PendingInteraction } from "../state/app-props.ts";
 import type { PreparedReviewSession } from "../../types.ts";
+
+interface ApplyLoadedSessionOptions {
+  resetReviewState?: boolean;
+  reviewCacheState?: ReviewCacheState;
+}
 
 interface UseSessionActionsOptions {
   getFileTopOffsets: () => number[];
@@ -45,7 +55,7 @@ export function useSessionActions({
   );
 
   const applyLoadedSession = useCallback(
-    (nextSession: PreparedReviewSession) => {
+    (nextSession: PreparedReviewSession, options: ApplyLoadedSessionOptions = {}) => {
       const scrollBox = state.scrollRef.current;
       const currentSelectedFilePath = state.session.files[state.selectedFileIndex]?.path;
       const currentSelectedFileOffset = getFileTopOffsets()[state.selectedFileIndex];
@@ -60,11 +70,27 @@ export function useSessionActions({
           scrollBox.scrollTop - currentSelectedFileOffset;
       }
 
-      state.setReviewedPaths(
-        restoreReviewedPaths(nextSession.files, {
-          reviewedFiles: buildReviewedFiles(state.session.files, state.reviewedPaths),
-        }),
-      );
+      if (options.resetReviewState) {
+        state.setReviewedPaths(restoreReviewedPaths(nextSession.files, options.reviewCacheState));
+        state.setCollapsedPaths(restoreCollapsedPaths(nextSession.files, options.reviewCacheState));
+        state.setCommentCollapseStates(options.reviewCacheState?.commentCollapseStates ?? {});
+        state.setSelectedFileIndex(
+          options.reviewCacheState?.selectedFilePath == null
+            ? 0
+            : Math.max(
+                nextSession.files.findIndex(
+                  (file) => file.path === options.reviewCacheState?.selectedFilePath,
+                ),
+                0,
+              ),
+        );
+      } else {
+        state.setReviewedPaths(
+          restoreReviewedPaths(nextSession.files, {
+            reviewedFiles: buildReviewedFiles(state.session.files, state.reviewedPaths),
+          }),
+        );
+      }
       state.setSession(nextSession);
     },
     [getFileTopOffsets, state],

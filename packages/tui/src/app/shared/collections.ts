@@ -38,6 +38,25 @@ export function reconcileCollapsedPaths(
   return nextPaths;
 }
 
+export function restoreCollapsedPaths(
+  files: PreparedReviewSession["files"],
+  cacheState?: Pick<ReviewCacheState, "collapsedPaths">,
+): Set<string> {
+  const nextPaths = reconcileCollapsedPaths(new Set<string>(), files);
+  if (cacheState == null) {
+    return nextPaths;
+  }
+
+  const availablePaths = new Set(files.map((file) => file.path));
+  for (const path of cacheState.collapsedPaths) {
+    if (availablePaths.has(path)) {
+      nextPaths.add(path);
+    }
+  }
+
+  return nextPaths;
+}
+
 export function getAncestorDirectoryPaths(path: string): string[] {
   const parts = path.split("/").filter(Boolean);
   const ancestors: string[] = [];

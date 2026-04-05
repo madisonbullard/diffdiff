@@ -9,7 +9,13 @@ import type { DiffdiffAppState } from "../state/use-app-state.ts";
 
 interface CreateGitHubReviewActionsOptions {
   actions: {
-    applyLoadedSession: (nextSession: import("../../types.ts").PreparedReviewSession) => void;
+    applyLoadedSession: (
+      nextSession: import("../../types.ts").PreparedReviewSession,
+      options?: {
+        resetReviewState?: boolean;
+        reviewCacheState?: import("@diffdiff/core").ReviewCacheState;
+      },
+    ) => void;
     beginSessionLoad: () => number;
     isLatestSessionLoad: (loadId: number) => boolean;
   };

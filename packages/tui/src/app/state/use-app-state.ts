@@ -14,7 +14,7 @@ import {
   type AppDialogStackEntry,
 } from "../dialogs/stack.ts";
 import { createKeybindController } from "../keybind-controller.ts";
-import { reconcileCollapsedPaths, restoreReviewedPaths } from "../shared/collections.ts";
+import { restoreCollapsedPaths, restoreReviewedPaths } from "../shared/collections.ts";
 import type {
   DiffdiffAppProps,
   DiffViewportMetrics,
@@ -81,16 +81,9 @@ export function useDiffdiffAppState({
   const [reviewedPaths, setReviewedPaths] = useState<Set<string>>(() =>
     restoreReviewedPaths(initialSession.files, initialReviewCache),
   );
-  const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() => {
-    const baseline = reconcileCollapsedPaths(new Set<string>(), initialSession.files);
-    if (initialReviewCache != null) {
-      const availablePaths = new Set(initialSession.files.map((file) => file.path));
-      for (const path of initialReviewCache.collapsedPaths) {
-        if (availablePaths.has(path)) baseline.add(path);
-      }
-    }
-    return baseline;
-  });
+  const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() =>
+    restoreCollapsedPaths(initialSession.files, initialReviewCache),
+  );
   const [statusMessage, setStatusMessage] = useState<string>(
     launchInPullRequestList
       ? "Opened pull request list."

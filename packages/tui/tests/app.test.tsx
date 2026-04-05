@@ -134,6 +134,7 @@ beforeEach(() => {
   prepareReviewSessionState.hydratePreparedReviewFiles
     .mockReset()
     .mockImplementation(async (files) => files);
+  vi.spyOn(diffdiffCore, "loadReviewCache").mockResolvedValue(undefined);
   vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 
@@ -1398,6 +1399,57 @@ test("opens PR review mode from the list modal", () => {
     base: "origin/main",
     head: "origin/feature/tui",
   });
+});
+
+test("restores reviewed files from the cache when opening a branch review from the list modal", async () => {
+  const nextSession = createPreparedSession();
+  const loadSession = vi.fn(async () => nextSession);
+  const loadReviewCacheSpy = vi.spyOn(diffdiffCore, "loadReviewCache").mockResolvedValue({
+    reviewedFiles: [
+      {
+        fingerprint: buildReviewedFileFingerprint(nextSession.files[0]!),
+        path: nextSession.files[0]!.path,
+      },
+    ],
+    collapsedPaths: [],
+  });
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialOptions: {},
+        initialSession: createPreparedSession({
+          comparison: {
+            base: "HEAD",
+            baseSha: "1234567",
+            head: "working tree",
+            headSha: "1234567",
+            mode: "working-tree",
+            range: "HEAD...working tree",
+            usesMergeBase: false,
+          },
+          commits: [],
+          files: [],
+          workingTreeSummary: {
+            additions: 0,
+            deletions: 0,
+            filesChanged: 0,
+          },
+        }),
+        loadSession,
+      })}
+    />,
+  );
+
+  emitKey({ name: "j" });
+  await emitAsyncKey({ name: "return" });
+
+  expect(loadSession).toHaveBeenCalledWith({ head: "feature/tui" });
+  expect(loadReviewCacheSpy).toHaveBeenCalledWith({
+    repositoryRootPath: "/tmp/diffdiff",
+    base: "origin/main",
+    head: "feature/tui",
+  });
+  expect(getAppText(tree)).toContain("1 / 2 reviewed");
 });
 
 test("shows outdated PR threads collapsed by default and expands them on click", () => {
