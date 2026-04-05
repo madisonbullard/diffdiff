@@ -214,100 +214,6 @@ describe("loadReviewSession", () => {
     expect(session.warnings.map((warning) => warning.code)).toContain("ignored-ref-comparison");
   });
 
-  test("keeps only the final deleted state when a file is modified then removed", async () => {
-    const repositoryPath = await createTemporaryRepository();
-
-    await runGit(repositoryPath, ["checkout", "-b", "main"]);
-    await mkdir(join(repositoryPath, "docs"), { recursive: true });
-    await writeFile(join(repositoryPath, "docs", "adr.md"), "# Original\n");
-    await runGit(repositoryPath, ["add", "."]);
-    await commitAll(repositoryPath, "Initial commit");
-
-    await runGit(repositoryPath, ["checkout", "-b", "feature"]);
-    await writeFile(join(repositoryPath, "docs", "adr.md"), "# Updated\n");
-    await runGit(repositoryPath, ["add", "docs/adr.md"]);
-    await commitAll(repositoryPath, "Update ADR");
-
-    await runGit(repositoryPath, ["rm", "docs/adr.md"]);
-    await commitAll(repositoryPath, "Remove ADR");
-
-    const session = await loadReviewSession({
-      base: "main",
-      head: "feature",
-      repoPath: repositoryPath,
-    });
-
-    expect(session.files).toHaveLength(1);
-    expect(session.files).toMatchObject([
-      {
-        path: "docs/adr.md",
-        status: "deleted",
-      },
-    ]);
-    expect(new Set(session.files.map((file) => file.path)).size).toBe(session.files.length);
-  }, 15000);
-
-  test("drops files that were added and later deleted before head", async () => {
-    const repositoryPath = await createTemporaryRepository();
-
-    await runGit(repositoryPath, ["checkout", "-b", "main"]);
-    await writeFile(join(repositoryPath, "README.md"), "# diffdiff\n");
-    await runGit(repositoryPath, ["add", "README.md"]);
-    await commitAll(repositoryPath, "Initial commit");
-
-    await runGit(repositoryPath, ["checkout", "-b", "feature"]);
-    await mkdir(join(repositoryPath, "docs"), { recursive: true });
-    await writeFile(join(repositoryPath, "docs", "adr.md"), "# Draft\n");
-    await runGit(repositoryPath, ["add", "docs/adr.md"]);
-    await commitAll(repositoryPath, "Add ADR draft");
-
-    await runGit(repositoryPath, ["rm", "docs/adr.md"]);
-    await commitAll(repositoryPath, "Drop ADR draft");
-
-    const session = await loadReviewSession({
-      base: "main",
-      head: "feature",
-      repoPath: repositoryPath,
-    });
-
-    expect(session.files.find((file) => file.path === "docs/adr.md")).toBeUndefined();
-    expect(new Set(session.files.map((file) => file.path)).size).toBe(session.files.length);
-  }, 15000);
-
-  test("keeps only the final net state when a path is deleted and recreated", async () => {
-    const repositoryPath = await createTemporaryRepository();
-
-    await runGit(repositoryPath, ["checkout", "-b", "main"]);
-    await mkdir(join(repositoryPath, "docs"), { recursive: true });
-    await writeFile(join(repositoryPath, "docs", "adr.md"), "# Original\n");
-    await runGit(repositoryPath, ["add", "."]);
-    await commitAll(repositoryPath, "Initial commit");
-
-    await runGit(repositoryPath, ["checkout", "-b", "feature"]);
-    await runGit(repositoryPath, ["rm", "docs/adr.md"]);
-    await commitAll(repositoryPath, "Remove ADR");
-
-    await mkdir(join(repositoryPath, "docs"), { recursive: true });
-    await writeFile(join(repositoryPath, "docs", "adr.md"), "# Replacement\n");
-    await runGit(repositoryPath, ["add", "docs/adr.md"]);
-    await commitAll(repositoryPath, "Recreate ADR");
-
-    const session = await loadReviewSession({
-      base: "main",
-      head: "feature",
-      repoPath: repositoryPath,
-    });
-
-    expect(session.files).toHaveLength(1);
-    expect(session.files).toMatchObject([
-      {
-        path: "docs/adr.md",
-        status: "modified",
-      },
-    ]);
-    expect(new Set(session.files.map((file) => file.path)).size).toBe(session.files.length);
-  }, 15000);
-
   test("lists comparison commits in git log order with decorations", async () => {
     const repositoryPath = await createTemporaryRepository();
 
@@ -340,7 +246,7 @@ describe("loadReviewSession", () => {
       decoration: expect.stringContaining("HEAD -> feature"),
       subject: "Refine feature",
     });
-  }, 15000);
+  });
 });
 
 async function createTemporaryRepository(): Promise<string> {

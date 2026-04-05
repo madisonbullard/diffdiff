@@ -1,11 +1,6 @@
 import type { FileDiffMetadata } from "@pierre/diffs";
 import type { ReviewSession, StartupOptions } from "@diffdiff/core";
-import {
-  loadReviewSession,
-  logDiffdiffError,
-  logDiffdiffInfo,
-  logDiffdiffWarn,
-} from "@diffdiff/core";
+import { loadReviewSession, logDiffdiffError, logDiffdiffInfo } from "@diffdiff/core";
 import { createPierreSegmentColorResolver } from "../pierre-colors.ts";
 import { resolvePierreLanguage } from "../language.ts";
 import { getSyntaxPalette, type SyntaxPalette } from "../syntax-palette.ts";
@@ -23,40 +18,6 @@ import { buildSideBySideRows, buildUnifiedLines, parseThemeVariables } from "./r
 function getMonotonicNow(): number {
   const now = globalThis.performance?.now?.();
   return typeof now === "number" ? now : Date.now();
-}
-
-function dedupeSessionFilesForRender(session: ReviewSession): ReviewSession {
-  const filesByPath = new Map<string, ReviewSession["files"][number]>();
-  const orderedPaths: string[] = [];
-  const duplicatePaths = new Set<string>();
-
-  for (const file of session.files) {
-    if (!filesByPath.has(file.path)) {
-      orderedPaths.push(file.path);
-    } else {
-      duplicatePaths.add(file.path);
-    }
-
-    filesByPath.set(file.path, file);
-  }
-
-  if (duplicatePaths.size === 0) {
-    return session;
-  }
-
-  logDiffdiffWarn("render", "duplicate_session_files_deduped_before_render", {
-    duplicatePaths: [...duplicatePaths].sort((left, right) => left.localeCompare(right)),
-    inputFileCount: session.files.length,
-    uniqueFileCount: filesByPath.size,
-  });
-
-  return {
-    ...session,
-    files: orderedPaths.flatMap((path) => {
-      const file = filesByPath.get(path);
-      return file == null ? [] : [file];
-    }),
-  };
 }
 
 export async function loadPreparedReviewSession(
@@ -106,11 +67,7 @@ export async function prepareReviewSession(
   prepareOptions: PrepareReviewSessionOptions = {},
 ): Promise<PreparedReviewSession> {
   const startedAt = getMonotonicNow();
-  const normalizedSession = dedupeSessionFilesForRender(session);
-  const sortedSession = {
-    ...normalizedSession,
-    files: sortFilesInTreeOrder(normalizedSession.files),
-  };
+  const sortedSession = { ...session, files: sortFilesInTreeOrder(session.files) };
 
   if (prepareOptions.deferSyntaxRendering) {
     return prepareDeferredReviewSession(

@@ -1,9 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import {
-  parseChangedFilePatch,
-  parseNameStatusEntries,
-  splitPatchIntoFiles,
-} from "../src/repository/patch.ts";
+import { parseChangedFilePatch, splitPatchIntoFiles } from "../src/repository/patch.ts";
 
 describe("splitPatchIntoFiles", () => {
   test("splits a multi-file patch into separate sections", () => {
@@ -102,38 +98,5 @@ describe("parseChangedFilePatch", () => {
       path: "assets/logo.png",
       status: "added",
     });
-  });
-});
-
-describe("parseNameStatusEntries", () => {
-  test("parses regular, renamed, and copied name-status records", () => {
-    const output = [
-      "M",
-      "src/app.ts",
-      "R100",
-      "src/old.ts",
-      "src/new.ts",
-      "C068",
-      "README.md",
-      "README.copy.md",
-      "",
-    ].join("\u0000");
-
-    expect(parseNameStatusEntries(output)).toEqual([
-      {
-        path: "src/app.ts",
-        status: "M",
-      },
-      {
-        originalPath: "src/old.ts",
-        path: "src/new.ts",
-        status: "R100",
-      },
-      {
-        originalPath: "README.md",
-        path: "README.copy.md",
-        status: "C068",
-      },
-    ]);
   });
 });

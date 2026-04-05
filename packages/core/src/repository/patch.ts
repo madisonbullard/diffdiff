@@ -91,43 +91,6 @@ export function parsePorcelainStatusEntries(stdout: string): StatusEntry[] {
   return entries;
 }
 
-export function parseNameStatusEntries(stdout: string): StatusEntry[] {
-  const entries: StatusEntry[] = [];
-  const records = stdout.split(FIELD_SEPARATOR);
-
-  for (let index = 0; index < records.length; index += 1) {
-    const status = records[index];
-    if (status == null || status === "") {
-      continue;
-    }
-
-    const firstPath = records[index + 1];
-    if (firstPath == null || firstPath === "") {
-      continue;
-    }
-
-    if (status.startsWith("R") || status.startsWith("C")) {
-      const path = records[index + 2];
-      if (path == null || path === "") {
-        continue;
-      }
-
-      entries.push({
-        status,
-        path,
-        originalPath: firstPath,
-      });
-      index += 2;
-      continue;
-    }
-
-    entries.push({ status, path: firstPath });
-    index += 1;
-  }
-
-  return entries;
-}
-
 export function splitPatchIntoFiles(patch: string): string[] {
   const matches = [...patch.matchAll(/^diff --git .*$/gmu)];
   if (matches.length === 0) {
