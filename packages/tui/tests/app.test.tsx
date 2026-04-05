@@ -825,6 +825,7 @@ test("marks all files reviewed with shift+r", () => {
 test("starts with the key legend hidden when that preference is restored", () => {
   const tree = render(<DiffdiffApp {...createAppProps({ initialShowKeyLegend: false })} />);
 
+  expect(getAppText(tree)).toContain("? help");
   expect(getAppText(tree)).toContain("show keys");
   expect(getAppText(tree)).not.toContain("j/k move");
 });
@@ -837,6 +838,7 @@ test("persists key legend visibility when toggled", async () => {
 
   await emitAsyncKey({ name: "z" });
 
+  expect(getAppText(tree)).toContain("? help");
   expect(getAppText(tree)).toContain("show keys");
   expect(getAppText(tree)).not.toContain("j/k move");
   expect(savePreferencesSpy).toHaveBeenCalledWith({

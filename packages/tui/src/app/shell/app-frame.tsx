@@ -42,7 +42,6 @@ interface DiffdiffAppViewProps {
   collapsedDirectories: ReadonlySet<string>;
   collapsedPaths: ReadonlySet<string>;
   commandIndex: number;
-  commandListLabel: string;
   commandQuery: string;
   commitListIndex: number;
   commitSearchActive: boolean;
@@ -63,10 +62,12 @@ interface DiffdiffAppViewProps {
   footerModeBadge: { bg: string; fg: string; label: string };
   handleFileTreeMouseUp: (node: FileTreeNode) => void;
   helpCommands: readonly AppCommand[];
+  helpLabel: string;
   isPullRequestListLoading: boolean;
   isSubmittingReviewAction: boolean;
   keyLegendToggleLabel: string;
   leaderKeybind: string;
+  localBranchCount: number;
   mergeBodyScrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   mergeCommitMessage: string;
   mergeCommitTitle: string;
@@ -137,7 +138,6 @@ export function DiffdiffAppView({
   collapsedDirectories,
   collapsedPaths,
   commandIndex,
-  commandListLabel,
   commandQuery,
   commitListIndex,
   commitSearchActive,
@@ -158,10 +158,12 @@ export function DiffdiffAppView({
   footerModeBadge,
   handleFileTreeMouseUp,
   helpCommands,
+  helpLabel,
   isPullRequestListLoading,
   isSubmittingReviewAction,
   keyLegendToggleLabel,
   leaderKeybind,
+  localBranchCount,
   mergeBodyScrollRef,
   mergeCommitMessage,
   mergeCommitTitle,
@@ -264,10 +266,10 @@ export function DiffdiffAppView({
       </box>
 
       <AppFooter
-        commandListLabel={commandListLabel}
         footerEvent={footerEvent}
         footerEventMessage={footerEventMessage}
         footerModeBadge={footerModeBadge}
+        helpLabel={helpLabel}
         keyLegendToggleLabel={keyLegendToggleLabel}
         theme={theme}
       />
@@ -275,6 +277,7 @@ export function DiffdiffAppView({
       <DiffdiffAppDialogs
         activeDialog={activeOverlay}
         activeListView={activeListView}
+        activePane={activePane}
         branchItems={branchItems}
         branchListFilters={branchListFilters}
         branchListIndex={branchListIndex}
@@ -292,6 +295,7 @@ export function DiffdiffAppView({
         filteredCommitItems={filteredCommitItems}
         filterIndex={filterIndex}
         isSubmittingReviewAction={isSubmittingReviewAction}
+        localBranchCount={localBranchCount}
         leaderKeybind={leaderKeybind}
         mergeBodyScrollRef={mergeBodyScrollRef}
         mergeCommitMessage={mergeCommitMessage}

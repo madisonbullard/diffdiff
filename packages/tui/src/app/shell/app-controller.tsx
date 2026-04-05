@@ -1,24 +1,15 @@
 import { copyTextToClipboard } from "../../clipboard.ts";
 import { copySelection } from "../../selection-copy.ts";
-import { useEffect, useMemo } from "react";
-import { syncGitRemotes } from "@diffdiff/core";
-import {
-  buildAppCommands,
-  findAppCommandByValue,
-  getPaletteCommands,
-  type AppCommand,
-} from "../commands/registry.ts";
+import { useCallback, useEffect, useMemo } from "react";
+import { logDiffdiffError, syncGitRemotes } from "@diffdiff/core";
+import { buildAppCommands, getPaletteCommands, type AppCommand } from "../commands/registry.ts";
 import { filterCommands, formatCommandKeybind } from "../../commands.ts";
 import {
   getKeymapModeBadge,
   keymapModeSuspendsGlobalKeybinds,
   resolveActiveKeymapMode,
 } from "./keymap-mode.ts";
-import {
-  COMMAND_LIST_KEYBIND,
-  LEADER_KEYBIND,
-  LOADING_INDICATOR_FRAMES,
-} from "../shared/constants.ts";
+import { LEADER_KEYBIND, LOADING_INDICATOR_FRAMES } from "../shared/constants.ts";
 import { openDialog as openAppDialog } from "../dialogs/stack.ts";
 import { DiffdiffAppView } from "./app-frame.tsx";
 import { createCommandActions } from "../commands/command-actions.ts";
@@ -41,7 +32,6 @@ import { createTreeActions } from "../tree/tree-actions.ts";
 import { findInitialBranchListSelection } from "../../view-model.ts";
 
 export function DiffdiffAppController(props: DiffdiffAppProps) {
-  const launchInPullRequestList = props.initialOptions.initialListMode === "pull-requests";
   const state = useDiffdiffAppState(props);
   const derived = useDiffdiffAppDerived(state, props.theme);
   const layout = useDiffdiffAppLayoutEffects(state, derived);
@@ -75,6 +65,30 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     props,
     state,
   });
+  const prefetchComparisonBrowserData = useCallback(async () => {
+    if (props.loadComparisonBrowserData == null) {
+      return;
+    }
+
+    const loadId = sessionActions.beginSessionLoad();
+
+    try {
+      await sessionActions.syncRemoteState();
+      const nextData = await props.loadComparisonBrowserData(state.startupOptions);
+      if (!sessionActions.isLatestSessionLoad(loadId)) {
+        return;
+      }
+
+      sessionActions.applyComparisonBrowserData(nextData);
+    } catch (error) {
+      if (sessionActions.isLatestSessionLoad(loadId)) {
+        logDiffdiffError("app", "startup_branch_list_prefetch_failed", error, {
+          action: "startup-prefetch-comparison-browser-data",
+          startupOptions: state.startupOptions,
+        });
+      }
+    }
+  }, [props.loadComparisonBrowserData, sessionActions, state.startupOptions]);
 
   const commandActions = createCommandActions({
     getCommands: () => commands,
@@ -273,13 +287,11 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     () => keymapModeSuspendsGlobalKeybinds(activeKeymapMode),
     [activeKeymapMode],
   );
-  const commandListLabel =
+  const helpLabel =
     formatCommandKeybind(
-      findAppCommandByValue(commands, "system.command-palette")?.keybind,
+      commands.find((command) => command.value === "system.help")?.keybind,
       LEADER_KEYBIND,
-    ) ??
-    formatCommandKeybind(COMMAND_LIST_KEYBIND, LEADER_KEYBIND) ??
-    "ctrl+p";
+    ) ?? "?";
   const keyLegendToggleLabel = state.showKeyLegend ? "hide keys" : "show keys";
   const footerEvent = useMemo(
     () => ({
@@ -316,17 +328,14 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         footerEvent.message,
         Math.max(
           state.terminalDimensions.width -
-            (footerModeBadge.label.length +
-              commandListLabel.length +
-              keyLegendToggleLabel.length +
-              34),
+            (footerModeBadge.label.length + helpLabel.length + keyLegendToggleLabel.length + 30),
           0,
         ),
       ),
     [
-      commandListLabel,
       footerEvent.message,
       footerModeBadge.label.length,
+      helpLabel,
       keyLegendToggleLabel,
       state.terminalDimensions.width,
     ],
@@ -356,8 +365,8 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   useDiffdiffAppLifecycle({
     activeKeymapModeSuspendsGlobalKeybinds,
     derived,
-    launchInPullRequestList,
     persistence,
+    prefetchComparisonBrowserData,
     refreshGitHubPullRequestList: githubActions.refreshGitHubPullRequestList,
     state,
     startupInstrumentation: props.startupInstrumentation,
@@ -387,7 +396,6 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       collapsedDirectories={state.collapsedDirectories}
       collapsedPaths={state.collapsedPaths}
       commandIndex={state.commandIndex}
-      commandListLabel={commandListLabel}
       commandQuery={state.commandQuery}
       commitListIndex={state.commitListIndex}
       commitSearchActive={state.commitSearchActive}
@@ -408,10 +416,12 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       footerModeBadge={footerModeBadge}
       handleFileTreeMouseUp={treeActions.handleFileTreeMouseUp}
       helpCommands={commands}
+      helpLabel={helpLabel}
       isPullRequestListLoading={state.isPullRequestListLoading}
       isSubmittingReviewAction={state.isSubmittingReviewAction}
       keyLegendToggleLabel={keyLegendToggleLabel}
       leaderKeybind={LEADER_KEYBIND}
+      localBranchCount={derived.localBranchCount}
       mergeBodyScrollRef={state.mergeBodyScrollRef}
       mergeCommitMessage={state.mergeCommitMessage}
       mergeCommitTitle={state.mergeCommitTitle}

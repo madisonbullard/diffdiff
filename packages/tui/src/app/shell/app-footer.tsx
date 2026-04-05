@@ -2,19 +2,19 @@ import { Tag } from "../../components/shared.tsx";
 import type { UiTheme } from "../../theme.ts";
 
 export interface AppFooterProps {
-  commandListLabel: string;
   footerEvent: { color: string; message: string };
   footerEventMessage: string;
   footerModeBadge: { bg: string; fg: string; label: string };
+  helpLabel: string;
   keyLegendToggleLabel: string;
   theme: UiTheme;
 }
 
 export function AppFooter({
-  commandListLabel,
   footerEvent,
   footerEventMessage,
   footerModeBadge,
+  helpLabel,
   keyLegendToggleLabel,
   theme,
 }: AppFooterProps) {
@@ -35,8 +35,8 @@ export function AppFooter({
           <Tag label={footerModeBadge.label} fg={footerModeBadge.fg} bg={footerModeBadge.bg} />
         </text>
         <text fg={theme.textMuted} wrapMode="none">
-          <span fg={theme.accent} bg={theme.surfaceMuted}>{` ${commandListLabel} `}</span>
-          <span>{" commands  "}</span>
+          <span fg={theme.accent} bg={theme.surfaceMuted}>{` ${helpLabel} `}</span>
+          <span>{" help  "}</span>
           <span fg={theme.accent} bg={theme.surfaceMuted}>
             {" z "}
           </span>
