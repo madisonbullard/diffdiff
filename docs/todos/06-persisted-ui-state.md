@@ -31,7 +31,7 @@ OpenCode uses a tiny shared KV store for persisting lightweight TUI preferences.
 ## Good Fit Ideas To Steal
 
 - Add a tiny KV-style store for TUI preferences that are not review-cache-specific.
-- Good early candidates include diff view preference, sidebar visibility, key legend visibility, outdated-thread visibility, and other purely local presentation toggles.
+- Good early candidates include diff view preference, sidebar visibility, outdated-thread visibility, and other purely local presentation toggles.
 - Keep review cache and UI state separate so the meaning of each persistence layer stays clear.
 
 ## Cautions

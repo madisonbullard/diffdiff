@@ -89,12 +89,10 @@ export interface BuildAppCommandsOptions {
   refreshComparison: () => void;
   selectedTreeNode?: FileTreeNode;
   sessionGitHub?: GitHubReviewSession;
-  showKeyLegend: boolean;
   toggleActivePane: () => void;
   toggleCollapsedSelectedFile: () => void;
   toggleDiffView: () => void;
   toggleFocusedReviewThreadCollapsed: () => void;
-  toggleKeyLegend: () => void;
   toggleReviewedSelectedFile: () => void;
 }
 

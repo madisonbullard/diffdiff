@@ -4,21 +4,18 @@ import type { KeyboardInput } from "../../commands.ts";
 import { matchCommandKeybind } from "../../commands.ts";
 import { LEADER_KEYBIND } from "../shared/constants.ts";
 import { closeDialog as closeAppDialog, openDialog as openAppDialog } from "../dialogs/stack.ts";
-import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import type { TextInputLeaderOptions } from "../state/app-props.ts";
 
 interface CreateCommandActionsOptions {
   getCommands: () => readonly AppCommand[];
   leaderKeyLabel: string;
-  persistence: DiffdiffAppPersistence;
   state: DiffdiffAppState;
 }
 
 export function createCommandActions({
   getCommands,
   leaderKeyLabel,
-  persistence,
   state,
 }: CreateCommandActionsOptions) {
   function clearLeaderMode(status?: string): void {
@@ -72,19 +69,6 @@ export function createCommandActions({
     state.setStatusMessage("Closed command palette.");
   }
 
-  function toggleKeyLegend(): void {
-    state.setShowKeyLegend((currentValue) => {
-      const nextValue = !currentValue;
-      state.showKeyLegendRef.current = nextValue;
-      void persistence.persistenceApi.persistDiffdiffPreferences({
-        github: state.gitHubPreferencesRef.current,
-        ui: { showKeyLegend: nextValue },
-      });
-      state.setStatusMessage(nextValue ? "Key legend shown." : "Key legend hidden.");
-      return nextValue;
-    });
-  }
-
   function handleTextInputLeaderKey(
     key: KeyboardInput,
     options: TextInputLeaderOptions = {},
@@ -136,6 +120,5 @@ export function createCommandActions({
     openCommandModal,
     runCommand,
     runCommandByValue,
-    toggleKeyLegend,
   };
 }

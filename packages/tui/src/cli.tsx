@@ -281,7 +281,6 @@ async function launchTui(options: LaunchOptions): Promise<void> {
             .then(() => undefined)
         }
         initialGitHubPreferences={initialPreferences.github}
-        initialShowKeyLegend={initialPreferences.ui.showKeyLegend}
         isGitHubAuthenticated={isGitHubAuthenticated}
         initialReviewCache={initialReviewCache}
         initialOptions={options}

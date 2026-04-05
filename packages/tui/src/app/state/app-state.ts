@@ -103,8 +103,6 @@ export interface DiffdiffAppState {
   selectedTreePath: string;
   session: PreparedReviewSession;
   sessionActivityTimeoutRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
-  showKeyLegend: boolean;
-  showKeyLegendRef: MutableRefObject<boolean>;
   startupOptions: LaunchOptions;
   statusMessage: string;
   terminalDimensions: ReturnType<typeof useTerminalDimensions>;
@@ -168,7 +166,6 @@ export interface DiffdiffAppState {
   setSelectedReviewThreadIndexByFilePath: Dispatch<SetStateAction<Record<string, number>>>;
   setSelectedTreePath: Dispatch<SetStateAction<string>>;
   setSession: Dispatch<SetStateAction<PreparedReviewSession>>;
-  setShowKeyLegend: Dispatch<SetStateAction<boolean>>;
   setStartupOptions: Dispatch<SetStateAction<LaunchOptions>>;
   setStatusMessage: Dispatch<SetStateAction<string>>;
   setToastMessage: Dispatch<SetStateAction<string | null>>;

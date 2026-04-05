@@ -3,7 +3,6 @@ import type { MutableRefObject } from "react";
 import { FileTreeSidebar } from "../../components/file-tree-sidebar.tsx";
 import type { AppPane, FileTreeNode, PreparedReviewSession } from "../../types.ts";
 import type { UiTheme } from "../../theme.ts";
-import { DiffdiffAppKeyLegend } from "./key-legend.tsx";
 
 export interface AppSidebarProps {
   activeOverlay: import("../dialogs/stack.ts").AppDialog | null;
@@ -15,7 +14,6 @@ export interface AppSidebarProps {
   selectedFileIndex: number;
   selectedTreePath: string;
   session: PreparedReviewSession;
-  showKeyLegend: boolean;
   sidebarWidth: number;
   theme: UiTheme;
   treeRowRefCallbacks: readonly ((node: BoxRenderable | null) => void)[];
@@ -39,7 +37,6 @@ export function AppSidebar({
   selectedFileIndex,
   selectedTreePath,
   session,
-  showKeyLegend,
   sidebarWidth,
   theme,
   treeRowRefCallbacks,
@@ -113,10 +110,6 @@ export function AppSidebar({
           />
         </box>
       </scrollbox>
-
-      {showKeyLegend ? (
-        <DiffdiffAppKeyLegend hasGitHubReview={session.github != null} theme={theme} />
-      ) : null}
     </box>
   );
 }

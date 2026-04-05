@@ -137,19 +137,9 @@ export function useDiffdiffAppPersistence(
     async (nextPreferences: import("@diffdiff/core").GitHubUserPreferences) => {
       state.setGitHubPreferences(nextPreferences);
       state.gitHubPreferencesRef.current = nextPreferences;
-      await persistDiffdiffPreferences({
-        github: nextPreferences,
-        ui: {
-          showKeyLegend: state.showKeyLegendRef.current,
-        },
-      });
+      await persistDiffdiffPreferences({ github: nextPreferences });
     },
-    [
-      persistDiffdiffPreferences,
-      state.gitHubPreferencesRef,
-      state.setGitHubPreferences,
-      state.showKeyLegendRef,
-    ],
+    [persistDiffdiffPreferences, state.gitHubPreferencesRef, state.setGitHubPreferences],
   );
 
   const updateCleanupSelection = useCallback(

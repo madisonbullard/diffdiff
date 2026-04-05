@@ -6,7 +6,6 @@ export interface AppFooterProps {
   footerEventMessage: string;
   footerModeBadge: { bg: string; fg: string; label: string };
   helpLabel: string;
-  keyLegendToggleLabel: string;
   theme: UiTheme;
 }
 
@@ -15,7 +14,6 @@ export function AppFooter({
   footerEventMessage,
   footerModeBadge,
   helpLabel,
-  keyLegendToggleLabel,
   theme,
 }: AppFooterProps) {
   return (
@@ -36,11 +34,7 @@ export function AppFooter({
         </text>
         <text fg={theme.textMuted} wrapMode="none">
           <span fg={theme.accent} bg={theme.surfaceMuted}>{` ${helpLabel} `}</span>
-          <span>{" help  "}</span>
-          <span fg={theme.accent} bg={theme.surfaceMuted}>
-            {" z "}
-          </span>
-          <span>{` ${keyLegendToggleLabel}`}</span>
+          <span>{" help"}</span>
         </text>
       </box>
       <box flexGrow={1} flexDirection="row" justifyContent="flex-end">

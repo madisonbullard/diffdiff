@@ -68,7 +68,6 @@ export type {
 export type { ReviewedFileState } from "./reviewed-file-fingerprint.ts";
 export type {
   DiffdiffPreferences,
-  DiffdiffUiPreferences,
   ForgeRepository,
   GitHubActor,
   GitHubAuthSession,

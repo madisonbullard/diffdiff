@@ -43,7 +43,7 @@ OpenCode's prompt input is much more advanced than diffdiff's current comment an
 - `packages/tui/src/app/DiffdiffApp.tsx` owns `reviewComposerBody`, `reviewSubmissionBody`, `mergeCommitTitle`, and `mergeCommitMessage` directly.
 - `handleCommentComposerKey`, `handleSubmitReviewModalKey`, and `handleMergeModalKey` each implement their own append, backspace, newline, and submit logic inline.
 - `packages/tui/src/review/review-composer-modal.tsx`, `submit-review-modal.tsx`, and `merge-pull-request-modal.tsx` are display-only surfaces, so any richer behavior still needs to be orchestrated from the app layer.
-- `packages/core/src/preferences.ts` currently persists only GitHub cleanup defaults, default merge method, and the key legend toggle, so draft recovery or history should not be stuffed into `preferences.json` by default.
+- `packages/core/src/preferences.ts` currently persists only GitHub cleanup defaults and the default merge method, so draft recovery or history should not be stuffed into `preferences.json` by default.
 
 ## Proposed UX
 

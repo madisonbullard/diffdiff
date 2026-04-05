@@ -964,31 +964,12 @@ test("refreshes the comparison with shift+r", async () => {
   expect(getAppText(tree)).not.toContain("src/current.ts");
 });
 
-test("starts with the key legend hidden when that preference is restored", () => {
-  const tree = render(<DiffdiffApp {...createAppProps({ initialShowKeyLegend: false })} />);
-
-  expect(getAppText(tree)).toContain("? help");
-  expect(getAppText(tree)).toContain("show keys");
-  expect(getAppText(tree)).not.toContain("j/k move");
-});
-
-test("persists key legend visibility when toggled", async () => {
-  const savePreferencesSpy = vi
-    .spyOn(diffdiffCore, "saveDiffdiffPreferences")
-    .mockResolvedValue(undefined);
+test("does not render the removed key legend", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 
-  await emitAsyncKey({ name: "z" });
-
   expect(getAppText(tree)).toContain("? help");
-  expect(getAppText(tree)).toContain("show keys");
+  expect(getAppText(tree)).not.toContain("show keys");
   expect(getAppText(tree)).not.toContain("j/k move");
-  expect(savePreferencesSpy).toHaveBeenCalledWith({
-    github: createGitHubPreferences(),
-    ui: {
-      showKeyLegend: false,
-    },
-  });
 });
 
 test("requires confirmation before clearing all reviewed files with alt+r", () => {
@@ -2692,7 +2673,6 @@ function createAppProps(overrides: Partial<DiffdiffAppProps> = {}): DiffdiffAppP
     addPullRequestComment: vi.fn(async () => undefined),
     addReviewThread: vi.fn(async () => undefined),
     initialGitHubPreferences: createGitHubPreferences(),
-    initialShowKeyLegend: true,
     isGitHubAuthenticated: true,
     initialOptions,
     initialSession,

@@ -54,12 +54,10 @@ function createRegistryOptions(
         isAuthenticated: true,
       },
     } as GitHubReviewSession,
-    showKeyLegend: true,
     toggleActivePane: vi.fn(),
     toggleCollapsedSelectedFile: vi.fn(),
     toggleDiffView: vi.fn(),
     toggleFocusedReviewThreadCollapsed: vi.fn(),
-    toggleKeyLegend: vi.fn(),
     toggleReviewedSelectedFile: vi.fn(),
     ...overrides,
   };
@@ -146,5 +144,12 @@ describe("command registry", () => {
       )?.value,
     ).toBe("comparison.refresh");
     expect(findAppCommandByValue(commands, "review.mark-all-reviewed")?.keybind).toBeUndefined();
+  });
+
+  test("does not register the removed key legend toggle command", () => {
+    const commands = buildAppCommands(createRegistryOptions());
+
+    expect(findAppCommandByValue(commands, "system.key-legend")).toBeUndefined();
+    expect(findAppCommandByKey(commands, { name: "z" }, { activePane: "diff" })).toBeUndefined();
   });
 });

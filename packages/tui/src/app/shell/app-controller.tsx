@@ -101,7 +101,6 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   const commandActions = createCommandActions({
     getCommands: () => commands,
     leaderKeyLabel: formatCommandKeybind(LEADER_KEYBIND, LEADER_KEYBIND) ?? "ctrl+x",
-    persistence,
     state,
   });
 
@@ -206,12 +205,10 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         refreshComparison: refresh.refreshComparison,
         selectedTreeNode: derived.selectedTreeNode,
         sessionGitHub: state.session.github,
-        showKeyLegend: state.showKeyLegend,
         toggleActivePane: treeActions.toggleActivePane,
         toggleCollapsedSelectedFile: () => reviewActions.toggleCollapsed(state.selectedFileIndex),
         toggleDiffView: reviewActions.toggleDiffView,
         toggleFocusedReviewThreadCollapsed: reviewActions.toggleFocusedReviewThreadCollapsed,
-        toggleKeyLegend: commandActions.toggleKeyLegend,
         toggleReviewedSelectedFile: () => reviewActions.toggleReviewed(state.selectedFileIndex),
       }),
     [
@@ -230,7 +227,6 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       state.selectedFileIndex,
       state.session.files.length,
       state.session.github,
-      state.showKeyLegend,
       treeActions,
     ],
   );
@@ -323,7 +319,6 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       commands.find((command) => command.value === "system.help")?.keybind,
       LEADER_KEYBIND,
     ) ?? "?";
-  const keyLegendToggleLabel = state.showKeyLegend ? "hide keys" : "show keys";
   const footerEvent = useMemo(
     () => ({
       color:
@@ -358,18 +353,11 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       truncateInlineMessage(
         footerEvent.message,
         Math.max(
-          state.terminalDimensions.width -
-            (footerModeBadge.label.length + helpLabel.length + keyLegendToggleLabel.length + 30),
+          state.terminalDimensions.width - (footerModeBadge.label.length + helpLabel.length + 20),
           0,
         ),
       ),
-    [
-      footerEvent.message,
-      footerModeBadge.label.length,
-      helpLabel,
-      keyLegendToggleLabel,
-      state.terminalDimensions.width,
-    ],
+    [footerEvent.message, footerModeBadge.label.length, helpLabel, state.terminalDimensions.width],
   );
 
   useMainKeyboard({
@@ -458,7 +446,6 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       isDiagnosticsLoading={diagnostics.isDiagnosticsLoading}
       isPullRequestListLoading={state.isPullRequestListLoading}
       isSubmittingReviewAction={state.isSubmittingReviewAction}
-      keyLegendToggleLabel={keyLegendToggleLabel}
       leaderKeybind={LEADER_KEYBIND}
       localBranchCount={derived.localBranchCount}
       mergeBodyScrollRef={state.mergeBodyScrollRef}
@@ -502,7 +489,6 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       selectedReviewThread={derived.selectedReviewThread}
       selectedTreePath={state.selectedTreePath}
       session={state.session}
-      showKeyLegend={state.showKeyLegend}
       showMergeConfirmModal={derived.showMergeConfirmModal}
       sidebarWidth={derived.sidebarWidth}
       stickyFile={derived.stickyFile}

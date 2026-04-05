@@ -52,14 +52,9 @@ export function useDiffdiffAppState({
   initialOptions,
   initialReviewCache,
   initialSession,
-  initialShowKeyLegend,
 }: Pick<
   DiffdiffAppProps,
-  | "initialGitHubPreferences"
-  | "initialOptions"
-  | "initialReviewCache"
-  | "initialSession"
-  | "initialShowKeyLegend"
+  "initialGitHubPreferences" | "initialOptions" | "initialReviewCache" | "initialSession"
 >): DiffdiffAppState {
   const launchInPullRequestList = initialOptions.initialListMode === "pull-requests";
   const launchInBranchList =
@@ -112,7 +107,6 @@ export function useDiffdiffAppState({
     () => initialGitHubPreferences ?? getDefaultGitHubPreferences(),
   );
   const gitHubPreferencesRef = useRef(initialGitHubPreferences ?? getDefaultGitHubPreferences());
-  const showKeyLegendRef = useRef(initialShowKeyLegend ?? true);
   const latestSessionLoadIdRef = useRef(0);
   const [dialogStack, setDialogStack] = useState<readonly AppDialogStackEntry[]>(() =>
     launchInPullRequestList
@@ -128,7 +122,6 @@ export function useDiffdiffAppState({
   const [comparisonBrowserData, setComparisonBrowserData] = useState<ComparisonBrowserData>(() =>
     getComparisonBrowserData(initialSession),
   );
-  const [showKeyLegend, setShowKeyLegend] = useState(() => initialShowKeyLegend ?? true);
   const [activeListView, setActiveListView] = useState<ListModalView>("branch");
   const [branchListFilters, setBranchListFilters] = useState<BranchListFilters>({
     ...initialBranchListFilters,
@@ -345,12 +338,9 @@ export function useDiffdiffAppState({
     setSelectedReviewThreadIndexByFilePath,
     setSelectedTreePath,
     setSession,
-    setShowKeyLegend,
     setStartupOptions,
     setStatusMessage,
     setToastMessage,
-    showKeyLegend,
-    showKeyLegendRef,
     startupOptions,
     statusMessage,
     terminalDimensions,

@@ -72,7 +72,6 @@ interface DiffdiffAppViewProps {
   isDiagnosticsLoading: boolean;
   isPullRequestListLoading: boolean;
   isSubmittingReviewAction: boolean;
-  keyLegendToggleLabel: string;
   leaderKeybind: string;
   localBranchCount: number;
   mergeBodyScrollRef: MutableRefObject<ScrollBoxRenderable | null>;
@@ -110,7 +109,6 @@ interface DiffdiffAppViewProps {
   selectedReviewThread?: import("@diffdiff/core").GitHubPullRequestReviewThread;
   selectedTreePath: string;
   session: PreparedReviewSession;
-  showKeyLegend: boolean;
   showMergeConfirmModal: boolean;
   sidebarWidth: number;
   stickyFile?: PreparedReviewSession["files"][number];
@@ -176,7 +174,6 @@ export function DiffdiffAppView({
   isDiagnosticsLoading,
   isPullRequestListLoading,
   isSubmittingReviewAction,
-  keyLegendToggleLabel,
   leaderKeybind,
   localBranchCount,
   mergeBodyScrollRef,
@@ -207,7 +204,6 @@ export function DiffdiffAppView({
   selectedReviewThread,
   selectedTreePath,
   session,
-  showKeyLegend,
   showMergeConfirmModal,
   sidebarWidth,
   stickyFile,
@@ -246,7 +242,6 @@ export function DiffdiffAppView({
           selectedFileIndex={selectedFileIndex}
           selectedTreePath={selectedTreePath}
           session={session}
-          showKeyLegend={showKeyLegend}
           sidebarWidth={sidebarWidth}
           theme={theme}
           treeRowRefCallbacks={treeRowRefCallbacks}
@@ -287,7 +282,6 @@ export function DiffdiffAppView({
         footerEventMessage={footerEventMessage}
         footerModeBadge={footerModeBadge}
         helpLabel={helpLabel}
-        keyLegendToggleLabel={keyLegendToggleLabel}
         theme={theme}
       />
 

@@ -46,9 +46,6 @@ describe("diffdiff preferences", () => {
           },
           defaultMergeMethod: "squash",
         },
-        ui: {
-          showKeyLegend: false,
-        },
       },
       filePath,
     );
@@ -63,13 +60,10 @@ describe("diffdiff preferences", () => {
         },
         defaultMergeMethod: "squash",
       },
-      ui: {
-        showKeyLegend: false,
-      },
     });
   });
 
-  test("defaults the key legend preference when older files omit ui settings", async () => {
+  test("ignores legacy ui settings when loading older preference files", async () => {
     const homePath = await mkdtemp(join(tmpdir(), "diffdiff-preferences-"));
     temporaryDirectories.push(homePath);
     const filePath = getDiffdiffPreferencesFilePath(homePath);
@@ -85,6 +79,9 @@ describe("diffdiff preferences", () => {
               removeLocal: false,
               removeRemote: true,
             },
+          },
+          ui: {
+            showKeyLegend: false,
           },
           version: 1,
         },
@@ -104,9 +101,6 @@ describe("diffdiff preferences", () => {
         },
         defaultMergeMethod: undefined,
       },
-      ui: {
-        showKeyLegend: true,
-      },
     });
   });
 
@@ -124,9 +118,6 @@ describe("diffdiff preferences", () => {
           },
           defaultMergeMethod: "merge",
         },
-        ui: {
-          showKeyLegend: false,
-        },
       },
       filePath,
     );
@@ -141,9 +132,6 @@ describe("diffdiff preferences", () => {
           removeRemote: false,
         },
         defaultMergeMethod: "merge",
-      },
-      ui: {
-        showKeyLegend: false,
       },
       version: 1,
     });

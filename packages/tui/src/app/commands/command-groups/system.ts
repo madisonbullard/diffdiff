@@ -5,16 +5,9 @@ export function buildSystemCommands({
   openCommandModal,
   openDiagnostics,
   openHelp,
-  showKeyLegend,
-  toggleKeyLegend,
 }: Pick<
   BuildAppCommandsOptions,
-  | "onExit"
-  | "openCommandModal"
-  | "openDiagnostics"
-  | "openHelp"
-  | "showKeyLegend"
-  | "toggleKeyLegend"
+  "onExit" | "openCommandModal" | "openDiagnostics" | "openHelp"
 >): AppCommand[] {
   return [
     {
@@ -44,14 +37,6 @@ export function buildSystemCommands({
       title: "Open diagnostics",
       value: "system.diagnostics",
       run: () => openDiagnostics(),
-    },
-    {
-      category: "System",
-      description: "Show or hide the shortcut legend in the sidebar.",
-      keybind: "z,<leader>z",
-      title: showKeyLegend ? "Hide key legend" : "Show key legend",
-      value: "system.key-legend",
-      run: () => toggleKeyLegend(),
     },
     {
       category: "System",
