@@ -182,7 +182,7 @@ export function useDiffdiffAppState({
   const mergeBodyScrollRef = useRef<ScrollBoxRenderable | null>(null);
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
   const fileCardRefs = useRef<(BoxRenderable | null)[]>([]);
-  const pendingSelectedFileScrollOffsetRef = useRef(0);
+  const pendingSelectedFileScrollOffsetRef = useRef<number | null>(null);
   const pendingInteractionRef = useRef<import("./app-props.ts").PendingInteraction | null>(null);
   const pendingReviewCacheRef = useRef<{
     key: import("@diffdiff/core").ReviewCacheKey;

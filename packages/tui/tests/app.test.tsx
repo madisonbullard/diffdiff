@@ -591,6 +591,100 @@ test("hydrates deferred syntax previews when files move close to the viewport", 
   ).toContain("src/utils.ts");
 });
 
+test("does not snap back to the selected file while deferred previews hydrate near the viewport", async () => {
+  const scrollboxes: ReturnType<typeof createMockScrollbox>[] = [];
+  const fileCardYs = [0, 80];
+  let fileCardRefIndex = 0;
+  prepareReviewSessionState.hydratePreparedReviewFiles.mockImplementation(async (files) =>
+    files.map((file) =>
+      createPreparedFile({
+        ...file,
+        path: file.path,
+        sideBySideRows: [
+          {
+            kind: "line",
+            left: { kind: "context", lineNumber: 1, segments: [{ text: `left:${file.path}` }] },
+            right: {
+              kind: "addition",
+              lineNumber: 1,
+              segments: [{ text: `right:${file.path}`, fg: "#3fb950" }],
+            },
+          },
+        ],
+        unifiedLines: [
+          {
+            kind: "addition",
+            newLineNumber: 1,
+            segments: [{ text: `hydrated:${file.path}`, fg: "#3fb950" }],
+          },
+        ],
+      }),
+    ),
+  );
+
+  const files = [
+    createDeferredSyntaxPreparedFile({ path: "src/app.ts" }),
+    createDeferredSyntaxPreparedFile({ path: "src/utils.ts" }),
+  ];
+
+  render(
+    <DiffdiffApp {...createAppProps({ initialSession: createPreparedSession({ files }) })} />,
+    {
+      createNodeMock(element) {
+        const props =
+          typeof element.props === "object" && element.props != null
+            ? (element.props as {
+                border?: unknown;
+                flexDirection?: unknown;
+                gap?: unknown;
+                paddingLeft?: unknown;
+              })
+            : undefined;
+
+        if (element.type === "scrollbox") {
+          const scrollbox = createMockScrollbox(false);
+          scrollboxes.push(scrollbox);
+          return scrollbox;
+        }
+
+        if (
+          element.type === "box" &&
+          Array.isArray(props?.border) &&
+          props.border[0] === "left" &&
+          props.paddingLeft === 2 &&
+          props.flexDirection === "column" &&
+          props.gap === 1
+        ) {
+          return { y: fileCardYs[fileCardRefIndex++] ?? 0 };
+        }
+
+        if (element.type === "box") {
+          return { y: 0 };
+        }
+
+        return null;
+      },
+    },
+  );
+
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  scrollboxes[1]?.scrollTo.mockClear();
+
+  await act(async () => {
+    scrollboxes[1]!.scrollTop = 70;
+    scrollboxes[1]!.emitScroll();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  expect(prepareReviewSessionState.hydratePreparedReviewFiles).toHaveBeenCalledTimes(2);
+  expect(scrollboxes[1]?.scrollTo).not.toHaveBeenCalled();
+});
+
 test("uses a compact header for the sticky diff card and removes top list padding", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 
@@ -1218,6 +1312,72 @@ test("preserves the selected file scroll position when refreshing", async () => 
     head: "feature/tui",
   });
   expect(scrollboxes[1]?.scrollTo).toHaveBeenLastCalledWith({ x: 0, y: 55 });
+});
+
+test("preserves the selected file alignment when refreshing with zero relative scroll offset", async () => {
+  const scrollboxes: ReturnType<typeof createMockScrollbox>[] = [];
+  const fileCardYs = [10, 110, 15, 115];
+  let fileCardRefIndex = 0;
+  const nextSession = createPreparedSession({ github: createGitHubReviewSession() });
+  const syncRemotes = vi.fn(async () => undefined);
+  const loadSession = vi.fn(async () => nextSession);
+
+  render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        loadSession,
+        syncRemotes,
+      })}
+    />,
+    {
+      createNodeMock(element) {
+        const props =
+          typeof element.props === "object" && element.props != null
+            ? (element.props as {
+                border?: unknown;
+                flexDirection?: unknown;
+                gap?: unknown;
+                paddingLeft?: unknown;
+              })
+            : undefined;
+
+        if (element.type === "scrollbox") {
+          const scrollbox = createMockScrollbox(false);
+          scrollboxes.push(scrollbox);
+          return scrollbox;
+        }
+
+        if (
+          element.type === "box" &&
+          Array.isArray(props?.border) &&
+          props.border[0] === "left" &&
+          props.paddingLeft === 2 &&
+          props.flexDirection === "column" &&
+          props.gap === 1
+        ) {
+          return { y: fileCardYs[fileCardRefIndex++] ?? 15 };
+        }
+
+        if (element.type === "box") {
+          return { y: 0 };
+        }
+
+        return null;
+      },
+    },
+  );
+
+  scrollboxes[1]!.scrollTop = 10;
+
+  await emitAsyncKey({ name: "f", sequence: "F", shift: true });
+
+  expect(syncRemotes).toHaveBeenCalledWith("/tmp/diffdiff");
+  expect(loadSession).toHaveBeenCalledWith({
+    base: "origin/main",
+    head: "feature/tui",
+  });
+  expect(scrollboxes[1]?.scrollTo).toHaveBeenLastCalledWith({ x: 0, y: 15 });
 });
 
 test("auto-refreshes working tree sessions when local changes are detected", async () => {

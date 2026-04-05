@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { clampIndex, getTopIntersectingFileIndex } from "../../view-model.ts";
 import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
@@ -11,6 +11,8 @@ import {
 import { LOADING_INDICATOR_FRAMES } from "../shared/constants.ts";
 
 export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: DiffdiffAppDerived) {
+  const lastScrolledSelectedFileIndexRef = useRef<number | null>(null);
+
   useEffect(() => {
     state.fileCardRefs.current.length = state.session.files.length;
   }, [state.fileCardRefs, state.session.files.length]);
@@ -134,9 +136,16 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
       return;
     }
 
-    const scrollOffset = state.pendingSelectedFileScrollOffsetRef.current;
-    state.pendingSelectedFileScrollOffsetRef.current = 0;
-    scrollBox.scrollTo({ x: 0, y: Math.max(offset + scrollOffset, 0) });
+    const pendingScrollOffset = state.pendingSelectedFileScrollOffsetRef.current;
+    const selectedFileChanged =
+      lastScrolledSelectedFileIndexRef.current !== state.selectedFileIndex;
+    if (!selectedFileChanged && pendingScrollOffset == null) {
+      return;
+    }
+
+    state.pendingSelectedFileScrollOffsetRef.current = null;
+    lastScrolledSelectedFileIndexRef.current = state.selectedFileIndex;
+    scrollBox.scrollTo({ x: 0, y: Math.max(offset + (pendingScrollOffset ?? 0), 0) });
     state.setActiveFileIndex(state.selectedFileIndex);
   }, [
     getFileTopOffsets,

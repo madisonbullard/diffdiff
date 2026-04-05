@@ -72,7 +72,7 @@ export interface DiffdiffAppState {
     key: import("@diffdiff/core").ReviewCacheKey;
     state: import("@diffdiff/core").ReviewCacheState;
   } | null>;
-  pendingSelectedFileScrollOffsetRef: MutableRefObject<number>;
+  pendingSelectedFileScrollOffsetRef: MutableRefObject<number | null>;
   pendingSessionActivityRef: MutableRefObject<SessionActivityUpdate | null>;
   pendingSyntaxHydrationPathsRef: MutableRefObject<Set<string>>;
   pullRequestConversationIndex: number;
