@@ -123,6 +123,64 @@ test("deferred rendering keeps blank-line diffs parsed without pre-rendering pre
   expect(prepared.files[0]?.sideBySideRows).toEqual([]);
 });
 
+test("prepareReviewSession dedupes duplicate file paths before rendering", async () => {
+  const prepared = await prepareReviewSession(
+    createReviewSession({
+      files: [
+        {
+          path: "src/app.ts",
+          status: "added",
+          additions: 1,
+          deletions: 0,
+          isBinary: false,
+          patch: [
+            "diff --git a/src/app.ts b/src/app.ts",
+            "new file mode 100644",
+            "index 0000000..1111111",
+            "--- /dev/null",
+            "+++ b/src/app.ts",
+            "@@ -0,0 +1 @@",
+            "+export const app = true;",
+          ].join("\n"),
+        },
+        {
+          path: "src/app.ts",
+          status: "deleted",
+          additions: 0,
+          deletions: 1,
+          isBinary: false,
+          patch: [
+            "diff --git a/src/app.ts b/src/app.ts",
+            "deleted file mode 100644",
+            "index 1111111..0000000",
+            "--- a/src/app.ts",
+            "+++ /dev/null",
+            "@@ -1 +0,0 @@",
+            "-export const app = true;",
+          ].join("\n"),
+        },
+      ],
+      workingTreeSummary: {
+        filesChanged: 2,
+        additions: 1,
+        deletions: 1,
+      },
+    }),
+    "pierre-dark",
+    undefined,
+    undefined,
+    {
+      deferSyntaxRendering: true,
+    },
+  );
+
+  expect(prepared.files).toHaveLength(1);
+  expect(prepared.files[0]).toMatchObject({
+    path: "src/app.ts",
+    status: "deleted",
+  });
+});
+
 test("deferred rendering preserves blank-context diffs for on-demand rendering", async () => {
   const prepared = await prepareReviewSession(
     createReviewSession({
