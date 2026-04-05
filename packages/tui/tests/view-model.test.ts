@@ -71,7 +71,7 @@ test("getVisibleRemoteBranches keeps open PRs and active refs when collapsed", (
   expect(visibleBranches).toHaveLength(2);
 });
 
-test("buildBranchListItems groups working tree, locals, PRs, and remotes in order", () => {
+test("buildBranchListItems groups working tree, PRs, locals, and remotes in order", () => {
   const items = buildBranchListItems({
     filters: {
       ...DEFAULT_BRANCH_LIST_FILTERS,
@@ -123,8 +123,8 @@ test("buildBranchListItems groups working tree, locals, PRs, and remotes in orde
 
   expect(items.map((item) => item.kind)).toEqual([
     "working-tree",
-    "local-branch",
     "open-pr",
+    "local-branch",
     "remote-branch",
   ]);
 });

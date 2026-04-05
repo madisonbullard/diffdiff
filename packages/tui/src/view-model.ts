@@ -67,16 +67,6 @@ export function buildBranchListItems({
     });
   }
 
-  if (filters.localBranch) {
-    items.push(
-      ...localBranches.map((branch) => ({
-        key: `local:${branch.ref}`,
-        kind: "local-branch" as const,
-        branch,
-      })),
-    );
-  }
-
   if (filters.openPr) {
     items.push(
       ...remoteBranches
@@ -86,6 +76,16 @@ export function buildBranchListItems({
           kind: "open-pr" as const,
           branch,
         })),
+    );
+  }
+
+  if (filters.localBranch) {
+    items.push(
+      ...localBranches.map((branch) => ({
+        key: `local:${branch.ref}`,
+        kind: "local-branch" as const,
+        branch,
+      })),
     );
   }
 
