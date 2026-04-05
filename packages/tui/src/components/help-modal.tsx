@@ -1,78 +1,98 @@
 import { formatCommandKeybind, type CommandDefinition } from "../commands.ts";
+import type { AppPane } from "../types.ts";
 import type { UiTheme } from "../theme.ts";
-import { KeyCap, ModalFrame, SPLIT_BORDER } from "./shared.tsx";
+import { KeyCap, MODAL_OVERLAY, SPLIT_BORDER } from "./shared.tsx";
 
-interface HelpSection {
+type ModeKey = "global" | AppPane;
+
+interface HelpRow {
+  keybind: string | undefined;
+  text: string;
+}
+
+interface HelpModeSection {
   color: string;
-  rows: {
-    keybind: string;
-    text: string;
-  }[];
+  dimmed: boolean;
+  mode: ModeKey;
+  rows: HelpRow[];
   title: string;
 }
+
+const MODE_LABELS: Record<ModeKey, string> = {
+  global: "Global",
+  tree: "Tree Pane",
+  diff: "Diff Pane",
+};
 
 function formatHelpText(command: CommandDefinition): string {
   return command.title.charAt(0).toLowerCase() + command.title.slice(1);
 }
 
-function buildHelpSections(
-  commands: readonly CommandDefinition[],
-  leaderKeybind: string,
-  theme: UiTheme,
-): HelpSection[] {
-  const sections: HelpSection[] = [
-    {
-      color: theme.accent,
-      title: "Navigation",
-      rows: [
-        { keybind: "j / k", text: "move in the active pane" },
-        { keybind: "home / end", text: "jump to the first or last item" },
-        { keybind: "tab", text: "switch between the tree and diff panes" },
-        { keybind: "h / l / left / right", text: "collapse, expand, or open from the tree" },
-      ],
-    },
-    {
-      color: theme.success,
-      title: "Review Navigation",
-      rows: [
-        { keybind: "i / o", text: "focus the previous or next inline thread" },
-        { keybind: "[ / ]", text: "move between diff lines or comments in the focused thread" },
-      ],
-    },
-  ];
+function getModeForCommand(command: { keybindingContexts?: readonly AppPane[] }): ModeKey {
+  if (command.keybindingContexts == null || command.keybindingContexts.length === 0) {
+    return "global";
+  }
 
-  const categoryColors = new Map<string, string>([
-    ["System", theme.accent],
-    ["View", theme.accent],
-    ["Review", theme.success],
-    ["Comparison", theme.warning],
-    ["GitHub", theme.warning],
-  ]);
-  const rowsByCategory = new Map<string, HelpSection["rows"]>();
+  // If the command has a single context, use it. If multiple, take the first.
+  return command.keybindingContexts[0];
+}
+
+interface CommandWithContext extends CommandDefinition {
+  keybindingContexts?: readonly AppPane[];
+}
+
+function buildModeSections(
+  commands: readonly CommandWithContext[],
+  leaderKeybind: string,
+  activePane: AppPane,
+  theme: UiTheme,
+): HelpModeSection[] {
+  const rowsByMode = new Map<ModeKey, HelpRow[]>();
 
   for (const command of commands) {
-    if (command.hidden === true || command.keybind == null) {
-      continue;
-    }
+    const mode = getModeForCommand(command);
+    const keybind =
+      command.keybind != null ? formatCommandKeybind(command.keybind, leaderKeybind) : undefined;
 
-    const keybind = formatCommandKeybind(command.keybind, leaderKeybind);
-    if (keybind == null) {
-      continue;
-    }
-
-    const rows = rowsByCategory.get(command.category) ?? [];
+    const rows = rowsByMode.get(mode) ?? [];
     rows.push({
       keybind,
       text: formatHelpText(command),
     });
-    rowsByCategory.set(command.category, rows);
+    rowsByMode.set(mode, rows);
   }
 
-  for (const [category, rows] of rowsByCategory) {
+  // Determine which modes are active: global is always active, plus the current pane
+  const activeModes = new Set<ModeKey>(["global", activePane]);
+
+  // Build ordered sections: global first, current pane second, then remaining
+  const allModes: ModeKey[] = ["global", "tree", "diff"];
+  const orderedModes: ModeKey[] = [
+    "global",
+    activePane,
+    ...allModes.filter((m) => m !== "global" && m !== activePane),
+  ];
+
+  const modeColors: Record<ModeKey, string> = {
+    global: theme.accent,
+    tree: theme.warning,
+    diff: theme.success,
+  };
+
+  const sections: HelpModeSection[] = [];
+
+  for (const mode of orderedModes) {
+    const rows = rowsByMode.get(mode);
+    if (rows == null || rows.length === 0) {
+      continue;
+    }
+
     sections.push({
-      color: categoryColors.get(category) ?? theme.textMuted,
+      color: modeColors[mode],
+      dimmed: !activeModes.has(mode),
+      mode,
       rows,
-      title: category,
+      title: MODE_LABELS[mode],
     });
   }
 
@@ -80,60 +100,108 @@ function buildHelpSections(
 }
 
 export function HelpModal({
+  activePane,
   commands,
   leaderKeybind,
   theme,
 }: {
-  commands: readonly CommandDefinition[];
+  activePane: AppPane;
+  commands: readonly CommandWithContext[];
   leaderKeybind: string;
   theme: UiTheme;
 }) {
-  const sections = buildHelpSections(commands, leaderKeybind, theme);
+  const sections = buildModeSections(commands, leaderKeybind, activePane, theme);
 
   return (
-    <ModalFrame
-      title="Help"
-      subtitle="Review files quickly without leaving the keyboard."
-      theme={theme}
-      maxWidth={92}
+    <box
+      position="absolute"
+      top={0}
+      right={0}
+      bottom={0}
+      left={0}
+      alignItems="center"
+      justifyContent="center"
       zIndex={30}
-      headerRight={
-        <text fg={theme.textMuted} wrapMode="none">
-          <KeyCap label="esc" theme={theme} />
-          <span>{" close"}</span>
-        </text>
-      }
+      backgroundColor={MODAL_OVERLAY}
     >
-      {sections.map((section) => (
-        <box
-          key={section.title}
-          width="100%"
-          border={["left"]}
-          customBorderChars={SPLIT_BORDER}
-          borderColor={section.color}
-          backgroundColor={theme.surface}
-          paddingLeft={2}
-          paddingRight={1}
-          paddingTop={1}
-          paddingBottom={1}
-          flexDirection="column"
-          gap={0}
-        >
-          <text fg={section.color} wrapMode="none">
-            {section.title}
-          </text>
-          {section.rows.map((row) => (
-            <text
-              key={`${section.title}:${row.keybind}:${row.text}`}
-              fg={theme.textMuted}
-              wrapMode="none"
-            >
-              <KeyCap label={row.keybind} theme={theme} />
-              <span>{` ${row.text}`}</span>
+      <box
+        width="92%"
+        maxWidth={92}
+        maxHeight="80%"
+        backgroundColor={theme.modalBg}
+        padding={1}
+        flexDirection="column"
+        gap={1}
+      >
+        <box width="100%" flexDirection="column">
+          <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
+            <text fg={theme.accent} wrapMode="none">
+              Help
             </text>
-          ))}
+            <text fg={theme.textMuted} wrapMode="none">
+              <KeyCap label="esc" theme={theme} />
+              <span>{" close"}</span>
+            </text>
+          </box>
+          <text fg={theme.textMuted} wrapMode="none">
+            All keyboard shortcuts by mode.
+          </text>
         </box>
-      ))}
-    </ModalFrame>
+        <scrollbox
+          width="100%"
+          flexGrow={1}
+          focused={true}
+          viewportOptions={{ backgroundColor: theme.modalBg }}
+          contentOptions={{ backgroundColor: theme.modalBg }}
+          verticalScrollbarOptions={{ trackOptions: { backgroundColor: theme.border } }}
+        >
+          <box width="100%" flexDirection="column" gap={1}>
+            {sections.map((section) => (
+              <box
+                key={section.mode}
+                width="100%"
+                border={["left"]}
+                customBorderChars={SPLIT_BORDER}
+                borderColor={section.dimmed ? theme.border : section.color}
+                backgroundColor={theme.surface}
+                paddingLeft={2}
+                paddingRight={1}
+                paddingTop={1}
+                paddingBottom={1}
+                flexDirection="column"
+                gap={0}
+              >
+                <text fg={section.dimmed ? theme.border : section.color} wrapMode="none">
+                  {section.title}
+                </text>
+                {section.rows.map((row) => (
+                  <text
+                    key={`${section.mode}:${row.text}`}
+                    fg={section.dimmed ? theme.border : theme.textMuted}
+                    wrapMode="none"
+                  >
+                    {row.keybind != null ? (
+                      <>
+                        <KeyCap
+                          label={row.keybind}
+                          theme={
+                            section.dimmed
+                              ? { ...theme, accent: theme.border, surfaceMuted: theme.surface }
+                              : theme
+                          }
+                        />
+                        <span>{` ${row.text}`}</span>
+                      </>
+                    ) : (
+                      <span>{`  ${row.text}`}</span>
+                    )}
+                  </text>
+                ))}
+              </box>
+            ))}
+          </box>
+        </scrollbox>
+      </box>
+    </box>
   );
 }

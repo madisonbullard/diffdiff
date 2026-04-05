@@ -487,7 +487,7 @@ test("renders empty branch columns and help copy", () => {
     />,
   );
   const filterModal = render(<ListFilterModal filters={filters} selectedIndex={0} theme={theme} />);
-  const helpCommands: CommandDefinition[] = [
+  const helpCommands = [
     {
       category: "System",
       keybind: "ctrl+p",
@@ -506,9 +506,23 @@ test("renders empty branch columns and help copy", () => {
       title: "Copy PR URL",
       value: "github.copy-url",
     },
+    {
+      category: "Review",
+      keybind: "r",
+      keybindingContexts: ["diff"] as const,
+      title: "Toggle reviewed",
+      value: "review.toggle-reviewed",
+    },
+    {
+      category: "View",
+      keybind: "return,right,space",
+      keybindingContexts: ["tree"] as const,
+      title: "Open selected file",
+      value: "view.open-selected-file",
+    },
   ];
   const helpModal = render(
-    <HelpModal commands={helpCommands} leaderKeybind="ctrl+x" theme={theme} />,
+    <HelpModal activePane="diff" commands={helpCommands} leaderKeybind="ctrl+x" theme={theme} />,
   );
 
   expect(collectText(branchModal.toJSON())).toContain("Working tree");
@@ -517,8 +531,12 @@ test("renders empty branch columns and help copy", () => {
   expect(collectText(helpModal.toJSON())).toContain("ctrl+p");
   expect(collectText(helpModal.toJSON())).toContain("ctrl+x");
   expect(collectText(helpModal.toJSON())).toContain("open comparison list");
-  expect(collectText(helpModal.toJSON())).toContain("switch between the tree and diff panes");
   expect(collectText(helpModal.toJSON())).toContain("copy PR URL");
+  expect(collectText(helpModal.toJSON())).toContain("Global");
+  expect(collectText(helpModal.toJSON())).toContain("Diff Pane");
+  expect(collectText(helpModal.toJSON())).toContain("Tree Pane");
+  expect(collectText(helpModal.toJSON())).toContain("toggle reviewed");
+  expect(collectText(helpModal.toJSON())).toContain("open selected file");
 });
 
 test("groups suggested commands under a dedicated heading in the palette", () => {
