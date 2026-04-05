@@ -90,9 +90,10 @@ export function AppSidebar({
         ref={treeScrollRef}
         width="100%"
         flexGrow={1}
+        backgroundColor={theme.surface}
         focused={activeOverlay == null && activePane === "tree"}
-        viewportOptions={{ backgroundColor: theme.appBackground }}
-        contentOptions={{ backgroundColor: theme.appBackground }}
+        viewportOptions={{ backgroundColor: theme.surface }}
+        contentOptions={{ backgroundColor: theme.surface }}
         verticalScrollbarOptions={{ trackOptions: { backgroundColor: theme.border } }}
       >
         <box width="100%" flexDirection="column">
