@@ -48,6 +48,7 @@ describe("review cache", () => {
       head: "feature/ui",
     };
     const state: ReviewCacheState = {
+      reviewedStateSource: "local",
       reviewedFiles: [
         { fingerprint: "fingerprint-app", path: "src/app.ts" },
         { fingerprint: "fingerprint-index", path: "src/index.ts" },
@@ -79,10 +80,12 @@ describe("review cache", () => {
       head: "feature/b",
     };
     const stateA: ReviewCacheState = {
+      reviewedStateSource: "local",
       reviewedFiles: [{ fingerprint: "fingerprint-a", path: "a.ts" }],
       collapsedPaths: [],
     };
     const stateB: ReviewCacheState = {
+      reviewedStateSource: "local",
       reviewedFiles: [{ fingerprint: "fingerprint-b", path: "b.ts" }],
       collapsedPaths: ["b.ts"],
       selectedFilePath: "b.ts",
@@ -111,10 +114,12 @@ describe("review cache", () => {
       head: "feature/x",
     };
     const stateA: ReviewCacheState = {
+      reviewedStateSource: "local",
       reviewedFiles: [{ fingerprint: "fingerprint-a", path: "a.ts" }],
       collapsedPaths: [],
     };
     const stateB: ReviewCacheState = {
+      reviewedStateSource: "local",
       reviewedFiles: [{ fingerprint: "fingerprint-b", path: "b.ts" }],
       collapsedPaths: [],
     };
@@ -152,6 +157,7 @@ describe("review cache", () => {
     const loaded = await loadReviewCache(key, cacheDir);
 
     expect(loaded).toEqual({
+      reviewedStateSource: "local",
       reviewedFiles: [{ fingerprint: "fingerprint-new", path: "new.ts" }],
       collapsedPaths: ["new.ts"],
       selectedFilePath: "new.ts",
@@ -166,6 +172,7 @@ describe("review cache", () => {
       head: "feature/ui",
     };
     const state: ReviewCacheState = {
+      reviewedStateSource: "local",
       reviewedFiles: [],
       collapsedPaths: [],
     };
@@ -202,10 +209,55 @@ describe("review cache", () => {
       repositoryRootPath: "/tmp/repo",
       base: "main",
       head: "HEAD",
+      reviewedStateSource: "local",
       reviewedFiles: [{ fingerprint: "fingerprint-x", path: "x.ts" }],
       collapsedPaths: [],
       updatedAt: expect.any(String),
     });
+  });
+
+  test("saves PR-backed cache state without reviewed files and overwrites stale local review marks", async () => {
+    const cacheDir = await createTempDir();
+    const key: ReviewCacheKey = {
+      repositoryRootPath: "/tmp/repo",
+      base: "origin/main",
+      head: "feature/ui",
+    };
+
+    await saveReviewCache(
+      key,
+      {
+        reviewedStateSource: "local",
+        reviewedFiles: [{ fingerprint: "fingerprint-old", path: "old.ts" }],
+        collapsedPaths: ["old.ts"],
+        selectedFilePath: "old.ts",
+      },
+      cacheDir,
+    );
+    await saveReviewCache(
+      key,
+      {
+        reviewedStateSource: "github",
+        collapsedPaths: ["src/app.ts"],
+        commentCollapseStates: { "thread:101": true },
+        selectedFilePath: "src/app.ts",
+      },
+      cacheDir,
+    );
+
+    expect(await loadReviewCache(key, cacheDir)).toEqual({
+      reviewedStateSource: "github",
+      collapsedPaths: ["src/app.ts"],
+      commentCollapseStates: { "thread:101": true },
+      selectedFilePath: "src/app.ts",
+    });
+
+    const { readdir } = await import("node:fs/promises");
+    const [cacheFile] = await readdir(cacheDir);
+    const parsed = JSON.parse(await readFile(join(cacheDir, cacheFile!), "utf8"));
+    expect(parsed.reviewedStateSource).toBe("github");
+    expect(parsed.reviewedFiles).toBeUndefined();
+    expect(parsed.reviewedPaths).toBeUndefined();
   });
 
   test("loads legacy reviewed paths when present", async () => {
@@ -236,6 +288,7 @@ describe("review cache", () => {
     );
 
     expect(await loadReviewCache(key, cacheDir)).toEqual({
+      reviewedStateSource: "local",
       reviewedPaths: ["src/app.ts"],
       collapsedPaths: [],
     });

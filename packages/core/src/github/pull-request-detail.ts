@@ -2,6 +2,7 @@ import { logDiffdiffError } from "../logging.ts";
 import type { PullRequestFingerprint } from "../types/session.ts";
 import type {
   ForgeRepository,
+  GitHubPullRequestChangedFilesByPath,
   GitHubPullRequestChecksSummary,
   GitHubPullRequestDetail,
 } from "../types/github.ts";
@@ -18,6 +19,7 @@ import {
 import type {
   GitHubCheckRunsResponse,
   GitHubCommitStatusResponse,
+  GitHubGraphqlPullRequestFilesResponse,
   GitHubIssueCommentResponse,
   GitHubPullRequestDetailResponse,
   GitHubReviewCommentResponse,
@@ -38,6 +40,7 @@ export async function loadPullRequestDetail(
     { checksSummary, pullRequestResponse },
     reviewsResponse,
     commentsResponse,
+    changedFiles,
     issueCommentsResponse,
   ] = await Promise.all([
     loadPullRequestSnapshot(client, repository, pullRequestNumber),
@@ -53,6 +56,7 @@ export async function loadPullRequestDetail(
       pull_number: pullRequestNumber,
       per_page: 100,
     }) as Promise<GitHubReviewCommentResponse[]>,
+    loadPullRequestChangedFiles(client, repository, pullRequestNumber),
     client.paginate("GET /repos/{owner}/{repo}/issues/{issue_number}/comments", {
       owner: repository.owner,
       repo: repository.repo,
@@ -78,6 +82,7 @@ export async function loadPullRequestDetail(
     baseRefName: pullRequestResponse.base.ref,
     body: pullRequestResponse.body ?? undefined,
     checks: checksSummary,
+    changedFiles,
     conversationItems,
     headRefName: pullRequestResponse.head.ref,
     headSha: pullRequestResponse.head.sha,
@@ -158,6 +163,77 @@ function buildPullRequestFingerprintFromSnapshot({
     mergeableState: pullRequestResponse.mergeable_state ?? undefined,
     updatedAt: pullRequestResponse.updated_at,
   };
+}
+
+async function loadPullRequestChangedFiles(
+  client: GitHubApiClient,
+  repository: ForgeRepository,
+  pullRequestNumber: number,
+): Promise<GitHubPullRequestChangedFilesByPath> {
+  const changedFiles: GitHubPullRequestChangedFilesByPath = {};
+  let after: string | null = null;
+
+  while (true) {
+    const response: GitHubGraphqlPullRequestFilesResponse = await client.graphql(
+      `
+        query PullRequestChangedFiles(
+          $owner: String!
+          $repo: String!
+          $pullRequestNumber: Int!
+          $after: String
+        ) {
+          repository(owner: $owner, name: $repo) {
+            pullRequest(number: $pullRequestNumber) {
+              files(first: 100, after: $after) {
+                nodes {
+                  path
+                  viewerViewedState
+                }
+                pageInfo {
+                  endCursor
+                  hasNextPage
+                }
+              }
+            }
+          }
+        }
+      `,
+      {
+        after,
+        owner: repository.owner,
+        pullRequestNumber,
+        repo: repository.repo,
+      },
+    );
+    const filesConnection:
+      | NonNullable<
+          NonNullable<
+            NonNullable<GitHubGraphqlPullRequestFilesResponse["repository"]>["pullRequest"]
+          >["files"]
+        >
+      | null
+      | undefined = response.repository?.pullRequest?.files;
+
+    for (const file of filesConnection?.nodes ?? []) {
+      if (file?.path == null) {
+        continue;
+      }
+
+      changedFiles[file.path] = {
+        path: file.path,
+        viewedState: file.viewerViewedState ?? "UNVIEWED",
+      };
+    }
+
+    if (
+      filesConnection?.pageInfo?.hasNextPage !== true ||
+      filesConnection.pageInfo.endCursor == null
+    ) {
+      return changedFiles;
+    }
+
+    after = filesConnection.pageInfo.endCursor;
+  }
 }
 
 export async function loadChecksSummaryForHeadSha(

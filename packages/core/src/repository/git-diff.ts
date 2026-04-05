@@ -229,7 +229,7 @@ async function mapWithConcurrency<TInput, TOutput>(
     return [];
   }
 
-  const results = new Array<TOutput>(items.length);
+  const results = Array.from({ length: items.length }, () => undefined) as TOutput[];
   let nextIndex = 0;
   const workerCount = Math.max(1, Math.min(concurrency, items.length));
 

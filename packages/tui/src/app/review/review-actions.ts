@@ -13,14 +13,17 @@ import {
   resolveDiffView,
 } from "../../view-model.ts";
 import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
+import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
+import type { DiffdiffAppProps, PendingInteraction } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
-import type { PendingInteraction } from "../state/app-props.ts";
 import { REVIEWED_NEXT_FILE_SCROLL_OFFSET } from "../shared/constants.ts";
 import { selectFileIndexWithPendingScrollOffset } from "../shared/file-selection.ts";
 import { haveSamePaths } from "../shared/collections.ts";
 
 interface CreateReviewActionsOptions {
   derived: DiffdiffAppDerived;
+  persistence: DiffdiffAppPersistence;
+  props: Pick<DiffdiffAppProps, "markFileAsViewed" | "unmarkFileAsViewed">;
   startInteraction: (
     kind: string,
     options?: Omit<PendingInteraction, "kind" | "startedAt" | "token">,
@@ -30,9 +33,68 @@ interface CreateReviewActionsOptions {
 
 export function createReviewActions({
   derived,
+  persistence,
+  props,
   startInteraction,
   state,
 }: CreateReviewActionsOptions) {
+  function applyReviewedStateToFile(fileIndex: number): void {
+    const file = state.session.files[fileIndex];
+    if (file == null) {
+      return;
+    }
+
+    const nextReviewedPaths = new Set(state.reviewedPaths);
+    nextReviewedPaths.add(file.path);
+    state.setReviewedPaths(nextReviewedPaths);
+    state.setCollapsedPaths((currentPaths) => new Set(currentPaths).add(file.path));
+
+    const files = state.session.files;
+    let nextIndex: number | null = null;
+    for (let index = 1; index < files.length; index += 1) {
+      const candidateIndex = (fileIndex + index) % files.length;
+      const candidatePath = files[candidateIndex]?.path;
+      if (candidatePath != null && !nextReviewedPaths.has(candidatePath)) {
+        nextIndex = candidateIndex;
+        break;
+      }
+    }
+
+    if (nextIndex != null) {
+      const nextFilePath = files[nextIndex]?.path;
+      if (nextFilePath != null) {
+        startInteraction("file_selection", {
+          details: {
+            fromFilePath: file.path,
+            toFilePath: nextFilePath,
+            trigger: "reviewed-next-file",
+          },
+          expectedSelectedFilePath: nextFilePath,
+        });
+      }
+
+      selectFileIndexWithPendingScrollOffset(
+        state.setSelectedFileIndex,
+        state.pendingSelectedFileScrollOffsetRef,
+        nextIndex,
+        REVIEWED_NEXT_FILE_SCROLL_OFFSET,
+      );
+      state.setStatusMessage(
+        `Reviewed ${file.path}. Jumped to ${files[nextIndex]?.path ?? "next file"}.`,
+      );
+      return;
+    }
+
+    state.setStatusMessage(`Reviewed ${file.path}. All files reviewed!`);
+  }
+
+  function applyUnreviewedStateToFile(filePath: string): void {
+    const nextReviewedPaths = new Set(state.reviewedPaths);
+    nextReviewedPaths.delete(filePath);
+    state.setReviewedPaths(nextReviewedPaths);
+    state.setStatusMessage(`Marked ${filePath} as not reviewed.`);
+  }
+
   function moveSelectedFile(delta: number): void {
     const nextIndex = clampIndex(state.selectedFileIndex + delta, state.session.files.length);
     if (nextIndex === state.selectedFileIndex) {
@@ -196,59 +258,74 @@ export function createReviewActions({
       return;
     }
 
+    if (state.session.github != null) {
+      void toggleGitHubReviewed(file.path, fileIndex);
+      return;
+    }
+
     if (state.reviewedPaths.has(file.path)) {
-      state.setReviewedPaths((currentPaths) => {
-        const nextPaths = new Set(currentPaths);
-        nextPaths.delete(file.path);
-        return nextPaths;
-      });
-      state.setStatusMessage(`Marked ${file.path} as not reviewed.`);
+      applyUnreviewedStateToFile(file.path);
       return;
     }
 
-    state.setReviewedPaths((currentPaths) => new Set(currentPaths).add(file.path));
-    state.setCollapsedPaths((currentPaths) => new Set(currentPaths).add(file.path));
+    applyReviewedStateToFile(fileIndex);
+  }
 
-    const files = state.session.files;
-    let nextIndex: number | null = null;
-    for (let index = 1; index < files.length; index += 1) {
-      const candidateIndex = (fileIndex + index) % files.length;
-      const candidatePath = files[candidateIndex]?.path;
-      if (candidatePath != null && !state.reviewedPaths.has(candidatePath)) {
-        nextIndex = candidateIndex;
-        break;
-      }
+  async function toggleGitHubReviewed(filePath: string, fileIndex: number): Promise<void> {
+    const reviewSession = state.session.github;
+    if (reviewSession == null) {
+      return;
     }
 
-    if (nextIndex != null) {
-      const nextFilePath = files[nextIndex]?.path;
-      if (nextFilePath != null) {
-        startInteraction("file_selection", {
-          details: {
-            fromFilePath: file.path,
-            toFilePath: nextFilePath,
-            trigger: "reviewed-next-file",
-          },
-          expectedSelectedFilePath: nextFilePath,
-        });
-      }
-
-      selectFileIndexWithPendingScrollOffset(
-        state.setSelectedFileIndex,
-        state.pendingSelectedFileScrollOffsetRef,
-        nextIndex,
-        REVIEWED_NEXT_FILE_SCROLL_OFFSET,
-      );
+    if (!reviewSession.auth.isAuthenticated) {
       state.setStatusMessage(
-        `Reviewed ${file.path}. Jumped to ${files[nextIndex]?.path ?? "next file"}.`,
+        "GitHub auth is required. Run `diffdiff auth login --token-stdin` first.",
       );
       return;
     }
 
-    state.setStatusMessage(`Reviewed ${file.path}. All files reviewed!`);
+    const isReviewed = state.reviewedPaths.has(filePath);
+    const updateViewedState = isReviewed ? props.unmarkFileAsViewed : props.markFileAsViewed;
+    if (updateViewedState == null) {
+      persistence.persistenceApi.handleAppFailure("Unable to update GitHub viewed state.", {
+        action: isReviewed ? "unmark-file-as-viewed" : "mark-file-as-viewed",
+        path: filePath,
+        pullRequestNumber: reviewSession.pullRequest.number,
+      });
+      return;
+    }
+
+    state.setIsSubmittingReviewAction(true);
+    state.setStatusMessage(
+      isReviewed
+        ? `Removing GitHub reviewed state from ${filePath}...`
+        : `Marking ${filePath} reviewed on GitHub...`,
+    );
+
+    try {
+      await updateViewedState(reviewSession, filePath);
+      if (isReviewed) {
+        applyUnreviewedStateToFile(filePath);
+      } else {
+        applyReviewedStateToFile(fileIndex);
+      }
+    } catch (error) {
+      persistence.persistenceApi.handleAppError(error, "Unable to update GitHub viewed state.", {
+        action: isReviewed ? "unmark-file-as-viewed" : "mark-file-as-viewed",
+        path: filePath,
+        pullRequestNumber: reviewSession.pullRequest.number,
+      });
+    } finally {
+      state.setIsSubmittingReviewAction(false);
+    }
   }
 
   function markAllReviewed(): void {
+    if (state.session.github != null) {
+      state.setStatusMessage("GitHub PR reviewed state can only be updated one file at a time.");
+      return;
+    }
+
     if (state.session.files.length === 0) {
       state.setStatusMessage("No files are available to review.");
       return;
@@ -272,6 +349,11 @@ export function createReviewActions({
   }
 
   function clearReviewed(): void {
+    if (state.session.github != null) {
+      state.setStatusMessage("GitHub PR reviewed state can only be updated one file at a time.");
+      return;
+    }
+
     if (state.reviewedPaths.size === 0) {
       state.setStatusMessage("No files are marked reviewed.");
       return;

@@ -37,9 +37,11 @@ import {
 import type {
   GitHubCreateReviewResponse,
   GitHubGraphqlAddPullRequestReviewThreadResponse,
+  GitHubGraphqlMarkFileAsViewedResponse,
   GitHubMergeResponse,
   GitHubPullRequestListResponse,
   GitHubSearchIssuePullRequestResponse,
+  GitHubGraphqlUnmarkFileAsViewedResponse,
 } from "./pull-request-types.ts";
 
 export class GitHubPullRequestService {
@@ -313,6 +315,56 @@ export class GitHubPullRequestService {
       issue_number: reviewSession.pullRequest.number,
       owner: reviewSession.repository.owner,
       repo: reviewSession.repository.repo,
+    });
+  }
+
+  async markFileAsViewed(reviewSession: GitHubReviewSession, path: string): Promise<void> {
+    const client = await this.requireClient(reviewSession);
+
+    await client.graphql<GitHubGraphqlMarkFileAsViewedResponse>(
+      `
+        mutation MarkFileAsViewed($input: MarkFileAsViewedInput!) {
+          markFileAsViewed(input: $input) {
+            clientMutationId
+          }
+        }
+      `,
+      {
+        input: {
+          path,
+          pullRequestId: reviewSession.pullRequest.nodeId,
+        },
+      },
+    );
+    logDiffdiffInfo("github", "pull_request_file_marked_viewed", {
+      path,
+      pullRequestNumber: reviewSession.pullRequest.number,
+      repository: reviewSession.repository,
+    });
+  }
+
+  async unmarkFileAsViewed(reviewSession: GitHubReviewSession, path: string): Promise<void> {
+    const client = await this.requireClient(reviewSession);
+
+    await client.graphql<GitHubGraphqlUnmarkFileAsViewedResponse>(
+      `
+        mutation UnmarkFileAsViewed($input: UnmarkFileAsViewedInput!) {
+          unmarkFileAsViewed(input: $input) {
+            clientMutationId
+          }
+        }
+      `,
+      {
+        input: {
+          path,
+          pullRequestId: reviewSession.pullRequest.nodeId,
+        },
+      },
+    );
+    logDiffdiffInfo("github", "pull_request_file_unmarked_viewed", {
+      path,
+      pullRequestNumber: reviewSession.pullRequest.number,
+      repository: reviewSession.repository,
     });
   }
 

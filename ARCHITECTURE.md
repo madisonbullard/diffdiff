@@ -108,6 +108,20 @@ At a high level, the current runtime flow is:
 This split is deliberate: data acquisition and shared review behavior live in
 `core`, while rendering and interaction live in `tui`.
 
+## Reviewed State
+
+- Non-PR comparisons use the local review cache as the source of truth for file
+  reviewed state.
+- PR-backed comparisons use GitHub's per-file viewed state as the source of
+  truth.
+- When a comparison becomes PR-backed, diffdiff overwrites any existing local
+  reviewed-file cache entry for that comparison with a GitHub-sourced cache
+  record that keeps only local UI state such as collapsed paths, selected file,
+  and comment collapse state.
+- This split is intentional: `packages/core` owns the cache model, GitHub viewed
+  state loading, and GitHub viewed-state mutations, while `packages/tui`
+  reconciles those sources into its `reviewedPaths` UI model.
+
 ## Extension guidance
 
 - New repository or forge integrations should start in `packages/core`.

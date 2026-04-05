@@ -1,3 +1,5 @@
+import type { GitHubPullRequestFileViewedState } from "../types/github.ts";
+
 export interface GitHubUserResponse {
   login?: string;
   html_url?: string;
@@ -111,6 +113,35 @@ export interface GitHubGraphqlAddPullRequestReviewThreadResponse {
     thread?: {
       id?: string;
     };
+  };
+}
+
+export interface GitHubGraphqlPullRequestFilesResponse {
+  repository?: {
+    pullRequest?: {
+      files?: {
+        nodes?: Array<{
+          path?: string | null;
+          viewerViewedState?: GitHubPullRequestFileViewedState | null;
+        } | null>;
+        pageInfo?: {
+          endCursor?: string | null;
+          hasNextPage: boolean;
+        } | null;
+      } | null;
+    } | null;
+  } | null;
+}
+
+export interface GitHubGraphqlMarkFileAsViewedResponse {
+  markFileAsViewed?: {
+    clientMutationId?: string | null;
+  };
+}
+
+export interface GitHubGraphqlUnmarkFileAsViewedResponse {
+  unmarkFileAsViewed?: {
+    clientMutationId?: string | null;
   };
 }
 

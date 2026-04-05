@@ -2,6 +2,7 @@ import type { AppCommand, BuildAppCommandsOptions } from "../registry.ts";
 import { withLeaderKeybind } from "../../shared/constants.ts";
 
 export function buildReviewCommands({
+  bulkReviewedActionsDisabledReason,
   canClearReviewed,
   canMoveToNextUnreviewed,
   clearReviewed,
@@ -12,6 +13,7 @@ export function buildReviewCommands({
   toggleReviewedSelectedFile,
 }: Pick<
   BuildAppCommandsOptions,
+  | "bulkReviewedActionsDisabledReason"
   | "canClearReviewed"
   | "canMoveToNextUnreviewed"
   | "clearReviewed"
@@ -52,8 +54,10 @@ export function buildReviewCommands({
     {
       category: "Review",
       description: "Mark every file in the current comparison as reviewed.",
-      disabledReason: hasFiles ? undefined : "No files are available to review.",
-      enabled: hasFiles,
+      disabledReason:
+        bulkReviewedActionsDisabledReason ??
+        (hasFiles ? undefined : "No files are available to review."),
+      enabled: bulkReviewedActionsDisabledReason == null && hasFiles,
       title: "Mark all reviewed",
       value: "review.mark-all-reviewed",
       run: () => markAllReviewed(),
@@ -61,8 +65,10 @@ export function buildReviewCommands({
     {
       category: "Review",
       description: "Clear the reviewed state from every file in the current comparison.",
-      disabledReason: canClearReviewed ? undefined : "No files are marked reviewed.",
-      enabled: canClearReviewed,
+      disabledReason:
+        bulkReviewedActionsDisabledReason ??
+        (canClearReviewed ? undefined : "No files are marked reviewed."),
+      enabled: bulkReviewedActionsDisabledReason == null && canClearReviewed,
       keybind: withLeaderKeybind("alt+r"),
       title: "Unmark all reviewed",
       value: "review.clear-reviewed",

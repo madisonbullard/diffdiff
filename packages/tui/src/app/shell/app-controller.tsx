@@ -56,6 +56,8 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   const launchActions = createLaunchActions({ actions: sessionActions, persistence, props, state });
   const reviewActions = createReviewActions({
     derived,
+    persistence,
+    props,
     startInteraction: sessionActions.startInteraction,
     state,
   });
@@ -141,6 +143,11 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   }
 
   function openClearReviewedConfirmModal(): void {
+    if (state.session.github != null) {
+      state.setStatusMessage("GitHub PR reviewed state can only be updated one file at a time.");
+      return;
+    }
+
     if (state.reviewedPaths.size === 0) {
       state.setStatusMessage("No files are marked reviewed.");
       return;
@@ -166,6 +173,10 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   const commands = useMemo<AppCommand[]>(
     () =>
       buildAppCommands({
+        bulkReviewedActionsDisabledReason:
+          state.session.github == null
+            ? undefined
+            : "GitHub PR reviewed state can only be updated one file at a time.",
         canClearReviewed: state.reviewedPaths.size > 0,
         canMoveToNextUnreviewed: derived.hasNextUnreviewedFile,
         canOpenSelectedTreeFile: derived.selectedTreeNode?.kind === "file",

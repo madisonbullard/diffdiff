@@ -1,4 +1,7 @@
-import { buildReviewedFileFingerprint } from "@diffdiff/core";
+import {
+  buildReviewedFileFingerprint,
+  getReviewedPathsFromGitHubViewedState,
+} from "@diffdiff/core";
 import type { ReviewCacheState, ReviewedFileState } from "@diffdiff/core";
 import type { FileTreeNode, PreparedReviewSession } from "../../types.ts";
 
@@ -96,6 +99,43 @@ export function buildReviewedFiles(
       ? [{ fingerprint: buildReviewedFileFingerprint(file), path: file.path }]
       : [],
   );
+}
+
+export function getSessionReviewedPaths(
+  session: PreparedReviewSession,
+  cacheState?: Pick<ReviewCacheState, "reviewedFiles" | "reviewedPaths">,
+): Set<string> {
+  if (session.github != null) {
+    return getReviewedPathsFromGitHubViewedState(
+      session.files,
+      session.github.pullRequest.changedFiles,
+    );
+  }
+
+  return restoreReviewedPaths(session.files, cacheState);
+}
+
+export function buildSessionReviewCacheState(
+  session: PreparedReviewSession,
+  reviewedPaths: ReadonlySet<string>,
+  state: Pick<ReviewCacheState, "collapsedPaths" | "commentCollapseStates" | "selectedFilePath">,
+): ReviewCacheState {
+  if (session.github != null) {
+    return {
+      reviewedStateSource: "github",
+      collapsedPaths: state.collapsedPaths,
+      commentCollapseStates: state.commentCollapseStates,
+      selectedFilePath: state.selectedFilePath,
+    };
+  }
+
+  return {
+    reviewedStateSource: "local",
+    reviewedFiles: buildReviewedFiles(session.files, reviewedPaths),
+    collapsedPaths: state.collapsedPaths,
+    commentCollapseStates: state.commentCollapseStates,
+    selectedFilePath: state.selectedFilePath,
+  };
 }
 
 export function restoreReviewedPaths(

@@ -17,6 +17,7 @@ function createPullRequest(
       total: 1,
       ...overrides,
     },
+    changedFiles: {},
     conversationItems: [],
     headRefName: "feature/checks",
     headSha: "abc123",

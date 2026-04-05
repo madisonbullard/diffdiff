@@ -27,6 +27,8 @@ The next implemented slice follows the later decisions made after the original p
 13. Pending review body stays hidden from that modal.
 14. Modal actions are `r` reply and `y` copy focused item URL.
 15. Because PR-level issue comments are flat in GitHub, modal "reply" creates a new top-level PR comment with a quote block referencing the focused item.
+16. Reviewed-file state is source-aware: non-PR diffs use local cache, while PR-backed diffs use GitHub viewed state.
+17. When a comparison becomes PR-backed, any local reviewed-file cache for that comparison is discarded and replaced with a GitHub-sourced cache record that keeps only local UI state.
 
 ### Implemented Changes
 
@@ -50,6 +52,11 @@ The next implemented slice follows the later decisions made after the original p
    inline thread replies,
    and quoted PR-level replies.
 10. Core and TUI tests were expanded to cover the new reply and conversation flows.
+11. `packages/core` now loads GitHub per-file viewed state for pull requests, including GraphQL pagination across all changed files.
+12. `packages/core` now exposes reusable `markFileAsViewed` and `unmarkFileAsViewed` mutations for PR-backed clients.
+13. The review cache now records whether reviewed state comes from local cache or GitHub, and PR-backed saves intentionally omit `reviewedFiles`.
+14. The TUI now restores reviewed state from local cache only for non-PR comparisons; PR-backed sessions rehydrate from GitHub viewed state on startup and reload.
+15. PR mode reviewed toggling now calls GitHub per-file viewed-state mutations, while bulk reviewed actions remain disabled until a dedicated batch-sync workflow exists.
 
 ### Verification
 

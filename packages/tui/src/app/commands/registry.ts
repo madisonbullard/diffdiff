@@ -59,6 +59,7 @@ export function getPaletteCommands(commands: readonly AppCommand[]): AppCommand[
 }
 
 export interface BuildAppCommandsOptions {
+  bulkReviewedActionsDisabledReason?: string;
   canClearReviewed: boolean;
   canMoveToNextUnreviewed: boolean;
   canOpenSelectedTreeFile: boolean;

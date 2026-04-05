@@ -7,7 +7,7 @@ import {
 import { useEffect } from "react";
 import { getStartupTraceNow, summarizeStartupInstrumentation } from "../../startup-tracing.ts";
 import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
-import { buildReviewedFiles } from "../shared/collections.ts";
+import { buildSessionReviewCacheState } from "../shared/collections.ts";
 import type { DiffdiffAppPersistence } from "./use-app-persistence.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import { GITHUB_DIALOGS } from "../shared/constants.ts";
@@ -199,12 +199,11 @@ export function useDiffdiffAppLifecycle({
         base: state.session.comparison.base,
         head: state.session.comparison.head,
       },
-      {
-        reviewedFiles: buildReviewedFiles(state.session.files, state.reviewedPaths),
+      buildSessionReviewCacheState(state.session, state.reviewedPaths, {
         collapsedPaths: [...state.collapsedPaths],
         commentCollapseStates: state.commentCollapseStates,
         selectedFilePath: state.session.files[state.selectedFileIndex]?.path,
-      },
+      }),
     );
   }, [
     persistence.persistenceApi,

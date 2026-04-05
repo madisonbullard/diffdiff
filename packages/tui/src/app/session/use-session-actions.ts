@@ -4,8 +4,8 @@ import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import { getMonotonicNow } from "../layout/preview-helpers.ts";
 import {
   buildReviewedFiles,
+  getSessionReviewedPaths,
   restoreCollapsedPaths,
-  restoreReviewedPaths,
 } from "../shared/collections.ts";
 import type { PendingInteraction } from "../state/app-props.ts";
 import type { PreparedReviewSession } from "../../types.ts";
@@ -71,7 +71,7 @@ export function useSessionActions({
       }
 
       if (options.resetReviewState) {
-        state.setReviewedPaths(restoreReviewedPaths(nextSession.files, options.reviewCacheState));
+        state.setReviewedPaths(getSessionReviewedPaths(nextSession, options.reviewCacheState));
         state.setCollapsedPaths(restoreCollapsedPaths(nextSession.files, options.reviewCacheState));
         state.setCommentCollapseStates(options.reviewCacheState?.commentCollapseStates ?? {});
         state.setSelectedFileIndex(
@@ -86,9 +86,11 @@ export function useSessionActions({
         );
       } else {
         state.setReviewedPaths(
-          restoreReviewedPaths(nextSession.files, {
-            reviewedFiles: buildReviewedFiles(state.session.files, state.reviewedPaths),
-          }),
+          nextSession.github != null
+            ? getSessionReviewedPaths(nextSession)
+            : getSessionReviewedPaths(nextSession, {
+                reviewedFiles: buildReviewedFiles(state.session.files, state.reviewedPaths),
+              }),
         );
       }
       state.setComparisonBrowserData({

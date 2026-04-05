@@ -38,6 +38,10 @@ export {
 export { clearGitHubToken, resolveGitHubAuth, storeGitHubToken } from "./github/auth.ts";
 export { OctokitGitHubClientFactory } from "./github/client.ts";
 export { getGitHubAuthConfigPaths } from "./github/config.ts";
+export {
+  getReviewedPathsFromGitHubViewedState,
+  isGitHubFileViewed,
+} from "./github/file-viewed-state.ts";
 export { GitHubPullRequestService } from "./github/pull-request-service.ts";
 export { loadReviewCache, saveReviewCache } from "./review-cache.ts";
 export {
@@ -56,7 +60,11 @@ export {
   saveDiffdiffPreferences,
 } from "./preferences.ts";
 export { formatHelpText, parseStartupOptions, resolveStartupOptions } from "./startup-options.ts";
-export type { ReviewCacheKey, ReviewCacheState } from "./review-cache.ts";
+export type {
+  ReviewCacheKey,
+  ReviewCacheReviewedStateSource,
+  ReviewCacheState,
+} from "./review-cache.ts";
 export type { ReviewedFileState } from "./reviewed-file-fingerprint.ts";
 export type {
   DiffdiffPreferences,
@@ -70,9 +78,12 @@ export type {
   GitHubMergeMethod,
   GitHubPendingReview,
   GitHubPullRequestChecksSummary,
+  GitHubPullRequestChangedFile,
+  GitHubPullRequestChangedFilesByPath,
   GitHubPullRequestComment,
   GitHubPullRequestConversationItem,
   GitHubPullRequestDetail,
+  GitHubPullRequestFileViewedState,
   GitHubPullRequestMergeRequest,
   GitHubPullRequestMergeResult,
   GitHubPullRequestMergeState,

@@ -377,11 +377,48 @@ describe("GitHubPullRequestService", () => {
     expect(pullRequest.number).toBe(42);
     expect(pullRequest.baseRefName).toBe("main");
     expect(pullRequest.headRefName).toBe("feature/ui");
+    expect(pullRequest.changedFiles["src/app.ts"]).toEqual({
+      path: "src/app.ts",
+      viewedState: "UNVIEWED",
+    });
     expect(
       client.requestMock.mock.calls.filter(
         ([route]) => route === "GET /repos/{owner}/{repo}/pulls/{pull_number}",
       ),
     ).toHaveLength(1);
+  });
+
+  test("loads pull request file viewed state across GraphQL pages", async () => {
+    const client = createGitHubApiClient({
+      pullRequestFilePages: [
+        [{ path: "src/app.ts", viewedState: "VIEWED" }],
+        [{ path: "src/utils.ts", viewedState: "DISMISSED" }],
+      ],
+    });
+    const clientFactory: GitHubClientFactory = {
+      create: vi.fn(async () => client),
+    };
+    const service = new GitHubPullRequestService(clientFactory);
+
+    const pullRequest = await service.loadPullRequest(
+      {
+        forge: "github",
+        host: "github.com",
+        owner: "diffdiff",
+        repo: "diffdiff",
+      },
+      42,
+    );
+
+    expect(pullRequest.changedFiles).toEqual({
+      "src/app.ts": { path: "src/app.ts", viewedState: "VIEWED" },
+      "src/utils.ts": { path: "src/utils.ts", viewedState: "DISMISSED" },
+    });
+    expect(
+      client.graphqlMock.mock.calls.filter(([query]) =>
+        String(query).includes("query PullRequestChangedFiles"),
+      ),
+    ).toHaveLength(2);
   });
 
   test("attaches active pull request review data to a review session", async () => {
@@ -596,6 +633,50 @@ describe("GitHubPullRequestService", () => {
     );
   });
 
+  test("marks a pull request file as viewed through GraphQL", async () => {
+    mockRemoteTrackingRefs("refs/remotes/origin/main", "refs/remotes/origin/feature/ui");
+    const client = createGitHubApiClient();
+    const clientFactory: GitHubClientFactory = {
+      create: vi.fn(async () => client),
+    };
+    const service = new GitHubPullRequestService(clientFactory);
+    const session = await service.attachReviewSession(createReviewSession());
+
+    await service.markFileAsViewed(session.github!, "src/app.ts");
+
+    expect(client.graphqlMock).toHaveBeenCalledWith(
+      expect.stringContaining("mutation MarkFileAsViewed"),
+      expect.objectContaining({
+        input: {
+          path: "src/app.ts",
+          pullRequestId: "PR_node_42",
+        },
+      }),
+    );
+  });
+
+  test("unmarks a pull request file as viewed through GraphQL", async () => {
+    mockRemoteTrackingRefs("refs/remotes/origin/main", "refs/remotes/origin/feature/ui");
+    const client = createGitHubApiClient();
+    const clientFactory: GitHubClientFactory = {
+      create: vi.fn(async () => client),
+    };
+    const service = new GitHubPullRequestService(clientFactory);
+    const session = await service.attachReviewSession(createReviewSession());
+
+    await service.unmarkFileAsViewed(session.github!, "src/app.ts");
+
+    expect(client.graphqlMock).toHaveBeenCalledWith(
+      expect.stringContaining("mutation UnmarkFileAsViewed"),
+      expect.objectContaining({
+        input: {
+          path: "src/app.ts",
+          pullRequestId: "PR_node_42",
+        },
+      }),
+    );
+  });
+
   test("merges a pull request, refreshes refs, and suggests cleanup for deleted branch refs", async () => {
     const client = createGitHubApiClient();
     const clientFactory: GitHubClientFactory = {
@@ -701,6 +782,12 @@ function createGitHubApiClient(
     checkRuns?: Array<{ conclusion: string | null; status: string }>;
     combinedStatusState?: string;
     commentPath?: string;
+    pullRequestFilePages?: Array<
+      Array<{
+        path: string;
+        viewedState: "VIEWED" | "UNVIEWED" | "DISMISSED";
+      }>
+    >;
     searchPullRequests?: {
       authored?: Array<{
         draft?: boolean;
@@ -732,8 +819,50 @@ function createGitHubApiClient(
   const checkRuns = options.checkRuns ?? [{ conclusion: "success", status: "completed" }];
   const combinedStatusState = options.combinedStatusState ?? "success";
   const commentPath = options.commentPath ?? "src/app.ts";
+  const pullRequestFilePages = options.pullRequestFilePages ?? [
+    [{ path: commentPath, viewedState: "UNVIEWED" }],
+  ];
   const searchPullRequests = options.searchPullRequests ?? {};
-  const graphql = vi.fn(async () => ({ addPullRequestReviewThread: { thread: { id: "PRRT_1" } } }));
+  const graphql = vi.fn(async (query: unknown, parameters: Record<string, unknown>) => {
+    const queryText = String(query);
+
+    if (queryText.includes("query PullRequestChangedFiles")) {
+      const pageIndex = parameters.after == null ? 0 : Number(parameters.after);
+      const page = pullRequestFilePages[pageIndex] ?? [];
+
+      return {
+        repository: {
+          pullRequest: {
+            files: {
+              nodes: page.map((file) => ({
+                path: file.path,
+                viewerViewedState: file.viewedState,
+              })),
+              pageInfo: {
+                endCursor:
+                  pageIndex < pullRequestFilePages.length - 1 ? String(pageIndex + 1) : null,
+                hasNextPage: pageIndex < pullRequestFilePages.length - 1,
+              },
+            },
+          },
+        },
+      };
+    }
+
+    if (queryText.includes("mutation AddPullRequestReviewThread")) {
+      return { addPullRequestReviewThread: { thread: { id: "PRRT_1" } } };
+    }
+
+    if (queryText.includes("mutation MarkFileAsViewed")) {
+      return { markFileAsViewed: { clientMutationId: null } };
+    }
+
+    if (queryText.includes("mutation UnmarkFileAsViewed")) {
+      return { unmarkFileAsViewed: { clientMutationId: null } };
+    }
+
+    return {};
+  });
   const request = vi.fn(async (route) => {
     if (route === "GET /repos/{owner}/{repo}/pulls/{pull_number}") {
       return {

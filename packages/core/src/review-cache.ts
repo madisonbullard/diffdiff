@@ -7,7 +7,10 @@ import type { ReviewedFileState } from "./reviewed-file-fingerprint.ts";
 
 const DEFAULT_CACHE_DIRECTORY = join(homedir(), ".diffdiff", "review-cache");
 
+export type ReviewCacheReviewedStateSource = "local" | "github";
+
 export interface ReviewCacheState {
+  reviewedStateSource?: ReviewCacheReviewedStateSource;
   reviewedFiles?: ReviewedFileState[];
   reviewedPaths?: string[];
   collapsedPaths: string[];
@@ -26,6 +29,53 @@ export interface ReviewCacheKey {
   repositoryRootPath: string;
   base: string;
   head: string;
+}
+
+function getReviewedStateSource(
+  state: Pick<ReviewCacheState, "reviewedFiles" | "reviewedPaths" | "reviewedStateSource">,
+): ReviewCacheReviewedStateSource | undefined {
+  if (state.reviewedStateSource != null) {
+    return state.reviewedStateSource;
+  }
+
+  return state.reviewedFiles != null || state.reviewedPaths != null ? "local" : undefined;
+}
+
+function getLoadedReviewCacheState(record: ReviewCacheRecord): ReviewCacheState {
+  const reviewedStateSource = getReviewedStateSource(record);
+  const nextState: ReviewCacheState = {
+    reviewedStateSource,
+    collapsedPaths: record.collapsedPaths,
+    commentCollapseStates: record.commentCollapseStates,
+    selectedFilePath: record.selectedFilePath,
+  };
+
+  if (reviewedStateSource === "github") {
+    return nextState;
+  }
+
+  return {
+    ...nextState,
+    reviewedFiles: record.reviewedFiles,
+    reviewedPaths: record.reviewedPaths,
+  };
+}
+
+function getReviewCacheRecord(key: ReviewCacheKey, state: ReviewCacheState): ReviewCacheRecord {
+  const reviewedStateSource = getReviewedStateSource(state);
+
+  return {
+    repositoryRootPath: key.repositoryRootPath,
+    base: key.base,
+    head: key.head,
+    reviewedStateSource,
+    reviewedFiles: reviewedStateSource === "github" ? undefined : state.reviewedFiles,
+    reviewedPaths: reviewedStateSource === "github" ? undefined : state.reviewedPaths,
+    collapsedPaths: state.collapsedPaths,
+    commentCollapseStates: state.commentCollapseStates,
+    selectedFilePath: state.selectedFilePath,
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 function buildCacheFileName(key: ReviewCacheKey): string {
@@ -68,17 +118,15 @@ export async function loadReviewCache(
       commentCollapseStateCount: Object.keys(record.commentCollapseStates ?? {}).length,
       head: key.head,
       repositoryRootPath: key.repositoryRootPath,
-      reviewedPathCount: record.reviewedFiles?.length ?? record.reviewedPaths?.length ?? 0,
+      reviewedPathCount:
+        getReviewedStateSource(record) === "github"
+          ? 0
+          : (record.reviewedFiles?.length ?? record.reviewedPaths?.length ?? 0),
+      reviewedStateSource: getReviewedStateSource(record),
       selectedFilePath: record.selectedFilePath,
     });
 
-    return {
-      reviewedFiles: record.reviewedFiles,
-      reviewedPaths: record.reviewedPaths,
-      collapsedPaths: record.collapsedPaths,
-      commentCollapseStates: record.commentCollapseStates,
-      selectedFilePath: record.selectedFilePath,
-    };
+    return getLoadedReviewCacheState(record);
   } catch {
     return undefined;
   }
@@ -90,17 +138,7 @@ export async function saveReviewCache(
   cacheDirectoryPath = DEFAULT_CACHE_DIRECTORY,
 ): Promise<void> {
   const filePath = join(cacheDirectoryPath, buildCacheFileName(key));
-
-  const record: ReviewCacheRecord = {
-    repositoryRootPath: key.repositoryRootPath,
-    base: key.base,
-    head: key.head,
-    reviewedFiles: state.reviewedFiles,
-    collapsedPaths: state.collapsedPaths,
-    commentCollapseStates: state.commentCollapseStates,
-    selectedFilePath: state.selectedFilePath,
-    updatedAt: new Date().toISOString(),
-  };
+  const record = getReviewCacheRecord(key, state);
 
   try {
     await mkdir(cacheDirectoryPath, { recursive: true });
@@ -111,7 +149,11 @@ export async function saveReviewCache(
       commentCollapseStateCount: Object.keys(state.commentCollapseStates ?? {}).length,
       head: key.head,
       repositoryRootPath: key.repositoryRootPath,
-      reviewedPathCount: state.reviewedFiles?.length ?? state.reviewedPaths?.length ?? 0,
+      reviewedPathCount:
+        record.reviewedStateSource === "github"
+          ? 0
+          : (state.reviewedFiles?.length ?? state.reviewedPaths?.length ?? 0),
+      reviewedStateSource: record.reviewedStateSource,
       selectedFilePath: state.selectedFilePath,
     });
   } catch (error) {

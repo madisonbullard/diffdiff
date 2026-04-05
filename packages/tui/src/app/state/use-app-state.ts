@@ -14,7 +14,7 @@ import {
   type AppDialogStackEntry,
 } from "../dialogs/stack.ts";
 import { createKeybindController } from "../keybind-controller.ts";
-import { restoreCollapsedPaths, restoreReviewedPaths } from "../shared/collections.ts";
+import { getSessionReviewedPaths, restoreCollapsedPaths } from "../shared/collections.ts";
 import type {
   DiffdiffAppProps,
   DiffViewportMetrics,
@@ -88,7 +88,7 @@ export function useDiffdiffAppState({
         ),
   );
   const [reviewedPaths, setReviewedPaths] = useState<Set<string>>(() =>
-    restoreReviewedPaths(initialSession.files, initialReviewCache),
+    getSessionReviewedPaths(initialSession, initialReviewCache),
   );
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() =>
     restoreCollapsedPaths(initialSession.files, initialReviewCache),

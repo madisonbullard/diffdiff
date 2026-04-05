@@ -41,6 +41,7 @@ export interface DiffdiffAppProps {
   loadSessionDiagnostics?: (logFilePath: string) => Promise<SessionDiagnosticEvent[]>;
   loadSession: (options: LaunchOptions) => Promise<PreparedReviewSession>;
   logFilePath?: string;
+  markFileAsViewed?: (reviewSession: GitHubReviewSession, path: string) => Promise<void>;
   mergePullRequest?: (
     reviewSession: GitHubReviewSession,
     input: GitHubPullRequestMergeRequest,
@@ -66,6 +67,7 @@ export interface DiffdiffAppProps {
   syncRemotes?: (repositoryRootPath: string) => Promise<unknown>;
   syntaxStyle: SyntaxStyle;
   theme: UiTheme;
+  unmarkFileAsViewed?: (reviewSession: GitHubReviewSession, path: string) => Promise<void>;
 }
 
 export type MergeModalField = "method" | "title" | "body";

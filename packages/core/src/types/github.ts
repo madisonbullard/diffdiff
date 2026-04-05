@@ -145,6 +145,15 @@ export interface GitHubPullRequestChecksSummary {
   pending: number;
 }
 
+export type GitHubPullRequestFileViewedState = "VIEWED" | "UNVIEWED" | "DISMISSED";
+
+export interface GitHubPullRequestChangedFile {
+  path: string;
+  viewedState: GitHubPullRequestFileViewedState;
+}
+
+export type GitHubPullRequestChangedFilesByPath = Record<string, GitHubPullRequestChangedFile>;
+
 export interface GitHubPullRequestMergeState {
   canMerge: boolean;
   isDraft: boolean;
@@ -178,6 +187,7 @@ export interface GitHubPullRequestDetail extends PullRequestInfo {
   author: GitHubActor;
   body?: string;
   checks: GitHubPullRequestChecksSummary;
+  changedFiles: GitHubPullRequestChangedFilesByPath;
   conversationItems: GitHubPullRequestConversationItem[];
   headSha: string;
   isDraft: boolean;

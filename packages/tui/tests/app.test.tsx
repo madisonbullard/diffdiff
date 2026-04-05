@@ -1771,6 +1771,177 @@ test("keeps reviewed files across refresh when their diffs are unchanged", async
   expect(getAppText(tree)).not.toContain("2 / 2 reviewed");
 });
 
+test("uses GitHub viewed state instead of stale cached reviewed files for PR sessions", () => {
+  const files = [createPreparedFile(), createPreparedFile({ path: "src/utils.ts" })];
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialReviewCache: {
+          reviewedFiles: files.map((file) => ({
+            fingerprint: buildReviewedFileFingerprint(file),
+            path: file.path,
+          })),
+          collapsedPaths: [],
+        },
+        initialSession: createPreparedSession({
+          files,
+          github: createGitHubReviewSession({
+            pullRequest: {
+              ...createGitHubReviewSession().pullRequest,
+              changedFiles: createGitHubChangedFilesByPath({
+                "src/app.ts": "VIEWED",
+                "src/utils.ts": "UNVIEWED",
+              }),
+            },
+          }),
+        }),
+      })}
+    />,
+  );
+
+  expect(getAppText(tree)).toContain("1 / 2 reviewed");
+  expect(getAppText(tree)).not.toContain("2 / 2 reviewed");
+});
+
+test("replaces local reviewed state with GitHub viewed state when refresh becomes PR-backed", async () => {
+  const initialSession = createPreparedSession();
+  const nextSession = createPreparedSession({
+    github: createGitHubReviewSession({
+      pullRequest: {
+        ...createGitHubReviewSession().pullRequest,
+        changedFiles: createGitHubChangedFilesByPath({
+          "src/app.ts": "VIEWED",
+          "src/utils.ts": "UNVIEWED",
+        }),
+      },
+    }),
+  });
+  const loadSession = vi.fn(async () => nextSession);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession,
+        loadSession,
+        syncRemotes: vi.fn(async () => undefined),
+      })}
+    />,
+  );
+
+  emitKey({ name: "r", sequence: "r" });
+  emitKey({ name: "r", sequence: "r" });
+  expect(getAppText(tree)).toContain("2 / 2 reviewed");
+
+  await emitAsyncKey({ name: "r", sequence: "R", shift: true });
+
+  expect(getAppText(tree)).toContain("1 / 2 reviewed");
+  expect(getAppText(tree)).not.toContain("2 / 2 reviewed");
+});
+
+test("updates PR reviewed state through the GitHub viewed-file flow", async () => {
+  const markFileAsViewed = vi.fn(async () => undefined);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({
+          github: createGitHubReviewSession({
+            pullRequest: {
+              ...createGitHubReviewSession().pullRequest,
+              changedFiles: createGitHubChangedFilesByPath({
+                "src/app.ts": "UNVIEWED",
+                "src/utils.ts": "UNVIEWED",
+              }),
+            },
+          }),
+        }),
+        markFileAsViewed,
+      })}
+    />,
+  );
+
+  emitKey({ ctrl: true, name: "x" });
+  await emitAsyncKey({ name: "r", sequence: "r" });
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(markFileAsViewed).toHaveBeenCalledWith(expect.any(Object), "src/app.ts");
+  expect(getAppText(tree)).toContain("1 / 2 reviewed");
+});
+
+test("does not save reviewed files back into the cache for PR sessions", async () => {
+  const saveReviewCacheSpy = vi.spyOn(diffdiffCore, "saveReviewCache").mockResolvedValue(undefined);
+  const onExit = vi.fn();
+  render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({
+          github: createGitHubReviewSession({
+            pullRequest: {
+              ...createGitHubReviewSession().pullRequest,
+              changedFiles: createGitHubChangedFilesByPath({
+                "src/app.ts": "VIEWED",
+                "src/utils.ts": "UNVIEWED",
+              }),
+            },
+          }),
+        }),
+        onExit,
+      })}
+    />,
+  );
+
+  await emitAsyncKey({ ctrl: true, name: "x" });
+  await emitAsyncKey({ name: "q", sequence: "q" });
+
+  const githubSaveReviewCacheCall = saveReviewCacheSpy.mock.calls.find(
+    ([key, value]) =>
+      key.repositoryRootPath === "/tmp/diffdiff" &&
+      key.base === "origin/main" &&
+      key.head === "feature/tui" &&
+      value.reviewedStateSource === "github",
+  );
+
+  expect(githubSaveReviewCacheCall?.[0]).toEqual({
+    repositoryRootPath: "/tmp/diffdiff",
+    base: "origin/main",
+    head: "feature/tui",
+  });
+  expect(githubSaveReviewCacheCall?.[1]).toMatchObject({
+    reviewedStateSource: "github",
+  });
+  expect(githubSaveReviewCacheCall?.[1]?.reviewedFiles).toBeUndefined();
+  expect(onExit).toHaveBeenCalledTimes(1);
+});
+
+test("shows PR bulk reviewed actions as disabled in the command palette", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({
+          github: createGitHubReviewSession({
+            pullRequest: {
+              ...createGitHubReviewSession().pullRequest,
+              changedFiles: createGitHubChangedFilesByPath({
+                "src/app.ts": "VIEWED",
+                "src/utils.ts": "UNVIEWED",
+              }),
+            },
+          }),
+        }),
+      })}
+    />,
+  );
+
+  emitKey({ ctrl: true, name: "p" });
+  emitText("reviewed");
+
+  expect(getAppText(tree)).toContain("Mark all reviewed");
+  expect(getAppText(tree)).toContain("Unmark all reviewed");
+  expect(getAppText(tree)).toContain(
+    "GitHub PR reviewed state can only be updated one file at a time.",
+  );
+});
+
 test("opens PR review mode from the list modal", () => {
   const loadSession = vi.fn(async () =>
     createPreparedSession({ github: createGitHubReviewSession() }),
@@ -2533,6 +2704,7 @@ function createAppProps(overrides: Partial<DiffdiffAppProps> = {}): DiffdiffAppP
     })),
     loadSession: vi.fn(async () => initialSession),
     logFilePath: "/Users/test/.diffdiff/logs/log-test.jsonl",
+    markFileAsViewed: vi.fn(async () => undefined),
     mergePullRequest: async () => ({
       cleanupCandidates: [],
       deletedRemoteRefs: [],
@@ -2547,8 +2719,17 @@ function createAppProps(overrides: Partial<DiffdiffAppProps> = {}): DiffdiffAppP
     syncRemotes: vi.fn(async () => undefined),
     syntaxStyle,
     theme,
+    unmarkFileAsViewed: vi.fn(async () => undefined),
     ...overrides,
   };
+}
+
+function createGitHubChangedFilesByPath(
+  viewedStatesByPath: Record<string, "VIEWED" | "UNVIEWED" | "DISMISSED">,
+) {
+  return Object.fromEntries(
+    Object.entries(viewedStatesByPath).map(([path, viewedState]) => [path, { path, viewedState }]),
+  );
 }
 
 function createGitHubPreferences(
@@ -2726,6 +2907,10 @@ function createGitHubReviewSession(
         successful: 1,
         total: 1,
       },
+      changedFiles: createGitHubChangedFilesByPath({
+        "src/app.ts": "UNVIEWED",
+        "src/utils.ts": "UNVIEWED",
+      }),
       conversationItems: [
         {
           author: {

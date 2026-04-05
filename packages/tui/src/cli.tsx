@@ -297,6 +297,9 @@ async function launchTui(options: LaunchOptions): Promise<void> {
         }}
         loadSession={loadSession}
         logFilePath={logSession?.logFilePath}
+        markFileAsViewed={(reviewSession, path) =>
+          gitHubPullRequestService.markFileAsViewed(reviewSession, path)
+        }
         mergePullRequest={(reviewSession, input) =>
           gitHubPullRequestService.mergePullRequest(reviewSession, input)
         }
@@ -331,6 +334,9 @@ async function launchTui(options: LaunchOptions): Promise<void> {
         }
         syntaxStyle={syntaxStyle}
         theme={theme}
+        unmarkFileAsViewed={(reviewSession, path) =>
+          gitHubPullRequestService.unmarkFileAsViewed(reviewSession, path)
+        }
       />,
     );
 
