@@ -1461,6 +1461,36 @@ test("shows a files changed header indicator until refresh reloads the session",
   expect(getAppText(tree)).not.toContain("1 file changed");
 });
 
+test("keeps the PR refresh badge visible after an auto-refresh probe until the session changes", async () => {
+  vi.useFakeTimers();
+  const probeFreshness = vi.fn(async () => ({
+    comparisonSummary: undefined,
+    hasComparisonUpdates: true,
+    hasGitHubUpdates: true,
+    nextBaseSha: "fedcba9",
+    nextHeadSha: "7654321",
+  }));
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        loadComparisonBrowserData: undefined,
+        probeFreshness,
+      })}
+    />,
+  );
+
+  expect(tree.root.findAll((node) => node.props.label === "updates + PR")).toHaveLength(0);
+
+  await act(async () => {
+    vi.advanceTimersByTime(5_000);
+    await Promise.resolve();
+  });
+
+  expect(probeFreshness).toHaveBeenCalledTimes(1);
+  expect(tree.root.findAll((node) => node.props.label === "updates + PR")).toHaveLength(1);
+});
+
 test("preserves the selected file scroll position when refreshing", async () => {
   const scrollboxes: ReturnType<typeof createMockScrollbox>[] = [];
   const fileCardYs = [10, 110, 15, 115];

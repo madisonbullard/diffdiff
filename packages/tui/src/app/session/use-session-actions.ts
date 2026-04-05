@@ -98,6 +98,7 @@ export function useSessionActions({
         commits: nextSession.commits,
         workingTreeSummary: nextSession.workingTreeSummary,
       });
+      state.setRefreshIndicatorLabel(null);
       state.setSession(nextSession);
     },
     [getFileTopOffsets, state],

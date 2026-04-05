@@ -194,14 +194,6 @@ export function useDiffdiffAppRefresh({ actions, persistence, props, state }: Us
     };
   }, [checkForUpdates, state.renderer, state.terminalFocusedRef, syncGitStateOnFocus]);
 
-  useEffect(() => {
-    if (state.refreshIndicatorLabel == null) {
-      return;
-    }
-
-    state.setRefreshIndicatorLabel(null);
-  }, [state.refreshIndicatorLabel, state.session, state.setRefreshIndicatorLabel]);
-
   return {
     checkForUpdates,
     refreshComparison: () => {
