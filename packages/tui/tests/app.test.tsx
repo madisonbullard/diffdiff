@@ -2111,6 +2111,37 @@ test("renders the PR banner flush with the header", () => {
   expect(prBanner.findAll((node) => String(node.type) === "text")).toHaveLength(1);
 });
 
+test("renders header warnings after the PR banner", () => {
+  const warningMessage = "base commit differs from the PR base";
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({
+          github: createGitHubReviewSession(),
+          warnings: [{ code: "base-ref-mismatch", message: warningMessage }],
+        }),
+      })}
+    />,
+  );
+
+  const header = tree.root.find(
+    (node) =>
+      String(node.type) === "box" &&
+      node.props.backgroundColor === theme.chromeBackground &&
+      node.props.paddingX === 2 &&
+      node.props.flexDirection === "column",
+  );
+  const headerLines = header.children
+    .filter((child): child is ReactTestInstance => typeof child !== "string")
+    .map((child) => collectInstanceText(child))
+    .filter((line) => line.length > 0);
+
+  expect(headerLines).toHaveLength(3);
+  expect(headerLines[1]).toContain("#42");
+  expect(headerLines[1]).toContain("Build TUI reviewer");
+  expect(headerLines[2]).toBe(`warning ${warningMessage}`);
+});
+
 test("uses the draft PR tag instead of a separate draft status", () => {
   const tree = render(
     <DiffdiffApp

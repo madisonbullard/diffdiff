@@ -57,14 +57,14 @@ export function AppHeader({
           <span fg={theme.accent} bg={theme.surfaceMuted}>{` ${currentBranchLabel} `}</span>
         </text>
       </box>
+      {session.github != null ? (
+        <PullRequestBanner pullRequest={session.github.pullRequest} theme={theme} />
+      ) : null}
       {session.warnings[0] != null ? (
         <text fg={theme.warning} wrapMode="none">
           <span>{"warning "}</span>
           <span>{session.warnings[0].message}</span>
         </text>
-      ) : null}
-      {session.github != null ? (
-        <PullRequestBanner pullRequest={session.github.pullRequest} theme={theme} />
       ) : null}
     </box>
   );
