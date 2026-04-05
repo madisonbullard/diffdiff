@@ -242,6 +242,21 @@ test("runs leader key commands with ctrl+x", () => {
   expect(getAppText(tree)).toContain("Working tree");
 });
 
+test("opens the modal picker with space and launches a modal with one key", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ name: "space", sequence: " " });
+
+  expect(getAppText(tree)).toContain("Modal picker active");
+  expect(getAppText(tree)).toContain("Modal Picker");
+  expect(getAppText(tree)).toContain("Open comparison list");
+
+  emitKey({ name: "l", sequence: "l" });
+
+  expect(getAppText(tree)).toContain("Opened list modal.");
+  expect(getAppText(tree)).toContain("Working tree");
+});
+
 test("opens the GitHub PR list on launch when requested", async () => {
   const tree = render(
     <DiffdiffApp

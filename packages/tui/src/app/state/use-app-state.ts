@@ -145,6 +145,7 @@ export function useDiffdiffAppState({
   const [isSubmittingReviewAction, setIsSubmittingReviewAction] = useState(false);
   const [leaderActive, setLeaderActive] = useState(false);
   const [refreshIndicatorLabel, setRefreshIndicatorLabel] = useState<string | null>(null);
+  const [modalPickerActive, setModalPickerActive] = useState(false);
   const [diffViewPreference, setDiffViewPreference] = useState<DiffViewPreference>("unified");
   const [mergeCommitMessage, setMergeCommitMessage] = useState("");
   const [mergeCommitTitle, setMergeCommitTitle] = useState("");
@@ -208,6 +209,7 @@ export function useDiffdiffAppState({
       createKeybindController({
         getFocusedRenderable: () => renderer.currentFocusedRenderable,
         onLeaderActiveChange: setLeaderActive,
+        onModalPickerActiveChange: setModalPickerActive,
         onStatusMessage: setStatusMessage,
       }),
     [renderer],
@@ -252,6 +254,7 @@ export function useDiffdiffAppState({
     latestSessionLoadIdRef,
     leaderActive,
     loadingIndicatorFrame,
+    modalPickerActive,
     mergeBodyScrollRef,
     mergeCommitMessage,
     mergeCommitTitle,
@@ -316,6 +319,7 @@ export function useDiffdiffAppState({
     setIsSubmittingReviewAction,
     setLeaderActive,
     setLoadingIndicatorFrame,
+    setModalPickerActive,
     setMergeCommitMessage,
     setMergeCommitTitle,
     setMergeConfirmOpen,

@@ -9,7 +9,9 @@ import { FileCard, StickyFileHeader } from "../src/components/file-card.tsx";
 import { FileTreeSidebar } from "../src/components/file-tree-sidebar.tsx";
 import { HelpModal } from "../src/components/help-modal.tsx";
 import { ListFilterModal } from "../src/components/list-filter-modal.tsx";
+import { ModalPickerOverlay } from "../src/components/modal-picker-overlay.tsx";
 import { PullRequestListModal } from "../src/components/pull-request-list-modal.tsx";
+import type { ModalPickerCommand } from "../src/app/commands/modal-picker.ts";
 import { getUiTheme } from "../src/theme.ts";
 import type { CommandDefinition } from "../src/commands.ts";
 import type { BranchListFilters, PreparedReviewFile } from "../src/types.ts";
@@ -498,7 +500,8 @@ test("renders empty branch columns and help copy", () => {
     },
     {
       category: "Comparison",
-      keybind: "<leader>l,l",
+      keybind: "l,<leader>l",
+      modalKeybind: "l",
       title: "Open comparison list",
       value: "comparison.list",
     },
@@ -517,7 +520,7 @@ test("renders empty branch columns and help copy", () => {
     },
     {
       category: "View",
-      keybind: "return,right,space",
+      keybind: "return,right",
       keybindingContexts: ["tree"] as const,
       title: "Open selected file",
       value: "view.open-selected-file",
@@ -531,6 +534,7 @@ test("renders empty branch columns and help copy", () => {
   expect(collectText(branchModal.toJSON())).toContain("ACTIVE");
   expect(collectText(filterModal.toJSON())).toContain("Remote branches");
   expect(collectText(helpModal.toJSON())).toContain("ctrl+p");
+  expect(collectText(helpModal.toJSON())).toContain("space l / l");
   expect(collectText(helpModal.toJSON())).toContain("ctrl+x");
   expect(collectText(helpModal.toJSON())).toContain("open comparison list");
   expect(collectText(helpModal.toJSON())).toContain("copy PR URL");
@@ -539,6 +543,42 @@ test("renders empty branch columns and help copy", () => {
   expect(collectText(helpModal.toJSON())).toContain("Tree Pane");
   expect(collectText(helpModal.toJSON())).toContain("toggle reviewed");
   expect(collectText(helpModal.toJSON())).toContain("open selected file");
+});
+
+test("renders a compact modal picker overlay", () => {
+  const commands: ModalPickerCommand[] = [
+    {
+      command: {
+        category: "Comparison",
+        keybind: "l,<leader>l",
+        modalKeybind: "l",
+        run: () => undefined,
+        title: "Open comparison list",
+        value: "comparison.list",
+      },
+      keybind: "l",
+      label: "l",
+    },
+    {
+      command: {
+        category: "System",
+        enabled: false,
+        modalKeybind: "d",
+        run: () => undefined,
+        title: "Open diagnostics",
+        value: "system.diagnostics",
+      },
+      keybind: "d",
+      label: "d",
+    },
+  ];
+
+  const overlay = render(<ModalPickerOverlay commands={commands} theme={theme} />);
+
+  expect(collectText(overlay.toJSON())).toContain("Modal Picker");
+  expect(collectText(overlay.toJSON())).toContain("Press a key to open a modal.");
+  expect(collectText(overlay.toJSON())).toContain("Open comparison list");
+  expect(collectText(overlay.toJSON())).toContain("Open diagnostics");
 });
 
 test("groups suggested commands under a dedicated heading in the palette", () => {
@@ -559,7 +599,7 @@ test("groups suggested commands under a dedicated heading in the palette", () =>
     },
     {
       category: "Comparison",
-      keybind: "<leader>l,l",
+      keybind: "l,<leader>l",
       title: "Open comparison list",
       value: "comparison.list",
     },

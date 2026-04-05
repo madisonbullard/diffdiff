@@ -1,4 +1,4 @@
-import { formatCommandKeybind, type CommandDefinition } from "../commands.ts";
+import { formatCommandShortcuts, type CommandDefinition } from "../commands.ts";
 import type { UiTheme } from "../theme.ts";
 import { KeyCap, ModalFrame, SPLIT_BORDER, selectItem } from "./shared.tsx";
 
@@ -129,7 +129,7 @@ export function CommandPaletteModal({
                       ) : null}
                     </box>
                     <text fg={detail} wrapMode="none">
-                      {formatCommandKeybind(command.keybind, leaderKeybind) ?? ""}
+                      {formatCommandShortcuts(command, leaderKeybind) ?? ""}
                     </text>
                   </box>
                 </box>

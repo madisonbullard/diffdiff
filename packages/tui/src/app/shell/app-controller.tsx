@@ -3,6 +3,7 @@ import { copySelection } from "../../selection-copy.ts";
 import { useCallback, useEffect, useMemo } from "react";
 import { logDiffdiffError, syncGitRemotes } from "@diffdiff/core";
 import { buildAppCommands, getPaletteCommands, type AppCommand } from "../commands/registry.ts";
+import { findModalPickerCommandByKey, getModalPickerCommands } from "../commands/modal-picker.ts";
 import { filterCommands, formatCommandKeybind } from "../../commands.ts";
 import { useSessionDiagnostics } from "../diagnostics/use-session-diagnostics.ts";
 import {
@@ -233,6 +234,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       treeActions,
     ],
   );
+  const modalPickerCommands = useMemo(() => getModalPickerCommands(commands), [commands]);
   const filteredCommands = useMemo(
     () => filterCommands(getPaletteCommands(commands), state.commandQuery),
     [commands, state.commandQuery],
@@ -293,6 +295,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         commitSearchActive: state.commitSearchActive,
         hasSelectedReviewThread: derived.hasThreadKeymap,
         leaderActive: false,
+        modalPickerActive: false,
         mergeConfirmOpen: state.mergeConfirmOpen,
         mergeModalField: state.mergeModalField,
         pullRequestSearchActive: state.pullRequestSearchActive,
@@ -308,7 +311,11 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       state.pullRequestSearchActive,
     ],
   );
-  const displayKeymapMode = state.leaderActive ? "leader" : activeKeymapMode;
+  const displayKeymapMode = state.modalPickerActive
+    ? "modal-picker"
+    : state.leaderActive
+      ? "leader"
+      : activeKeymapMode;
   const footerModeBadge = useMemo(
     () => getKeymapModeBadge(displayKeymapMode, props.theme),
     [displayKeymapMode, props.theme],
@@ -329,7 +336,10 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
           ? props.theme.danger
           : state.toastMessage != null
             ? props.theme.success
-            : state.baseBranchLoadingMessage != null || state.isReloading || state.leaderActive
+            : state.baseBranchLoadingMessage != null ||
+                state.isReloading ||
+                state.leaderActive ||
+                state.modalPickerActive
               ? props.theme.accent
               : props.theme.textMuted,
       message:
@@ -347,6 +357,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       state.isReloading,
       state.leaderActive,
       state.loadingIndicatorFrame,
+      state.modalPickerActive,
       state.statusMessage,
       state.toastMessage,
     ],
@@ -369,6 +380,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     derived,
     dismissErrorToast: persistence.persistenceApi.dismissErrorToast,
     findCommandByKey: listHandlers.findCommandByKey,
+    findModalPickerCommandByKey: (key) => findModalPickerCommandByKey(modalPickerCommands, key),
     handleBranchModalKey: listHandlers.handleBranchModalKey,
     handleClearReviewedModalKey: reviewModalHandlers.handleClearReviewedModalKey,
     handleCleanupModalKey: reviewModalHandlers.handleCleanupModalKey,
@@ -456,6 +468,8 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       mergeCommitTitle={state.mergeCommitTitle}
       mergeMethod={state.mergeMethod}
       mergeModalField={state.mergeModalField}
+      modalPickerActive={state.modalPickerActive}
+      modalPickerCommands={modalPickerCommands}
       onMouseUp={() =>
         copySelection(state.renderer, {
           onSuccess: () => persistence.persistenceApi.showToast("Copied to clipboard"),

@@ -196,7 +196,7 @@ export function createTreeActions({ derived, startInteraction, state }: CreateTr
       return true;
     }
 
-    if (key.name === "return" || key.name === "space") {
+    if (key.name === "return") {
       if (currentNode.kind === "directory") {
         setFileTreeDirectoryCollapsed(
           currentNode.path,

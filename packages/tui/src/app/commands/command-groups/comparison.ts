@@ -18,6 +18,7 @@ export function buildComparisonCommands({
       category: "Comparison",
       description: "Browse the working tree, branches, PRs, and commits.",
       keybind: withLeaderKeybind("l"),
+      modalKeybind: "l",
       suggested: true,
       title: "Open comparison list",
       value: "comparison.list",

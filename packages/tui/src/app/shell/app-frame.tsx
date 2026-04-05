@@ -8,8 +8,10 @@ import type {
 import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
 import type { MutableRefObject } from "react";
 import type { FileCardPreviewViewport } from "../../components/file-card.tsx";
+import { ModalPickerOverlay } from "../../components/modal-picker-overlay.tsx";
 import type { SessionDiagnosticEvent } from "../diagnostics/session-events.ts";
 import type { AppCommand } from "../commands/registry.ts";
+import type { ModalPickerCommand } from "../commands/modal-picker.ts";
 import { DiffdiffAppDialogs } from "../dialogs/dialog-router.tsx";
 import { AppDiffPane } from "./app-diff-pane.tsx";
 import { AppFooter } from "./app-footer.tsx";
@@ -79,6 +81,8 @@ interface DiffdiffAppViewProps {
   mergeCommitTitle: string;
   mergeMethod: GitHubMergeMethod | undefined;
   mergeModalField: "method" | "title" | "body";
+  modalPickerActive: boolean;
+  modalPickerCommands: readonly ModalPickerCommand[];
   onMouseUp: () => void;
   openPrCount: number;
   pullRequestConversationItemId?: string;
@@ -181,6 +185,8 @@ export function DiffdiffAppView({
   mergeCommitTitle,
   mergeMethod,
   mergeModalField,
+  modalPickerActive,
+  modalPickerCommands,
   onMouseUp,
   openPrCount,
   pullRequestConversationItemId,
@@ -284,6 +290,10 @@ export function DiffdiffAppView({
         helpLabel={helpLabel}
         theme={theme}
       />
+
+      {modalPickerActive ? (
+        <ModalPickerOverlay commands={modalPickerCommands} theme={theme} />
+      ) : null}
 
       <DiffdiffAppDialogs
         activeDialog={activeOverlay}

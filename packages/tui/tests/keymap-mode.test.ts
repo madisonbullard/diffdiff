@@ -16,6 +16,7 @@ describe("keymap mode", () => {
         commitSearchActive: false,
         hasSelectedReviewThread: true,
         leaderActive: true,
+        modalPickerActive: false,
         mergeConfirmOpen: true,
         mergeModalField: "body",
         pullRequestSearchActive: false,
@@ -31,6 +32,7 @@ describe("keymap mode", () => {
       commitSearchActive: false,
       hasSelectedReviewThread: true,
       leaderActive: false,
+      modalPickerActive: false,
       mergeConfirmOpen: false,
       mergeModalField: "method",
       pullRequestSearchActive: false,
@@ -53,6 +55,7 @@ describe("keymap mode", () => {
         commitSearchActive: false,
         hasSelectedReviewThread: false,
         leaderActive: false,
+        modalPickerActive: false,
         mergeConfirmOpen: false,
         mergeModalField: "method",
         pullRequestSearchActive: false,
@@ -67,6 +70,7 @@ describe("keymap mode", () => {
         commitSearchActive: false,
         hasSelectedReviewThread: false,
         leaderActive: false,
+        modalPickerActive: false,
         mergeConfirmOpen: false,
         mergeModalField: "method",
         pullRequestSearchActive: true,
@@ -83,6 +87,7 @@ describe("keymap mode", () => {
         commitSearchActive: false,
         hasSelectedReviewThread: false,
         leaderActive: false,
+        modalPickerActive: false,
         mergeConfirmOpen: false,
         mergeModalField: "method",
         pullRequestSearchActive: false,
@@ -97,6 +102,7 @@ describe("keymap mode", () => {
         commitSearchActive: false,
         hasSelectedReviewThread: false,
         leaderActive: false,
+        modalPickerActive: false,
         mergeConfirmOpen: false,
         mergeModalField: "method",
         pullRequestSearchActive: false,
@@ -111,6 +117,7 @@ describe("keymap mode", () => {
         commitSearchActive: true,
         hasSelectedReviewThread: false,
         leaderActive: false,
+        modalPickerActive: false,
         mergeConfirmOpen: false,
         mergeModalField: "method",
         pullRequestSearchActive: false,
@@ -127,6 +134,7 @@ describe("keymap mode", () => {
         commitSearchActive: false,
         hasSelectedReviewThread: false,
         leaderActive: false,
+        modalPickerActive: false,
         mergeConfirmOpen: false,
         mergeModalField: "title",
         pullRequestSearchActive: false,
@@ -141,6 +149,7 @@ describe("keymap mode", () => {
         commitSearchActive: false,
         hasSelectedReviewThread: false,
         leaderActive: false,
+        modalPickerActive: false,
         mergeConfirmOpen: true,
         mergeModalField: "title",
         pullRequestSearchActive: false,
@@ -155,5 +164,26 @@ describe("keymap mode", () => {
     expect(keymapModeSuspendsGlobalKeybinds("confirm-merge")).toBe(true);
     expect(keymapModeSuspendsGlobalKeybinds("diff")).toBe(false);
     expect(keymapModeSuspendsGlobalKeybinds("tree")).toBe(false);
+  });
+
+  test("returns modal-picker mode when the space picker is active", () => {
+    expect(
+      resolveActiveKeymapMode({
+        activeDialog: null,
+        activeListView: "branch",
+        activePane: "diff",
+        commitSearchActive: false,
+        hasSelectedReviewThread: false,
+        leaderActive: false,
+        modalPickerActive: true,
+        mergeConfirmOpen: false,
+        mergeModalField: "method",
+        pullRequestSearchActive: false,
+      }),
+    ).toBe("modal-picker");
+
+    expect(getKeymapModeBadge("modal-picker", DARK_THEME)).toMatchObject({
+      label: "SPACE",
+    });
   });
 });

@@ -68,6 +68,7 @@ export interface DiffdiffAppState {
   latestSessionLoadIdRef: MutableRefObject<number>;
   leaderActive: boolean;
   loadingIndicatorFrame: number;
+  modalPickerActive: boolean;
   mergeCommitMessage: string;
   mergeCommitTitle: string;
   mergeConfirmOpen: boolean;
@@ -144,6 +145,7 @@ export interface DiffdiffAppState {
   setIsSubmittingReviewAction: Dispatch<SetStateAction<boolean>>;
   setLeaderActive: Dispatch<SetStateAction<boolean>>;
   setLoadingIndicatorFrame: Dispatch<SetStateAction<number>>;
+  setModalPickerActive: Dispatch<SetStateAction<boolean>>;
   setMergeCommitMessage: Dispatch<SetStateAction<string>>;
   setMergeCommitTitle: Dispatch<SetStateAction<string>>;
   setMergeConfirmOpen: Dispatch<SetStateAction<boolean>>;

@@ -1,17 +1,27 @@
 import type { Renderable } from "@opentui/core";
 
-const LEADER_TIMEOUT_MS = 2_000;
+const TRANSIENT_KEY_TIMEOUT_MS = 2_000;
+
+type TransientKeyMode = "leader" | "modal-picker" | null;
 
 export interface KeybindController {
+  clearModalPickerMode(status?: string): void;
   clearLeaderMode(status?: string): void;
+  clearTransientMode(status?: string): void;
   dispose(): void;
   enterLeaderMode(options: {
     preserveFocus?: boolean;
     status: string;
     timeoutStatus: string;
   }): void;
+  enterModalPickerMode(options: {
+    preserveFocus?: boolean;
+    status: string;
+    timeoutStatus: string;
+  }): void;
   globalKeybindsSuspended(): boolean;
   isLeaderActive(): boolean;
+  isModalPickerActive(): boolean;
   resumeGlobalKeybinds(): void;
   suspendGlobalKeybinds(): () => void;
 }
@@ -19,36 +29,39 @@ export interface KeybindController {
 export function createKeybindController({
   getFocusedRenderable,
   onLeaderActiveChange,
+  onModalPickerActiveChange,
   onStatusMessage,
 }: {
   getFocusedRenderable: () => Renderable | null | undefined;
   onLeaderActiveChange: (active: boolean) => void;
+  onModalPickerActiveChange: (active: boolean) => void;
   onStatusMessage?: (status: string) => void;
 }): KeybindController {
-  let leaderActive = false;
-  let leaderFocus: Renderable | null = null;
+  let activeMode: TransientKeyMode = null;
+  let transientFocus: Renderable | null = null;
   let suspendCount = 0;
-  let leaderTimeout: ReturnType<typeof setTimeout> | null = null;
+  let transientTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  function setLeaderActive(nextActive: boolean): void {
-    if (leaderActive === nextActive) {
+  function setActiveMode(nextMode: TransientKeyMode): void {
+    if (activeMode === nextMode) {
       return;
     }
 
-    leaderActive = nextActive;
-    onLeaderActiveChange(nextActive);
+    activeMode = nextMode;
+    onLeaderActiveChange(nextMode === "leader");
+    onModalPickerActiveChange(nextMode === "modal-picker");
   }
 
-  function clearLeaderTimeout(): void {
-    if (leaderTimeout != null) {
-      clearTimeout(leaderTimeout);
-      leaderTimeout = null;
+  function clearTransientTimeout(): void {
+    if (transientTimeout != null) {
+      clearTimeout(transientTimeout);
+      transientTimeout = null;
     }
   }
 
-  function restoreLeaderFocus(): void {
-    const previousFocus = leaderFocus;
-    leaderFocus = null;
+  function restoreTransientFocus(): void {
+    const previousFocus = transientFocus;
+    transientFocus = null;
     if (previousFocus == null || previousFocus.isDestroyed) {
       return;
     }
@@ -58,20 +71,63 @@ export function createKeybindController({
     }
   }
 
-  function clearLeaderMode(status?: string): void {
-    clearLeaderTimeout();
+  function clearTransientMode(status?: string): void {
+    clearTransientTimeout();
 
-    if (leaderActive) {
-      restoreLeaderFocus();
+    if (activeMode != null) {
+      restoreTransientFocus();
     } else {
-      leaderFocus = null;
+      transientFocus = null;
     }
 
-    setLeaderActive(false);
+    setActiveMode(null);
 
     if (status != null) {
       onStatusMessage?.(status);
     }
+  }
+
+  function clearLeaderMode(status?: string): void {
+    if (activeMode !== "leader") {
+      return;
+    }
+
+    clearTransientMode(status);
+  }
+
+  function clearModalPickerMode(status?: string): void {
+    if (activeMode !== "modal-picker") {
+      return;
+    }
+
+    clearTransientMode(status);
+  }
+
+  function enterTransientMode(
+    nextMode: Exclude<TransientKeyMode, null>,
+    options: {
+      preserveFocus?: boolean;
+      status: string;
+      timeoutStatus: string;
+    },
+  ): void {
+    clearTransientTimeout();
+
+    if (activeMode !== nextMode) {
+      if (activeMode != null) {
+        restoreTransientFocus();
+      }
+
+      transientFocus = options.preserveFocus ? null : (getFocusedRenderable() ?? null);
+      transientFocus?.blur();
+    }
+
+    setActiveMode(nextMode);
+    onStatusMessage?.(options.status);
+    transientTimeout = setTimeout(() => {
+      transientTimeout = null;
+      clearTransientMode(options.timeoutStatus);
+    }, TRANSIENT_KEY_TIMEOUT_MS);
   }
 
   function enterLeaderMode(options: {
@@ -79,24 +135,20 @@ export function createKeybindController({
     status: string;
     timeoutStatus: string;
   }): void {
-    clearLeaderTimeout();
+    enterTransientMode("leader", options);
+  }
 
-    if (!leaderActive) {
-      leaderFocus = options.preserveFocus ? null : (getFocusedRenderable() ?? null);
-      leaderFocus?.blur();
-    }
-
-    setLeaderActive(true);
-    onStatusMessage?.(options.status);
-    leaderTimeout = setTimeout(() => {
-      leaderTimeout = null;
-      clearLeaderMode(options.timeoutStatus);
-    }, LEADER_TIMEOUT_MS);
+  function enterModalPickerMode(options: {
+    preserveFocus?: boolean;
+    status: string;
+    timeoutStatus: string;
+  }): void {
+    enterTransientMode("modal-picker", options);
   }
 
   function suspendGlobalKeybinds(): () => void {
     suspendCount += 1;
-    clearLeaderMode();
+    clearTransientMode();
 
     let released = false;
     return () => {
@@ -114,19 +166,25 @@ export function createKeybindController({
   }
 
   return {
+    clearModalPickerMode,
     clearLeaderMode,
+    clearTransientMode,
     dispose() {
-      clearLeaderTimeout();
-      leaderFocus = null;
-      setLeaderActive(false);
+      clearTransientTimeout();
+      transientFocus = null;
+      setActiveMode(null);
       suspendCount = 0;
     },
     enterLeaderMode,
+    enterModalPickerMode,
     globalKeybindsSuspended() {
       return suspendCount > 0;
     },
     isLeaderActive() {
-      return leaderActive;
+      return activeMode === "leader";
+    },
+    isModalPickerActive() {
+      return activeMode === "modal-picker";
     },
     resumeGlobalKeybinds,
     suspendGlobalKeybinds,

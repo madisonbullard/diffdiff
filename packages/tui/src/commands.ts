@@ -14,6 +14,7 @@ export interface CommandDefinition {
   description?: string;
   disabledReason?: string;
   keybind?: string;
+  modalKeybind?: string;
   enabled?: boolean;
   hidden?: boolean;
   keywords?: readonly string[];
@@ -258,6 +259,24 @@ export function formatCommandKeybind(
   const leaderLabel =
     leader == null ? "leader" : formatParsedKeybind({ ...leader, leader: false }, undefined);
   return formatParsedKeybind(first, leaderLabel);
+}
+
+export function formatCommandShortcuts(
+  command: Pick<CommandDefinition, "keybind" | "modalKeybind">,
+  leaderKeybind: string,
+): string | undefined {
+  const shortcuts: string[] = [];
+  const modalKeybind = formatCommandKeybind(command.modalKeybind, leaderKeybind);
+  if (modalKeybind != null) {
+    shortcuts.push(`space ${modalKeybind}`);
+  }
+
+  const keybind = formatCommandKeybind(command.keybind, leaderKeybind);
+  if (keybind != null && !shortcuts.includes(keybind)) {
+    shortcuts.push(keybind);
+  }
+
+  return shortcuts.length === 0 ? undefined : shortcuts.join(" / ");
 }
 
 export function filterCommands<T extends CommandDefinition>(

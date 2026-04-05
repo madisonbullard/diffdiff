@@ -24,6 +24,7 @@ describe("keybind controller", () => {
     const controller = createKeybindController({
       getFocusedRenderable: () => currentFocusedRenderable,
       onLeaderActiveChange,
+      onModalPickerActiveChange: vi.fn(),
       onStatusMessage,
     });
 
@@ -51,6 +52,7 @@ describe("keybind controller", () => {
     const controller = createKeybindController({
       getFocusedRenderable: () => createRenderable().renderable,
       onLeaderActiveChange,
+      onModalPickerActiveChange: vi.fn(),
     });
 
     controller.enterLeaderMode({
@@ -80,6 +82,7 @@ describe("keybind controller", () => {
     const controller = createKeybindController({
       getFocusedRenderable: () => renderable,
       onLeaderActiveChange: vi.fn(),
+      onModalPickerActiveChange: vi.fn(),
     });
 
     controller.enterLeaderMode({
@@ -93,6 +96,35 @@ describe("keybind controller", () => {
     controller.clearLeaderMode();
 
     expect(focusSpy).not.toHaveBeenCalled();
+  });
+
+  test("tracks modal picker state without blurring preserved focus", () => {
+    vi.useFakeTimers();
+
+    const { blurSpy, focusSpy, renderable } = createRenderable();
+    const onModalPickerActiveChange = vi.fn();
+    const controller = createKeybindController({
+      getFocusedRenderable: () => renderable,
+      onLeaderActiveChange: vi.fn(),
+      onModalPickerActiveChange,
+      onStatusMessage: vi.fn(),
+    });
+
+    controller.enterModalPickerMode({
+      preserveFocus: true,
+      status: "Modal picker active.",
+      timeoutStatus: "Modal picker timed out.",
+    });
+
+    expect(controller.isModalPickerActive()).toBe(true);
+    expect(blurSpy).not.toHaveBeenCalled();
+
+    controller.clearModalPickerMode();
+
+    expect(controller.isModalPickerActive()).toBe(false);
+    expect(focusSpy).not.toHaveBeenCalled();
+    expect(onModalPickerActiveChange).toHaveBeenNthCalledWith(1, true);
+    expect(onModalPickerActiveChange).toHaveBeenNthCalledWith(2, false);
   });
 });
 

@@ -18,8 +18,16 @@ export function createCommandActions({
   leaderKeyLabel,
   state,
 }: CreateCommandActionsOptions) {
+  function clearTransientMode(status?: string): void {
+    state.keybindController.clearTransientMode(status);
+  }
+
   function clearLeaderMode(status?: string): void {
     state.keybindController.clearLeaderMode(status);
+  }
+
+  function clearModalPickerMode(status?: string): void {
+    state.keybindController.clearModalPickerMode(status);
   }
 
   function enterLeaderMode(options: { preserveFocus?: boolean } = {}): void {
@@ -27,6 +35,14 @@ export function createCommandActions({
       preserveFocus: options.preserveFocus,
       status: `Leader key active. Awaiting a ${leaderKeyLabel} command.`,
       timeoutStatus: "Leader key timed out.",
+    });
+  }
+
+  function enterModalPickerMode(): void {
+    state.keybindController.enterModalPickerMode({
+      preserveFocus: true,
+      status: "Modal picker active. Awaiting a space command.",
+      timeoutStatus: "Modal picker timed out.",
     });
   }
 
@@ -38,7 +54,7 @@ export function createCommandActions({
       return;
     }
 
-    clearLeaderMode();
+    clearTransientMode();
     state.setDialogStack((currentStack) => closeAppDialog(currentStack, "command-palette"));
     state.setCommandQuery("");
     state.setCommandIndex(0);
@@ -53,7 +69,7 @@ export function createCommandActions({
   }
 
   function openCommandModal(): void {
-    clearLeaderMode();
+    clearTransientMode();
     state.setCommandQuery("");
     state.setCommandIndex(0);
     state.setDialogStack((currentStack) => openAppDialog(currentStack, "command-palette"));
@@ -113,9 +129,12 @@ export function createCommandActions({
   }
 
   return {
+    clearModalPickerMode,
     clearLeaderMode,
+    clearTransientMode,
     closeCommandModal,
     enterLeaderMode,
+    enterModalPickerMode,
     handleTextInputLeaderKey,
     openCommandModal,
     runCommand,

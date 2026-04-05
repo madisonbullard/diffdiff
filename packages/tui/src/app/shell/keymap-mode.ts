@@ -5,6 +5,7 @@ import type { AppDialog } from "../dialogs/stack.ts";
 
 export type KeymapMode =
   | "leader"
+  | "modal-picker"
   | "clear-reviewed"
   | "diff"
   | "thread"
@@ -40,6 +41,7 @@ export interface ResolveActiveKeymapModeOptions {
   commitSearchActive: boolean;
   hasSelectedReviewThread: boolean;
   leaderActive: boolean;
+  modalPickerActive: boolean;
   mergeConfirmOpen: boolean;
   mergeModalField: "method" | "title" | "body";
   pullRequestSearchActive: boolean;
@@ -52,12 +54,17 @@ export function resolveActiveKeymapMode({
   commitSearchActive,
   hasSelectedReviewThread,
   leaderActive,
+  modalPickerActive,
   mergeConfirmOpen,
   mergeModalField,
   pullRequestSearchActive,
 }: ResolveActiveKeymapModeOptions): KeymapMode {
   if (leaderActive) {
     return "leader";
+  }
+
+  if (modalPickerActive) {
+    return "modal-picker";
   }
 
   switch (activeDialog) {
@@ -156,6 +163,12 @@ export function getKeymapModeBadge(mode: KeymapMode, theme: UiTheme): KeymapMode
         bg: theme.accent,
         fg: theme.inverseText,
         label: "LEADER",
+      };
+    case "modal-picker":
+      return {
+        bg: tintHex(theme.surfaceMuted, theme.accent, 0.28),
+        fg: theme.text,
+        label: "SPACE",
       };
     case "clear-reviewed":
       return actionMode("CONFIRM");

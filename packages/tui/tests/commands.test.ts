@@ -1,5 +1,10 @@
 import { expect, test } from "vite-plus/test";
-import { filterCommands, formatCommandKeybind, type CommandDefinition } from "../src/commands.ts";
+import {
+  filterCommands,
+  formatCommandKeybind,
+  formatCommandShortcuts,
+  type CommandDefinition,
+} from "../src/commands.ts";
 
 const commands: CommandDefinition[] = [
   {
@@ -38,4 +43,16 @@ test("filterCommands keeps enabled commands ahead of disabled ones", () => {
 
 test("formatCommandKeybind prints question mark shortcuts cleanly", () => {
   expect(formatCommandKeybind("shift+/,<leader>shift+/,<leader>h", "ctrl+x")).toBe("?");
+});
+
+test("formatCommandShortcuts includes space-prefixed modal shortcuts", () => {
+  expect(
+    formatCommandShortcuts(
+      {
+        keybind: "l,<leader>l",
+        modalKeybind: "l",
+      },
+      "ctrl+x",
+    ),
+  ).toBe("space l / l");
 });

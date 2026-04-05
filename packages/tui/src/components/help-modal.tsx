@@ -1,4 +1,4 @@
-import { formatCommandKeybind, type CommandDefinition } from "../commands.ts";
+import { formatCommandShortcuts, type CommandDefinition } from "../commands.ts";
 import type { AppPane } from "../types.ts";
 import type { UiTheme } from "../theme.ts";
 import { KeyCap, MODAL_OVERLAY, SPLIT_BORDER } from "./shared.tsx";
@@ -51,8 +51,7 @@ function buildModeSections(
 
   for (const command of commands) {
     const mode = getModeForCommand(command);
-    const keybind =
-      command.keybind != null ? formatCommandKeybind(command.keybind, leaderKeybind) : undefined;
+    const keybind = formatCommandShortcuts(command, leaderKeybind);
 
     const rows = rowsByMode.get(mode) ?? [];
     rows.push({

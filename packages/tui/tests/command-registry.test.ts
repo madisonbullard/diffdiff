@@ -128,7 +128,7 @@ describe("command registry", () => {
     expect(findAppCommandByValue(commands, "view.open-selected-file")).toMatchObject({
       disabledReason: "Select a file in the tree first.",
       enabled: false,
-      keybind: "return,right,space",
+      keybind: "return,right",
     });
   });
 

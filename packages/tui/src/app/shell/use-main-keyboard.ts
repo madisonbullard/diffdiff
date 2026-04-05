@@ -11,14 +11,17 @@ import type { AppCommand } from "../commands/registry.ts";
 interface UseMainKeyboardOptions {
   activeKeymapMode: KeymapMode;
   commandActions: {
+    clearModalPickerMode: (status?: string) => void;
     clearLeaderMode: (status?: string) => void;
     enterLeaderMode: (options?: { preserveFocus?: boolean }) => void;
+    enterModalPickerMode: () => void;
     runCommand: (command: AppCommand) => void;
     runCommandByValue: (value: string) => void;
   };
   derived: DiffdiffAppDerived;
   dismissErrorToast: () => void;
   findCommandByKey: (key: KeyboardInput, leader?: boolean) => AppCommand | undefined;
+  findModalPickerCommandByKey: (key: KeyboardInput) => AppCommand | undefined;
   handleBranchModalKey: (key: KeyboardInput) => void;
   handleClearReviewedModalKey: (key: KeyboardInput) => void;
   handleCleanupModalKey: (key: KeyboardInput) => void;
@@ -41,6 +44,7 @@ export function useMainKeyboard({
   commandActions,
   dismissErrorToast,
   findCommandByKey,
+  findModalPickerCommandByKey,
   handleBranchModalKey,
   handleClearReviewedModalKey,
   handleCleanupModalKey,
@@ -84,8 +88,28 @@ export function useMainKeyboard({
     commandActions.clearLeaderMode(`No command is bound to leader ${key.name}.`);
   }
 
+  function handleModalPickerModeKey(key: KeyboardInput): void {
+    if (key.name === "escape") {
+      commandActions.clearModalPickerMode("Canceled modal picker.");
+      return;
+    }
+
+    const command = findModalPickerCommandByKey(key);
+    if (command != null) {
+      commandActions.runCommand(command);
+      return;
+    }
+
+    commandActions.clearModalPickerMode(`No modal is bound to space ${key.name}.`);
+  }
+
   function handleMainPaneKey(key: KeyboardInput, globalKeybindsSuspended: boolean): void {
     if (globalKeybindsSuspended) {
+      return;
+    }
+
+    if (key.name === "space" && !key.ctrl && !key.meta && !key.shift && !key.super) {
+      commandActions.enterModalPickerMode();
       return;
     }
 
@@ -214,6 +238,7 @@ export function useMainKeyboard({
 
   keyboardHandlerRef.current = (key) => {
     const leaderModeActive = state.keybindController.isLeaderActive();
+    const modalPickerActive = state.keybindController.isModalPickerActive();
     const globalKeybindsSuspended = state.keybindController.globalKeybindsSuspended();
 
     if (
@@ -222,6 +247,11 @@ export function useMainKeyboard({
       (key.name === "escape" || key.name === "x")
     ) {
       dismissErrorToast();
+      return;
+    }
+
+    if (modalPickerActive && isPaneKeymapMode(activeKeymapMode)) {
+      handleModalPickerModeKey(key);
       return;
     }
 

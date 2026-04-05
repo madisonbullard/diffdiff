@@ -44,7 +44,7 @@ export function buildViewCommands({
             ? "No file is selected in the tree."
             : undefined,
       enabled: canOpenSelectedTreeFile,
-      keybind: "return,right,space",
+      keybind: "return,right",
       keybindingContexts: ["tree"],
       keybindingPriority: 20,
       title: "Open selected file",
