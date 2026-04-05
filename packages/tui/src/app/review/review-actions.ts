@@ -16,6 +16,7 @@ import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import type { PendingInteraction } from "../state/app-props.ts";
 import { REVIEWED_NEXT_FILE_SCROLL_OFFSET } from "../shared/constants.ts";
+import { selectFileIndexWithPendingScrollOffset } from "../shared/file-selection.ts";
 import { haveSamePaths } from "../shared/collections.ts";
 
 interface CreateReviewActionsOptions {
@@ -76,8 +77,12 @@ export function createReviewActions({
         },
         expectedSelectedFilePath: candidate.path,
       });
-      state.pendingSelectedFileScrollOffsetRef.current = REVIEWED_NEXT_FILE_SCROLL_OFFSET;
-      state.setSelectedFileIndex(candidateIndex);
+      selectFileIndexWithPendingScrollOffset(
+        state.setSelectedFileIndex,
+        state.pendingSelectedFileScrollOffsetRef,
+        candidateIndex,
+        REVIEWED_NEXT_FILE_SCROLL_OFFSET,
+      );
       state.setActivePane("diff");
       state.setStatusMessage(`Jumped to next unreviewed file: ${candidate.path}.`);
       return;
@@ -228,8 +233,12 @@ export function createReviewActions({
         });
       }
 
-      state.pendingSelectedFileScrollOffsetRef.current = REVIEWED_NEXT_FILE_SCROLL_OFFSET;
-      state.setSelectedFileIndex(nextIndex);
+      selectFileIndexWithPendingScrollOffset(
+        state.setSelectedFileIndex,
+        state.pendingSelectedFileScrollOffsetRef,
+        nextIndex,
+        REVIEWED_NEXT_FILE_SCROLL_OFFSET,
+      );
       state.setStatusMessage(
         `Reviewed ${file.path}. Jumped to ${files[nextIndex]?.path ?? "next file"}.`,
       );

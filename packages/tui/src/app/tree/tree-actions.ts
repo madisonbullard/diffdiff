@@ -4,6 +4,8 @@ import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import { clampIndex } from "../../view-model.ts";
 import { getAncestorDirectoryPaths } from "../shared/collections.ts";
 import type { PendingInteraction } from "../state/app-props.ts";
+import { selectFileIndexWithPendingScrollOffset } from "../shared/file-selection.ts";
+import { REVIEWED_NEXT_FILE_SCROLL_OFFSET } from "../shared/constants.ts";
 
 interface CreateTreeActionsOptions {
   derived: DiffdiffAppDerived;
@@ -88,7 +90,12 @@ export function createTreeActions({ derived, startInteraction, state }: CreateTr
     }
 
     expandFileTreeAncestors(node.path);
-    state.setSelectedFileIndex(node.fileIndex);
+    selectFileIndexWithPendingScrollOffset(
+      state.setSelectedFileIndex,
+      state.pendingSelectedFileScrollOffsetRef,
+      node.fileIndex,
+      REVIEWED_NEXT_FILE_SCROLL_OFFSET,
+    );
     state.setStatusMessage(options?.openDiff ? `Opened ${node.path}.` : `Selected ${node.path}.`);
 
     if (options?.openDiff) {

@@ -386,6 +386,55 @@ test("tab switches to the file tree and tree navigation opens files", () => {
   expect(getDiffScrollbox(tree).props.focused).toBe(true);
 });
 
+test("scrolls farther past tree-selected files so the sticky header obscures the diff header", () => {
+  const scrollboxes: ReturnType<typeof createMockScrollbox>[] = [];
+  const fileCardYs = [0, 10];
+  let fileCardRefIndex = 0;
+  render(<DiffdiffApp {...createAppProps()} />, {
+    createNodeMock(element) {
+      const props =
+        typeof element.props === "object" && element.props != null
+          ? (element.props as {
+              border?: unknown;
+              flexDirection?: unknown;
+              gap?: unknown;
+              paddingLeft?: unknown;
+            })
+          : undefined;
+
+      if (element.type === "scrollbox") {
+        const scrollbox = createMockScrollbox(false);
+        scrollboxes.push(scrollbox);
+        return scrollbox;
+      }
+
+      if (
+        element.type === "box" &&
+        Array.isArray(props?.border) &&
+        props.border[0] === "left" &&
+        props.paddingLeft === 2 &&
+        props.flexDirection === "column" &&
+        props.gap === 1
+      ) {
+        return { y: fileCardYs[fileCardRefIndex++] ?? 0 };
+      }
+
+      if (element.type === "box") {
+        return { y: 0 };
+      }
+
+      return null;
+    },
+  });
+
+  scrollboxes[1]?.scrollTo.mockClear();
+
+  emitKey({ name: "tab", sequence: "\t" });
+  emitKey({ name: "j" });
+
+  expect(scrollboxes[1]?.scrollTo).toHaveBeenLastCalledWith({ x: 0, y: 16 });
+});
+
 test("uses a compact file tree summary when the sidebar is narrow", () => {
   terminalDimensionsState.width = 80;
   const files = [
@@ -716,7 +765,7 @@ test("keeps non-first file headers expanded when selecting a later file", () => 
   expect(secondCard?.props.headerVariant).toBeUndefined();
 });
 
-test("scrolls slightly past the next file when marking a file reviewed", () => {
+test("scrolls farther past the next file when marking a file reviewed", () => {
   const scrollboxes: ReturnType<typeof createMockScrollbox>[] = [];
   const fileCardYs = [0, 10];
   let fileCardRefIndex = 0;
@@ -761,7 +810,7 @@ test("scrolls slightly past the next file when marking a file reviewed", () => {
   emitKey({ name: "r", sequence: "r" });
 
   expect(getAppText(tree)).toContain("Reviewed src/app.ts. Jumped to src/utils.ts.");
-  expect(scrollboxes[1]?.scrollTo).toHaveBeenLastCalledWith({ x: 0, y: 13 });
+  expect(scrollboxes[1]?.scrollTo).toHaveBeenLastCalledWith({ x: 0, y: 16 });
 });
 
 test("marks all files reviewed with shift+r", () => {
