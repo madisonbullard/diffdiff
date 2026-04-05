@@ -115,7 +115,7 @@ const MemoizedFileCard = memo(function FileCard({
       paddingLeft={2}
       paddingRight={0}
       paddingTop={removeTopPadding ? 0 : 1}
-      paddingBottom={isCollapsed ? 0 : 1}
+      paddingBottom={1}
       gap={1}
     >
       {usesCompactHeader ? null : (

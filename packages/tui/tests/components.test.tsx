@@ -89,6 +89,25 @@ test("removes top padding for the first compact file card", () => {
   expect(collectText(tree.toJSON())).toContain("const count = 1");
 });
 
+test("keeps bottom padding when a file card is collapsed", () => {
+  const tree = render(
+    <FileCard
+      file={createPreparedFile()}
+      diffView="unified"
+      isCollapsed={true}
+      isReviewed={false}
+      isSelected={true}
+      syntaxStyle={syntaxStyle}
+      terminalWidth={160}
+      theme={theme}
+    />,
+  );
+
+  expect(tree.toJSON()).toMatchObject({ props: { paddingBottom: 1 } });
+  expect(collectText(tree.toJSON())).toContain("src/app.ts");
+  expect(collectText(tree.toJSON())).not.toContain("const count = 1");
+});
+
 test("renders a branch modal snapshot", () => {
   const filters: BranchListFilters = {
     workingTree: true,
