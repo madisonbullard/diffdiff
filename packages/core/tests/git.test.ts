@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, test } from "vite-plus/test";
 import { loadReviewSession } from "../src/load-review-session.ts";
@@ -176,6 +176,28 @@ describe("loadReviewSession", () => {
     const session = await loadReviewSession({ repoPath: repositoryPath });
 
     expect(session.files.map((file) => file.path)).toEqual(["src.ts"]);
+  });
+
+  test("accepts relative nested paths when locating a repository", async () => {
+    const repositoryPath = await createTemporaryRepository();
+    const originalCwd = process.cwd();
+
+    await mkdir(join(repositoryPath, "src"), { recursive: true });
+    await writeFile(join(repositoryPath, "src", "app.ts"), "export const app = true;\n");
+    await runGit(repositoryPath, ["add", "."]);
+    await commitAll(repositoryPath, "Initial commit");
+
+    try {
+      process.chdir(dirname(repositoryPath));
+      const session = await loadReviewSession({
+        repoPath: join(basename(repositoryPath), "src", "app.ts"),
+      });
+
+      expect(await realpath(session.repository.rootPath)).toBe(await realpath(repositoryPath));
+      expect(session.files).toEqual([]);
+    } finally {
+      process.chdir(originalCwd);
+    }
   });
 
   test("warns when unborn repositories receive explicit refs", async () => {

@@ -95,20 +95,22 @@ export function AppSidebar({
         contentOptions={{ backgroundColor: theme.appBackground }}
         verticalScrollbarOptions={{ trackOptions: { backgroundColor: theme.border } }}
       >
-        <FileTreeSidebar
-          activePane={activePane}
-          collapsedDirectories={collapsedDirectories}
-          collapsedPaths={collapsedPaths}
-          nodes={visibleTreeNodes}
-          onNodeMouseUp={handleFileTreeMouseUp}
-          onRowRef={(index, node) => {
-            treeRowRefCallbacks[index]?.(node);
-          }}
-          reviewedPaths={reviewedPaths}
-          selectedFilePath={session.files[selectedFileIndex]?.path}
-          selectedPath={selectedTreePath}
-          theme={theme}
-        />
+        <box width="100%" flexDirection="column">
+          <FileTreeSidebar
+            activePane={activePane}
+            collapsedDirectories={collapsedDirectories}
+            collapsedPaths={collapsedPaths}
+            nodes={visibleTreeNodes}
+            onNodeMouseUp={handleFileTreeMouseUp}
+            onRowRef={(index, node) => {
+              treeRowRefCallbacks[index]?.(node);
+            }}
+            reviewedPaths={reviewedPaths}
+            selectedFilePath={session.files[selectedFileIndex]?.path}
+            selectedPath={selectedTreePath}
+            theme={theme}
+          />
+        </box>
       </scrollbox>
 
       {showKeyLegend ? (

@@ -408,16 +408,19 @@ function FileCardHeaderMeta({
   theme: UiTheme;
 }) {
   return (
-    <box paddingRight={2}>
+    <box paddingRight={2} flexDirection="row">
+      <box paddingRight={1}>
+        <text wrapMode="none">
+          <Tag label={statusLabel.toUpperCase()} fg={theme.inverseText} bg={statusColor} />
+          {isReviewed ? (
+            <>
+              <span> </span>
+              <Tag label="REVIEWED" fg={theme.success} bg={theme.reviewedBg} />
+            </>
+          ) : null}
+        </text>
+      </box>
       <text fg={theme.textMuted} wrapMode="none">
-        <Tag label={statusLabel.toUpperCase()} fg={theme.inverseText} bg={statusColor} />
-        {isReviewed ? (
-          <>
-            <span> </span>
-            <Tag label="REVIEWED" fg={theme.success} bg={theme.reviewedBg} />
-          </>
-        ) : null}
-        <span> </span>
         <span fg={theme.success}>{`+${additions}`}</span>
         <span fg={theme.border}>{" / "}</span>
         <span fg={theme.danger}>{`-${deletions}`}</span>

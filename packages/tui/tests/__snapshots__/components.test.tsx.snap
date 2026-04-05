@@ -1305,30 +1305,36 @@ exports[`renders a sticky file header for the active viewport file 1`] = `
         </span>
       </text>
       <box
+        flexDirection="row"
         paddingRight={2}
       >
+        <box
+          paddingRight={1}
+        >
+          <text
+            wrapMode="none"
+          >
+            <span
+              bg="#9cdcfe"
+              fg="#0b1b26"
+            >
+               CHANGED 
+            </span>
+            <span>
+               
+            </span>
+            <span
+              bg="#0d2634"
+              fg="#3fb950"
+            >
+               REVIEWED 
+            </span>
+          </text>
+        </box>
         <text
           fg="#8ea4b5"
           wrapMode="none"
         >
-          <span
-            bg="#9cdcfe"
-            fg="#0b1b26"
-          >
-             CHANGED 
-          </span>
-          <span>
-             
-          </span>
-          <span
-            bg="#0d2634"
-            fg="#3fb950"
-          >
-             REVIEWED 
-          </span>
-          <span>
-              
-          </span>
           <span
             fg="#3fb950"
           >
@@ -1405,21 +1411,27 @@ exports[`renders an expanded file card snapshot 1`] = `
       </span>
     </text>
     <box
+      flexDirection="row"
       paddingRight={2}
     >
+      <box
+        paddingRight={1}
+      >
+        <text
+          wrapMode="none"
+        >
+          <span
+            bg="#9cdcfe"
+            fg="#0b1b26"
+          >
+             CHANGED 
+          </span>
+        </text>
+      </box>
       <text
         fg="#8ea4b5"
         wrapMode="none"
       >
-        <span
-          bg="#9cdcfe"
-          fg="#0b1b26"
-        >
-           CHANGED 
-        </span>
-        <span>
-            
-        </span>
         <span
           fg="#3fb950"
         >

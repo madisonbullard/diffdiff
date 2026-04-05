@@ -22,6 +22,7 @@ import {
 } from "@diffdiff/core";
 import { Command } from "commander";
 import packageJson from "../package.json";
+import { getStartupOptionValues } from "./command-options.ts";
 import { resolveLaunchOptionsFromTarget } from "./launch-target.ts";
 import { loadStartupPreparedReviewSession } from "./startup-session.ts";
 import { StartupScreen } from "./startup-screen.tsx";
@@ -70,9 +71,16 @@ function createProgram(): Command {
     "[target]",
     "PR shortcut, PR number, GitHub PR URL, owner/repo/number, or repository path.",
   );
-  program.action(async (target: string | undefined, options: LaunchCommandOptions) => {
-    await launchTui(await resolveLaunchOptionsFromTarget(target, resolveStartupOptions(options)));
-  });
+  program.action(
+    async (target: string | undefined, _options: LaunchCommandOptions, command: Command) => {
+      await launchTui(
+        await resolveLaunchOptionsFromTarget(
+          target,
+          resolveStartupOptions(getStartupOptionValues(command)),
+        ),
+      );
+    },
+  );
 
   const tuiCommand = program
     .command("tui")
@@ -82,9 +90,16 @@ function createProgram(): Command {
     "[target]",
     "PR shortcut, PR number, GitHub PR URL, owner/repo/number, or repository path.",
   );
-  tuiCommand.action(async (target: string | undefined, options: LaunchCommandOptions) => {
-    await launchTui(await resolveLaunchOptionsFromTarget(target, resolveStartupOptions(options)));
-  });
+  tuiCommand.action(
+    async (target: string | undefined, _options: LaunchCommandOptions, command: Command) => {
+      await launchTui(
+        await resolveLaunchOptionsFromTarget(
+          target,
+          resolveStartupOptions(getStartupOptionValues(command)),
+        ),
+      );
+    },
+  );
 
   const authCommand = program.command("auth").description("Manage local GitHub authentication.");
   authCommand.action(() => {

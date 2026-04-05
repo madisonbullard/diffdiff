@@ -1,4 +1,4 @@
-import { basename } from "node:path";
+import { basename, dirname } from "node:path";
 import { runCommand } from "../command.ts";
 import { DiffdiffError } from "../errors.ts";
 import { parseGitHubRemote, selectCurrentForgeRepository } from "../github/index.ts";
@@ -43,14 +43,22 @@ export class GitRepositoryProvider implements RepositoryProvider {
   readonly kind = "git";
 
   async detectRepository(startPath: string): Promise<RepositoryHandle | null> {
-    try {
-      const rootPath = (
-        await runCommand("git", ["rev-parse", "--show-toplevel"], { cwd: startPath })
-      ).trim();
-      return new GitRepository(rootPath);
-    } catch {
-      return null;
+    const candidatePaths = [startPath, dirname(startPath)].filter(
+      (candidatePath, index, values) => values.indexOf(candidatePath) === index,
+    );
+
+    for (const candidatePath of candidatePaths) {
+      try {
+        const rootPath = (
+          await runCommand("git", ["rev-parse", "--show-toplevel"], { cwd: candidatePath })
+        ).trim();
+        return new GitRepository(rootPath);
+      } catch {
+        continue;
+      }
     }
+
+    return null;
   }
 }
 
