@@ -2,7 +2,7 @@ import type { FileDiffMetadata } from "@pierre/diffs";
 import type { ReviewSession, StartupOptions } from "@diffdiff/core";
 import { loadReviewSession, logDiffdiffError, logDiffdiffInfo } from "@diffdiff/core";
 import { createPierreSegmentColorResolver } from "../pierre-colors.ts";
-import { resolveSyntaxLanguage } from "../language.ts";
+import { resolvePierreLanguage } from "../language.ts";
 import { getSyntaxPalette, type SyntaxPalette } from "../syntax-palette.ts";
 import { getUiTheme, type UiTheme } from "../theme.ts";
 import type { PierreThemeName, PreparedReviewFile, PreparedReviewSession } from "../types.ts";
@@ -219,7 +219,7 @@ function collectLanguages(
   const languages = new Set<string>();
 
   for (const file of files) {
-    const language = resolveSyntaxLanguage({
+    const language = resolvePierreLanguage({
       hintedLanguage: file.diff?.lang,
       path: file.path,
       patch: file.patch,

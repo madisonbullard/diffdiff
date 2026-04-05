@@ -58,7 +58,9 @@ export const LANGUAGE_EXTENSIONS: Record<string, string> = {
   ".js": "javascript",
   ".js.erb": "erb",
   ".json": "json",
+  ".jsonc": "jsonc",
   ".json.erb": "erb",
+  ".jsonl": "jsonl",
   ".jsx": "javascriptreact",
   ".bash": "shellscript",
   ".bash_logout": "shellscript",
@@ -112,6 +114,7 @@ export const LANGUAGE_EXTENSIONS: Record<string, string> = {
   ".tex": "latex",
   ".tf": "terraform",
   ".tfvars": "terraform-vars",
+  ".toml": "toml",
   ".ts": "typescript",
   ".tsx": "typescriptreact",
   ".typ": "typst",
@@ -141,6 +144,12 @@ const LANGUAGE_ALIASES: Record<string, string> = {
   zsh: "shellscript",
 };
 
+const PIERRE_LANGUAGE_ALIASES: Record<string, string> = {
+  javascriptreact: "jsx",
+  "terraform-vars": "tfvars",
+  typescriptreact: "tsx",
+};
+
 const SHELL_SHEBANG_PATTERN =
   /^[ +-]?#!\s*(?:\/usr\/bin\/env(?:\s+-S)?\s+)?(?:\S*\/)?(?:bash|ksh|sh|zsh)\b/mu;
 
@@ -164,6 +173,19 @@ export function resolveSyntaxLanguage(options: {
   }
 
   return undefined;
+}
+
+export function resolvePierreLanguage(options: {
+  hintedLanguage?: string;
+  path?: string;
+  patch?: string;
+}): string | undefined {
+  const language = resolveSyntaxLanguage(options);
+  if (language == null) {
+    return undefined;
+  }
+
+  return PIERRE_LANGUAGE_ALIASES[language] ?? language;
 }
 
 export function getDiffFiletype(input?: string, patch?: string): string | undefined {

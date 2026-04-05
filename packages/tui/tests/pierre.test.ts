@@ -291,6 +291,189 @@ test("uses the shared shell language resolver for Pierre highlighter preloading"
   });
 });
 
+test("preloads TOML when only the file path identifies the language", async () => {
+  const actualPierreInternals = await vi.importActual<
+    typeof import("../src/diff/pierre-internals.ts")
+  >("../src/diff/pierre-internals.ts");
+  const actualPierreDiffs = await actualPierreInternals.loadPierreDiffs();
+  const getSharedHighlighter = vi.fn(async () => ({ mocked: true }));
+  const renderDiffWithHighlighter = vi.fn(
+    (diff: Parameters<PierreDiffsModule["renderDiffWithHighlighter"]>[0]) => ({
+      themeStyles: "--mock-token: #48bcca;",
+      code: {
+        deletionLines: diff.deletionLines.map((line) => ({ type: "text", value: line })),
+        additionLines: diff.additionLines.map((line) => ({ type: "text", value: line })),
+      },
+    }),
+  );
+
+  pierreInternalsState.loadPierreDiffsOverride = async () => ({
+    ...actualPierreDiffs,
+    getSharedHighlighter,
+    renderDiffWithHighlighter,
+  });
+
+  await prepareReviewSession(
+    createReviewSession({
+      files: [
+        {
+          path: "Cargo.toml",
+          status: "modified",
+          additions: 1,
+          deletions: 1,
+          isBinary: false,
+          patch: [
+            "diff --git a/Cargo.toml b/Cargo.toml",
+            "index 1111111..2222222 100644",
+            "--- a/Cargo.toml",
+            "+++ b/Cargo.toml",
+            "@@ -1 +1 @@",
+            '-name = "diffdiff"',
+            '+name = "diffdiff-tui"',
+          ].join("\n"),
+        },
+      ],
+    }),
+    "pierre-dark",
+  );
+
+  expect(getSharedHighlighter).toHaveBeenCalledTimes(1);
+  expect(getSharedHighlighter).toHaveBeenCalledWith({
+    themes: ["pierre-dark"],
+    langs: ["toml"],
+  });
+});
+
+test("preloads Pierre-compatible aliases for TSX, JSX, TFVARS, JSONC, and JSONL", async () => {
+  const actualPierreInternals = await vi.importActual<
+    typeof import("../src/diff/pierre-internals.ts")
+  >("../src/diff/pierre-internals.ts");
+  const actualPierreDiffs = await actualPierreInternals.loadPierreDiffs();
+  const getSharedHighlighter = vi.fn(async () => ({ mocked: true }));
+  const renderDiffWithHighlighter = vi.fn(
+    (diff: Parameters<PierreDiffsModule["renderDiffWithHighlighter"]>[0]) => ({
+      themeStyles: "--mock-token: #48bcca;",
+      code: {
+        deletionLines: diff.deletionLines.map((line) => ({ type: "text", value: line })),
+        additionLines: diff.additionLines.map((line) => ({ type: "text", value: line })),
+      },
+    }),
+  );
+
+  pierreInternalsState.loadPierreDiffsOverride = async () => ({
+    ...actualPierreDiffs,
+    getSharedHighlighter,
+    renderDiffWithHighlighter,
+  });
+
+  await prepareReviewSession(
+    createReviewSession({
+      files: [
+        {
+          path: "src/app.tsx",
+          status: "modified",
+          additions: 1,
+          deletions: 1,
+          isBinary: false,
+          patch: [
+            "diff --git a/src/app.tsx b/src/app.tsx",
+            "index 1111111..2222222 100644",
+            "--- a/src/app.tsx",
+            "+++ b/src/app.tsx",
+            "@@ -1 +1 @@",
+            "-export const App = () => <main>old</main>;",
+            "+export const App = () => <main>new</main>;",
+          ].join("\n"),
+        },
+        {
+          path: "src/app.jsx",
+          status: "modified",
+          additions: 1,
+          deletions: 1,
+          isBinary: false,
+          patch: [
+            "diff --git a/src/app.jsx b/src/app.jsx",
+            "index 1111111..2222222 100644",
+            "--- a/src/app.jsx",
+            "+++ b/src/app.jsx",
+            "@@ -1 +1 @@",
+            "-export const App = () => <main>old</main>;",
+            "+export const App = () => <main>new</main>;",
+          ].join("\n"),
+        },
+        {
+          path: "terraform/dev.tfvars",
+          status: "modified",
+          additions: 1,
+          deletions: 1,
+          isBinary: false,
+          patch: [
+            "diff --git a/terraform/dev.tfvars b/terraform/dev.tfvars",
+            "index 1111111..2222222 100644",
+            "--- a/terraform/dev.tfvars",
+            "+++ b/terraform/dev.tfvars",
+            "@@ -1 +1 @@",
+            '-environment = "dev"',
+            '+environment = "staging"',
+          ].join("\n"),
+        },
+        {
+          path: "tsconfig.jsonc",
+          status: "modified",
+          additions: 1,
+          deletions: 1,
+          isBinary: false,
+          patch: [
+            "diff --git a/tsconfig.jsonc b/tsconfig.jsonc",
+            "index 1111111..2222222 100644",
+            "--- a/tsconfig.jsonc",
+            "+++ b/tsconfig.jsonc",
+            "@@ -1 +1 @@",
+            "-// old config",
+            "+// new config",
+          ].join("\n"),
+        },
+        {
+          path: "logs/events.jsonl",
+          status: "modified",
+          additions: 1,
+          deletions: 1,
+          isBinary: false,
+          patch: [
+            "diff --git a/logs/events.jsonl b/logs/events.jsonl",
+            "index 1111111..2222222 100644",
+            "--- a/logs/events.jsonl",
+            "+++ b/logs/events.jsonl",
+            "@@ -1 +1 @@",
+            '-{"event":"old"}',
+            '+{"event":"new"}',
+          ].join("\n"),
+        },
+      ],
+    }),
+    "pierre-dark",
+  );
+
+  expect(getSharedHighlighter).toHaveBeenCalledTimes(1);
+  expect(getSharedHighlighter).toHaveBeenCalledWith(
+    expect.objectContaining({
+      themes: ["pierre-dark"],
+    }),
+  );
+  const highlighterCalls = getSharedHighlighter.mock.calls as unknown as Array<
+    [{ langs: string[]; themes: string[] }]
+  >;
+  const highlighterOptions = highlighterCalls[0]?.[0];
+
+  if (highlighterOptions == null) {
+    throw new Error("expected getSharedHighlighter to be called");
+  }
+
+  expect(new Set(highlighterOptions.langs)).toEqual(
+    new Set(["tsx", "jsx", "tfvars", "jsonc", "jsonl"]),
+  );
+});
+
 test("hydrates deferred files into syntax-highlighted previews", async () => {
   const actualPierreInternals = await vi.importActual<
     typeof import("../src/diff/pierre-internals.ts")
