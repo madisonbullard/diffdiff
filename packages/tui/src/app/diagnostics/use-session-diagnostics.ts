@@ -36,8 +36,9 @@ export function useSessionDiagnostics({
         return;
       }
 
-      setDiagnosticEvents(nextEvents);
-      setDiagnosticEventIndex((currentIndex) => clampIndex(currentIndex, nextEvents.length));
+      const orderedEvents = [...nextEvents].reverse();
+      setDiagnosticEvents(orderedEvents);
+      setDiagnosticEventIndex((currentIndex) => clampIndex(currentIndex, orderedEvents.length));
     } catch (error) {
       if (diagnosticLoadIdRef.current !== loadId) {
         return;
