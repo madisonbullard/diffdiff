@@ -172,6 +172,10 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   const commands = useMemo<AppCommand[]>(
     () =>
       buildAppCommands({
+        hasFocusedReviewComment:
+          derived.selectedReviewThread != null && derived.selectedReviewComment != null,
+        hasFocusedReviewThread: derived.selectedReviewThread != null,
+        hasReviewThreads: derived.selectedFileReviewThreads.length > 0,
         bulkReviewedActionsDisabledReason:
           state.session.github == null
             ? undefined
@@ -183,7 +187,6 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         copyFocusedReviewCommentUrl: reviewActions.copyFocusedReviewCommentUrl,
         copyPullRequestUrl,
         hasFiles: state.session.files.length > 0,
-        hasFocusedReviewComment: derived.hasSelectedReviewThread,
         hasSelectedReviewThread: derived.selectedReviewThread != null,
         isGitHubAuthenticated: props.isGitHubAuthenticated ?? false,
         markAllReviewed: reviewActions.markAllReviewed,

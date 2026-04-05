@@ -258,10 +258,12 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
     }
 
     state.setSelectedReviewThreadIndexByFilePath((currentIndexes) => {
-      const nextIndex = clampIndex(
-        currentIndexes[derived.selectedFilePath!] ?? 0,
-        derived.selectedFileReviewThreads.length,
-      );
+      const currentIndex = currentIndexes[derived.selectedFilePath!];
+      if (currentIndex == null) {
+        return currentIndexes;
+      }
+
+      const nextIndex = clampIndex(currentIndex, derived.selectedFileReviewThreads.length);
       return currentIndexes[derived.selectedFilePath!] === nextIndex
         ? currentIndexes
         : { ...currentIndexes, [derived.selectedFilePath!]: nextIndex };

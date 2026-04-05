@@ -5,6 +5,8 @@ export function buildGitHubCommands({
   copyFocusedReviewCommentUrl,
   copyPullRequestUrl,
   hasFocusedReviewComment,
+  hasFocusedReviewThread,
+  hasReviewThreads,
   hasSelectedReviewThread,
   isGitHubAuthenticated,
   moveFocusedReviewComment,
@@ -22,6 +24,8 @@ export function buildGitHubCommands({
   | "copyFocusedReviewCommentUrl"
   | "copyPullRequestUrl"
   | "hasFocusedReviewComment"
+  | "hasFocusedReviewThread"
+  | "hasReviewThreads"
   | "hasSelectedReviewThread"
   | "isGitHubAuthenticated"
   | "moveFocusedReviewComment"
@@ -41,6 +45,8 @@ export function buildGitHubCommands({
     isGitHubAuthenticated,
     true,
   );
+  const reviewThreadsDisabledReason =
+    gitHubDisabledReason ?? "No review threads are available in the selected file.";
   const focusedReviewThreadDisabledReason =
     gitHubDisabledReason ?? "No focused review thread is available in the selected file.";
   const focusedReviewCommentDisabledReason =
@@ -89,8 +95,8 @@ export function buildGitHubCommands({
     {
       category: "GitHub",
       description: "Move focus to the previous inline review thread.",
-      disabledReason: focusedReviewThreadDisabledReason,
-      enabled: sessionGitHub != null && hasSelectedReviewThread,
+      disabledReason: reviewThreadsDisabledReason,
+      enabled: sessionGitHub != null && hasReviewThreads,
       hidden: true,
       keybind: "i",
       keybindingContexts: ["diff"],
@@ -102,8 +108,8 @@ export function buildGitHubCommands({
     {
       category: "GitHub",
       description: "Move focus to the next inline review thread.",
-      disabledReason: focusedReviewThreadDisabledReason,
-      enabled: sessionGitHub != null && hasSelectedReviewThread,
+      disabledReason: reviewThreadsDisabledReason,
+      enabled: sessionGitHub != null && hasReviewThreads,
       hidden: true,
       keybind: "o",
       keybindingContexts: ["diff"],
@@ -116,7 +122,7 @@ export function buildGitHubCommands({
       category: "GitHub",
       description: "Move focus to the previous comment in the active thread.",
       disabledReason: focusedReviewThreadDisabledReason,
-      enabled: sessionGitHub != null && hasSelectedReviewThread,
+      enabled: sessionGitHub != null && hasFocusedReviewThread,
       hidden: true,
       keybind: "[",
       keybindingContexts: ["diff"],
@@ -129,7 +135,7 @@ export function buildGitHubCommands({
       category: "GitHub",
       description: "Move focus to the next comment in the active thread.",
       disabledReason: focusedReviewThreadDisabledReason,
-      enabled: sessionGitHub != null && hasSelectedReviewThread,
+      enabled: sessionGitHub != null && hasFocusedReviewThread,
       hidden: true,
       keybind: "]",
       keybindingContexts: ["diff"],

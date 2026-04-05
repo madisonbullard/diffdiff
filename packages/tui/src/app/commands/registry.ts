@@ -68,6 +68,8 @@ export interface BuildAppCommandsOptions {
   copyPullRequestUrl: () => Promise<void>;
   hasFiles: boolean;
   hasFocusedReviewComment: boolean;
+  hasFocusedReviewThread: boolean;
+  hasReviewThreads: boolean;
   hasSelectedReviewThread: boolean;
   isGitHubAuthenticated: boolean;
   markAllReviewed: () => void;

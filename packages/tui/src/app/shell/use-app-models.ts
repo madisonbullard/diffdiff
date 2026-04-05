@@ -208,14 +208,15 @@ export function useDiffdiffAppDerived(
     selectedFilePath == null
       ? EMPTY_REVIEW_THREADS
       : (reviewThreadsByPath.get(selectedFilePath) ?? EMPTY_REVIEW_THREADS);
-  const selectedReviewThread =
+  const selectedReviewThreadIndex =
     selectedFilePath == null
       ? undefined
+      : state.selectedReviewThreadIndexByFilePath[selectedFilePath];
+  const selectedReviewThread =
+    selectedFilePath == null || selectedReviewThreadIndex == null
+      ? undefined
       : selectedFileReviewThreads[
-          clampIndex(
-            state.selectedReviewThreadIndexByFilePath[selectedFilePath] ?? 0,
-            selectedFileReviewThreads.length,
-          )
+          clampIndex(selectedReviewThreadIndex, selectedFileReviewThreads.length)
         ];
   const selectedReviewComment =
     selectedReviewThread == null

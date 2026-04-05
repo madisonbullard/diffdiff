@@ -1839,7 +1839,6 @@ test("updates PR reviewed state through the GitHub viewed-file flow", async () =
     />,
   );
 
-  emitKey({ ctrl: true, name: "x" });
   await emitAsyncKey({ name: "r", sequence: "r" });
   await act(async () => {
     await Promise.resolve();
@@ -1847,6 +1846,24 @@ test("updates PR reviewed state through the GitHub viewed-file flow", async () =
 
   expect(markFileAsViewed).toHaveBeenCalledWith(expect.any(Object), "src/app.ts");
   expect(getAppText(tree)).toContain("1 / 2 reviewed");
+  expect(getAppText(tree)).not.toContain("Reply to Thread");
+});
+
+test("stays in diff mode until an inline review thread is explicitly focused", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+      })}
+    />,
+  );
+
+  expect(getAppText(tree)).toContain("DIFF");
+  expect(getAppText(tree)).not.toContain("THREAD");
+
+  emitKey({ name: "o", sequence: "o" });
+
+  expect(getAppText(tree)).toContain("THREAD");
 });
 
 test("does not save reviewed files back into the cache for PR sessions", async () => {
@@ -2269,6 +2286,7 @@ test("cycles inline thread and comment focus, then copies the focused comment UR
     />,
   );
 
+  emitKey({ name: "o", sequence: "o" });
   emitKey({ name: "]", sequence: "]" });
   emitKey({ name: "y", sequence: "y" });
   await act(async () => {
@@ -2304,6 +2322,7 @@ test("replies to the root comment of the focused inline thread", async () => {
     />,
   );
 
+  emitKey({ name: "o", sequence: "o" });
   emitKey({ name: "]", sequence: "]" });
   emitKey({ name: "r", sequence: "r" });
 

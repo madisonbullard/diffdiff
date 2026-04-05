@@ -19,6 +19,8 @@ function createRegistryOptions(
     copyPullRequestUrl: vi.fn(async () => undefined),
     hasFiles: true,
     hasFocusedReviewComment: true,
+    hasFocusedReviewThread: true,
+    hasReviewThreads: true,
     hasSelectedReviewThread: true,
     isGitHubAuthenticated: true,
     markAllReviewed: vi.fn(),

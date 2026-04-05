@@ -160,10 +160,11 @@ export function createReviewActions({
     }
 
     state.setSelectedReviewThreadIndexByFilePath((currentIndexes) => {
-      const nextIndex = clampIndex(
-        (currentIndexes[derived.selectedFilePath!] ?? 0) + delta,
-        derived.selectedFileReviewThreads.length,
-      );
+      const currentIndex = currentIndexes[derived.selectedFilePath!];
+      const nextIndex =
+        currentIndex == null
+          ? 0
+          : clampIndex(currentIndex + delta, derived.selectedFileReviewThreads.length);
       const nextThread = derived.selectedFileReviewThreads[nextIndex];
       if (nextThread != null) {
         state.setStatusMessage(`Focused thread ${formatThreadAnchor(nextThread)}.`);
