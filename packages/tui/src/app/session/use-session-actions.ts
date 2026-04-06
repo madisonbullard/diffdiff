@@ -7,6 +7,7 @@ import {
   getSessionReviewedPaths,
   restoreCollapsedPaths,
 } from "../shared/collections.ts";
+import type { FileFocusController, FileFocusRevealMode } from "../shared/file-focus.ts";
 import type { PendingInteraction } from "../state/app-props.ts";
 import type { PreparedReviewSession } from "../../types.ts";
 
@@ -16,12 +17,14 @@ interface ApplyLoadedSessionOptions {
 }
 
 interface UseSessionActionsOptions {
+  fileFocus: FileFocusController;
   getFileTopOffsets: () => number[];
   state: DiffdiffAppState;
   syncRemotes: (repositoryRootPath: string) => Promise<unknown>;
 }
 
 export function useSessionActions({
+  fileFocus,
   getFileTopOffsets,
   state,
   syncRemotes,
@@ -59,31 +62,33 @@ export function useSessionActions({
       const scrollBox = state.scrollRef.current;
       const currentSelectedFilePath = state.session.files[state.selectedFileIndex]?.path;
       const currentSelectedFileOffset = getFileTopOffsets()[state.selectedFileIndex];
-
-      if (
+      const preservedRelativeOffset =
         scrollBox != null &&
         currentSelectedFilePath != null &&
-        Number.isFinite(currentSelectedFileOffset) &&
-        nextSession.files.some((file) => file.path === currentSelectedFilePath)
-      ) {
-        state.pendingSelectedFileScrollOffsetRef.current =
-          scrollBox.scrollTop - currentSelectedFileOffset;
-      }
+        Number.isFinite(currentSelectedFileOffset)
+          ? scrollBox.scrollTop - currentSelectedFileOffset
+          : undefined;
+      let nextFocusTarget: { index: number } | { path: string } = { index: 0 };
+      let nextFocusReveal: FileFocusRevealMode = "default";
+      let nextFocusRelativeOffset: number | undefined;
 
       if (options.resetReviewState) {
         state.setReviewedPaths(getSessionReviewedPaths(nextSession, options.reviewCacheState));
         state.setCollapsedPaths(restoreCollapsedPaths(nextSession.files, options.reviewCacheState));
         state.setCommentCollapseStates(options.reviewCacheState?.commentCollapseStates ?? {});
-        state.setSelectedFileIndex(
-          options.reviewCacheState?.selectedFilePath == null
-            ? 0
-            : Math.max(
-                nextSession.files.findIndex(
-                  (file) => file.path === options.reviewCacheState?.selectedFilePath,
-                ),
-                0,
-              ),
-        );
+        if (options.reviewCacheState?.selectedFilePath != null) {
+          nextFocusTarget = { path: options.reviewCacheState.selectedFilePath };
+          if (
+            options.reviewCacheState.selectedFilePath === currentSelectedFilePath &&
+            preservedRelativeOffset != null &&
+            nextSession.files.some(
+              (file) => file.path === options.reviewCacheState?.selectedFilePath,
+            )
+          ) {
+            nextFocusReveal = "preserve-relative-offset";
+            nextFocusRelativeOffset = preservedRelativeOffset;
+          }
+        }
       } else {
         state.setReviewedPaths(
           nextSession.github != null
@@ -92,7 +97,27 @@ export function useSessionActions({
                 reviewedFiles: buildReviewedFiles(state.session.files, state.reviewedPaths),
               }),
         );
+
+        if (currentSelectedFilePath != null) {
+          nextFocusTarget = { path: currentSelectedFilePath };
+          if (
+            preservedRelativeOffset != null &&
+            nextSession.files.some((file) => file.path === currentSelectedFilePath)
+          ) {
+            nextFocusReveal = "preserve-relative-offset";
+            nextFocusRelativeOffset = preservedRelativeOffset;
+          }
+        }
       }
+
+      fileFocus.focusFile({
+        activatePane: "preserve",
+        fallback: "first-file",
+        files: nextSession.files,
+        relativeOffset: nextFocusRelativeOffset,
+        reveal: nextFocusReveal,
+        target: nextFocusTarget,
+      });
       state.setComparisonBrowserData({
         branches: nextSession.branches,
         commits: nextSession.commits,
@@ -101,7 +126,7 @@ export function useSessionActions({
       state.setRefreshIndicatorLabel(null);
       state.setSession(nextSession);
     },
-    [getFileTopOffsets, state],
+    [fileFocus, getFileTopOffsets, state],
   );
 
   const applyComparisonBrowserData = useCallback(

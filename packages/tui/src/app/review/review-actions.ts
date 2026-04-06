@@ -16,12 +16,12 @@ import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
 import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import type { DiffdiffAppProps, PendingInteraction } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
-import { REVIEWED_NEXT_FILE_SCROLL_OFFSET } from "../shared/constants.ts";
-import { selectFileIndexWithPendingScrollOffset } from "../shared/file-selection.ts";
 import { haveSamePaths } from "../shared/collections.ts";
+import type { FileFocusController } from "../shared/file-focus.ts";
 
 interface CreateReviewActionsOptions {
   derived: DiffdiffAppDerived;
+  fileFocus: FileFocusController;
   persistence: DiffdiffAppPersistence;
   props: Pick<DiffdiffAppProps, "markFileAsViewed" | "unmarkFileAsViewed">;
   startInteraction: (
@@ -33,6 +33,7 @@ interface CreateReviewActionsOptions {
 
 export function createReviewActions({
   derived,
+  fileFocus,
   persistence,
   props,
   startInteraction,
@@ -73,12 +74,11 @@ export function createReviewActions({
         });
       }
 
-      selectFileIndexWithPendingScrollOffset(
-        state.setSelectedFileIndex,
-        state.pendingSelectedFileScrollOffsetRef,
-        nextIndex,
-        REVIEWED_NEXT_FILE_SCROLL_OFFSET,
-      );
+      fileFocus.focusFile({
+        activatePane: "preserve",
+        reveal: "align-under-sticky-header",
+        target: { path: nextFilePath },
+      });
       state.setStatusMessage(
         `Reviewed ${file.path}. Jumped to ${files[nextIndex]?.path ?? "next file"}.`,
       );
@@ -114,7 +114,11 @@ export function createReviewActions({
       });
     }
 
-    state.setSelectedFileIndex(nextIndex);
+    fileFocus.focusFile({
+      activatePane: "preserve",
+      reveal: "default",
+      target: { path: nextFilePath },
+    });
     state.setStatusMessage(`Selected ${nextFilePath ?? "file"}.`);
   }
 
@@ -125,8 +129,8 @@ export function createReviewActions({
     }
 
     for (let offset = 1; offset <= state.session.files.length; offset += 1) {
-      const candidateIndex = (state.selectedFileIndex + offset) % state.session.files.length;
-      const candidate = state.session.files[candidateIndex];
+      const candidate =
+        state.session.files[(state.selectedFileIndex + offset) % state.session.files.length];
       if (candidate == null || state.reviewedPaths.has(candidate.path)) {
         continue;
       }
@@ -139,13 +143,11 @@ export function createReviewActions({
         },
         expectedSelectedFilePath: candidate.path,
       });
-      selectFileIndexWithPendingScrollOffset(
-        state.setSelectedFileIndex,
-        state.pendingSelectedFileScrollOffsetRef,
-        candidateIndex,
-        REVIEWED_NEXT_FILE_SCROLL_OFFSET,
-      );
-      state.setActivePane("diff");
+      fileFocus.focusFile({
+        activatePane: "diff",
+        reveal: "align-under-sticky-header",
+        target: { path: candidate.path },
+      });
       state.setStatusMessage(`Jumped to next unreviewed file: ${candidate.path}.`);
       return;
     }

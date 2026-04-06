@@ -28,6 +28,7 @@ import {
   DEFAULT_BRANCH_LIST_FILTERS,
   findInitialBranchListSelection,
 } from "../../view-model.ts";
+import type { PendingFileFocusRequest } from "../shared/file-focus.ts";
 import type {
   AppPane,
   BranchListFilters,
@@ -189,7 +190,7 @@ export function useDiffdiffAppState({
   const mergeBodyScrollRef = useRef<ScrollBoxRenderable | null>(null);
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
   const fileCardRefs = useRef<(BoxRenderable | null)[]>([]);
-  const pendingSelectedFileScrollOffsetRef = useRef<number | null>(null);
+  const pendingFileFocusRequestRef = useRef<PendingFileFocusRequest | null>(null);
   const pendingInteractionRef = useRef<import("./app-props.ts").PendingInteraction | null>(null);
   const pendingReviewCacheRef = useRef<{
     key: import("@diffdiff/core").ReviewCacheKey;
@@ -263,7 +264,7 @@ export function useDiffdiffAppState({
     pendingInteractionRef,
     pendingInteractionTokenRef,
     pendingReviewCacheRef,
-    pendingSelectedFileScrollOffsetRef,
+    pendingFileFocusRequestRef,
     pendingSessionActivityRef,
     pendingSyntaxHydrationPathsRef,
     pullRequestConversationIndex,

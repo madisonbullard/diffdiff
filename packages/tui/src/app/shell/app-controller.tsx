@@ -21,7 +21,7 @@ import { createGitHubReviewActions } from "../review/github-actions.ts";
 import { useDiffdiffAppLayoutEffects } from "../layout/use-app-layout-effects.ts";
 import { createLaunchActions } from "../comparison/launch-actions.ts";
 import { useDiffdiffAppLifecycle } from "../session/use-app-lifecycle.ts";
-import { createListModalHandlers } from "../dialogs/list-dialog-handlers.ts";
+import { createListModalHandlers, openBranchListModal } from "../dialogs/list-dialog-handlers.ts";
 import { useMainKeyboard } from "./use-main-keyboard.ts";
 import { useDiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import { useDiffdiffAppRefresh } from "../comparison/use-comparison-refresh.ts";
@@ -30,15 +30,23 @@ import { createReviewActions } from "../review/review-actions.ts";
 import { useSessionActions } from "../session/use-session-actions.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import { useDiffdiffAppState } from "../state/use-app-state.ts";
+import { createFileFocusController } from "../shared/file-focus.ts";
 import { truncateInlineMessage } from "../shared/text.ts";
 import { createTreeActions } from "../tree/tree-actions.ts";
-import { findInitialBranchListSelection } from "../../view-model.ts";
 
 export function DiffdiffAppController(props: DiffdiffAppProps) {
   const state = useDiffdiffAppState(props);
+  const fileFocus = createFileFocusController({
+    getCurrentFiles: () => state.session.files,
+    getCurrentIndex: () => state.selectedFileIndex,
+    pendingFileFocusRequestRef: state.pendingFileFocusRequestRef,
+    setActivePane: state.setActivePane,
+    setSelectedFileIndex: state.setSelectedFileIndex,
+  });
   const derived = useDiffdiffAppDerived(state, props.theme);
   const layout = useDiffdiffAppLayoutEffects(state, derived);
   const sessionActions = useSessionActions({
+    fileFocus,
     getFileTopOffsets: layout.getFileTopOffsets,
     state,
     syncRemotes: props.syncRemotes ?? syncGitRemotes,
@@ -58,6 +66,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   const launchActions = createLaunchActions({ actions: sessionActions, persistence, props, state });
   const reviewActions = createReviewActions({
     derived,
+    fileFocus,
     persistence,
     props,
     startInteraction: sessionActions.startInteraction,
@@ -65,6 +74,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   });
   const treeActions = createTreeActions({
     derived,
+    fileFocus,
     startInteraction: sessionActions.startInteraction,
     state,
   });
@@ -110,21 +120,10 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     state.setDialogStack((currentStack) => openAppDialog(currentStack, "help"));
   }
 
-  function openBranchModal(): void {
-    state.setBranchListIndex(
-      findInitialBranchListSelection({
-        comparison: state.session.comparison,
-        currentBranch: state.session.repository.currentBranch,
-        items: derived.branchItems,
-      }),
-    );
-    state.setCommitListIndex(0);
-    state.setCommitSearchQuery("");
-    state.setCommitSearchActive(false);
-    state.setActiveListView("branch");
-    state.setDialogStack((currentStack) => openAppDialog(currentStack, "branch", { clear: true }));
-    state.setStatusMessage("Opened list modal.");
-  }
+  const openBranchModal = useCallback(
+    () => openBranchListModal(state, derived.branchItems),
+    [derived.branchItems, state],
+  );
 
   async function copyPullRequestUrl(): Promise<void> {
     if (state.session.github == null) {
@@ -380,6 +379,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     activeKeymapMode,
     commandActions,
     dismissErrorToast: persistence.persistenceApi.dismissErrorToast,
+    focusFile: fileFocus.focusFile,
     findCommandByKey: (key, prefix = null) => listHandlers.findCommandByKey(key, prefix),
     getPrefixMenuCommands: (prefix) => getPrefixMenuCommands(commands, prefix),
     handleBranchModalKey: listHandlers.handleBranchModalKey,

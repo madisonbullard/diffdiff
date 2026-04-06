@@ -3,12 +3,12 @@ import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import { clampIndex } from "../../view-model.ts";
 import { getAncestorDirectoryPaths } from "../shared/collections.ts";
+import type { FileFocusController } from "../shared/file-focus.ts";
 import type { PendingInteraction } from "../state/app-props.ts";
-import { selectFileIndexWithPendingScrollOffset } from "../shared/file-selection.ts";
-import { REVIEWED_NEXT_FILE_SCROLL_OFFSET } from "../shared/constants.ts";
 
 interface CreateTreeActionsOptions {
   derived: DiffdiffAppDerived;
+  fileFocus: FileFocusController;
   startInteraction: (
     kind: string,
     options?: Omit<PendingInteraction, "kind" | "startedAt" | "token">,
@@ -16,7 +16,12 @@ interface CreateTreeActionsOptions {
   state: DiffdiffAppState;
 }
 
-export function createTreeActions({ derived, startInteraction, state }: CreateTreeActionsOptions) {
+export function createTreeActions({
+  derived,
+  fileFocus,
+  startInteraction,
+  state,
+}: CreateTreeActionsOptions) {
   function toggleActivePane(): void {
     const nextPane = state.activePane === "diff" ? "tree" : "diff";
     startInteraction("pane_toggle", {
@@ -90,17 +95,12 @@ export function createTreeActions({ derived, startInteraction, state }: CreateTr
     }
 
     expandFileTreeAncestors(node.path);
-    selectFileIndexWithPendingScrollOffset(
-      state.setSelectedFileIndex,
-      state.pendingSelectedFileScrollOffsetRef,
-      node.fileIndex,
-      REVIEWED_NEXT_FILE_SCROLL_OFFSET,
-    );
+    fileFocus.focusFile({
+      activatePane: options?.openDiff ? "diff" : "preserve",
+      reveal: "align-under-sticky-header",
+      target: { path: node.path },
+    });
     state.setStatusMessage(options?.openDiff ? `Opened ${node.path}.` : `Selected ${node.path}.`);
-
-    if (options?.openDiff) {
-      state.setActivePane("diff");
-    }
   }
 
   function openSelectedTreeFile(): void {

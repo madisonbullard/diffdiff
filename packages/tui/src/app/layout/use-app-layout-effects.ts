@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { clampIndex, getTopIntersectingFileIndex } from "../../view-model.ts";
 import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
+import { getFileFocusScrollOffset } from "../shared/file-focus.ts";
 import {
   getAncestorDirectoryPaths,
   haveSamePaths,
@@ -136,20 +137,27 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
       return;
     }
 
-    const pendingScrollOffset = state.pendingSelectedFileScrollOffsetRef.current;
+    const pendingFileFocusRequest = state.pendingFileFocusRequestRef.current;
+    const matchingFocusRequest =
+      pendingFileFocusRequest?.index === state.selectedFileIndex ? pendingFileFocusRequest : null;
     const selectedFileChanged =
       lastScrolledSelectedFileIndexRef.current !== state.selectedFileIndex;
-    if (!selectedFileChanged && pendingScrollOffset == null) {
+    if (!selectedFileChanged && matchingFocusRequest == null) {
       return;
     }
 
-    state.pendingSelectedFileScrollOffsetRef.current = null;
+    state.pendingFileFocusRequestRef.current = null;
     lastScrolledSelectedFileIndexRef.current = state.selectedFileIndex;
-    scrollBox.scrollTo({ x: 0, y: Math.max(offset + (pendingScrollOffset ?? 0), 0) });
+    if (matchingFocusRequest?.mode === "none") {
+      return;
+    }
+
+    const revealScrollOffset = getFileFocusScrollOffset(matchingFocusRequest) ?? 0;
+    scrollBox.scrollTo({ x: 0, y: Math.max(offset + revealScrollOffset, 0) });
     state.setActiveFileIndex(state.selectedFileIndex);
   }, [
     getFileTopOffsets,
-    state.pendingSelectedFileScrollOffsetRef,
+    state.pendingFileFocusRequestRef,
     state.scrollRef,
     state.selectedFileIndex,
     state.setActiveFileIndex,

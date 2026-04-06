@@ -25,6 +25,7 @@ import type {
   SessionActivityUpdate,
 } from "./app-props.ts";
 import type { ReviewComposerTarget } from "../review/review-composer.ts";
+import type { PendingFileFocusRequest } from "../shared/file-focus.ts";
 
 export interface ComparisonBrowserData {
   branches: PreparedReviewSession["branches"];
@@ -80,7 +81,7 @@ export interface DiffdiffAppState {
     key: import("@diffdiff/core").ReviewCacheKey;
     state: import("@diffdiff/core").ReviewCacheState;
   } | null>;
-  pendingSelectedFileScrollOffsetRef: MutableRefObject<number | null>;
+  pendingFileFocusRequestRef: MutableRefObject<PendingFileFocusRequest | null>;
   pendingSessionActivityRef: MutableRefObject<SessionActivityUpdate | null>;
   pendingSyntaxHydrationPathsRef: MutableRefObject<Set<string>>;
   pullRequestConversationIndex: number;

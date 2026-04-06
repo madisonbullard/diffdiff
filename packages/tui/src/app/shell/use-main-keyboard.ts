@@ -10,6 +10,7 @@ import { closeDialog as closeAppDialog } from "../dialogs/stack.ts";
 import type { KeymapMode } from "./keymap-mode.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import type { AppCommand } from "../commands/registry.ts";
+import type { FileFocusController } from "../shared/file-focus.ts";
 import {
   getPrefixMenuByTriggerKey,
   getPrefixMenuConfig,
@@ -25,6 +26,7 @@ interface UseMainKeyboardOptions {
     runCommandByValue: (value: string) => void;
   };
   dismissErrorToast: () => void;
+  focusFile: FileFocusController["focusFile"];
   findCommandByKey: (
     key: KeyboardInput,
     prefix?: CommandKeybindPrefix | null,
@@ -53,6 +55,7 @@ export function useMainKeyboard({
   activeKeymapMode,
   commandActions,
   dismissErrorToast,
+  focusFile,
   findCommandByKey,
   getPrefixMenuCommands,
   handleBranchModalKey,
@@ -161,13 +164,17 @@ export function useMainKeyboard({
     }
 
     if (key.name === "home") {
-      state.setSelectedFileIndex(0);
+      focusFile({ activatePane: "preserve", reveal: "default", target: { index: 0 } });
       state.setStatusMessage("Jumped to the first file.");
       return;
     }
 
     if (key.name === "end") {
-      state.setSelectedFileIndex(Math.max(state.session.files.length - 1, 0));
+      focusFile({
+        activatePane: "preserve",
+        reveal: "default",
+        target: { index: Math.max(state.session.files.length - 1, 0) },
+      });
       state.setStatusMessage("Jumped to the last file.");
       return;
     }

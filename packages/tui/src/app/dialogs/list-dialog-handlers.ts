@@ -34,6 +34,25 @@ interface CreateListModalHandlersOptions {
   toggleBranchFilter: (key: keyof import("../../types.ts").BranchListFilters) => void;
 }
 
+export function openBranchListModal(
+  state: DiffdiffAppState,
+  branchItems: DiffdiffAppDerived["branchItems"],
+): void {
+  state.setBranchListIndex(
+    findInitialBranchListSelection({
+      comparison: state.session.comparison,
+      currentBranch: state.session.repository.currentBranch,
+      items: branchItems,
+    }),
+  );
+  state.setCommitListIndex(0);
+  state.setCommitSearchQuery("");
+  state.setCommitSearchActive(false);
+  state.setActiveListView("branch");
+  state.setDialogStack((currentStack) => openAppDialog(currentStack, "branch", { clear: true }));
+  state.setStatusMessage("Opened list modal.");
+}
+
 export function createListModalHandlers({
   applyBranchSelection,
   applyCommitSelection,
@@ -51,19 +70,7 @@ export function createListModalHandlers({
   toggleBranchFilter,
 }: CreateListModalHandlersOptions) {
   function openBranchModal(): void {
-    state.setBranchListIndex(
-      findInitialBranchListSelection({
-        comparison: state.session.comparison,
-        currentBranch: state.session.repository.currentBranch,
-        items: derived.branchItems,
-      }),
-    );
-    state.setCommitListIndex(0);
-    state.setCommitSearchQuery("");
-    state.setCommitSearchActive(false);
-    state.setActiveListView("branch");
-    state.setDialogStack((currentStack) => openAppDialog(currentStack, "branch", { clear: true }));
-    state.setStatusMessage("Opened list modal.");
+    openBranchListModal(state, derived.branchItems);
   }
 
   function findCommandByKey(

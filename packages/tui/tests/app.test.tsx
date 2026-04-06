@@ -979,6 +979,114 @@ test("refreshes the comparison with shift+r", async () => {
   expect(getAppText(tree)).not.toContain("src/current.ts");
 });
 
+test("falls back to the first file when the selected file disappears during refresh", async () => {
+  const nextSession = createPreparedSession({
+    files: [
+      createPreparedFile({ path: "src/first.ts" }),
+      createPreparedFile({ path: "src/second.ts" }),
+    ],
+  });
+  const loadSession = vi.fn(async () => nextSession);
+  const syncRemotes = vi.fn(async () => undefined);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({
+          files: [
+            createPreparedFile({ path: "src/app.ts" }),
+            createPreparedFile({ path: "src/utils.ts" }),
+          ],
+        }),
+        loadSession,
+        syncRemotes,
+      })}
+    />,
+  );
+
+  emitKey({ name: "j" });
+  expect(getSelectedFileCard(tree).props.file.path).toBe("src/utils.ts");
+
+  await emitAsyncKey({ name: "r", sequence: "R", shift: true });
+
+  expect(getSelectedFileCard(tree).props.file.path).toBe("src/first.ts");
+});
+
+test("does not reuse the previous file offset when a branch switch restores a different cached file", async () => {
+  const scrollboxes: ReturnType<typeof createMockScrollbox>[] = [];
+  const fileCardYs = [10, 110, 15, 115];
+  let fileCardRefIndex = 0;
+  const nextSession = createPreparedSession({
+    files: [
+      createPreparedFile({ path: "src/app.ts" }),
+      createPreparedFile({ path: "src/utils.ts" }),
+    ],
+  });
+  const loadSession = vi.fn(async () => nextSession);
+  vi.spyOn(diffdiffCore, "loadReviewCache").mockResolvedValue({
+    collapsedPaths: [],
+    reviewedFiles: [],
+    selectedFilePath: nextSession.files[1]!.path,
+  });
+
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({
+          files: [
+            createPreparedFile({ path: "src/app.ts" }),
+            createPreparedFile({ path: "src/utils.ts" }),
+          ],
+        }),
+        loadSession,
+      })}
+    />,
+    {
+      createNodeMock(element) {
+        const props =
+          typeof element.props === "object" && element.props != null
+            ? (element.props as {
+                border?: unknown;
+                flexDirection?: unknown;
+                gap?: unknown;
+                paddingLeft?: unknown;
+              })
+            : undefined;
+
+        if (element.type === "scrollbox") {
+          const scrollbox = createMockScrollbox(false);
+          scrollboxes.push(scrollbox);
+          return scrollbox;
+        }
+
+        if (
+          element.type === "box" &&
+          Array.isArray(props?.border) &&
+          props.border[0] === "left" &&
+          props.paddingLeft === 2 &&
+          props.flexDirection === "column" &&
+          props.gap === 1
+        ) {
+          return { y: fileCardYs[fileCardRefIndex++] ?? 15 };
+        }
+
+        if (element.type === "box") {
+          return { y: 0 };
+        }
+
+        return null;
+      },
+    },
+  );
+
+  scrollboxes[1]!.scrollTop = 50;
+
+  emitKey({ name: "l", sequence: "l" });
+  await emitAsyncKey({ name: "w", sequence: "w" });
+
+  expect(getSelectedFileCard(tree).props.file.path).toBe("src/utils.ts");
+  expect(scrollboxes[1]?.scrollTo).toHaveBeenLastCalledWith({ x: 0, y: 115 });
+});
+
 test("does not render the removed key legend", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 
@@ -3293,6 +3401,18 @@ function getRootBox(tree: ReactTestRenderer) {
 
 function getSelectedFileLabel(tree: ReactTestRenderer): string {
   return getAppText(tree);
+}
+
+function getSelectedFileCard(tree: ReactTestRenderer): ReactTestInstance {
+  const selectedCard = tree.root
+    .findAllByType(FileCard)
+    .find((node) => node.props.isSelected === true);
+
+  if (selectedCard == null) {
+    throw new Error("Expected a selected file card.");
+  }
+
+  return selectedCard;
 }
 
 function getAppText(tree: ReactTestRenderer): string {

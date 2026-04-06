@@ -36,7 +36,6 @@ export function useDiffdiffAppRefresh({ actions, persistence, props, state }: Us
       return;
     }
 
-    const selectedFilePath = state.session.files[state.selectedFileIndex]?.path;
     state.setIsReloading(true);
     state.setRefreshIndicatorLabel(null);
     state.setStatusMessage("Refreshing branches and GitHub data...");
@@ -49,14 +48,7 @@ export function useDiffdiffAppRefresh({ actions, persistence, props, state }: Us
         return;
       }
 
-      const nextSelectedFileIndex =
-        selectedFilePath == null
-          ? -1
-          : nextSession.files.findIndex((file) => file.path === selectedFilePath);
       actions.applyLoadedSession(nextSession);
-      if (nextSelectedFileIndex >= 0) {
-        state.setSelectedFileIndex(nextSelectedFileIndex);
-      }
       state.setStatusMessage("Refreshed branches and GitHub data.");
     } catch (error) {
       if (actions.isLatestSessionLoad(sessionLoadId)) {
@@ -83,7 +75,6 @@ export function useDiffdiffAppRefresh({ actions, persistence, props, state }: Us
         state.session.comparison.mode === "working-tree" &&
         (freshness.hasComparisonUpdates || freshness.hasGitHubUpdates)
       ) {
-        const selectedFilePath = state.session.files[state.selectedFileIndex]?.path;
         state.setIsReloading(true);
         state.setRefreshIndicatorLabel(null);
         state.setStatusMessage("Updating working tree view...");
@@ -95,14 +86,7 @@ export function useDiffdiffAppRefresh({ actions, persistence, props, state }: Us
             return;
           }
 
-          const nextSelectedFileIndex =
-            selectedFilePath == null
-              ? -1
-              : nextSession.files.findIndex((file) => file.path === selectedFilePath);
           actions.applyLoadedSession(nextSession);
-          if (nextSelectedFileIndex >= 0) {
-            state.setSelectedFileIndex(nextSelectedFileIndex);
-          }
           state.setStatusMessage("Updated working tree view.");
         } catch (error) {
           if (actions.isLatestSessionLoad(sessionLoadId)) {
