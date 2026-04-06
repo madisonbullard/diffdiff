@@ -10,6 +10,8 @@
   "permission": {
     "read": {
       "/Users/madisonbullard/.diffdiff/**": "allow",
+      "/Users/madisonbullard/Documents/Projects/opencode/**": "allow",
+      "/Users/madisonbullard/Documents/Projects/helix/**": "allow",
     },
   },
 }
