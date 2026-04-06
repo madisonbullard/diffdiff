@@ -72,9 +72,9 @@ export interface DiffdiffAppProps {
 export type MergeModalField = "method" | "title" | "body";
 export type SessionActivityUpdate = Parameters<typeof updateDiffdiffSessionActivity>[0];
 
-export interface TextInputLeaderOptions {
-  onLeaderDown?: () => void;
-  onLeaderUp?: () => void;
+export interface TextInputPrefixOptions {
+  onPrefixDown?: () => void;
+  onPrefixUp?: () => void;
 }
 
 export interface RenderSurfaceMetrics {

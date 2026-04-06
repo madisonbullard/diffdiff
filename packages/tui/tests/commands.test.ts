@@ -49,10 +49,9 @@ test("formatCommandShortcuts includes space-prefixed modal shortcuts", () => {
   expect(
     formatCommandShortcuts(
       {
-        keybind: "l,<leader>l",
-        modalKeybind: "l",
+        keybind: "l,<leader>l,<space>l",
       },
       "ctrl+x",
     ),
-  ).toBe("space l / l");
+  ).toBe("l / ctrl+x l / space l");
 });

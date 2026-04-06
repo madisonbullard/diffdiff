@@ -9,9 +9,9 @@ import { FileCard, StickyFileHeader } from "../src/components/file-card.tsx";
 import { FileTreeSidebar } from "../src/components/file-tree-sidebar.tsx";
 import { HelpModal } from "../src/components/help-modal.tsx";
 import { ListFilterModal } from "../src/components/list-filter-modal.tsx";
-import { ModalPickerOverlay } from "../src/components/modal-picker-overlay.tsx";
+import { PrefixPickerOverlay } from "../src/components/prefix-picker-overlay.tsx";
 import { PullRequestListModal } from "../src/components/pull-request-list-modal.tsx";
-import type { ModalPickerCommand } from "../src/app/commands/modal-picker.ts";
+import type { PrefixMenuCommand, PrefixMenuConfig } from "../src/app/commands/prefix-menus.ts";
 import { getUiTheme } from "../src/theme.ts";
 import type { CommandDefinition } from "../src/commands.ts";
 import type { BranchListFilters, PreparedReviewFile } from "../src/types.ts";
@@ -166,7 +166,7 @@ test("shows the PR review action when a PR entry is selected", () => {
         remoteBranches: createRemoteBranches(),
         workingTreeSummary: { filesChanged: 4, additions: 18, deletions: 6 },
       })}
-      branchIndex={3}
+      branchIndex={1}
       commitItems={buildCommitListItems(createComparisonCommits())}
       commitIndex={0}
       commitSearchQuery=""
@@ -500,8 +500,7 @@ test("renders empty branch columns and help copy", () => {
     },
     {
       category: "Comparison",
-      keybind: "l,<leader>l",
-      modalKeybind: "l",
+      keybind: "l,<leader>l,<space>l",
       title: "Open comparison list",
       value: "comparison.list",
     },
@@ -534,7 +533,7 @@ test("renders empty branch columns and help copy", () => {
   expect(collectText(branchModal.toJSON())).toContain("ACTIVE");
   expect(collectText(filterModal.toJSON())).toContain("Remote branches");
   expect(collectText(helpModal.toJSON())).toContain("ctrl+p");
-  expect(collectText(helpModal.toJSON())).toContain("space l / l");
+  expect(collectText(helpModal.toJSON())).toContain("l / ctrl+x l / space l");
   expect(collectText(helpModal.toJSON())).toContain("ctrl+x");
   expect(collectText(helpModal.toJSON())).toContain("open comparison list");
   expect(collectText(helpModal.toJSON())).toContain("copy PR URL");
@@ -546,34 +545,44 @@ test("renders empty branch columns and help copy", () => {
 });
 
 test("renders a compact modal picker overlay", () => {
-  const commands: ModalPickerCommand[] = [
+  const prefixMenu: PrefixMenuConfig = {
+    badgeLabel: "SPACE",
+    pickerDescription: "Press a key to open a modal.",
+    pickerTitle: "Modal Picker",
+    prefix: "space",
+    cancelStatus: "Canceled modal picker.",
+    getActivateStatus: () => "modal picker active. Awaiting a space command.",
+    getUnboundStatus: (keyName) => `No modal is bound to space ${keyName}.`,
+    preserveFocusByDefault: true,
+    statusLabel: "space",
+    triggerKeybind: "space",
+  };
+  const commands: PrefixMenuCommand[] = [
     {
       command: {
         category: "Comparison",
-        keybind: "l,<leader>l",
-        modalKeybind: "l",
+        keybind: "l,<leader>l,<space>l",
         run: () => undefined,
         title: "Open comparison list",
         value: "comparison.list",
       },
-      keybind: "l",
-      label: "l",
+      label: "space l",
     },
     {
       command: {
         category: "System",
         enabled: false,
-        modalKeybind: "d",
         run: () => undefined,
         title: "Open diagnostics",
         value: "system.diagnostics",
       },
-      keybind: "d",
-      label: "d",
+      label: "space d",
     },
   ];
 
-  const overlay = render(<ModalPickerOverlay commands={commands} theme={theme} />);
+  const overlay = render(
+    <PrefixPickerOverlay commands={commands} prefixMenu={prefixMenu} theme={theme} />,
+  );
 
   expect(collectText(overlay.toJSON())).toContain("Modal Picker");
   expect(collectText(overlay.toJSON())).toContain("Press a key to open a modal.");
@@ -599,7 +608,7 @@ test("groups suggested commands under a dedicated heading in the palette", () =>
     },
     {
       category: "Comparison",
-      keybind: "l,<leader>l",
+      keybind: "l,<leader>l,<space>l",
       title: "Open comparison list",
       value: "comparison.list",
     },

@@ -1,14 +1,20 @@
+import type { PrefixMenuCommand, PrefixMenuConfig } from "../app/commands/prefix-menus.ts";
 import type { UiTheme } from "../theme.ts";
-import type { ModalPickerCommand } from "../app/commands/modal-picker.ts";
 import { KeyCap } from "./shared.tsx";
 
-export function ModalPickerOverlay({
+export function PrefixPickerOverlay({
   commands,
+  prefixMenu,
   theme,
 }: {
-  commands: readonly ModalPickerCommand[];
+  commands: readonly PrefixMenuCommand[];
+  prefixMenu: PrefixMenuConfig;
   theme: UiTheme;
 }) {
+  if (prefixMenu.pickerTitle == null || prefixMenu.pickerDescription == null) {
+    return null;
+  }
+
   return (
     <box
       position="absolute"
@@ -25,17 +31,17 @@ export function ModalPickerOverlay({
       gap={0}
     >
       <text fg={theme.accent} wrapMode="none">
-        Modal Picker
+        {prefixMenu.pickerTitle}
       </text>
       <text fg={theme.textMuted} wrapMode="none">
-        Press a key to open a modal.
+        {prefixMenu.pickerDescription}
       </text>
       {commands.map(({ command, label }) => {
         const enabled = command.enabled !== false;
         const textColor = enabled ? theme.text : theme.textMuted;
         return (
           <text key={command.value} fg={textColor} wrapMode="none">
-            <KeyCap label={label} theme={theme} />
+            <KeyCap label={label.replace(/^[^ ]+ /u, "") || label} theme={theme} />
             <span>{` ${command.title}`}</span>
           </text>
         );

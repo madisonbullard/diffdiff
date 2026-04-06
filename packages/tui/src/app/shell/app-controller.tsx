@@ -3,10 +3,11 @@ import { copySelection } from "../../selection-copy.ts";
 import { useCallback, useEffect, useMemo } from "react";
 import { logDiffdiffError, syncGitRemotes } from "@diffdiff/core";
 import { buildAppCommands, getPaletteCommands, type AppCommand } from "../commands/registry.ts";
-import { findModalPickerCommandByKey, getModalPickerCommands } from "../commands/modal-picker.ts";
+import { getPrefixMenuCommands, getPrefixMenuConfig } from "../commands/prefix-menus.ts";
 import { filterCommands, formatCommandKeybind } from "../../commands.ts";
 import { useSessionDiagnostics } from "../diagnostics/use-session-diagnostics.ts";
 import {
+  getPrefixModeBadge,
   getKeymapModeBadge,
   keymapModeSuspendsGlobalKeybinds,
   resolveActiveKeymapMode,
@@ -101,7 +102,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
 
   const commandActions = createCommandActions({
     getCommands: () => commands,
-    leaderKeyLabel: formatCommandKeybind(LEADER_KEYBIND, LEADER_KEYBIND) ?? "ctrl+x",
+    leaderTriggerLabel: formatCommandKeybind(LEADER_KEYBIND, LEADER_KEYBIND) ?? "ctrl+x",
     state,
   });
 
@@ -234,7 +235,14 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       treeActions,
     ],
   );
-  const modalPickerCommands = useMemo(() => getModalPickerCommands(commands), [commands]);
+  const activePrefixMenu = useMemo(
+    () => (state.activePrefix == null ? undefined : getPrefixMenuConfig(state.activePrefix)),
+    [state.activePrefix],
+  );
+  const activePrefixMenuCommands = useMemo(
+    () => (state.activePrefix == null ? [] : getPrefixMenuCommands(commands, state.activePrefix)),
+    [commands, state.activePrefix],
+  );
   const filteredCommands = useMemo(
     () => filterCommands(getPaletteCommands(commands), state.commandQuery),
     [commands, state.commandQuery],
@@ -263,7 +271,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       filteredCommands: readonly AppCommand[];
     },
     filteredCommands,
-    handleTextInputLeaderKey: commandActions.handleTextInputLeaderKey,
+    handleTextInputPrefixKeypress: commandActions.handleTextInputPrefixKeypress,
     openHelp,
     refreshGitHubPullRequestList: githubActions.refreshGitHubPullRequestList,
     runCommand: commandActions.runCommand,
@@ -275,7 +283,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     clearReviewed: reviewActions.clearReviewed,
     copySelectedPullRequestConversationItemUrl:
       reviewActions.copySelectedPullRequestConversationItemUrl,
-    handleTextInputLeaderKey: commandActions.handleTextInputLeaderKey,
+    handleTextInputPrefixKeypress: commandActions.handleTextInputPrefixKeypress,
     openMergeConfirmModal,
     openPullRequestConversationReplyComposer:
       githubActions.openPullRequestConversationReplyComposer,
@@ -294,8 +302,6 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         activePane: state.activePane,
         commitSearchActive: state.commitSearchActive,
         hasSelectedReviewThread: derived.hasThreadKeymap,
-        leaderActive: false,
-        modalPickerActive: false,
         mergeConfirmOpen: state.mergeConfirmOpen,
         mergeModalField: state.mergeModalField,
         pullRequestSearchActive: state.pullRequestSearchActive,
@@ -311,14 +317,12 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       state.pullRequestSearchActive,
     ],
   );
-  const displayKeymapMode = state.modalPickerActive
-    ? "modal-picker"
-    : state.leaderActive
-      ? "leader"
-      : activeKeymapMode;
   const footerModeBadge = useMemo(
-    () => getKeymapModeBadge(displayKeymapMode, props.theme),
-    [displayKeymapMode, props.theme],
+    () =>
+      activePrefixMenu == null
+        ? getKeymapModeBadge(activeKeymapMode, props.theme)
+        : getPrefixModeBadge(activePrefixMenu, props.theme),
+    [activeKeymapMode, activePrefixMenu, props.theme],
   );
   const activeKeymapModeSuspendsGlobalKeybinds = useMemo(
     () => keymapModeSuspendsGlobalKeybinds(activeKeymapMode),
@@ -338,8 +342,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
             ? props.theme.success
             : state.baseBranchLoadingMessage != null ||
                 state.isReloading ||
-                state.leaderActive ||
-                state.modalPickerActive
+                state.activePrefix != null
               ? props.theme.accent
               : props.theme.textMuted,
       message:
@@ -352,12 +355,11 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     }),
     [
       props.theme,
+      state.activePrefix,
       state.baseBranchLoadingMessage,
       state.errorToastMessage,
       state.isReloading,
-      state.leaderActive,
       state.loadingIndicatorFrame,
-      state.modalPickerActive,
       state.statusMessage,
       state.toastMessage,
     ],
@@ -377,10 +379,9 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   useMainKeyboard({
     activeKeymapMode,
     commandActions,
-    derived,
     dismissErrorToast: persistence.persistenceApi.dismissErrorToast,
-    findCommandByKey: listHandlers.findCommandByKey,
-    findModalPickerCommandByKey: (key) => findModalPickerCommandByKey(modalPickerCommands, key),
+    findCommandByKey: (key, prefix = null) => listHandlers.findCommandByKey(key, prefix),
+    getPrefixMenuCommands: (prefix) => getPrefixMenuCommands(commands, prefix),
     handleBranchModalKey: listHandlers.handleBranchModalKey,
     handleClearReviewedModalKey: reviewModalHandlers.handleClearReviewedModalKey,
     handleCleanupModalKey: reviewModalHandlers.handleCleanupModalKey,
@@ -468,8 +469,8 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       mergeCommitTitle={state.mergeCommitTitle}
       mergeMethod={state.mergeMethod}
       mergeModalField={state.mergeModalField}
-      modalPickerActive={state.modalPickerActive}
-      modalPickerCommands={modalPickerCommands}
+      activePrefixMenu={activePrefixMenu}
+      activePrefixMenuCommands={activePrefixMenuCommands}
       onMouseUp={() =>
         copySelection(state.renderer, {
           onSuccess: () => persistence.persistenceApi.showToast("Copied to clipboard"),

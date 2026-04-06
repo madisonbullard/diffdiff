@@ -7,7 +7,7 @@ afterEach(() => {
 });
 
 describe("keybind controller", () => {
-  test("blurs the focused renderable on leader entry and restores it on timeout", () => {
+  test("blurs the focused renderable on leader entry and restores it when the leader hook clears", () => {
     vi.useFakeTimers();
 
     const { blurSpy, focusSpy, renderable } = createRenderable();
@@ -15,55 +15,58 @@ describe("keybind controller", () => {
     blurSpy.mockImplementation(() => {
       currentFocusedRenderable = null;
     });
-    const onLeaderActiveChange = vi.fn((active: boolean) => {
-      if (!active) {
+    const onActivePrefixChange = vi.fn((activePrefix) => {
+      if (activePrefix == null) {
         currentFocusedRenderable = null;
       }
     });
     const onStatusMessage = vi.fn();
     const controller = createKeybindController({
       getFocusedRenderable: () => currentFocusedRenderable,
-      onLeaderActiveChange,
-      onModalPickerActiveChange: vi.fn(),
+      onActivePrefixChange,
       onStatusMessage,
     });
 
-    controller.enterLeaderMode({
+    controller.enterPrefixMode("leader", {
       status: "Leader key active.",
-      timeoutStatus: "Leader key timed out.",
+      onEnter: ({ clearPrefixMode }) => {
+        const timeout = setTimeout(() => {
+          clearPrefixMode("Leader key timed out.");
+        }, 2_000);
+
+        return () => clearTimeout(timeout);
+      },
     });
 
-    expect(controller.isLeaderActive()).toBe(true);
+    expect(controller.isPrefixActive("leader")).toBe(true);
     expect(blurSpy).toHaveBeenCalledTimes(1);
     expect(focusSpy).not.toHaveBeenCalled();
 
     vi.advanceTimersByTime(2_000);
 
-    expect(controller.isLeaderActive()).toBe(false);
+    expect(controller.getActivePrefix()).toBeNull();
     expect(focusSpy).toHaveBeenCalledTimes(1);
-    expect(onLeaderActiveChange).toHaveBeenNthCalledWith(1, true);
-    expect(onLeaderActiveChange).toHaveBeenNthCalledWith(2, false);
+    expect(onActivePrefixChange).toHaveBeenNthCalledWith(1, "leader");
+    expect(onActivePrefixChange).toHaveBeenNthCalledWith(2, null);
     expect(onStatusMessage).toHaveBeenNthCalledWith(1, "Leader key active.");
     expect(onStatusMessage).toHaveBeenNthCalledWith(2, "Leader key timed out.");
   });
 
-  test("clears leader mode when global keybinds are suspended", () => {
-    const onLeaderActiveChange = vi.fn();
+  test("clears the active prefix when global keybinds are suspended", () => {
+    const onActivePrefixChange = vi.fn();
     const controller = createKeybindController({
       getFocusedRenderable: () => createRenderable().renderable,
-      onLeaderActiveChange,
-      onModalPickerActiveChange: vi.fn(),
+      onActivePrefixChange,
     });
 
-    controller.enterLeaderMode({
+    controller.enterPrefixMode("leader", {
       status: "Leader key active.",
-      timeoutStatus: "Leader key timed out.",
     });
 
     const releaseFirst = controller.suspendGlobalKeybinds();
     const releaseSecond = controller.suspendGlobalKeybinds();
 
-    expect(controller.isLeaderActive()).toBe(false);
+    expect(controller.getActivePrefix()).toBeNull();
     expect(controller.globalKeybindsSuspended()).toBe(true);
 
     releaseFirst();
@@ -71,60 +74,52 @@ describe("keybind controller", () => {
 
     releaseSecond();
     expect(controller.globalKeybindsSuspended()).toBe(false);
-    expect(onLeaderActiveChange).toHaveBeenNthCalledWith(1, true);
-    expect(onLeaderActiveChange).toHaveBeenNthCalledWith(2, false);
+    expect(onActivePrefixChange).toHaveBeenNthCalledWith(1, "leader");
+    expect(onActivePrefixChange).toHaveBeenNthCalledWith(2, null);
   });
 
-  test("keeps the current focus when leader mode preserves text-input focus", () => {
-    vi.useFakeTimers();
-
+  test("keeps the current focus when prefix mode preserves text-input focus", () => {
     const { blurSpy, focusSpy, renderable } = createRenderable();
     const controller = createKeybindController({
       getFocusedRenderable: () => renderable,
-      onLeaderActiveChange: vi.fn(),
-      onModalPickerActiveChange: vi.fn(),
+      onActivePrefixChange: vi.fn(),
     });
 
-    controller.enterLeaderMode({
+    controller.enterPrefixMode("leader", {
       preserveFocus: true,
       status: "Leader key active.",
-      timeoutStatus: "Leader key timed out.",
     });
 
     expect(blurSpy).not.toHaveBeenCalled();
 
-    controller.clearLeaderMode();
+    controller.clearPrefixMode();
 
     expect(focusSpy).not.toHaveBeenCalled();
   });
 
-  test("tracks modal picker state without blurring preserved focus", () => {
-    vi.useFakeTimers();
-
+  test("tracks a space prefix without blurring preserved focus", () => {
     const { blurSpy, focusSpy, renderable } = createRenderable();
-    const onModalPickerActiveChange = vi.fn();
+    const onActivePrefixChange = vi.fn();
     const controller = createKeybindController({
       getFocusedRenderable: () => renderable,
-      onLeaderActiveChange: vi.fn(),
-      onModalPickerActiveChange,
+      onActivePrefixChange,
       onStatusMessage: vi.fn(),
     });
 
-    controller.enterModalPickerMode({
+    controller.enterPrefixMode("space", {
       preserveFocus: true,
       status: "Modal picker active.",
-      timeoutStatus: "Modal picker timed out.",
     });
 
-    expect(controller.isModalPickerActive()).toBe(true);
+    expect(controller.isPrefixActive("space")).toBe(true);
     expect(blurSpy).not.toHaveBeenCalled();
 
-    controller.clearModalPickerMode();
+    controller.clearPrefixMode();
 
-    expect(controller.isModalPickerActive()).toBe(false);
+    expect(controller.getActivePrefix()).toBeNull();
     expect(focusSpy).not.toHaveBeenCalled();
-    expect(onModalPickerActiveChange).toHaveBeenNthCalledWith(1, true);
-    expect(onModalPickerActiveChange).toHaveBeenNthCalledWith(2, false);
+    expect(onActivePrefixChange).toHaveBeenNthCalledWith(1, "space");
+    expect(onActivePrefixChange).toHaveBeenNthCalledWith(2, null);
   });
 });
 

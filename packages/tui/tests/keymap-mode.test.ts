@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import {
+  getPrefixModeBadge,
   getKeymapModeBadge,
   keymapModeSuspendsGlobalKeybinds,
   resolveActiveKeymapMode,
@@ -7,23 +8,6 @@ import {
 import { DARK_THEME } from "../src/theme.ts";
 
 describe("keymap mode", () => {
-  test("prioritizes leader mode over every other keymap", () => {
-    expect(
-      resolveActiveKeymapMode({
-        activeDialog: "merge",
-        activeListView: "branch",
-        activePane: "diff",
-        commitSearchActive: false,
-        hasSelectedReviewThread: true,
-        leaderActive: true,
-        modalPickerActive: false,
-        mergeConfirmOpen: true,
-        mergeModalField: "body",
-        pullRequestSearchActive: false,
-      }),
-    ).toBe("leader");
-  });
-
   test("returns thread mode when an inline review thread is focused", () => {
     const mode = resolveActiveKeymapMode({
       activeDialog: null,
@@ -31,8 +15,6 @@ describe("keymap mode", () => {
       activePane: "diff",
       commitSearchActive: false,
       hasSelectedReviewThread: true,
-      leaderActive: false,
-      modalPickerActive: false,
       mergeConfirmOpen: false,
       mergeModalField: "method",
       pullRequestSearchActive: false,
@@ -54,8 +36,6 @@ describe("keymap mode", () => {
         activePane: "diff",
         commitSearchActive: false,
         hasSelectedReviewThread: false,
-        leaderActive: false,
-        modalPickerActive: false,
         mergeConfirmOpen: false,
         mergeModalField: "method",
         pullRequestSearchActive: false,
@@ -69,8 +49,6 @@ describe("keymap mode", () => {
         activePane: "diff",
         commitSearchActive: false,
         hasSelectedReviewThread: false,
-        leaderActive: false,
-        modalPickerActive: false,
         mergeConfirmOpen: false,
         mergeModalField: "method",
         pullRequestSearchActive: true,
@@ -86,8 +64,6 @@ describe("keymap mode", () => {
         activePane: "diff",
         commitSearchActive: false,
         hasSelectedReviewThread: false,
-        leaderActive: false,
-        modalPickerActive: false,
         mergeConfirmOpen: false,
         mergeModalField: "method",
         pullRequestSearchActive: false,
@@ -101,8 +77,6 @@ describe("keymap mode", () => {
         activePane: "diff",
         commitSearchActive: false,
         hasSelectedReviewThread: false,
-        leaderActive: false,
-        modalPickerActive: false,
         mergeConfirmOpen: false,
         mergeModalField: "method",
         pullRequestSearchActive: false,
@@ -116,8 +90,6 @@ describe("keymap mode", () => {
         activePane: "diff",
         commitSearchActive: true,
         hasSelectedReviewThread: false,
-        leaderActive: false,
-        modalPickerActive: false,
         mergeConfirmOpen: false,
         mergeModalField: "method",
         pullRequestSearchActive: false,
@@ -133,8 +105,6 @@ describe("keymap mode", () => {
         activePane: "diff",
         commitSearchActive: false,
         hasSelectedReviewThread: false,
-        leaderActive: false,
-        modalPickerActive: false,
         mergeConfirmOpen: false,
         mergeModalField: "title",
         pullRequestSearchActive: false,
@@ -148,8 +118,6 @@ describe("keymap mode", () => {
         activePane: "diff",
         commitSearchActive: false,
         hasSelectedReviewThread: false,
-        leaderActive: false,
-        modalPickerActive: false,
         mergeConfirmOpen: true,
         mergeModalField: "title",
         pullRequestSearchActive: false,
@@ -166,23 +134,40 @@ describe("keymap mode", () => {
     expect(keymapModeSuspendsGlobalKeybinds("tree")).toBe(false);
   });
 
-  test("returns modal-picker mode when the space picker is active", () => {
+  test("renders prefix badges from the prefix menu registry", () => {
     expect(
-      resolveActiveKeymapMode({
-        activeDialog: null,
-        activeListView: "branch",
-        activePane: "diff",
-        commitSearchActive: false,
-        hasSelectedReviewThread: false,
-        leaderActive: false,
-        modalPickerActive: true,
-        mergeConfirmOpen: false,
-        mergeModalField: "method",
-        pullRequestSearchActive: false,
-      }),
-    ).toBe("modal-picker");
+      getPrefixModeBadge(
+        {
+          badgeLabel: "LEADER",
+          cancelStatus: "Canceled leader key.",
+          getActivateStatus: () => "Leader key active.",
+          getUnboundStatus: (keyName) => `No command is bound to leader ${keyName}.`,
+          preserveFocusByDefault: false,
+          prefix: "leader",
+          statusLabel: "leader",
+          triggerKeybind: "ctrl+x",
+        },
+        DARK_THEME,
+      ),
+    ).toMatchObject({
+      label: "LEADER",
+    });
 
-    expect(getKeymapModeBadge("modal-picker", DARK_THEME)).toMatchObject({
+    expect(
+      getPrefixModeBadge(
+        {
+          badgeLabel: "SPACE",
+          cancelStatus: "Canceled modal picker.",
+          getActivateStatus: () => "modal picker active. Awaiting a space command.",
+          getUnboundStatus: (keyName) => `No modal is bound to space ${keyName}.`,
+          preserveFocusByDefault: true,
+          prefix: "space",
+          statusLabel: "space",
+          triggerKeybind: "space",
+        },
+        DARK_THEME,
+      ),
+    ).toMatchObject({
       label: "SPACE",
     });
   });

@@ -102,6 +102,13 @@ describe("command registry", () => {
     expect(findAppCommandByKey(commands, { name: "return" }, { activePane: "tree" })?.value).toBe(
       "view.open-selected-file",
     );
+    expect(
+      findAppCommandByKey(
+        commands,
+        { name: "l", sequence: "l" },
+        { activePane: "diff", prefix: "space" },
+      )?.value,
+    ).toBe("comparison.list");
   });
 
   test("models next-unreviewed and open-selected-file as command metadata", () => {

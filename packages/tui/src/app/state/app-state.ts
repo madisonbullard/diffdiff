@@ -7,6 +7,7 @@ import type {
 import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core";
 import type { useRenderer, useTerminalDimensions } from "@opentui/react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import type { CommandKeybindPrefix } from "../../commands.ts";
 import type { AppDialogStackEntry } from "../dialogs/stack.ts";
 import { createKeybindController } from "../keybind-controller.ts";
 import type {
@@ -66,9 +67,8 @@ export interface DiffdiffAppState {
   isSubmittingReviewAction: boolean;
   keybindController: ReturnType<typeof createKeybindController>;
   latestSessionLoadIdRef: MutableRefObject<number>;
-  leaderActive: boolean;
+  activePrefix: CommandKeybindPrefix | null;
   loadingIndicatorFrame: number;
-  modalPickerActive: boolean;
   mergeCommitMessage: string;
   mergeCommitTitle: string;
   mergeConfirmOpen: boolean;
@@ -143,9 +143,8 @@ export interface DiffdiffAppState {
   setIsPullRequestListLoading: Dispatch<SetStateAction<boolean>>;
   setIsReloading: Dispatch<SetStateAction<boolean>>;
   setIsSubmittingReviewAction: Dispatch<SetStateAction<boolean>>;
-  setLeaderActive: Dispatch<SetStateAction<boolean>>;
+  setActivePrefix: Dispatch<SetStateAction<CommandKeybindPrefix | null>>;
   setLoadingIndicatorFrame: Dispatch<SetStateAction<number>>;
-  setModalPickerActive: Dispatch<SetStateAction<boolean>>;
   setMergeCommitMessage: Dispatch<SetStateAction<string>>;
   setMergeCommitTitle: Dispatch<SetStateAction<string>>;
   setMergeConfirmOpen: Dispatch<SetStateAction<boolean>>;

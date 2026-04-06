@@ -247,7 +247,7 @@ test("opens the modal picker with space and launches a modal with one key", () =
 
   emitKey({ name: "space", sequence: " " });
 
-  expect(getAppText(tree)).toContain("Modal picker active");
+  expect(getAppText(tree)).toContain("modal picker active");
   expect(getAppText(tree)).toContain("Modal Picker");
   expect(getAppText(tree)).toContain("Open comparison list");
 

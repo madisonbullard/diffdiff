@@ -6,9 +6,9 @@ import type { DiffdiffAppState } from "../../state/use-app-state.ts";
 
 interface CommandPaletteKeymapOptions {
   filteredCommands: readonly AppCommand[];
-  handleTextInputLeaderKey: (
+  handleTextInputPrefixKeypress: (
     key: KeyboardInput,
-    options?: { onLeaderDown?: () => void; onLeaderUp?: () => void },
+    options?: { onPrefixDown?: () => void; onPrefixUp?: () => void },
   ) => boolean;
   runCommand: (command: AppCommand) => void;
   state: DiffdiffAppState;
@@ -16,19 +16,19 @@ interface CommandPaletteKeymapOptions {
 
 export function createCommandPaletteKeyHandler({
   filteredCommands,
-  handleTextInputLeaderKey,
+  handleTextInputPrefixKeypress,
   runCommand,
   state,
 }: CommandPaletteKeymapOptions) {
   return function handleCommandModalKey(key: KeyboardInput): void {
     if (
-      handleTextInputLeaderKey(key, {
-        onLeaderDown: () => {
+      handleTextInputPrefixKeypress(key, {
+        onPrefixDown: () => {
           state.setCommandIndex((currentIndex) =>
             clampIndex(currentIndex + 1, filteredCommands.length),
           );
         },
-        onLeaderUp: () => {
+        onPrefixUp: () => {
           state.setCommandIndex((currentIndex) =>
             clampIndex(currentIndex - 1, filteredCommands.length),
           );

@@ -4,24 +4,24 @@ import { closeDialog as closeAppDialog } from "../../dialogs/stack.ts";
 import type { DiffdiffAppState } from "../../state/use-app-state.ts";
 
 export function createSubmitReviewKeyHandler({
-  handleTextInputLeaderKey,
+  handleTextInputPrefixKeypress,
   state,
   submitReviewFromModal,
 }: {
-  handleTextInputLeaderKey: (
+  handleTextInputPrefixKeypress: (
     key: KeyboardInput,
-    options?: { onLeaderDown?: () => void; onLeaderUp?: () => void },
+    options?: { onPrefixDown?: () => void; onPrefixUp?: () => void },
   ) => boolean;
   state: DiffdiffAppState;
   submitReviewFromModal: () => Promise<void>;
 }) {
   return function handleSubmitReviewModalKey(key: KeyboardInput): void {
     if (
-      handleTextInputLeaderKey(key, {
-        onLeaderDown: () => {
+      handleTextInputPrefixKeypress(key, {
+        onPrefixDown: () => {
           state.setReviewSubmissionEventIndex((currentIndex) => clampIndex(currentIndex + 1, 3));
         },
-        onLeaderUp: () => {
+        onPrefixUp: () => {
           state.setReviewSubmissionEventIndex((currentIndex) => clampIndex(currentIndex - 1, 3));
         },
       })

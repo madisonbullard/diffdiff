@@ -1,27 +1,37 @@
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useRef } from "react";
-import { matchCommandKeybind, type KeyboardInput } from "../../commands.ts";
-import { COMMAND_LIST_KEYBIND, LEADER_KEYBIND } from "../shared/constants.ts";
+import {
+  matchCommandKeybind,
+  type CommandKeybindPrefix,
+  type KeyboardInput,
+} from "../../commands.ts";
+import { COMMAND_LIST_KEYBIND } from "../shared/constants.ts";
 import { closeDialog as closeAppDialog } from "../dialogs/stack.ts";
 import type { KeymapMode } from "./keymap-mode.ts";
-import type { DiffdiffAppDerived } from "./use-app-models.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import type { AppCommand } from "../commands/registry.ts";
+import {
+  getPrefixMenuByTriggerKey,
+  getPrefixMenuConfig,
+  type PrefixMenuConfig,
+} from "../commands/prefix-menus.ts";
 
 interface UseMainKeyboardOptions {
   activeKeymapMode: KeymapMode;
   commandActions: {
-    clearModalPickerMode: (status?: string) => void;
-    clearLeaderMode: (status?: string) => void;
-    enterLeaderMode: (options?: { preserveFocus?: boolean }) => void;
-    enterModalPickerMode: () => void;
+    clearPrefixMode: (status?: string) => void;
+    enterPrefixMode: (prefix: CommandKeybindPrefix, options?: { preserveFocus?: boolean }) => void;
     runCommand: (command: AppCommand) => void;
     runCommandByValue: (value: string) => void;
   };
-  derived: DiffdiffAppDerived;
   dismissErrorToast: () => void;
-  findCommandByKey: (key: KeyboardInput, leader?: boolean) => AppCommand | undefined;
-  findModalPickerCommandByKey: (key: KeyboardInput) => AppCommand | undefined;
+  findCommandByKey: (
+    key: KeyboardInput,
+    prefix?: CommandKeybindPrefix | null,
+  ) => AppCommand | undefined;
+  getPrefixMenuCommands: (
+    prefix: CommandKeybindPrefix,
+  ) => readonly import("../commands/prefix-menus.ts").PrefixMenuCommand[];
   handleBranchModalKey: (key: KeyboardInput) => void;
   handleClearReviewedModalKey: (key: KeyboardInput) => void;
   handleCleanupModalKey: (key: KeyboardInput) => void;
@@ -44,7 +54,7 @@ export function useMainKeyboard({
   commandActions,
   dismissErrorToast,
   findCommandByKey,
-  findModalPickerCommandByKey,
+  getPrefixMenuCommands,
   handleBranchModalKey,
   handleClearReviewedModalKey,
   handleCleanupModalKey,
@@ -73,34 +83,34 @@ export function useMainKeyboard({
     }
   }
 
-  function handleLeaderModeKey(key: KeyboardInput): void {
+  function handleActivePrefixKey(key: KeyboardInput, prefixMenu: PrefixMenuConfig): void {
     if (key.name === "escape") {
-      commandActions.clearLeaderMode("Canceled leader key.");
+      commandActions.clearPrefixMode(prefixMenu.cancelStatus);
       return;
     }
 
-    const command = findCommandByKey(key, true);
+    const command = findCommandByKey(key, prefixMenu.prefix);
     if (command != null) {
       commandActions.runCommand(command);
       return;
     }
 
-    commandActions.clearLeaderMode(`No command is bound to leader ${key.name}.`);
+    commandActions.clearPrefixMode(prefixMenu.getUnboundStatus(key.name));
   }
 
-  function handleModalPickerModeKey(key: KeyboardInput): void {
-    if (key.name === "escape") {
-      commandActions.clearModalPickerMode("Canceled modal picker.");
-      return;
+  function maybeEnterPrefixMode(key: KeyboardInput): boolean {
+    const prefixMenu = getPrefixMenuByTriggerKey(key);
+    if (prefixMenu == null) {
+      return false;
     }
 
-    const command = findModalPickerCommandByKey(key);
-    if (command != null) {
-      commandActions.runCommand(command);
-      return;
+    const prefixCommands = getPrefixMenuCommands(prefixMenu.prefix);
+    if (prefixCommands.length === 0) {
+      return false;
     }
 
-    commandActions.clearModalPickerMode(`No modal is bound to space ${key.name}.`);
+    commandActions.enterPrefixMode(prefixMenu.prefix);
+    return true;
   }
 
   function handleMainPaneKey(key: KeyboardInput, globalKeybindsSuspended: boolean): void {
@@ -108,13 +118,7 @@ export function useMainKeyboard({
       return;
     }
 
-    if (key.name === "space" && !key.ctrl && !key.meta && !key.shift && !key.super) {
-      commandActions.enterModalPickerMode();
-      return;
-    }
-
-    if (matchCommandKeybind(LEADER_KEYBIND, key)) {
-      commandActions.enterLeaderMode();
+    if (maybeEnterPrefixMode(key)) {
       return;
     }
 
@@ -184,9 +188,6 @@ export function useMainKeyboard({
     globalKeybindsSuspended: boolean,
   ): void {
     switch (mode) {
-      case "leader":
-        handleLeaderModeKey(key);
-        return;
       case "commands":
         handleCommandModalKey(key);
         return;
@@ -237,8 +238,8 @@ export function useMainKeyboard({
   }
 
   keyboardHandlerRef.current = (key) => {
-    const leaderModeActive = state.keybindController.isLeaderActive();
-    const modalPickerActive = state.keybindController.isModalPickerActive();
+    const activePrefix = state.keybindController.getActivePrefix();
+    const activePrefixMenu = activePrefix == null ? undefined : getPrefixMenuConfig(activePrefix);
     const globalKeybindsSuspended = state.keybindController.globalKeybindsSuspended();
 
     if (
@@ -250,13 +251,8 @@ export function useMainKeyboard({
       return;
     }
 
-    if (modalPickerActive && isPaneKeymapMode(activeKeymapMode)) {
-      handleModalPickerModeKey(key);
-      return;
-    }
-
-    if (leaderModeActive && isPaneKeymapMode(activeKeymapMode)) {
-      handleLeaderModeKey(key);
+    if (activePrefixMenu != null && isPaneKeymapMode(activeKeymapMode)) {
+      handleActivePrefixKey(key, activePrefixMenu);
       return;
     }
 

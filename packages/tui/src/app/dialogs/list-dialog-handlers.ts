@@ -22,9 +22,9 @@ interface CreateListModalHandlersOptions {
   applyWorkingTreeSelection: () => Promise<void>;
   commands: readonly AppCommand[];
   filteredCommands: readonly AppCommand[];
-  handleTextInputLeaderKey: (
+  handleTextInputPrefixKeypress: (
     key: KeyboardInput,
-    options?: { onLeaderDown?: () => void; onLeaderUp?: () => void },
+    options?: { onPrefixDown?: () => void; onPrefixUp?: () => void },
   ) => boolean;
   openHelp: () => void;
   refreshGitHubPullRequestList: () => Promise<void>;
@@ -43,7 +43,7 @@ export function createListModalHandlers({
   commands,
   derived,
   filteredCommands,
-  handleTextInputLeaderKey,
+  handleTextInputPrefixKeypress,
   openHelp,
   refreshGitHubPullRequestList,
   runCommand,
@@ -66,14 +66,17 @@ export function createListModalHandlers({
     state.setStatusMessage("Opened list modal.");
   }
 
-  function findCommandByKey(key: KeyboardInput, leader = false): AppCommand | undefined {
-    return findAppCommandByKey(commands, key, { activePane: state.activePane, leader });
+  function findCommandByKey(
+    key: KeyboardInput,
+    prefix: import("../../commands.ts").CommandKeybindPrefix | null = null,
+  ): AppCommand | undefined {
+    return findAppCommandByKey(commands, key, { activePane: state.activePane, prefix });
   }
 
   const handlePullRequestListModalKey = createPullRequestListKeyHandler({
     applyDashboardPullRequestSelection,
     derived,
-    handleTextInputLeaderKey,
+    handleTextInputPrefixKeypress,
     refreshGitHubPullRequestList,
     state,
   });
@@ -83,14 +86,14 @@ export function createListModalHandlers({
     applyPullRequestSelection,
     applyWorkingTreeSelection,
     derived,
-    handleTextInputLeaderKey,
+    handleTextInputPrefixKeypress,
     state,
     toggleBranchFilter,
   });
   const handleListFilterModalKey = createListFilterKeyHandler({ state, toggleBranchFilter });
   const handleCommandModalKey = createCommandPaletteKeyHandler({
     filteredCommands,
-    handleTextInputLeaderKey,
+    handleTextInputPrefixKeypress,
     runCommand,
     state,
   });

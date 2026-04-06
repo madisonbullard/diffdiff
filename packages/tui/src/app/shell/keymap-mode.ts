@@ -2,10 +2,9 @@ import { tintHex } from "../../components/shared.tsx";
 import type { AppPane, ListModalView } from "../../types.ts";
 import type { UiTheme } from "../../theme.ts";
 import type { AppDialog } from "../dialogs/stack.ts";
+import type { PrefixMenuConfig } from "../commands/prefix-menus.ts";
 
 export type KeymapMode =
-  | "leader"
-  | "modal-picker"
   | "clear-reviewed"
   | "diff"
   | "thread"
@@ -40,8 +39,6 @@ export interface ResolveActiveKeymapModeOptions {
   activePane: AppPane;
   commitSearchActive: boolean;
   hasSelectedReviewThread: boolean;
-  leaderActive: boolean;
-  modalPickerActive: boolean;
   mergeConfirmOpen: boolean;
   mergeModalField: "method" | "title" | "body";
   pullRequestSearchActive: boolean;
@@ -53,20 +50,10 @@ export function resolveActiveKeymapMode({
   activePane,
   commitSearchActive,
   hasSelectedReviewThread,
-  leaderActive,
-  modalPickerActive,
   mergeConfirmOpen,
   mergeModalField,
   pullRequestSearchActive,
 }: ResolveActiveKeymapModeOptions): KeymapMode {
-  if (leaderActive) {
-    return "leader";
-  }
-
-  if (modalPickerActive) {
-    return "modal-picker";
-  }
-
   switch (activeDialog) {
     case "help":
       return "help";
@@ -132,6 +119,22 @@ export function keymapModeSuspendsGlobalKeybinds(mode: KeymapMode): boolean {
   );
 }
 
+export function getPrefixModeBadge(prefixMenu: PrefixMenuConfig, theme: UiTheme): KeymapModeBadge {
+  if (prefixMenu.prefix === "leader") {
+    return {
+      bg: theme.accent,
+      fg: theme.inverseText,
+      label: prefixMenu.badgeLabel,
+    };
+  }
+
+  return {
+    bg: tintHex(theme.surfaceMuted, theme.accent, 0.28),
+    fg: theme.text,
+    label: prefixMenu.badgeLabel,
+  };
+}
+
 export function getKeymapModeBadge(mode: KeymapMode, theme: UiTheme): KeymapModeBadge {
   const navigationMode = (label: string): KeymapModeBadge => ({
     bg: tintHex(theme.surfaceMuted, theme.accent, 0.28),
@@ -158,18 +161,6 @@ export function getKeymapModeBadge(mode: KeymapMode, theme: UiTheme): KeymapMode
   });
 
   switch (mode) {
-    case "leader":
-      return {
-        bg: theme.accent,
-        fg: theme.inverseText,
-        label: "LEADER",
-      };
-    case "modal-picker":
-      return {
-        bg: tintHex(theme.surfaceMuted, theme.accent, 0.28),
-        fg: theme.text,
-        label: "SPACE",
-      };
     case "clear-reviewed":
       return actionMode("CONFIRM");
     case "diff":

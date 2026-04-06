@@ -13,9 +13,9 @@ interface BranchListKeymapOptions {
   applyPullRequestSelection: (branch: import("@diffdiff/core").BranchInfo) => Promise<void>;
   applyWorkingTreeSelection: () => Promise<void>;
   derived: DiffdiffAppDerived;
-  handleTextInputLeaderKey: (
+  handleTextInputPrefixKeypress: (
     key: KeyboardInput,
-    options?: { onLeaderDown?: () => void; onLeaderUp?: () => void },
+    options?: { onPrefixDown?: () => void; onPrefixUp?: () => void },
   ) => boolean;
   state: DiffdiffAppState;
   toggleBranchFilter: (key: keyof import("../../../types.ts").BranchListFilters) => void;
@@ -27,20 +27,20 @@ export function createBranchListKeyHandler({
   applyPullRequestSelection,
   applyWorkingTreeSelection,
   derived,
-  handleTextInputLeaderKey,
+  handleTextInputPrefixKeypress,
   state,
   toggleBranchFilter,
 }: BranchListKeymapOptions) {
   return function handleBranchModalKey(key: KeyboardInput): void {
     if (state.commitSearchActive && state.activeListView === "commit") {
       if (
-        handleTextInputLeaderKey(key, {
-          onLeaderDown: () => {
+        handleTextInputPrefixKeypress(key, {
+          onPrefixDown: () => {
             state.setCommitListIndex((currentIndex) =>
               clampIndex(currentIndex + 1, derived.filteredCommitItems.length),
             );
           },
-          onLeaderUp: () => {
+          onPrefixUp: () => {
             state.setCommitListIndex((currentIndex) =>
               clampIndex(currentIndex - 1, derived.filteredCommitItems.length),
             );

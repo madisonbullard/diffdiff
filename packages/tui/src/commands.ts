@@ -7,28 +7,38 @@ export interface KeyboardInput {
   super?: boolean;
 }
 
+export type CommandKeybindPrefix = "leader" | "space" | "g";
+
+export type PrefixedCommandKeybindSegment = `<${CommandKeybindPrefix}>${string}`;
+export type CommandKeybind = string;
+
 export interface CommandDefinition {
   value: string;
   title: string;
   category: string;
   description?: string;
   disabledReason?: string;
-  keybind?: string;
-  modalKeybind?: string;
+  keybind?: CommandKeybind;
   enabled?: boolean;
   hidden?: boolean;
   keywords?: readonly string[];
   suggested?: boolean;
 }
 
-interface KeybindInfo {
+export interface ParsedCommandKeybind {
   ctrl: boolean;
-  leader: boolean;
   meta: boolean;
   name: string;
+  prefix: CommandKeybindPrefix | null;
   shift: boolean;
   super: boolean;
 }
+
+interface CommandKeybindFormatOptions {
+  leaderKeybind: string;
+}
+
+const KNOWN_PREFIXES = new Set<CommandKeybindPrefix>(["leader", "space", "g"]);
 
 function normalizeKeyName(name: string): string {
   if (name === " ") {
@@ -42,7 +52,7 @@ function normalizeKeyName(name: string): string {
   return name.toLowerCase();
 }
 
-function fromKeyboardInput(input: KeyboardInput, leader: boolean): KeybindInfo {
+function fromKeyboardInput(input: KeyboardInput): ParsedCommandKeybind {
   const keyName =
     input.name !== ""
       ? input.name
@@ -52,26 +62,53 @@ function fromKeyboardInput(input: KeyboardInput, leader: boolean): KeybindInfo {
 
   return {
     ctrl: input.ctrl === true,
-    leader,
     meta: input.meta === true,
     name: normalizeKeyName(keyName),
+    prefix: null,
     shift: input.shift === true,
     super: input.super === true,
   };
 }
 
-function parseKeybind(keybind: string): KeybindInfo[] {
-  if (keybind === "none") {
+function consumePrefixToken(entry: string): {
+  keybind: string;
+  prefix: CommandKeybindPrefix | null;
+} {
+  const prefixedMatch = entry.trim().match(/^<([a-z-]+)>(.*)$/u);
+  if (prefixedMatch == null) {
+    return {
+      keybind: entry,
+      prefix: null,
+    };
+  }
+
+  const rawPrefix = prefixedMatch[1]?.trim().toLowerCase();
+  if (rawPrefix == null || !KNOWN_PREFIXES.has(rawPrefix as CommandKeybindPrefix)) {
+    return {
+      keybind: entry,
+      prefix: null,
+    };
+  }
+
+  return {
+    keybind: prefixedMatch[2] ?? "",
+    prefix: rawPrefix as CommandKeybindPrefix,
+  };
+}
+
+export function parseCommandKeybinds(keybind: CommandKeybind | undefined): ParsedCommandKeybind[] {
+  if (keybind == null || keybind === "none") {
     return [];
   }
 
   return keybind.split(",").map((entry) => {
-    const parts = entry.trim().replaceAll("<leader>", "leader+").split("+");
-    const parsed: KeybindInfo = {
+    const { keybind: bindingWithoutPrefix, prefix } = consumePrefixToken(entry);
+    const parts = bindingWithoutPrefix.trim().split("+");
+    const parsed: ParsedCommandKeybind = {
       ctrl: false,
-      leader: false,
       meta: false,
       name: "",
+      prefix,
       shift: false,
       super: false,
     };
@@ -94,9 +131,6 @@ function parseKeybind(keybind: string): KeybindInfo[] {
         case "super":
           parsed.super = true;
           break;
-        case "leader":
-          parsed.leader = true;
-          break;
         case "":
           break;
         default:
@@ -108,23 +142,41 @@ function parseKeybind(keybind: string): KeybindInfo[] {
   });
 }
 
-function matchesKeybind(expected: KeybindInfo, actual: KeybindInfo): boolean {
+function matchesKeybind(expected: ParsedCommandKeybind, actual: ParsedCommandKeybind): boolean {
   return (
     expected.ctrl === actual.ctrl &&
-    expected.leader === actual.leader &&
     expected.meta === actual.meta &&
     expected.name === actual.name &&
+    expected.prefix === actual.prefix &&
     expected.shift === actual.shift &&
     expected.super === actual.super
   );
 }
 
-function formatParsedKeybind(keybind: KeybindInfo, leaderLabel?: string): string {
+function formatPrefixLabel(
+  prefix: CommandKeybindPrefix,
+  options: CommandKeybindFormatOptions,
+): string {
+  if (prefix !== "leader") {
+    return prefix;
+  }
+
+  const [leader] = parseCommandKeybinds(options.leaderKeybind);
+  return leader == null
+    ? "leader"
+    : formatParsedCommandKeybind({ ...leader, prefix: null }, options);
+}
+
+export function formatParsedCommandKeybind(
+  keybind: ParsedCommandKeybind,
+  options: CommandKeybindFormatOptions,
+): string {
   const isQuestionMarkKeybind =
     keybind.shift && keybind.name === "/" && !keybind.ctrl && !keybind.meta && !keybind.super;
+  const prefixLabel = keybind.prefix == null ? null : formatPrefixLabel(keybind.prefix, options);
 
   if (isQuestionMarkKeybind) {
-    return keybind.leader ? `${leaderLabel ?? "leader"} ?` : "?";
+    return prefixLabel == null ? "?" : `${prefixLabel} ?`;
   }
 
   const parts: string[] = [];
@@ -150,11 +202,11 @@ function formatParsedKeybind(keybind: KeybindInfo, leaderLabel?: string): string
   }
 
   const text = parts.join("+");
-  if (!keybind.leader) {
+  if (prefixLabel == null) {
     return text;
   }
 
-  return text === "" ? (leaderLabel ?? "leader") : `${leaderLabel ?? "leader"} ${text}`;
+  return text === "" ? prefixLabel : `${prefixLabel} ${text}`;
 }
 
 function commandMatchesQuery(command: CommandDefinition, query: string): number | null {
@@ -230,53 +282,59 @@ export function isPrintableKey(input: KeyboardInput): boolean {
 }
 
 export function matchCommandKeybind(
-  keybind: string | undefined,
+  keybind: CommandKeybind | undefined,
   input: KeyboardInput,
-  leaderActive = false,
+  options: {
+    prefix?: CommandKeybindPrefix | null;
+  } = {},
 ): boolean {
   if (keybind == null) {
     return false;
   }
 
-  const parsedInput = fromKeyboardInput(input, leaderActive);
-  return parseKeybind(keybind).some((entry) => matchesKeybind(entry, parsedInput));
+  const parsedInput = fromKeyboardInput(input);
+  return parseCommandKeybinds(keybind).some((entry) =>
+    matchesKeybind(entry, { ...parsedInput, prefix: options.prefix ?? null }),
+  );
+}
+
+export function getCommandBindingsForPrefix(
+  keybind: CommandKeybind | undefined,
+  prefix: CommandKeybindPrefix,
+): ParsedCommandKeybind[] {
+  return parseCommandKeybinds(keybind).filter((entry) => entry.prefix === prefix);
 }
 
 export function formatCommandKeybind(
-  keybind: string | undefined,
+  keybind: CommandKeybind | undefined,
   leaderKeybind: string,
 ): string | undefined {
-  if (keybind == null) {
-    return undefined;
-  }
-
-  const [first] = parseKeybind(keybind);
+  const [first] = parseCommandKeybinds(keybind);
   if (first == null) {
     return undefined;
   }
 
-  const [leader] = parseKeybind(leaderKeybind);
-  const leaderLabel =
-    leader == null ? "leader" : formatParsedKeybind({ ...leader, leader: false }, undefined);
-  return formatParsedKeybind(first, leaderLabel);
+  return formatParsedCommandKeybind(first, { leaderKeybind });
 }
 
 export function formatCommandShortcuts(
-  command: Pick<CommandDefinition, "keybind" | "modalKeybind">,
+  command: Pick<CommandDefinition, "keybind">,
   leaderKeybind: string,
 ): string | undefined {
-  const shortcuts: string[] = [];
-  const modalKeybind = formatCommandKeybind(command.modalKeybind, leaderKeybind);
-  if (modalKeybind != null) {
-    shortcuts.push(`space ${modalKeybind}`);
+  const parsedBindings = parseCommandKeybinds(command.keybind);
+  if (parsedBindings.length === 0) {
+    return undefined;
   }
 
-  const keybind = formatCommandKeybind(command.keybind, leaderKeybind);
-  if (keybind != null && !shortcuts.includes(keybind)) {
-    shortcuts.push(keybind);
+  const formattedBindings: string[] = [];
+  for (const binding of parsedBindings) {
+    const label = formatParsedCommandKeybind(binding, { leaderKeybind });
+    if (!formattedBindings.includes(label)) {
+      formattedBindings.push(label);
+    }
   }
 
-  return shortcuts.length === 0 ? undefined : shortcuts.join(" / ");
+  return formattedBindings.join(" / ");
 }
 
 export function filterCommands<T extends CommandDefinition>(

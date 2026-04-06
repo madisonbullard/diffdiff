@@ -1,5 +1,5 @@
 import type { AppCommand, BuildAppCommandsOptions } from "../registry.ts";
-import { withLeaderKeybind } from "../../shared/constants.ts";
+import { withLeaderKeybind, withPrefixedKeybind } from "../../shared/constants.ts";
 
 export function buildGitHubCommands({
   copyFocusedReviewCommentUrl,
@@ -62,9 +62,8 @@ export function buildGitHubCommands({
         ? undefined
         : "GitHub auth is required. Run `diffdiff auth login --token-stdin` first.",
       enabled: isGitHubAuthenticated,
-      keybind: withLeaderKeybind("shift+p"),
+      keybind: withPrefixedKeybind("shift+p", ["leader", "space"]),
       keywords: ["pr", "pull request", "review requested", "inbox"],
-      modalKeybind: "shift+p",
       suggested: isGitHubAuthenticated,
       title: "Open GitHub PR list",
       value: "github.pull-request-list",
@@ -75,8 +74,7 @@ export function buildGitHubCommands({
       description: "Show the pull request conversation timeline.",
       disabledReason: gitHubDisabledReason,
       enabled: sessionGitHub != null,
-      keybind: withLeaderKeybind("t"),
-      modalKeybind: "t",
+      keybind: withPrefixedKeybind("t", ["leader", "space"]),
       suggested: sessionGitHub != null,
       title: "Open PR comments",
       value: "github.comments",
@@ -151,8 +149,7 @@ export function buildGitHubCommands({
       description: "Create a review comment on the selected diff line.",
       disabledReason: gitHubWriteDisabledReason,
       enabled: sessionGitHub != null && isGitHubAuthenticated,
-      keybind: withLeaderKeybind("a"),
-      modalKeybind: "a",
+      keybind: withPrefixedKeybind("a", ["leader", "space"]),
       suggested: sessionGitHub != null && isGitHubAuthenticated,
       title: "Add review comment",
       value: "github.add-comment",
@@ -201,8 +198,7 @@ export function buildGitHubCommands({
       description: "Submit the pending review to GitHub.",
       disabledReason: gitHubWriteDisabledReason,
       enabled: sessionGitHub != null && isGitHubAuthenticated,
-      keybind: withLeaderKeybind("shift+a"),
-      modalKeybind: "shift+a",
+      keybind: withPrefixedKeybind("shift+a", ["leader", "space"]),
       suggested: sessionGitHub != null && isGitHubAuthenticated,
       title: "Submit review",
       value: "github.submit-review",
@@ -213,8 +209,7 @@ export function buildGitHubCommands({
       description: "Merge the pull request with the selected merge strategy.",
       disabledReason: gitHubWriteDisabledReason,
       enabled: sessionGitHub != null && isGitHubAuthenticated,
-      keybind: withLeaderKeybind("m"),
-      modalKeybind: "m",
+      keybind: withPrefixedKeybind("m", ["leader", "space"]),
       suggested: sessionGitHub != null && isGitHubAuthenticated,
       title: "Merge pull request",
       value: "github.merge",

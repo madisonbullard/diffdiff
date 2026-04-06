@@ -1,48 +1,42 @@
 import type { AppCommand } from "./registry.ts";
-import { findAppCommandByValue } from "./registry.ts";
-import type { KeyboardInput } from "../../commands.ts";
+import { findAppCommandByKey, findAppCommandByValue } from "./registry.ts";
+import type { CommandKeybindPrefix, KeyboardInput } from "../../commands.ts";
 import { matchCommandKeybind } from "../../commands.ts";
-import { LEADER_KEYBIND } from "../shared/constants.ts";
 import { closeDialog as closeAppDialog, openDialog as openAppDialog } from "../dialogs/stack.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
-import type { TextInputLeaderOptions } from "../state/app-props.ts";
+import type { TextInputPrefixOptions } from "../state/app-props.ts";
+import { getPrefixMenuConfig } from "./prefix-menus.ts";
 
 interface CreateCommandActionsOptions {
   getCommands: () => readonly AppCommand[];
-  leaderKeyLabel: string;
+  leaderTriggerLabel: string;
   state: DiffdiffAppState;
 }
 
 export function createCommandActions({
   getCommands,
-  leaderKeyLabel,
+  leaderTriggerLabel,
   state,
 }: CreateCommandActionsOptions) {
-  function clearTransientMode(status?: string): void {
-    state.keybindController.clearTransientMode(status);
+  function clearPrefixMode(status?: string): void {
+    state.keybindController.clearPrefixMode(status);
   }
 
-  function clearLeaderMode(status?: string): void {
-    state.keybindController.clearLeaderMode(status);
-  }
+  function enterPrefixMode(
+    prefix: CommandKeybindPrefix,
+    options: { preserveFocus?: boolean } = {},
+  ): void {
+    const prefixMenu = getPrefixMenuConfig(prefix);
+    if (prefixMenu == null) {
+      return;
+    }
 
-  function clearModalPickerMode(status?: string): void {
-    state.keybindController.clearModalPickerMode(status);
-  }
-
-  function enterLeaderMode(options: { preserveFocus?: boolean } = {}): void {
-    state.keybindController.enterLeaderMode({
-      preserveFocus: options.preserveFocus,
-      status: `Leader key active. Awaiting a ${leaderKeyLabel} command.`,
-      timeoutStatus: "Leader key timed out.",
-    });
-  }
-
-  function enterModalPickerMode(): void {
-    state.keybindController.enterModalPickerMode({
-      preserveFocus: true,
-      status: "Modal picker active. Awaiting a space command.",
-      timeoutStatus: "Modal picker timed out.",
+    state.keybindController.enterPrefixMode(prefix, {
+      preserveFocus: options.preserveFocus ?? prefixMenu.preserveFocusByDefault,
+      status: prefixMenu.getActivateStatus(
+        prefix === "leader" ? leaderTriggerLabel : prefixMenu.statusLabel,
+      ),
+      onEnter: prefixMenu.onEnterMode,
     });
   }
 
@@ -54,7 +48,7 @@ export function createCommandActions({
       return;
     }
 
-    clearTransientMode();
+    clearPrefixMode();
     state.setDialogStack((currentStack) => closeAppDialog(currentStack, "command-palette"));
     state.setCommandQuery("");
     state.setCommandIndex(0);
@@ -69,7 +63,7 @@ export function createCommandActions({
   }
 
   function openCommandModal(): void {
-    clearTransientMode();
+    clearPrefixMode();
     state.setCommandQuery("");
     state.setCommandIndex(0);
     state.setDialogStack((currentStack) => openAppDialog(currentStack, "command-palette"));
@@ -85,57 +79,67 @@ export function createCommandActions({
     state.setStatusMessage("Closed command palette.");
   }
 
-  function handleTextInputLeaderKey(
+  function handleTextInputPrefixKey(
+    prefix: CommandKeybindPrefix,
     key: KeyboardInput,
-    options: TextInputLeaderOptions = {},
+    options: TextInputPrefixOptions,
   ): boolean {
-    if (matchCommandKeybind(LEADER_KEYBIND, key)) {
-      enterLeaderMode({ preserveFocus: true });
+    const prefixMenu = getPrefixMenuConfig(prefix);
+    if (prefixMenu == null) {
+      return false;
+    }
+
+    if (matchCommandKeybind(prefixMenu.triggerKeybind, key)) {
+      enterPrefixMode(prefix, { preserveFocus: true });
       return true;
     }
 
-    if (!state.keybindController.isLeaderActive()) {
+    if (!state.keybindController.isPrefixActive(prefix)) {
       return false;
     }
 
     if (key.name === "escape") {
-      clearLeaderMode("Canceled leader key.");
+      clearPrefixMode(prefixMenu.cancelStatus);
       return true;
     }
 
-    if (key.name === "j" && options.onLeaderDown != null) {
-      clearLeaderMode();
-      options.onLeaderDown();
+    if (key.name === "j" && options.onPrefixDown != null) {
+      clearPrefixMode();
+      options.onPrefixDown();
       return true;
     }
 
-    if (key.name === "k" && options.onLeaderUp != null) {
-      clearLeaderMode();
-      options.onLeaderUp();
+    if (key.name === "k" && options.onPrefixUp != null) {
+      clearPrefixMode();
+      options.onPrefixUp();
       return true;
     }
 
-    const command = getCommands().find(
-      (candidate) =>
-        candidate.enabled !== false && matchCommandKeybind(candidate.keybind, key, true),
-    );
+    const command = findAppCommandByKey(getCommands(), key, {
+      activePane: state.activePane,
+      prefix,
+    });
     if (command != null) {
       runCommand(command);
       return true;
     }
 
-    clearLeaderMode(`No command is bound to ${leaderKeyLabel} ${key.name}.`);
+    clearPrefixMode(prefixMenu.getUnboundStatus(key.name));
     return true;
   }
 
+  function handleTextInputPrefixKeypress(
+    key: KeyboardInput,
+    options: TextInputPrefixOptions = {},
+  ): boolean {
+    return handleTextInputPrefixKey("leader", key, options);
+  }
+
   return {
-    clearModalPickerMode,
-    clearLeaderMode,
-    clearTransientMode,
+    clearPrefixMode,
     closeCommandModal,
-    enterLeaderMode,
-    enterModalPickerMode,
-    handleTextInputLeaderKey,
+    enterPrefixMode,
+    handleTextInputPrefixKeypress,
     openCommandModal,
     runCommand,
     runCommandByValue,

@@ -1,67 +1,57 @@
 import type { Renderable } from "@opentui/core";
+import type { CommandKeybindPrefix } from "../commands.ts";
 
-const TRANSIENT_KEY_TIMEOUT_MS = 2_000;
+interface PrefixModeHandlers {
+  onEnter?: (controls: { clearPrefixMode: (status?: string) => void }) => void | (() => void);
+}
 
-type TransientKeyMode = "leader" | "modal-picker" | null;
+interface EnterPrefixModeOptions extends PrefixModeHandlers {
+  preserveFocus?: boolean;
+  status: string;
+}
 
 export interface KeybindController {
-  clearModalPickerMode(status?: string): void;
-  clearLeaderMode(status?: string): void;
-  clearTransientMode(status?: string): void;
+  clearPrefixMode(status?: string): void;
   dispose(): void;
-  enterLeaderMode(options: {
-    preserveFocus?: boolean;
-    status: string;
-    timeoutStatus: string;
-  }): void;
-  enterModalPickerMode(options: {
-    preserveFocus?: boolean;
-    status: string;
-    timeoutStatus: string;
-  }): void;
+  enterPrefixMode(prefix: CommandKeybindPrefix, options: EnterPrefixModeOptions): void;
+  getActivePrefix(): CommandKeybindPrefix | null;
   globalKeybindsSuspended(): boolean;
-  isLeaderActive(): boolean;
-  isModalPickerActive(): boolean;
+  isPrefixActive(prefix: CommandKeybindPrefix): boolean;
   resumeGlobalKeybinds(): void;
   suspendGlobalKeybinds(): () => void;
 }
 
 export function createKeybindController({
   getFocusedRenderable,
-  onLeaderActiveChange,
-  onModalPickerActiveChange,
+  onActivePrefixChange,
   onStatusMessage,
 }: {
   getFocusedRenderable: () => Renderable | null | undefined;
-  onLeaderActiveChange: (active: boolean) => void;
-  onModalPickerActiveChange: (active: boolean) => void;
+  onActivePrefixChange: (activePrefix: CommandKeybindPrefix | null) => void;
   onStatusMessage?: (status: string) => void;
 }): KeybindController {
-  let activeMode: TransientKeyMode = null;
-  let transientFocus: Renderable | null = null;
+  let activePrefix: CommandKeybindPrefix | null = null;
+  let prefixCleanup: (() => void) | null = null;
+  let prefixFocus: Renderable | null = null;
   let suspendCount = 0;
-  let transientTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  function setActiveMode(nextMode: TransientKeyMode): void {
-    if (activeMode === nextMode) {
+  function setActivePrefix(nextPrefix: CommandKeybindPrefix | null): void {
+    if (activePrefix === nextPrefix) {
       return;
     }
 
-    activeMode = nextMode;
-    onLeaderActiveChange(nextMode === "leader");
-    onModalPickerActiveChange(nextMode === "modal-picker");
+    activePrefix = nextPrefix;
+    onActivePrefixChange(nextPrefix);
   }
 
-  function clearTransientTimeout(): void {
-    if (transientTimeout != null) {
-      clearTimeout(transientTimeout);
-      transientTimeout = null;
-    }
+  function clearPrefixCleanup(): void {
+    prefixCleanup?.();
+    prefixCleanup = null;
   }
 
-  function restoreTransientFocus(): void {
-    const previousFocus = transientFocus;
-    transientFocus = null;
+  function restorePrefixFocus(): void {
+    const previousFocus = prefixFocus;
+    prefixFocus = null;
     if (previousFocus == null || previousFocus.isDestroyed) {
       return;
     }
@@ -71,84 +61,46 @@ export function createKeybindController({
     }
   }
 
-  function clearTransientMode(status?: string): void {
-    clearTransientTimeout();
+  function clearPrefixMode(status?: string): void {
+    clearPrefixCleanup();
 
-    if (activeMode != null) {
-      restoreTransientFocus();
+    if (activePrefix != null) {
+      restorePrefixFocus();
     } else {
-      transientFocus = null;
+      prefixFocus = null;
     }
 
-    setActiveMode(null);
+    setActivePrefix(null);
 
     if (status != null) {
       onStatusMessage?.(status);
     }
   }
 
-  function clearLeaderMode(status?: string): void {
-    if (activeMode !== "leader") {
-      return;
-    }
+  function enterPrefixMode(prefix: CommandKeybindPrefix, options: EnterPrefixModeOptions): void {
+    clearPrefixCleanup();
 
-    clearTransientMode(status);
-  }
-
-  function clearModalPickerMode(status?: string): void {
-    if (activeMode !== "modal-picker") {
-      return;
-    }
-
-    clearTransientMode(status);
-  }
-
-  function enterTransientMode(
-    nextMode: Exclude<TransientKeyMode, null>,
-    options: {
-      preserveFocus?: boolean;
-      status: string;
-      timeoutStatus: string;
-    },
-  ): void {
-    clearTransientTimeout();
-
-    if (activeMode !== nextMode) {
-      if (activeMode != null) {
-        restoreTransientFocus();
+    if (activePrefix !== prefix) {
+      if (activePrefix != null) {
+        restorePrefixFocus();
       }
 
-      transientFocus = options.preserveFocus ? null : (getFocusedRenderable() ?? null);
-      transientFocus?.blur();
+      prefixFocus = options.preserveFocus ? null : (getFocusedRenderable() ?? null);
+      prefixFocus?.blur();
     }
 
-    setActiveMode(nextMode);
+    setActivePrefix(prefix);
     onStatusMessage?.(options.status);
-    transientTimeout = setTimeout(() => {
-      transientTimeout = null;
-      clearTransientMode(options.timeoutStatus);
-    }, TRANSIENT_KEY_TIMEOUT_MS);
-  }
 
-  function enterLeaderMode(options: {
-    preserveFocus?: boolean;
-    status: string;
-    timeoutStatus: string;
-  }): void {
-    enterTransientMode("leader", options);
-  }
-
-  function enterModalPickerMode(options: {
-    preserveFocus?: boolean;
-    status: string;
-    timeoutStatus: string;
-  }): void {
-    enterTransientMode("modal-picker", options);
+    const cleanup = options.onEnter?.({
+      clearPrefixMode,
+    });
+    prefixCleanup = typeof cleanup === "function" ? cleanup : null;
   }
 
   function suspendGlobalKeybinds(): () => void {
     suspendCount += 1;
-    clearTransientMode();
+    clearPrefixMode();
 
     let released = false;
     return () => {
@@ -166,25 +118,22 @@ export function createKeybindController({
   }
 
   return {
-    clearModalPickerMode,
-    clearLeaderMode,
-    clearTransientMode,
+    clearPrefixMode,
     dispose() {
-      clearTransientTimeout();
-      transientFocus = null;
-      setActiveMode(null);
+      clearPrefixCleanup();
+      prefixFocus = null;
+      setActivePrefix(null);
       suspendCount = 0;
     },
-    enterLeaderMode,
-    enterModalPickerMode,
+    enterPrefixMode,
+    getActivePrefix() {
+      return activePrefix;
+    },
     globalKeybindsSuspended() {
       return suspendCount > 0;
     },
-    isLeaderActive() {
-      return activeMode === "leader";
-    },
-    isModalPickerActive() {
-      return activeMode === "modal-picker";
+    isPrefixActive(prefix) {
+      return activePrefix === prefix;
     },
     resumeGlobalKeybinds,
     suspendGlobalKeybinds,

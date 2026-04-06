@@ -3,19 +3,19 @@ import { closeDialog as closeAppDialog } from "../../dialogs/stack.ts";
 import type { DiffdiffAppState } from "../../state/use-app-state.ts";
 
 export function createCommentComposerKeyHandler({
-  handleTextInputLeaderKey,
+  handleTextInputPrefixKeypress,
   state,
   submitCommentComposer,
 }: {
-  handleTextInputLeaderKey: (
+  handleTextInputPrefixKeypress: (
     key: KeyboardInput,
-    options?: { onLeaderDown?: () => void; onLeaderUp?: () => void },
+    options?: { onPrefixDown?: () => void; onPrefixUp?: () => void },
   ) => boolean;
   state: DiffdiffAppState;
   submitCommentComposer: () => Promise<void>;
 }) {
   return function handleCommentComposerKey(key: KeyboardInput): void {
-    if (handleTextInputLeaderKey(key)) {
+    if (handleTextInputPrefixKeypress(key)) {
       return;
     }
 

@@ -1,5 +1,10 @@
 import type { GitHubReviewSession } from "@diffdiff/core";
-import { matchCommandKeybind, type CommandDefinition, type KeyboardInput } from "../../commands.ts";
+import {
+  matchCommandKeybind,
+  type CommandDefinition,
+  type CommandKeybindPrefix,
+  type KeyboardInput,
+} from "../../commands.ts";
 import type { AppPane, FileTreeNode } from "../../types.ts";
 import { buildComparisonCommands } from "./command-groups/comparison.ts";
 import { buildGitHubCommands } from "./command-groups/github.ts";
@@ -22,17 +27,17 @@ export function findAppCommandByKey(
   key: KeyboardInput,
   options: {
     activePane: AppPane;
-    leader?: boolean;
+    prefix?: CommandKeybindPrefix | null;
   },
 ): AppCommand | undefined {
-  const { activePane, leader = false } = options;
+  const { activePane, prefix = null } = options;
 
   return commands
     .filter(
       (command) =>
         command.enabled !== false &&
         matchesKeybindingContext(command, activePane) &&
-        matchCommandKeybind(command.keybind, key, leader),
+        matchCommandKeybind(command.keybind, key, { prefix }),
     )
     .sort((left, right) => {
       const leftPriority = left.keybindingPriority ?? 0;

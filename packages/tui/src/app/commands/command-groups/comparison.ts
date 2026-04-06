@@ -1,5 +1,5 @@
 import type { AppCommand, BuildAppCommandsOptions } from "../registry.ts";
-import { withLeaderKeybind } from "../../shared/constants.ts";
+import { withLeaderKeybind, withPrefixedKeybind } from "../../shared/constants.ts";
 
 export function buildComparisonCommands({
   openBranchModal,
@@ -17,8 +17,7 @@ export function buildComparisonCommands({
     {
       category: "Comparison",
       description: "Browse the working tree, branches, PRs, and commits.",
-      keybind: withLeaderKeybind("l"),
-      modalKeybind: "l",
+      keybind: withPrefixedKeybind("l", ["leader", "space"]),
       suggested: true,
       title: "Open comparison list",
       value: "comparison.list",

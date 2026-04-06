@@ -143,9 +143,10 @@ export function useDiffdiffAppState({
   const [isReloading, setIsReloading] = useState(false);
   const [isCheckingForUpdates, setIsCheckingForUpdates] = useState(false);
   const [isSubmittingReviewAction, setIsSubmittingReviewAction] = useState(false);
-  const [leaderActive, setLeaderActive] = useState(false);
+  const [activePrefix, setActivePrefix] = useState<
+    import("../../commands.ts").CommandKeybindPrefix | null
+  >(null);
   const [refreshIndicatorLabel, setRefreshIndicatorLabel] = useState<string | null>(null);
-  const [modalPickerActive, setModalPickerActive] = useState(false);
   const [diffViewPreference, setDiffViewPreference] = useState<DiffViewPreference>("unified");
   const [mergeCommitMessage, setMergeCommitMessage] = useState("");
   const [mergeCommitTitle, setMergeCommitTitle] = useState("");
@@ -208,8 +209,7 @@ export function useDiffdiffAppState({
     () =>
       createKeybindController({
         getFocusedRenderable: () => renderer.currentFocusedRenderable,
-        onLeaderActiveChange: setLeaderActive,
-        onModalPickerActiveChange: setModalPickerActive,
+        onActivePrefixChange: setActivePrefix,
         onStatusMessage: setStatusMessage,
       }),
     [renderer],
@@ -252,9 +252,8 @@ export function useDiffdiffAppState({
     isSubmittingReviewAction,
     keybindController,
     latestSessionLoadIdRef,
-    leaderActive,
+    activePrefix,
     loadingIndicatorFrame,
-    modalPickerActive,
     mergeBodyScrollRef,
     mergeCommitMessage,
     mergeCommitTitle,
@@ -317,9 +316,8 @@ export function useDiffdiffAppState({
     setIsPullRequestListLoading,
     setIsReloading,
     setIsSubmittingReviewAction,
-    setLeaderActive,
+    setActivePrefix,
     setLoadingIndicatorFrame,
-    setModalPickerActive,
     setMergeCommitMessage,
     setMergeCommitTitle,
     setMergeConfirmOpen,

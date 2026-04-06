@@ -11,9 +11,9 @@ interface CreateReviewModalHandlersOptions {
   applyCleanupSelection: () => Promise<void>;
   clearReviewed: () => void;
   copySelectedPullRequestConversationItemUrl: () => Promise<void>;
-  handleTextInputLeaderKey: (
+  handleTextInputPrefixKeypress: (
     key: KeyboardInput,
-    options?: { onLeaderDown?: () => void; onLeaderUp?: () => void },
+    options?: { onPrefixDown?: () => void; onPrefixUp?: () => void },
   ) => boolean;
   openMergeConfirmModal: () => void;
   openPullRequestConversationReplyComposer: () => void;
@@ -28,7 +28,7 @@ export function createReviewModalHandlers({
   applyCleanupSelection,
   clearReviewed,
   copySelectedPullRequestConversationItemUrl,
-  handleTextInputLeaderKey,
+  handleTextInputPrefixKeypress,
   openMergeConfirmModal,
   openPullRequestConversationReplyComposer,
   persistence,
@@ -42,7 +42,7 @@ export function createReviewModalHandlers({
     state,
   });
   const handleCommentComposerKey = createCommentComposerKeyHandler({
-    handleTextInputLeaderKey,
+    handleTextInputPrefixKeypress,
     state,
     submitCommentComposer,
   });
@@ -52,12 +52,12 @@ export function createReviewModalHandlers({
     state,
   });
   const handleSubmitReviewModalKey = createSubmitReviewKeyHandler({
-    handleTextInputLeaderKey,
+    handleTextInputPrefixKeypress,
     state,
     submitReviewFromModal,
   });
   const handleMergeModalKey = createMergeKeyHandler({
-    handleTextInputLeaderKey,
+    handleTextInputPrefixKeypress,
     openMergeConfirmModal,
     persistence,
     state,

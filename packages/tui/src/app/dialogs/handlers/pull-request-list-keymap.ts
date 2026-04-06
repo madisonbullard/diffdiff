@@ -9,9 +9,9 @@ interface PullRequestListKeymapOptions {
     pullRequest: import("@diffdiff/core").GitHubDashboardPullRequest,
   ) => Promise<void>;
   derived: DiffdiffAppDerived;
-  handleTextInputLeaderKey: (
+  handleTextInputPrefixKeypress: (
     key: KeyboardInput,
-    options?: { onLeaderDown?: () => void; onLeaderUp?: () => void },
+    options?: { onPrefixDown?: () => void; onPrefixUp?: () => void },
   ) => boolean;
   refreshGitHubPullRequestList: () => Promise<void>;
   state: DiffdiffAppState;
@@ -20,20 +20,20 @@ interface PullRequestListKeymapOptions {
 export function createPullRequestListKeyHandler({
   applyDashboardPullRequestSelection,
   derived,
-  handleTextInputLeaderKey,
+  handleTextInputPrefixKeypress,
   refreshGitHubPullRequestList,
   state,
 }: PullRequestListKeymapOptions) {
   return function handlePullRequestListModalKey(key: KeyboardInput): void {
     if (state.pullRequestSearchActive) {
       if (
-        handleTextInputLeaderKey(key, {
-          onLeaderDown: () => {
+        handleTextInputPrefixKeypress(key, {
+          onPrefixDown: () => {
             state.setPullRequestListIndex((currentIndex) =>
               clampIndex(currentIndex + 1, derived.filteredPullRequests.length),
             );
           },
-          onLeaderUp: () => {
+          onPrefixUp: () => {
             state.setPullRequestListIndex((currentIndex) =>
               clampIndex(currentIndex - 1, derived.filteredPullRequests.length),
             );

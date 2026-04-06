@@ -1,3 +1,5 @@
+import type { CommandKeybind, CommandKeybindPrefix } from "../../commands.ts";
+
 export const LIST_FILTER_KEYS = ["workingTree", "localBranch", "openPr", "remoteBranch"] as const;
 export const LOADING_INDICATOR_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
 export const TERMINAL_FOCUS_EVENT = "focus";
@@ -16,6 +18,24 @@ export const GITHUB_DIALOGS = new Set<import("../dialogs/stack.ts").AppDialog>([
   "submit-review",
 ]);
 
-export function withLeaderKeybind(keybind: string, ...additionalKeybinds: string[]): string {
-  return [keybind, `<leader>${keybind}`, ...additionalKeybinds].join(",");
+export function withKeybindPrefixes(
+  keybind: string,
+  prefixes: readonly CommandKeybindPrefix[],
+): CommandKeybind {
+  return prefixes.map((prefix) => `<${prefix}>${keybind}`).join(",");
+}
+
+export function withPrefixedKeybind(
+  keybind: string,
+  prefixes: readonly CommandKeybindPrefix[],
+  ...additionalKeybinds: string[]
+): CommandKeybind {
+  return [keybind, withKeybindPrefixes(keybind, prefixes), ...additionalKeybinds].join(",");
+}
+
+export function withLeaderKeybind(
+  keybind: string,
+  ...additionalKeybinds: string[]
+): CommandKeybind {
+  return withPrefixedKeybind(keybind, ["leader"], ...additionalKeybinds);
 }

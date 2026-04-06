@@ -5,15 +5,15 @@ import type { DiffdiffAppPersistence } from "../../session/use-app-persistence.t
 import type { DiffdiffAppState } from "../../state/use-app-state.ts";
 
 export function createMergeKeyHandler({
-  handleTextInputLeaderKey,
+  handleTextInputPrefixKeypress,
   openMergeConfirmModal,
   persistence,
   state,
   submitMergeFromModal,
 }: {
-  handleTextInputLeaderKey: (
+  handleTextInputPrefixKeypress: (
     key: KeyboardInput,
-    options?: { onLeaderDown?: () => void; onLeaderUp?: () => void },
+    options?: { onPrefixDown?: () => void; onPrefixUp?: () => void },
   ) => boolean;
   openMergeConfirmModal: () => void;
   persistence: DiffdiffAppPersistence;
@@ -40,7 +40,7 @@ export function createMergeKeyHandler({
 
     if (
       (state.mergeModalField === "title" || state.mergeModalField === "body") &&
-      handleTextInputLeaderKey(key)
+      handleTextInputPrefixKeypress(key)
     ) {
       return;
     }
