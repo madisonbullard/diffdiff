@@ -43,6 +43,10 @@ describe("default keymaps", () => {
       actionId: A.GITHUB_COMMENTS,
       kind: "matched",
     });
+    expect(press("diff", { name: "?", sequence: "?" })).toMatchObject({
+      actionId: A.SYSTEM_HELP,
+      kind: "matched",
+    });
     expect(press("diff", { name: "a", sequence: "a" })).toMatchObject({
       actionId: A.GITHUB_ADD_COMMENT,
       kind: "matched",

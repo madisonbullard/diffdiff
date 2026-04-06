@@ -109,7 +109,10 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
 
   const commandActions = createCommandActions({ getCommands: () => commands, state });
 
-  const openHelp = () => state.setDialogStack((s) => openAppDialog(s, "help"));
+  const openHelp = () => {
+    state.setDialogStack((s) => openAppDialog(s, "help"));
+    state.setStatusMessage("Opened help.");
+  };
   const openBranchModal = useCallback(
     () => openBranchListModal(state, derived.branchItems),
     [derived.branchItems, state],

@@ -18,9 +18,54 @@ const ALIASES: Record<string, string> = {
   enter: "return",
 };
 
+const SHIFTED_PRINTABLE_CHAR_ALIASES: Record<string, string> = {
+  "~": "`",
+  "!": "1",
+  "@": "2",
+  "#": "3",
+  $: "4",
+  "%": "5",
+  "^": "6",
+  "&": "7",
+  "*": "8",
+  "(": "9",
+  ")": "0",
+  _: "-",
+  "+": "=",
+  "{": "[",
+  "}": "]",
+  "|": "\\",
+  ":": ";",
+  '"': "'",
+  "<": ",",
+  ">": ".",
+  "?": "/",
+};
+
 function normalizeKeyName(raw: string): string {
   const lower = raw.toLowerCase();
   return ALIASES[lower] ?? lower;
+}
+
+function normalizePrintableCharacter(char: string): Pick<KeyEvent, "key" | "shift"> | null {
+  if (char.length !== 1 || char < " ") {
+    return null;
+  }
+
+  if (char === " ") {
+    return { key: "space", shift: false };
+  }
+
+  if (char >= "A" && char <= "Z") {
+    return { key: char.toLowerCase(), shift: true };
+  }
+
+  const shiftedBaseKey = SHIFTED_PRINTABLE_CHAR_ALIASES[char];
+  if (shiftedBaseKey != null) {
+    return { key: shiftedBaseKey, shift: true };
+  }
+
+  return { key: normalizeKeyName(char), shift: false };
 }
 
 // ---------------------------------------------------------------------------
@@ -33,6 +78,18 @@ function normalizeKeyName(raw: string): string {
  * into boolean flags.
  */
 export function keyEventFromInput(input: KeyboardInput): KeyEvent {
+  const printableEvent =
+    input.sequence != null ? normalizePrintableCharacter(input.sequence) : null;
+
+  if (printableEvent != null) {
+    return {
+      key: printableEvent.key,
+      ctrl: input.ctrl === true,
+      meta: input.meta === true,
+      shift: input.shift === true || printableEvent.shift,
+    };
+  }
+
   const keyName =
     input.name !== ""
       ? input.name
@@ -69,11 +126,25 @@ export function serializeKeyEvent(event: KeyEvent): string {
  * into a `KeyEvent`.
  */
 export function parseKeyString(raw: string): KeyEvent {
+  const trimmed = raw.trim();
+
   const normalized = raw.trim().toLowerCase();
 
   // Handle bare space before splitting on "+"
   if (normalized === "" && raw === " ") {
     return { key: "space", ctrl: false, meta: false, shift: false };
+  }
+
+  if (!trimmed.includes("+")) {
+    const printableEvent = normalizePrintableCharacter(trimmed);
+    if (printableEvent != null) {
+      return {
+        key: printableEvent.key,
+        ctrl: false,
+        meta: false,
+        shift: printableEvent.shift,
+      };
+    }
   }
 
   if (normalized === "space") {

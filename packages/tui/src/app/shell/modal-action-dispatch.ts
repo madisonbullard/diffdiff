@@ -140,6 +140,7 @@ export function buildModalActionDispatchMap({
 
   function closeHelpModal(): void {
     state.setDialogStack((currentStack) => closeAppDialog(currentStack, "help", "dismiss"));
+    state.setStatusMessage("Closed help.");
   }
 
   function setAllBranchFilters(enabled: boolean): void {

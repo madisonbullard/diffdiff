@@ -206,6 +206,26 @@ test("derives help labels from the resolved live keymap", () => {
   expect(getAppText(tree)).toContain("l / z / ctrl+x l / space l");
 });
 
+test("opens help when opentui reports a raw question-mark key", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ name: "?", sequence: "?" });
+
+  expect(getAppText(tree)).toContain("Help");
+  expect(getAppText(tree)).toContain("All keyboard shortcuts by mode.");
+  expect(getAppText(tree)).toContain("Opened help.");
+});
+
+test("updates the footer status when help closes", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ name: "?", sequence: "?" });
+  emitKey({ name: "q", sequence: "q" });
+
+  expect(getAppText(tree)).toContain("Closed help.");
+  expect(getAppText(tree)).not.toContain("Help");
+});
+
 test("treats j as query text inside the command palette", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 
