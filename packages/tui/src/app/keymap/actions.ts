@@ -14,7 +14,7 @@
 export const SYSTEM_HELP = "system.help";
 export const SYSTEM_COMMAND_PALETTE = "system.command-palette";
 export const SYSTEM_DIAGNOSTICS = "system.diagnostics";
-export const SYSTEM_EXIT = "system.exit";
+export const SYSTEM_QUIT = "system.quit";
 
 // ---------------------------------------------------------------------------
 // Comparison
@@ -28,7 +28,6 @@ export const COMPARISON_LIST = "comparison.list";
 export const VIEW_PANE_TOGGLE = "view.pane-toggle";
 export const VIEW_DIFF_TOGGLE = "view.diff-toggle";
 export const VIEW_OPEN_FILE_IN_EDITOR = "view.open-file-in-editor";
-export const VIEW_OPEN_SELECTED_FILE = "view.open-selected-file";
 
 // ---------------------------------------------------------------------------
 // Review / file navigation (diff pane)
@@ -72,6 +71,18 @@ export const GITHUB_TOGGLE_THREAD = "github.toggle-thread";
 export const GITHUB_COPY_COMMENT_URL = "github.copy-comment-url";
 export const GITHUB_SUBMIT_REVIEW = "github.submit-review";
 export const GITHUB_MERGE = "github.merge";
+
+// ---------------------------------------------------------------------------
+// Goto / positional navigation (g prefix menu)
+// ---------------------------------------------------------------------------
+export const GOTO_FIRST_FILE = "goto.first-file";
+export const GOTO_LAST_FILE = "goto.last-file";
+export const GOTO_WINDOW_TOP = "goto.window-top";
+export const GOTO_WINDOW_CENTER = "goto.window-center";
+export const GOTO_WINDOW_BOTTOM = "goto.window-bottom";
+export const GOTO_NEXT_HUNK = "goto.next-hunk";
+export const GOTO_PREVIOUS_HUNK = "goto.previous-hunk";
+export const GOTO_LAST_ACCESSED_FILE = "goto.last-accessed-file";
 
 // ---------------------------------------------------------------------------
 // Generic list/modal navigation (shared across many modals)

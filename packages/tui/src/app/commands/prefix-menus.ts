@@ -1,9 +1,7 @@
 import {
   formatParsedCommandKeybind,
   getCommandBindingsForPrefix,
-  matchCommandKeybind,
   type CommandKeybindPrefix,
-  type KeyboardInput,
 } from "../../commands.ts";
 import { LEADER_KEYBIND } from "../shared/constants.ts";
 import type { AppCommand } from "./registry.ts";
@@ -61,10 +59,6 @@ const PREFIX_MENUS: readonly PrefixMenuConfig[] = [
 
 export function getPrefixMenuConfig(prefix: CommandKeybindPrefix): PrefixMenuConfig | undefined {
   return PREFIX_MENUS.find((menu) => menu.prefix === prefix);
-}
-
-export function getPrefixMenuByTriggerKey(input: KeyboardInput): PrefixMenuConfig | undefined {
-  return PREFIX_MENUS.find((menu) => matchCommandKeybind(menu.triggerKeybind, input));
 }
 
 export function getPrefixMenuCommands(

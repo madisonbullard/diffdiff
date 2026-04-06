@@ -1,39 +1,20 @@
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useRef } from "react";
-import {
-  matchCommandKeybind,
-  type CommandKeybindPrefix,
-  type KeyboardInput,
-} from "../../commands.ts";
-import { COMMAND_LIST_KEYBIND } from "../shared/constants.ts";
+import type { KeyboardInput } from "../../commands.ts";
 import { closeDialog as closeAppDialog } from "../dialogs/stack.ts";
 import type { KeymapMode } from "./keymap-mode.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
-import type { AppCommand } from "../commands/registry.ts";
-import type { FileFocusController } from "../shared/file-focus.ts";
-import {
-  getPrefixMenuByTriggerKey,
-  getPrefixMenuConfig,
-  type PrefixMenuConfig,
-} from "../commands/prefix-menus.ts";
+import { keyEventFromInput } from "../keymap/key-event.ts";
+import { dispatchAction, type ActionDispatchMap } from "../keymap/action-dispatch.ts";
 
 interface UseMainKeyboardOptions {
+  actionDispatchMap: ActionDispatchMap;
   activeKeymapMode: KeymapMode;
   commandActions: {
     clearPrefixMode: (status?: string) => void;
-    enterPrefixMode: (prefix: CommandKeybindPrefix, options?: { preserveFocus?: boolean }) => void;
-    runCommand: (command: AppCommand) => void;
     runCommandByValue: (value: string) => void;
   };
   dismissErrorToast: () => void;
-  focusFile: FileFocusController["focusFile"];
-  findCommandByKey: (
-    key: KeyboardInput,
-    prefix?: CommandKeybindPrefix | null,
-  ) => AppCommand | undefined;
-  getPrefixMenuCommands: (
-    prefix: CommandKeybindPrefix,
-  ) => readonly import("../commands/prefix-menus.ts").PrefixMenuCommand[];
   handleBranchModalKey: (key: KeyboardInput) => void;
   handleClearReviewedModalKey: (key: KeyboardInput) => void;
   handleCleanupModalKey: (key: KeyboardInput) => void;
@@ -44,20 +25,15 @@ interface UseMainKeyboardOptions {
   handlePullRequestCommentsModalKey: (key: KeyboardInput) => void;
   handlePullRequestListModalKey: (key: KeyboardInput) => void;
   handleSubmitReviewModalKey: (key: KeyboardInput) => void;
-  handleTreePaneKey: (key: KeyboardInput) => boolean;
   handleMergeModalKey: (key: KeyboardInput) => void;
-  moveSelectedFile: (delta: number) => void;
-  moveSelectedReviewAnchor: (delta: number) => void;
   state: DiffdiffAppState;
 }
 
 export function useMainKeyboard({
+  actionDispatchMap,
   activeKeymapMode,
   commandActions,
   dismissErrorToast,
-  focusFile,
-  findCommandByKey,
-  getPrefixMenuCommands,
   handleBranchModalKey,
   handleClearReviewedModalKey,
   handleCleanupModalKey,
@@ -68,10 +44,7 @@ export function useMainKeyboard({
   handlePullRequestCommentsModalKey,
   handlePullRequestListModalKey,
   handleSubmitReviewModalKey,
-  handleTreePaneKey,
   handleMergeModalKey,
-  moveSelectedFile,
-  moveSelectedReviewAnchor,
   state,
 }: UseMainKeyboardOptions) {
   const keyboardHandlerRef = useRef<(key: KeyboardInput) => void>(() => undefined);
@@ -86,106 +59,65 @@ export function useMainKeyboard({
     }
   }
 
-  function handleActivePrefixKey(key: KeyboardInput, prefixMenu: PrefixMenuConfig): void {
-    if (key.name === "escape") {
-      commandActions.clearPrefixMode(prefixMenu.cancelStatus);
-      return;
-    }
-
-    const command = findCommandByKey(key, prefixMenu.prefix);
-    if (command != null) {
-      commandActions.runCommand(command);
-      return;
-    }
-
-    commandActions.clearPrefixMode(prefixMenu.getUnboundStatus(key.name));
-  }
-
-  function maybeEnterPrefixMode(key: KeyboardInput): boolean {
-    const prefixMenu = getPrefixMenuByTriggerKey(key);
-    if (prefixMenu == null) {
-      return false;
-    }
-
-    const prefixCommands = getPrefixMenuCommands(prefixMenu.prefix);
-    if (prefixCommands.length === 0) {
-      return false;
-    }
-
-    commandActions.enterPrefixMode(prefixMenu.prefix);
-    return true;
-  }
-
+  /**
+   * Primary key handler for diff/thread/tree pane modes.
+   *
+   * Keys are fed through the trie-based `KeymapRuntime` which handles:
+   *   - Numeric count prefix accumulation (e.g. `5` then `gg` → count=5)
+   *   - Multi-key sequence resolution (e.g. `g` → pending, `g` → matched)
+   *   - Action ID dispatch via the `ActionDispatchMap`
+   *
+   * Falls back to the old `AppCommand` system via `runCommandByValue` for
+   * actions not yet in the dispatch map (e.g. leader/space sub-commands).
+   */
   function handleMainPaneKey(key: KeyboardInput, globalKeybindsSuspended: boolean): void {
     if (globalKeybindsSuspended) {
       return;
     }
 
-    if (maybeEnterPrefixMode(key)) {
-      return;
-    }
+    const event = keyEventFromInput(key);
+    const result = state.keymapRuntime.get(activeKeymapMode, event);
 
-    if (matchCommandKeybind(COMMAND_LIST_KEYBIND, key)) {
-      commandActions.runCommandByValue("system.command-palette");
-      return;
-    }
-
-    if (key.sequence === "?") {
-      commandActions.runCommandByValue("system.help");
-      return;
-    }
-
-    if (state.activePane === "tree") {
-      if (handleTreePaneKey(key)) {
+    switch (result.kind) {
+      case "matched": {
+        if (dispatchAction(actionDispatchMap, result.actionId, result.count)) {
+          return;
+        }
+        // Action ID not in dispatch map — fall through to command system.
+        commandActions.runCommandByValue(result.actionId);
         return;
       }
 
-      const treeCommand = findCommandByKey(key);
-      if (treeCommand != null) {
-        commandActions.runCommand(treeCommand);
+      case "matched-sequence": {
+        for (const actionId of result.actionIds) {
+          if (!dispatchAction(actionDispatchMap, actionId, result.count)) {
+            commandActions.runCommandByValue(actionId);
+          }
+        }
+        return;
       }
-      return;
-    }
 
-    const command = findCommandByKey(key);
-    if (command != null) {
-      commandActions.runCommand(command);
-      return;
-    }
+      case "pending": {
+        const label = result.node.label;
+        if (label != null) {
+          state.setStatusMessage(`${label} mode active. Awaiting next key.`);
+        }
+        return;
+      }
 
-    if (key.name === "j" || key.name === "down") {
-      moveSelectedFile(1);
-      return;
-    }
+      case "cancelled": {
+        state.setStatusMessage("");
+        return;
+      }
 
-    if (key.name === "k" || key.name === "up") {
-      moveSelectedFile(-1);
-      return;
-    }
-
-    if (key.name === "home") {
-      focusFile({ activatePane: "preserve", reveal: "default", target: { index: 0 } });
-      state.setStatusMessage("Jumped to the first file.");
-      return;
-    }
-
-    if (key.name === "end") {
-      focusFile({
-        activatePane: "preserve",
-        reveal: "default",
-        target: { index: Math.max(state.session.files.length - 1, 0) },
-      });
-      state.setStatusMessage("Jumped to the last file.");
-      return;
-    }
-
-    if (key.name === "[") {
-      moveSelectedReviewAnchor(-1);
-      return;
-    }
-
-    if (key.name === "]") {
-      moveSelectedReviewAnchor(1);
+      case "not-found": {
+        // Count digit accumulation — show the in-progress count.
+        const currentCount = state.keymapRuntime.count();
+        if (currentCount != null) {
+          state.setStatusMessage(`${currentCount}`);
+        }
+        break;
+      }
     }
   }
 
@@ -245,8 +177,6 @@ export function useMainKeyboard({
   }
 
   keyboardHandlerRef.current = (key) => {
-    const activePrefix = state.keybindController.getActivePrefix();
-    const activePrefixMenu = activePrefix == null ? undefined : getPrefixMenuConfig(activePrefix);
     const globalKeybindsSuspended = state.keybindController.globalKeybindsSuspended();
 
     if (
@@ -255,11 +185,6 @@ export function useMainKeyboard({
       (key.name === "escape" || key.name === "x")
     ) {
       dismissErrorToast();
-      return;
-    }
-
-    if (activePrefixMenu != null && isPaneKeymapMode(activeKeymapMode)) {
-      handleActivePrefixKey(key, activePrefixMenu);
       return;
     }
 

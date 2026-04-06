@@ -151,6 +151,7 @@ export function useDiffdiffAppState({
   const [isReloading, setIsReloading] = useState(false);
   const [isCheckingForUpdates, setIsCheckingForUpdates] = useState(false);
   const [isSubmittingReviewAction, setIsSubmittingReviewAction] = useState(false);
+  const [lastAccessedFileIndex, setLastAccessedFileIndex] = useState<number | null>(null);
   const [activePrefix, setActivePrefix] = useState<
     import("../../commands.ts").CommandKeybindPrefix | null
   >(null);
@@ -270,6 +271,7 @@ export function useDiffdiffAppState({
     isReloading,
     isSubmittingReviewAction,
     keybindController,
+    lastAccessedFileIndex,
     latestSessionLoadIdRef,
     activePrefix,
     loadingIndicatorFrame,
@@ -336,6 +338,7 @@ export function useDiffdiffAppState({
     setIsReloading,
     setIsSubmittingReviewAction,
     setActivePrefix,
+    setLastAccessedFileIndex,
     setLoadingIndicatorFrame,
     setMergeCommitMessage,
     setMergeCommitTitle,

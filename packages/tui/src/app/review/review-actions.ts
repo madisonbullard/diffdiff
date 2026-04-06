@@ -114,6 +114,9 @@ export function createReviewActions({
       });
     }
 
+    // Track the previous file for alternate-file navigation (ga).
+    state.setLastAccessedFileIndex(state.selectedFileIndex);
+
     fileFocus.focusFile({
       activatePane: "preserve",
       reveal: "default",

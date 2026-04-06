@@ -33,6 +33,7 @@ import { createFileFocusController } from "../shared/file-focus.ts";
 import { truncateInlineMessage } from "../shared/text.ts";
 import { createTreeActions } from "../tree/tree-actions.ts";
 import { createViewActions } from "./view-actions.ts";
+import { buildActionDispatchMap } from "./action-dispatch-map.ts";
 
 export function DiffdiffAppController(props: DiffdiffAppProps) {
   const state = useDiffdiffAppState(props);
@@ -117,10 +118,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     state,
   });
 
-  function openHelp(): void {
-    state.setDialogStack((currentStack) => openAppDialog(currentStack, "help"));
-  }
-
+  const openHelp = () => state.setDialogStack((s) => openAppDialog(s, "help"));
   const openBranchModal = useCallback(
     () => openBranchListModal(state, derived.branchItems),
     [derived.branchItems, state],
@@ -146,10 +144,8 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       state.session.github == null ||
       state.mergeMethod == null ||
       !state.session.github.pullRequest.merge.canMerge
-    ) {
+    )
       return;
-    }
-
     state.setMergeConfirmOpen(true);
     state.setStatusMessage(`Press enter again to confirm the ${state.mergeMethod} merge.`);
   }
@@ -368,13 +364,18 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   );
   const showFooterLoadingIndicator = state.isSubmittingReviewAction && state.activeOverlay == null;
 
+  const actionDispatchMap = buildActionDispatchMap({
+    derived,
+    fileFocus,
+    reviewActions,
+    state,
+    treeActions,
+  });
   useMainKeyboard({
+    actionDispatchMap,
     activeKeymapMode,
     commandActions,
     dismissErrorToast: persistence.persistenceApi.dismissErrorToast,
-    focusFile: fileFocus.focusFile,
-    findCommandByKey: (key, prefix = null) => listHandlers.findCommandByKey(key, prefix),
-    getPrefixMenuCommands: (prefix) => getPrefixMenuCommands(commands, prefix),
     handleBranchModalKey: listHandlers.handleBranchModalKey,
     handleClearReviewedModalKey: reviewModalHandlers.handleClearReviewedModalKey,
     handleCleanupModalKey: reviewModalHandlers.handleCleanupModalKey,
@@ -385,10 +386,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     handlePullRequestCommentsModalKey: reviewModalHandlers.handlePullRequestCommentsModalKey,
     handlePullRequestListModalKey: listHandlers.handlePullRequestListModalKey,
     handleSubmitReviewModalKey: reviewModalHandlers.handleSubmitReviewModalKey,
-    handleTreePaneKey: treeActions.handleTreePaneKey,
     handleMergeModalKey: reviewModalHandlers.handleMergeModalKey,
-    moveSelectedFile: reviewActions.moveSelectedFile,
-    moveSelectedReviewAnchor: reviewActions.moveSelectedReviewAnchor,
     state,
   });
 

@@ -71,11 +71,15 @@ export type ResolvedKeymaps = ReadonlyMap<KeymapMode, KeyTrieNode>;
 export interface KeymapMatched {
   readonly kind: "matched";
   readonly actionId: string;
+  /** The numeric count accumulated before this action (e.g. `5gg` → count=5). */
+  readonly count: number | null;
 }
 
 export interface KeymapMatchedSequence {
   readonly kind: "matched-sequence";
   readonly actionIds: readonly string[];
+  /** The numeric count accumulated before this sequence. */
+  readonly count: number | null;
 }
 
 export interface KeymapPending {

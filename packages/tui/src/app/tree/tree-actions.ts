@@ -1,4 +1,3 @@
-import type { KeyboardInput } from "../../commands.ts";
 import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import { clampIndex } from "../../view-model.ts";
@@ -126,89 +125,65 @@ export function createTreeActions({
     }
   }
 
-  function handleTreePaneKey(key: KeyboardInput): boolean {
-    if (key.name === "j" || key.name === "down") {
-      moveTreeSelection(1);
-      return true;
-    }
-
-    if (key.name === "k" || key.name === "up") {
-      moveTreeSelection(-1);
-      return true;
-    }
-
-    if (key.name === "home") {
-      const firstNode = derived.visibleTreeNodes[0];
-      if (firstNode != null) {
-        selectTreeNode(firstNode);
-      }
-      return true;
-    }
-
-    if (key.name === "end") {
-      const lastNode = derived.visibleTreeNodes[Math.max(derived.visibleTreeNodes.length - 1, 0)];
-      if (lastNode != null) {
-        selectTreeNode(lastNode);
-      }
-      return true;
-    }
-
-    const currentNode =
+  function resolveCurrentTreeNode() {
+    return (
       derived.selectedTreeNode ??
       derived.visibleTreeNodes.find((node) => node.kind === "file") ??
-      derived.visibleTreeNodes[0];
-    if (currentNode == null) {
-      return false;
+      derived.visibleTreeNodes[0]
+    );
+  }
+
+  function collapseOrGoToParent(): void {
+    const currentNode = resolveCurrentTreeNode();
+    if (currentNode == null) return;
+
+    if (currentNode.kind === "directory" && !state.collapsedDirectories.has(currentNode.path)) {
+      setFileTreeDirectoryCollapsed(currentNode.path, true);
+      return;
     }
 
-    if (key.name === "left" || key.name === "h") {
-      if (currentNode.kind === "directory" && !state.collapsedDirectories.has(currentNode.path)) {
-        setFileTreeDirectoryCollapsed(currentNode.path, true);
-        return true;
+    if (currentNode.parentPath != null) {
+      const parentNode = derived.fileTreeNodeByPath.get(currentNode.parentPath);
+      if (parentNode != null) {
+        selectTreeNode(parentNode);
+      }
+    }
+  }
+
+  function expandOrEnterChild(): void {
+    const currentNode = resolveCurrentTreeNode();
+    if (currentNode == null) return;
+
+    if (currentNode.kind === "directory") {
+      if (state.collapsedDirectories.has(currentNode.path)) {
+        setFileTreeDirectoryCollapsed(currentNode.path, false);
+        return;
       }
 
-      if (currentNode.parentPath != null) {
-        const parentNode = derived.fileTreeNodeByPath.get(currentNode.parentPath);
-        if (parentNode != null) {
-          selectTreeNode(parentNode);
-        }
+      const childNode = derived.visibleTreeNodes.find(
+        (node) => node.parentPath === currentNode.path,
+      );
+      if (childNode != null) {
+        selectTreeNode(childNode);
       }
-      return true;
+      return;
     }
 
-    if (key.name === "right" || key.name === "l") {
-      if (currentNode.kind === "directory") {
-        if (state.collapsedDirectories.has(currentNode.path)) {
-          setFileTreeDirectoryCollapsed(currentNode.path, false);
-          return true;
-        }
+    selectTreeNode(currentNode, { openDiff: true });
+  }
 
-        const childNode = derived.visibleTreeNodes.find(
-          (node) => node.parentPath === currentNode.path,
-        );
-        if (childNode != null) {
-          selectTreeNode(childNode);
-        }
-        return true;
-      }
+  function toggleOrOpen(): void {
+    const currentNode = resolveCurrentTreeNode();
+    if (currentNode == null) return;
 
+    if (currentNode.kind === "directory") {
+      setFileTreeDirectoryCollapsed(
+        currentNode.path,
+        !state.collapsedDirectories.has(currentNode.path),
+      );
+    } else {
       selectTreeNode(currentNode, { openDiff: true });
-      return true;
     }
-
-    if (key.name === "return") {
-      if (currentNode.kind === "directory") {
-        setFileTreeDirectoryCollapsed(
-          currentNode.path,
-          !state.collapsedDirectories.has(currentNode.path),
-        );
-      } else {
-        selectTreeNode(currentNode, { openDiff: true });
-      }
-      return true;
-    }
-
-    return false;
   }
 
   function handleFileTreeMouseUp(node: import("../../types.ts").FileTreeNode): void {
@@ -223,12 +198,14 @@ export function createTreeActions({
   }
 
   return {
+    collapseOrGoToParent,
+    expandOrEnterChild,
     handleFileTreeMouseUp,
-    handleTreePaneKey,
     moveTreeSelection,
     openSelectedTreeFile,
     selectTreeNode,
     setFileTreeDirectoryCollapsed,
     toggleActivePane,
+    toggleOrOpen,
   };
 }

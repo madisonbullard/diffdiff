@@ -1,3 +1,4 @@
+export * from "./action-dispatch.ts";
 export * from "./actions.ts";
 export * from "./defaults.ts";
 export * from "./key-event.ts";

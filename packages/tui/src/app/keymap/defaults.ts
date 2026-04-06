@@ -88,7 +88,9 @@ const DIFF_LEADER_BINDINGS: readonly BindingTuple[] = [
   ["v", A.VIEW_DIFF_TOGGLE],
   ["e", A.VIEW_OPEN_FILE_IN_EDITOR],
   ["y", A.GITHUB_COPY_URL],
+  ["r", A.REVIEW_TOGGLE_REVIEWED],
   ["u", A.REVIEW_NEXT_UNREVIEWED],
+  ["c", A.REVIEW_TOGGLE_COLLAPSED],
   ["p", A.GITHUB_PULL_REQUEST_LIST],
   ["t", A.GITHUB_COMMENTS],
   ["a", A.GITHUB_ADD_COMMENT],
@@ -105,6 +107,17 @@ const DIFF_SPACE_BINDINGS: readonly BindingTuple[] = [
   ["shift+a", A.GITHUB_SUBMIT_REVIEW],
   ["m", A.GITHUB_MERGE],
   ["l", A.COMPARISON_LIST],
+];
+
+const GOTO_BINDINGS: readonly BindingTuple[] = [
+  ["g", A.GOTO_FIRST_FILE],
+  ["e", A.GOTO_LAST_FILE],
+  ["t", A.GOTO_WINDOW_TOP],
+  ["c", A.GOTO_WINDOW_CENTER],
+  ["b", A.GOTO_WINDOW_BOTTOM],
+  ["n", A.GOTO_NEXT_HUNK],
+  ["p", A.GOTO_PREVIOUS_HUNK],
+  ["a", A.GOTO_LAST_ACCESSED_FILE],
 ];
 
 const diffMode = buildModeWithPrefixes(
@@ -142,6 +155,7 @@ const diffMode = buildModeWithPrefixes(
   [
     { trigger: "ctrl+x", label: "Leader", bindings: DIFF_LEADER_BINDINGS },
     { trigger: "space", label: "Modal Picker", bindings: DIFF_SPACE_BINDINGS },
+    { trigger: "g", label: "Goto", bindings: GOTO_BINDINGS },
   ],
 );
 
@@ -196,6 +210,7 @@ const threadMode = buildModeWithPrefixes(
   [
     { trigger: "ctrl+x", label: "Leader", bindings: THREAD_LEADER_BINDINGS },
     { trigger: "space", label: "Modal Picker", bindings: THREAD_SPACE_BINDINGS },
+    { trigger: "g", label: "Goto", bindings: GOTO_BINDINGS },
   ],
 );
 
@@ -241,6 +256,7 @@ const treeMode = buildModeWithPrefixes(
   [
     { trigger: "ctrl+x", label: "Leader", bindings: TREE_LEADER_BINDINGS },
     { trigger: "space", label: "Modal Picker", bindings: TREE_SPACE_BINDINGS },
+    { trigger: "g", label: "Goto", bindings: GOTO_BINDINGS },
   ],
 );
 

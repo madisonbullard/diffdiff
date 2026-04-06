@@ -72,6 +72,8 @@ export interface DiffdiffAppState {
   isReloading: boolean;
   isSubmittingReviewAction: boolean;
   keybindController: ReturnType<typeof createKeybindController>;
+  /** The previously selected file index for alternate-file navigation (`ga`). */
+  lastAccessedFileIndex: number | null;
   latestSessionLoadIdRef: MutableRefObject<number>;
   activePrefix: CommandKeybindPrefix | null;
   loadingIndicatorFrame: number;
@@ -150,6 +152,7 @@ export interface DiffdiffAppState {
   setIsReloading: Dispatch<SetStateAction<boolean>>;
   setIsSubmittingReviewAction: Dispatch<SetStateAction<boolean>>;
   setActivePrefix: Dispatch<SetStateAction<CommandKeybindPrefix | null>>;
+  setLastAccessedFileIndex: Dispatch<SetStateAction<number | null>>;
   setLoadingIndicatorFrame: Dispatch<SetStateAction<number>>;
   setMergeCommitMessage: Dispatch<SetStateAction<string>>;
   setMergeCommitTitle: Dispatch<SetStateAction<string>>;
