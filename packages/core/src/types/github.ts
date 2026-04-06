@@ -63,6 +63,12 @@ export interface GitHubUserPreferences {
 
 export interface DiffdiffPreferences {
   github: GitHubUserPreferences;
+  /**
+   * User keymap overrides. Keys are mode names (e.g. `"diff"`, `"tree"`),
+   * values are nested objects mapping key strings to action IDs.
+   * See `packages/tui/src/app/keymap/types.ts` for the full schema.
+   */
+  keys?: Record<string, Record<string, unknown>>;
 }
 
 export interface GitHubReviewLineAnchor {

@@ -27,6 +27,7 @@ export interface DiffdiffAppProps {
   ) => Promise<void>;
   addPullRequestComment?: (reviewSession: GitHubReviewSession, body: string) => Promise<void>;
   initialGitHubPreferences?: GitHubUserPreferences;
+  initialUserKeymapConfig?: Record<string, Record<string, unknown>>;
   isGitHubAuthenticated?: boolean;
   initialReviewCache?: ReviewCacheState;
   initialSession: PreparedReviewSession;

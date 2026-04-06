@@ -8,6 +8,8 @@ import type {
 import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core";
 import { useRenderer, useTerminalDimensions } from "@opentui/react";
 import { useMemo, useRef, useState } from "react";
+import { getDefaultKeymaps, mergeUserKeymaps, createKeymapRuntime } from "../keymap/index.ts";
+import type { UserKeymapConfig } from "../keymap/index.ts";
 import {
   getActiveDialogEntry,
   openDialog as openAppDialog,
@@ -53,9 +55,14 @@ export function useDiffdiffAppState({
   initialOptions,
   initialReviewCache,
   initialSession,
+  initialUserKeymapConfig,
 }: Pick<
   DiffdiffAppProps,
-  "initialGitHubPreferences" | "initialOptions" | "initialReviewCache" | "initialSession"
+  | "initialGitHubPreferences"
+  | "initialOptions"
+  | "initialReviewCache"
+  | "initialSession"
+  | "initialUserKeymapConfig"
 >): DiffdiffAppState {
   const launchInPullRequestList = initialOptions.initialListMode === "pull-requests";
   const launchInBranchList =
@@ -206,6 +213,15 @@ export function useDiffdiffAppState({
   const terminalFocusedRef = useRef(true);
   const pullRequestListLoadIdRef = useRef(0);
   const renderer = useRenderer();
+  const resolvedKeymaps = useMemo(
+    () =>
+      mergeUserKeymaps(
+        getDefaultKeymaps(),
+        initialUserKeymapConfig as UserKeymapConfig | undefined,
+      ),
+    [initialUserKeymapConfig],
+  );
+  const keymapRuntime = useMemo(() => createKeymapRuntime(resolvedKeymaps), [resolvedKeymaps]);
   const keybindController = useMemo(
     () =>
       createKeybindController({
@@ -219,6 +235,8 @@ export function useDiffdiffAppState({
 
   return {
     activeFileIndex,
+    resolvedKeymaps,
+    keymapRuntime,
     activeOverlay,
     activePane,
     activeListView,

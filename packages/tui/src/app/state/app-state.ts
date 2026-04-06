@@ -10,6 +10,7 @@ import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { CommandKeybindPrefix } from "../../commands.ts";
 import type { AppDialogStackEntry } from "../dialogs/stack.ts";
 import { createKeybindController } from "../keybind-controller.ts";
+import type { KeymapRuntime, ResolvedKeymaps } from "../keymap/index.ts";
 import type {
   AppPane,
   BranchListFilters,
@@ -35,6 +36,10 @@ export interface ComparisonBrowserData {
 
 export interface DiffdiffAppState {
   activeFileIndex: number;
+  /** The fully resolved (defaults + user overrides) keymaps. */
+  resolvedKeymaps: ResolvedKeymaps;
+  /** The keymap runtime that tracks pending sequences. */
+  keymapRuntime: KeymapRuntime;
   activeOverlay: import("../dialogs/stack.ts").AppDialog | null;
   activePane: AppPane;
   activeListView: ListModalView;

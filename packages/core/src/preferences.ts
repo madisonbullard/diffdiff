@@ -7,6 +7,7 @@ import { logDiffdiffError, logDiffdiffInfo } from "./logging.ts";
 const PREFERENCES_VERSION = 1;
 
 interface DiffdiffPreferencesRecord extends DiffdiffPreferences {
+  keys?: Record<string, Record<string, unknown>>;
   version: number;
 }
 
@@ -99,6 +100,11 @@ function normalizePreferences(
       ? github.defaultMergeMethod
       : undefined;
 
+  const keys =
+    record.keys != null && typeof record.keys === "object" && !Array.isArray(record.keys)
+      ? (record.keys as Record<string, Record<string, unknown>>)
+      : undefined;
+
   return {
     github: {
       cleanup: {
@@ -113,5 +119,6 @@ function normalizePreferences(
       },
       defaultMergeMethod,
     },
+    keys,
   };
 }
