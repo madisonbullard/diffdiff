@@ -1,6 +1,6 @@
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useRef } from "react";
-import type { KeyboardInput } from "../../commands.ts";
+import type { CommandKeybindPrefix, KeyboardInput } from "../../commands.ts";
 import { closeDialog as closeAppDialog } from "../dialogs/stack.ts";
 import type { KeymapMode } from "./keymap-mode.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
@@ -59,6 +59,17 @@ export function useMainKeyboard({
     }
   }
 
+  function getUiPrefixForPendingLabel(label: string | undefined): CommandKeybindPrefix | null {
+    switch (label) {
+      case "Leader":
+        return "leader";
+      case "Modal Picker":
+        return "space";
+      default:
+        return null;
+    }
+  }
+
   /**
    * Primary key handler for diff/thread/tree pane modes.
    *
@@ -80,6 +91,7 @@ export function useMainKeyboard({
 
     switch (result.kind) {
       case "matched": {
+        state.setActivePrefix(null);
         if (dispatchAction(actionDispatchMap, result.actionId, result.count)) {
           return;
         }
@@ -89,6 +101,7 @@ export function useMainKeyboard({
       }
 
       case "matched-sequence": {
+        state.setActivePrefix(null);
         for (const actionId of result.actionIds) {
           if (!dispatchAction(actionDispatchMap, actionId, result.count)) {
             commandActions.runCommandByValue(actionId);
@@ -99,6 +112,7 @@ export function useMainKeyboard({
 
       case "pending": {
         const label = result.node.label;
+        state.setActivePrefix(getUiPrefixForPendingLabel(label));
         if (label != null) {
           state.setStatusMessage(`${label} mode active. Awaiting next key.`);
         }
@@ -106,11 +120,13 @@ export function useMainKeyboard({
       }
 
       case "cancelled": {
+        state.setActivePrefix(null);
         state.setStatusMessage("");
         return;
       }
 
       case "not-found": {
+        state.setActivePrefix(null);
         // Count digit accumulation — show the in-progress count.
         const currentCount = state.keymapRuntime.count();
         if (currentCount != null) {

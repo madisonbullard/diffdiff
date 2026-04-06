@@ -275,11 +275,13 @@ test("opens the modal picker with space and launches a modal with one key", () =
   emitKey({ name: "space", sequence: " " });
 
   expect(getAppText(tree)).toContain("Modal Picker mode active. Awaiting next key.");
+  expect(getAppText(tree)).toContain("Press a key to open a modal.");
 
   emitKey({ name: "l", sequence: "l" });
 
   expect(getAppText(tree)).toContain("Opened list modal.");
   expect(getAppText(tree)).toContain("Working tree");
+  expect(getAppText(tree)).not.toContain("Press a key to open a modal.");
 });
 
 test("opens the GitHub PR list on launch when requested", async () => {
