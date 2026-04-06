@@ -1,6 +1,5 @@
 import { logDiffdiffError } from "@diffdiff/core";
 import { useCallback, useRef, useState } from "react";
-import type { KeyboardInput } from "../../commands.ts";
 import { closeDialog as closeAppDialog, openDialog as openAppDialog } from "../dialogs/stack.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
@@ -67,48 +66,37 @@ export function useSessionDiagnostics({
     void loadDiagnostics();
   }, [loadDiagnostics, state]);
 
-  const handleDiagnosticsModalKey = useCallback(
-    (key: KeyboardInput): void => {
-      if (key.name === "escape" || key.name === "q") {
-        state.setDialogStack((currentStack) =>
-          closeAppDialog(currentStack, "diagnostics", "dismiss"),
-        );
-        state.setStatusMessage("Closed diagnostics.");
-        return;
-      }
+  const closeDiagnostics = useCallback((): void => {
+    state.setDialogStack((currentStack) => closeAppDialog(currentStack, "diagnostics", "dismiss"));
+    state.setStatusMessage("Closed diagnostics.");
+  }, [state]);
 
-      if (key.name === "j" || key.name === "down") {
-        setDiagnosticEventIndex((currentIndex) =>
-          clampIndex(currentIndex + 1, diagnosticEvents.length),
-        );
-        return;
-      }
-
-      if (key.name === "k" || key.name === "up") {
-        setDiagnosticEventIndex((currentIndex) =>
-          clampIndex(currentIndex - 1, diagnosticEvents.length),
-        );
-        return;
-      }
-
-      if (key.name === "home") {
-        setDiagnosticEventIndex(0);
-        return;
-      }
-
-      if (key.name === "end") {
-        setDiagnosticEventIndex(Math.max(diagnosticEvents.length - 1, 0));
-      }
+  const moveDiagnosticSelection = useCallback(
+    (delta: number): void => {
+      setDiagnosticEventIndex((currentIndex) =>
+        clampIndex(currentIndex + delta, diagnosticEvents.length),
+      );
     },
-    [diagnosticEvents.length, state],
+    [diagnosticEvents.length],
   );
 
+  const jumpToFirstDiagnostic = useCallback((): void => {
+    setDiagnosticEventIndex(0);
+  }, []);
+
+  const jumpToLastDiagnostic = useCallback((): void => {
+    setDiagnosticEventIndex(Math.max(diagnosticEvents.length - 1, 0));
+  }, [diagnosticEvents.length]);
+
   return {
+    closeDiagnostics,
     diagnosticErrorMessage,
     diagnosticEventIndex,
     diagnosticEvents,
-    handleDiagnosticsModalKey,
     isDiagnosticsLoading,
+    jumpToFirstDiagnostic,
+    jumpToLastDiagnostic,
+    moveDiagnosticSelection,
     openDiagnostics,
   };
 }

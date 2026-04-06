@@ -52,28 +52,23 @@ describe("keybind controller", () => {
     expect(onStatusMessage).toHaveBeenNthCalledWith(2, "Leader key timed out.");
   });
 
-  test("clears the active prefix when global keybinds are suspended", () => {
+  test("runs the prefix clear hook when prefix mode is cleared", () => {
     const onActivePrefixChange = vi.fn();
+    const onClear = vi.fn();
     const controller = createKeybindController({
       getFocusedRenderable: () => createRenderable().renderable,
       onActivePrefixChange,
     });
 
     controller.enterPrefixMode("leader", {
+      onClear,
       status: "Leader key active.",
     });
 
-    const releaseFirst = controller.suspendGlobalKeybinds();
-    const releaseSecond = controller.suspendGlobalKeybinds();
+    controller.clearPrefixMode();
 
     expect(controller.getActivePrefix()).toBeNull();
-    expect(controller.globalKeybindsSuspended()).toBe(true);
-
-    releaseFirst();
-    expect(controller.globalKeybindsSuspended()).toBe(true);
-
-    releaseSecond();
-    expect(controller.globalKeybindsSuspended()).toBe(false);
+    expect(onClear).toHaveBeenCalledTimes(1);
     expect(onActivePrefixChange).toHaveBeenNthCalledWith(1, "leader");
     expect(onActivePrefixChange).toHaveBeenNthCalledWith(2, null);
   });

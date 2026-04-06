@@ -1,31 +1,26 @@
 import { useKeyboard } from "@opentui/react";
-import { useCallback, useRef } from "react";
-import type { CommandKeybindPrefix, KeyboardInput } from "../../commands.ts";
-import { closeDialog as closeAppDialog } from "../dialogs/stack.ts";
+import { useCallback, useEffect, useRef } from "react";
+import { isPrintableKey, type KeyboardInput } from "../../commands.ts";
+import { getPrefixMenuConfig } from "../commands/prefix-menus.ts";
+import { dispatchAction, type ActionDispatchMap } from "../keymap/action-dispatch.ts";
+import { keyEventFromInput } from "../keymap/key-event.ts";
 import type { KeymapMode } from "./keymap-mode.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
-import { keyEventFromInput } from "../keymap/key-event.ts";
-import { dispatchAction, type ActionDispatchMap } from "../keymap/action-dispatch.ts";
 
 interface UseMainKeyboardOptions {
   actionDispatchMap: ActionDispatchMap;
   activeKeymapMode: KeymapMode;
   commandActions: {
-    clearPrefixMode: (status?: string) => void;
+    handleTextInputPrefixKeypress: (
+      key: KeyboardInput,
+      options?: { onPrefixDown?: () => void; onPrefixUp?: () => void },
+    ) => boolean;
     runCommandByValue: (value: string) => void;
   };
   dismissErrorToast: () => void;
-  handleBranchModalKey: (key: KeyboardInput) => void;
-  handleClearReviewedModalKey: (key: KeyboardInput) => void;
-  handleCleanupModalKey: (key: KeyboardInput) => void;
-  handleCommandModalKey: (key: KeyboardInput) => void;
-  handleCommentComposerKey: (key: KeyboardInput) => void;
-  handleDiagnosticsModalKey: (key: KeyboardInput) => void;
-  handleListFilterModalKey: (key: KeyboardInput) => void;
-  handlePullRequestCommentsModalKey: (key: KeyboardInput) => void;
-  handlePullRequestListModalKey: (key: KeyboardInput) => void;
-  handleSubmitReviewModalKey: (key: KeyboardInput) => void;
-  handleMergeModalKey: (key: KeyboardInput) => void;
+  filteredCommandsLength: number;
+  filteredCommitItemsLength: number;
+  filteredPullRequestsLength: number;
   state: DiffdiffAppState;
 }
 
@@ -34,17 +29,9 @@ export function useMainKeyboard({
   activeKeymapMode,
   commandActions,
   dismissErrorToast,
-  handleBranchModalKey,
-  handleClearReviewedModalKey,
-  handleCleanupModalKey,
-  handleCommandModalKey,
-  handleCommentComposerKey,
-  handleDiagnosticsModalKey,
-  handleListFilterModalKey,
-  handlePullRequestCommentsModalKey,
-  handlePullRequestListModalKey,
-  handleSubmitReviewModalKey,
-  handleMergeModalKey,
+  filteredCommandsLength,
+  filteredCommitItemsLength,
+  filteredPullRequestsLength,
   state,
 }: UseMainKeyboardOptions) {
   const keyboardHandlerRef = useRef<(key: KeyboardInput) => void>(() => undefined);
@@ -53,55 +40,156 @@ export function useMainKeyboard({
     return mode === "diff" || mode === "thread" || mode === "tree";
   }
 
-  function handleHelpModalKey(key: KeyboardInput): void {
-    if (key.name === "escape" || key.name === "q" || key.sequence === "?") {
-      state.setDialogStack((currentStack) => closeAppDialog(currentStack, "help", "dismiss"));
-    }
+  function isLeaderTextInputMode(mode: KeymapMode): boolean {
+    return (
+      mode === "commands" ||
+      mode === "pull-request-search" ||
+      mode === "commit-search" ||
+      mode === "comment" ||
+      mode === "submit-review" ||
+      mode === "merge-title" ||
+      mode === "merge-body"
+    );
   }
 
-  function getUiPrefixForPendingLabel(label: string | undefined): CommandKeybindPrefix | null {
-    switch (label) {
-      case "Leader":
-        return "leader";
-      case "Modal Picker":
-        return "space";
+  function getTextInputPrefixOptions(
+    mode: KeymapMode,
+  ): { onPrefixDown?: () => void; onPrefixUp?: () => void } | undefined {
+    switch (mode) {
+      case "commands":
+        return {
+          onPrefixDown: () => {
+            state.setCommandIndex((currentIndex) =>
+              Math.max(0, Math.min(currentIndex + 1, Math.max(filteredCommandsLength - 1, 0))),
+            );
+          },
+          onPrefixUp: () => {
+            state.setCommandIndex((currentIndex) =>
+              Math.max(0, Math.min(currentIndex - 1, Math.max(filteredCommandsLength - 1, 0))),
+            );
+          },
+        };
+      case "pull-request-search":
+        return {
+          onPrefixDown: () => {
+            state.setPullRequestListIndex((currentIndex) =>
+              Math.max(0, Math.min(currentIndex + 1, Math.max(filteredPullRequestsLength - 1, 0))),
+            );
+          },
+          onPrefixUp: () => {
+            state.setPullRequestListIndex((currentIndex) =>
+              Math.max(0, Math.min(currentIndex - 1, Math.max(filteredPullRequestsLength - 1, 0))),
+            );
+          },
+        };
+      case "commit-search":
+        return {
+          onPrefixDown: () => {
+            state.setCommitListIndex((currentIndex) =>
+              Math.max(0, Math.min(currentIndex + 1, Math.max(filteredCommitItemsLength - 1, 0))),
+            );
+          },
+          onPrefixUp: () => {
+            state.setCommitListIndex((currentIndex) =>
+              Math.max(0, Math.min(currentIndex - 1, Math.max(filteredCommitItemsLength - 1, 0))),
+            );
+          },
+        };
+      case "submit-review":
+        return {
+          onPrefixDown: () => {
+            state.setReviewSubmissionEventIndex((currentIndex) =>
+              Math.max(0, Math.min(currentIndex + 1, 2)),
+            );
+          },
+          onPrefixUp: () => {
+            state.setReviewSubmissionEventIndex((currentIndex) =>
+              Math.max(0, Math.min(currentIndex - 1, 2)),
+            );
+          },
+        };
       default:
-        return null;
+        return undefined;
     }
   }
 
-  /**
-   * Primary key handler for diff/thread/tree pane modes.
-   *
-   * Keys are fed through the trie-based `KeymapRuntime` which handles:
-   *   - Numeric count prefix accumulation (e.g. `5` then `gg` → count=5)
-   *   - Multi-key sequence resolution (e.g. `g` → pending, `g` → matched)
-   *   - Action ID dispatch via the `ActionDispatchMap`
-   *
-   * Falls back to the old `AppCommand` system via `runCommandByValue` for
-   * actions not yet in the dispatch map (e.g. leader/space sub-commands).
-   */
-  function handleMainPaneKey(key: KeyboardInput, globalKeybindsSuspended: boolean): void {
-    if (globalKeybindsSuspended) {
+  function setTextInputValue(key: KeyboardInput): void {
+    if (!isPrintableKey(key)) {
       return;
     }
 
+    switch (activeKeymapMode) {
+      case "commands":
+        state.setCommandQuery((currentQuery) => currentQuery + key.sequence);
+        state.setCommandIndex(0);
+        return;
+      case "pull-request-search":
+        state.setPullRequestSearchQuery((query) => query + key.sequence);
+        state.setPullRequestListIndex(0);
+        return;
+      case "commit-search":
+        state.setCommitSearchQuery((query) => query + key.sequence);
+        state.setCommitListIndex(0);
+        return;
+      case "comment":
+        state.setReviewComposerBody((currentBody) => currentBody + key.sequence);
+        return;
+      case "submit-review":
+        state.setReviewSubmissionBody((currentBody) => currentBody + key.sequence);
+        return;
+      case "merge-title":
+        state.setMergeCommitTitle((currentTitle) => currentTitle + key.sequence);
+        return;
+      case "merge-body":
+        state.setMergeCommitMessage((currentBody) => currentBody + key.sequence);
+        return;
+    }
+  }
+
+  function syncPendingPrefix(label: string | undefined): void {
+    if (label == null) {
+      state.keybindController.clearPrefixMode();
+      return;
+    }
+
+    const prefix = label === "Leader" ? "leader" : label === "Modal Picker" ? "space" : null;
+    if (prefix == null) {
+      state.keybindController.clearPrefixMode();
+      state.setStatusMessage(`${label} mode active. Awaiting next key.`);
+      return;
+    }
+
+    const prefixMenu = getPrefixMenuConfig(prefix);
+    if (prefixMenu == null) {
+      return;
+    }
+
+    state.keybindController.enterPrefixMode(prefix, {
+      preserveFocus: isLeaderTextInputMode(activeKeymapMode) || prefixMenu.preserveFocusByDefault,
+      status: `${label} mode active. Awaiting next key.`,
+      onClear: () => {
+        state.keymapRuntime.reset();
+      },
+      onEnter: prefixMenu.onEnterMode,
+    });
+  }
+
+  function handleResult(key: KeyboardInput): void {
     const event = keyEventFromInput(key);
     const result = state.keymapRuntime.get(activeKeymapMode, event);
 
     switch (result.kind) {
       case "matched": {
-        state.setActivePrefix(null);
+        state.keybindController.clearPrefixMode();
         if (dispatchAction(actionDispatchMap, result.actionId, result.count)) {
           return;
         }
-        // Action ID not in dispatch map — fall through to command system.
         commandActions.runCommandByValue(result.actionId);
         return;
       }
 
       case "matched-sequence": {
-        state.setActivePrefix(null);
+        state.keybindController.clearPrefixMode();
         for (const actionId of result.actionIds) {
           if (!dispatchAction(actionDispatchMap, actionId, result.count)) {
             commandActions.runCommandByValue(actionId);
@@ -111,90 +199,43 @@ export function useMainKeyboard({
       }
 
       case "pending": {
-        const label = result.node.label;
-        state.setActivePrefix(getUiPrefixForPendingLabel(label));
-        if (label != null) {
-          state.setStatusMessage(`${label} mode active. Awaiting next key.`);
-        }
+        syncPendingPrefix(result.node.label);
         return;
       }
 
       case "cancelled": {
-        state.setActivePrefix(null);
+        const activePrefix = state.keybindController.getActivePrefix();
+        const activePrefixMenu =
+          activePrefix == null ? undefined : getPrefixMenuConfig(activePrefix);
+
+        if (activePrefixMenu != null) {
+          state.keybindController.clearPrefixMode(
+            key.name === "escape"
+              ? activePrefixMenu.cancelStatus
+              : activePrefixMenu.getUnboundStatus(key.name),
+          );
+          return;
+        }
+
+        state.keybindController.clearPrefixMode();
         state.setStatusMessage("");
         return;
       }
 
       case "not-found": {
-        state.setActivePrefix(null);
-        // Count digit accumulation — show the in-progress count.
+        state.keybindController.clearPrefixMode();
         const currentCount = state.keymapRuntime.count();
         if (currentCount != null) {
           state.setStatusMessage(`${currentCount}`);
+          return;
         }
-        break;
+
+        setTextInputValue(key);
       }
     }
   }
 
-  function handleKeyForMode(
-    mode: KeymapMode,
-    key: KeyboardInput,
-    globalKeybindsSuspended: boolean,
-  ): void {
-    switch (mode) {
-      case "commands":
-        handleCommandModalKey(key);
-        return;
-      case "pull-request-list":
-      case "pull-request-search":
-        handlePullRequestListModalKey(key);
-        return;
-      case "help":
-        handleHelpModalKey(key);
-        return;
-      case "diagnostics":
-        handleDiagnosticsModalKey(key);
-        return;
-      case "clear-reviewed":
-        handleClearReviewedModalKey(key);
-        return;
-      case "comment":
-        handleCommentComposerKey(key);
-        return;
-      case "conversation":
-        handlePullRequestCommentsModalKey(key);
-        return;
-      case "submit-review":
-        handleSubmitReviewModalKey(key);
-        return;
-      case "merge-method":
-      case "merge-title":
-      case "merge-body":
-      case "confirm-merge":
-        handleMergeModalKey(key);
-        return;
-      case "cleanup":
-        handleCleanupModalKey(key);
-        return;
-      case "filters":
-        handleListFilterModalKey(key);
-        return;
-      case "compare-branches":
-      case "compare-commits":
-      case "commit-search":
-        handleBranchModalKey(key);
-        return;
-      case "tree":
-      case "thread":
-      case "diff":
-        handleMainPaneKey(key, globalKeybindsSuspended);
-    }
-  }
-
   keyboardHandlerRef.current = (key) => {
-    const globalKeybindsSuspended = state.keybindController.globalKeybindsSuspended();
-
     if (
       isPaneKeymapMode(activeKeymapMode) &&
       state.errorToastMessage != null &&
@@ -204,8 +245,20 @@ export function useMainKeyboard({
       return;
     }
 
-    handleKeyForMode(activeKeymapMode, key, globalKeybindsSuspended);
+    if (isLeaderTextInputMode(activeKeymapMode)) {
+      const prefixOptions = getTextInputPrefixOptions(activeKeymapMode);
+      if (commandActions.handleTextInputPrefixKeypress(key, prefixOptions)) {
+        return;
+      }
+    }
+
+    handleResult(key);
   };
+
+  useEffect(() => {
+    state.keymapRuntime.reset();
+    state.keybindController.clearPrefixMode();
+  }, [activeKeymapMode, state.keybindController, state.keymapRuntime]);
 
   useKeyboard(
     useCallback((key: KeyboardInput) => {

@@ -6,6 +6,7 @@ interface PrefixModeHandlers {
 }
 
 interface EnterPrefixModeOptions extends PrefixModeHandlers {
+  onClear?: () => void;
   preserveFocus?: boolean;
   status: string;
 }
@@ -15,10 +16,7 @@ interface KeybindController {
   dispose(): void;
   enterPrefixMode(prefix: CommandKeybindPrefix, options: EnterPrefixModeOptions): void;
   getActivePrefix(): CommandKeybindPrefix | null;
-  globalKeybindsSuspended(): boolean;
   isPrefixActive(prefix: CommandKeybindPrefix): boolean;
-  resumeGlobalKeybinds(): void;
-  suspendGlobalKeybinds(): () => void;
 }
 
 export function createKeybindController({
@@ -32,8 +30,8 @@ export function createKeybindController({
 }): KeybindController {
   let activePrefix: CommandKeybindPrefix | null = null;
   let prefixCleanup: (() => void) | null = null;
+  let prefixOnClear: (() => void) | null = null;
   let prefixFocus: Renderable | null = null;
-  let suspendCount = 0;
 
   function setActivePrefix(nextPrefix: CommandKeybindPrefix | null): void {
     if (activePrefix === nextPrefix) {
@@ -47,6 +45,11 @@ export function createKeybindController({
   function clearPrefixCleanup(): void {
     prefixCleanup?.();
     prefixCleanup = null;
+  }
+
+  function clearPrefixOnClear(): void {
+    prefixOnClear?.();
+    prefixOnClear = null;
   }
 
   function restorePrefixFocus(): void {
@@ -63,6 +66,7 @@ export function createKeybindController({
 
   function clearPrefixMode(status?: string): void {
     clearPrefixCleanup();
+    clearPrefixOnClear();
 
     if (activePrefix != null) {
       restorePrefixFocus();
@@ -79,6 +83,7 @@ export function createKeybindController({
 
   function enterPrefixMode(prefix: CommandKeybindPrefix, options: EnterPrefixModeOptions): void {
     clearPrefixCleanup();
+    prefixOnClear = options.onClear ?? null;
 
     if (activePrefix !== prefix) {
       if (activePrefix != null) {
@@ -98,44 +103,20 @@ export function createKeybindController({
     prefixCleanup = typeof cleanup === "function" ? cleanup : null;
   }
 
-  function suspendGlobalKeybinds(): () => void {
-    suspendCount += 1;
-    clearPrefixMode();
-
-    let released = false;
-    return () => {
-      if (released) {
-        return;
-      }
-
-      released = true;
-      suspendCount = Math.max(0, suspendCount - 1);
-    };
-  }
-
-  function resumeGlobalKeybinds(): void {
-    suspendCount = Math.max(0, suspendCount - 1);
-  }
-
   return {
     clearPrefixMode,
     dispose() {
       clearPrefixCleanup();
+      clearPrefixOnClear();
       prefixFocus = null;
       setActivePrefix(null);
-      suspendCount = 0;
     },
     enterPrefixMode,
     getActivePrefix() {
       return activePrefix;
     },
-    globalKeybindsSuspended() {
-      return suspendCount > 0;
-    },
     isPrefixActive(prefix) {
       return activePrefix === prefix;
     },
-    resumeGlobalKeybinds,
-    suspendGlobalKeybinds,
   };
 }

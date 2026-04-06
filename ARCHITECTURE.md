@@ -105,6 +105,11 @@ At a high level, the current runtime flow is:
 4. `packages/core` persists session metadata, logs, auth state, preferences, and
    review cache across runs.
 
+Within the TUI, all keyboard modes now route through the shared trie-based
+keymap runtime before dispatching to app actions. Pane navigation, dialogs,
+search states, composers, and confirmation flows should use that single runtime
+path instead of bespoke per-modal key handlers.
+
 This split is deliberate: data acquisition and shared review behavior live in
 `core`, while rendering and interaction live in `tui`.
 

@@ -5,12 +5,7 @@ import { buildAppCommands, getPaletteCommands, type AppCommand } from "../comman
 import { getPrefixMenuCommands, getPrefixMenuConfig } from "../commands/prefix-menus.ts";
 import { filterCommands, formatCommandKeybind } from "../../commands.ts";
 import { useSessionDiagnostics } from "../diagnostics/use-session-diagnostics.ts";
-import {
-  getPrefixModeBadge,
-  getKeymapModeBadge,
-  keymapModeSuspendsGlobalKeybinds,
-  resolveActiveKeymapMode,
-} from "./keymap-mode.ts";
+import { getPrefixModeBadge, getKeymapModeBadge, resolveActiveKeymapMode } from "./keymap-mode.ts";
 import { LEADER_KEYBIND, LOADING_INDICATOR_FRAMES } from "../shared/constants.ts";
 import { openDialog as openAppDialog } from "../dialogs/stack.ts";
 import { DiffdiffAppView } from "./app-frame.tsx";
@@ -20,11 +15,10 @@ import { createGitHubReviewActions } from "../review/github-actions.ts";
 import { useDiffdiffAppLayoutEffects } from "../layout/use-app-layout-effects.ts";
 import { createLaunchActions } from "../comparison/launch-actions.ts";
 import { useDiffdiffAppLifecycle } from "../session/use-app-lifecycle.ts";
-import { createListModalHandlers, openBranchListModal } from "../dialogs/list-dialog-handlers.ts";
+import { openBranchListModal } from "../dialogs/list-dialog-handlers.ts";
 import { useMainKeyboard } from "./use-main-keyboard.ts";
 import { useDiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import { useDiffdiffAppRefresh } from "../comparison/use-comparison-refresh.ts";
-import { createReviewModalHandlers } from "../dialogs/review-dialog-handlers.ts";
 import { createReviewActions } from "../review/review-actions.ts";
 import { useSessionActions } from "../session/use-session-actions.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
@@ -247,39 +241,6 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     );
   }, [filteredCommands.length, state.setCommandIndex]);
 
-  const listHandlers = createListModalHandlers({
-    applyBranchSelection: launchActions.applyBranchSelection,
-    applyCommitSelection: launchActions.applyCommitSelection,
-    applyDashboardPullRequestSelection: launchActions.applyDashboardPullRequestSelection,
-    applyPullRequestSelection: launchActions.applyPullRequestSelection,
-    applyWorkingTreeSelection: launchActions.applyWorkingTreeSelection,
-    derived: { ...derived, filteredCommands } as typeof derived & {
-      filteredCommands: readonly AppCommand[];
-    },
-    filteredCommands,
-    handleTextInputPrefixKeypress: commandActions.handleTextInputPrefixKeypress,
-    openHelp,
-    refreshGitHubPullRequestList: githubActions.refreshGitHubPullRequestList,
-    runCommand: commandActions.runCommand,
-    state,
-    toggleBranchFilter: launchActions.toggleBranchFilter,
-  });
-  const reviewModalHandlers = createReviewModalHandlers({
-    applyCleanupSelection: githubActions.applyCleanupSelection,
-    clearReviewed: reviewActions.clearReviewed,
-    copySelectedPullRequestConversationItemUrl:
-      reviewActions.copySelectedPullRequestConversationItemUrl,
-    handleTextInputPrefixKeypress: commandActions.handleTextInputPrefixKeypress,
-    openMergeConfirmModal,
-    openPullRequestConversationReplyComposer:
-      githubActions.openPullRequestConversationReplyComposer,
-    persistence,
-    state,
-    submitCommentComposer: githubActions.submitCommentComposer,
-    submitMergeFromModal: githubActions.submitMergeFromModal,
-    submitReviewFromModal: githubActions.submitReviewFromModal,
-  });
-
   const activeKeymapMode = useMemo(
     () =>
       resolveActiveKeymapMode({
@@ -309,10 +270,6 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         ? getKeymapModeBadge(activeKeymapMode, props.theme)
         : getPrefixModeBadge(activePrefixMenu, props.theme),
     [activeKeymapMode, activePrefixMenu, props.theme],
-  );
-  const activeKeymapModeSuspendsGlobalKeybinds = useMemo(
-    () => keymapModeSuspendsGlobalKeybinds(activeKeymapMode),
-    [activeKeymapMode],
   );
   const helpLabel =
     formatCommandKeybind(
@@ -364,10 +321,50 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   const showFooterLoadingIndicator = state.isSubmittingReviewAction && state.activeOverlay == null;
 
   const actionDispatchMap = buildActionDispatchMap({
+    activeKeymapMode,
+    applyBranchSelection: launchActions.applyBranchSelection,
+    applyCleanupSelection: githubActions.applyCleanupSelection,
+    applyCommitSelection: launchActions.applyCommitSelection,
+    applyDashboardPullRequestSelection: launchActions.applyDashboardPullRequestSelection,
+    applyPullRequestSelection: launchActions.applyPullRequestSelection,
+    applyWorkingTreeSelection: launchActions.applyWorkingTreeSelection,
+    clearReviewed: reviewActions.clearReviewed,
+    closeCommandModal: commandActions.closeCommandModal,
+    closeDiagnostics: diagnostics.closeDiagnostics,
+    copyPullRequestUrl: viewActions.copyPullRequestUrl,
+    copySelectedPullRequestConversationItemUrl:
+      reviewActions.copySelectedPullRequestConversationItemUrl,
     derived,
+    filteredCommands,
     fileFocus,
+    jumpToFirstDiagnostic: diagnostics.jumpToFirstDiagnostic,
+    jumpToLastDiagnostic: diagnostics.jumpToLastDiagnostic,
+    moveDiagnosticSelection: diagnostics.moveDiagnosticSelection,
+    openBranchModal,
+    openCommandModal: commandActions.openCommandModal,
+    openCommentComposer: githubActions.openCommentComposer,
+    openClearReviewedConfirmModal,
+    openDiagnostics: diagnostics.openDiagnostics,
+    openFocusedFileInEditor: viewActions.openFocusedFileInEditor,
+    openFocusedReviewThreadReplyComposer: githubActions.openFocusedReviewThreadReplyComposer,
+    openGitHubPullRequestList: githubActions.openGitHubPullRequestList,
+    openHelp,
+    openMergeConfirmModal,
+    openMergeModal: githubActions.openMergeModal,
+    openPullRequestCommentsModal: githubActions.openPullRequestCommentsModal,
+    openPullRequestConversationReplyComposer:
+      githubActions.openPullRequestConversationReplyComposer,
+    openSubmitReviewModal: githubActions.openSubmitReviewModal,
+    persistenceApi: persistence.persistenceApi,
+    refreshComparison: refresh.refreshComparison,
+    refreshGitHubPullRequestList: githubActions.refreshGitHubPullRequestList,
     reviewActions,
+    runCommand: commandActions.runCommand,
     state,
+    submitCommentComposer: githubActions.submitCommentComposer,
+    submitMergeFromModal: githubActions.submitMergeFromModal,
+    submitReviewFromModal: githubActions.submitReviewFromModal,
+    toggleBranchFilter: launchActions.toggleBranchFilter,
     treeActions,
   });
   useMainKeyboard({
@@ -375,22 +372,13 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     activeKeymapMode,
     commandActions,
     dismissErrorToast: persistence.persistenceApi.dismissErrorToast,
-    handleBranchModalKey: listHandlers.handleBranchModalKey,
-    handleClearReviewedModalKey: reviewModalHandlers.handleClearReviewedModalKey,
-    handleCleanupModalKey: reviewModalHandlers.handleCleanupModalKey,
-    handleCommandModalKey: listHandlers.handleCommandModalKey,
-    handleCommentComposerKey: reviewModalHandlers.handleCommentComposerKey,
-    handleDiagnosticsModalKey: diagnostics.handleDiagnosticsModalKey,
-    handleListFilterModalKey: listHandlers.handleListFilterModalKey,
-    handlePullRequestCommentsModalKey: reviewModalHandlers.handlePullRequestCommentsModalKey,
-    handlePullRequestListModalKey: listHandlers.handlePullRequestListModalKey,
-    handleSubmitReviewModalKey: reviewModalHandlers.handleSubmitReviewModalKey,
-    handleMergeModalKey: reviewModalHandlers.handleMergeModalKey,
+    filteredCommandsLength: filteredCommands.length,
+    filteredCommitItemsLength: derived.filteredCommitItems.length,
+    filteredPullRequestsLength: derived.filteredPullRequests.length,
     state,
   });
 
   useDiffdiffAppLifecycle({
-    activeKeymapModeSuspendsGlobalKeybinds,
     derived,
     persistence,
     prefetchComparisonBrowserData,

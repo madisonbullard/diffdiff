@@ -2,7 +2,6 @@ import { describe, expect, test } from "vite-plus/test";
 import {
   getPrefixModeBadge,
   getKeymapModeBadge,
-  keymapModeSuspendsGlobalKeybinds,
   resolveActiveKeymapMode,
 } from "../src/app/shell/keymap-mode.ts";
 import { DARK_THEME } from "../src/theme.ts";
@@ -123,15 +122,6 @@ describe("keymap mode", () => {
         pullRequestSearchActive: false,
       }),
     ).toBe("confirm-merge");
-  });
-
-  test("marks text-input and confirmation modes as global-keybind suspending", () => {
-    expect(keymapModeSuspendsGlobalKeybinds("commands")).toBe(true);
-    expect(keymapModeSuspendsGlobalKeybinds("commit-search")).toBe(true);
-    expect(keymapModeSuspendsGlobalKeybinds("merge-body")).toBe(true);
-    expect(keymapModeSuspendsGlobalKeybinds("confirm-merge")).toBe(true);
-    expect(keymapModeSuspendsGlobalKeybinds("diff")).toBe(false);
-    expect(keymapModeSuspendsGlobalKeybinds("tree")).toBe(false);
   });
 
   test("renders prefix badges from the prefix menu registry", () => {

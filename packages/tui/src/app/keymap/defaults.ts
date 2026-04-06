@@ -409,6 +409,10 @@ const filtersMode = buildMode([
   ...LIST_NAVIGATION,
   ["return", A.FILTER_TOGGLE],
   ["space", A.FILTER_TOGGLE],
+  ["shift+return", A.FILTER_ENABLE_ALL],
+  ["shift+space", A.FILTER_ENABLE_ALL],
+  ["alt+return", A.FILTER_DISABLE_ALL],
+  ["alt+space", A.FILTER_DISABLE_ALL],
   ["a", A.FILTER_ENABLE_ALL],
   ["n", A.FILTER_DISABLE_ALL],
 ]);

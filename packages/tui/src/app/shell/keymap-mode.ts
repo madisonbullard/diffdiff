@@ -104,21 +104,6 @@ export function resolveActiveKeymapMode({
   }
 }
 
-export function keymapModeSuspendsGlobalKeybinds(mode: KeymapMode): boolean {
-  return (
-    mode === "clear-reviewed" ||
-    mode === "commands" ||
-    mode === "comment" ||
-    mode === "submit-review" ||
-    mode === "merge-method" ||
-    mode === "merge-title" ||
-    mode === "merge-body" ||
-    mode === "confirm-merge" ||
-    mode === "commit-search" ||
-    mode === "pull-request-search"
-  );
-}
-
 export function getPrefixModeBadge(prefixMenu: PrefixMenuConfig, theme: UiTheme): KeymapModeBadge {
   if (prefixMenu.prefix === "leader") {
     return {

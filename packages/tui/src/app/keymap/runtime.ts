@@ -32,6 +32,10 @@ import type { KeymapMode } from "../shell/keymap-mode.ts";
 /** Maximum value for the accumulated count (prevents runaway input). */
 const MAX_COUNT = 100_000_000;
 
+function modeSupportsCounts(mode: KeymapMode): boolean {
+  return mode === "diff" || mode === "thread" || mode === "tree";
+}
+
 export interface KeymapRuntime {
   /**
    * Feed a key event for the given mode. Returns a `KeymapResult` describing
@@ -165,7 +169,13 @@ export function createKeymapRuntime(keymaps: ResolvedKeymaps): KeymapRuntime {
       // multi-key sequence (i.e. currentNode is null). Inside a pending
       // node (e.g. after pressing `g`), digits should resolve against
       // the sub-trie — they never extend a count.
-      if (currentNode == null && !event.ctrl && !event.meta && !event.shift) {
+      if (
+        modeSupportsCounts(mode) &&
+        currentNode == null &&
+        !event.ctrl &&
+        !event.meta &&
+        !event.shift
+      ) {
         const countResult = isCountDigit(event.key, accumulatedCount, root);
         if (countResult.isCount) {
           const base = accumulatedCount ?? 0;

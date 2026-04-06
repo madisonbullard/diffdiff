@@ -15,7 +15,6 @@ import { EMPTY_REVIEW_THREADS } from "../review/review-constants.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 
 interface UseLifecycleOptions {
-  activeKeymapModeSuspendsGlobalKeybinds: boolean;
   derived: DiffdiffAppDerived;
   persistence: DiffdiffAppPersistence;
   prefetchComparisonBrowserData: () => Promise<void>;
@@ -25,7 +24,6 @@ interface UseLifecycleOptions {
 }
 
 export function useDiffdiffAppLifecycle({
-  activeKeymapModeSuspendsGlobalKeybinds,
   derived,
   persistence,
   prefetchComparisonBrowserData,
@@ -39,14 +37,6 @@ export function useDiffdiffAppLifecycle({
     // Startup prefetch should only run once for the initial session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (!activeKeymapModeSuspendsGlobalKeybinds) {
-      return;
-    }
-
-    return state.keybindController.suspendGlobalKeybinds();
-  }, [activeKeymapModeSuspendsGlobalKeybinds, state.keybindController]);
 
   useEffect(() => {
     return () => {
