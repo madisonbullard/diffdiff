@@ -41,7 +41,7 @@ export function PrefixPickerOverlay({
         const textColor = enabled ? theme.text : theme.textMuted;
         return (
           <text key={command.value} fg={textColor} wrapMode="none">
-            <KeyCap label={label.replace(/^[^ ]+ /u, "") || label} theme={theme} />
+            <KeyCap label={label} theme={theme} />
             <span>{` ${command.title}`}</span>
           </text>
         );

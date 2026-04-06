@@ -549,8 +549,20 @@ test("renders empty branch columns and help copy", () => {
       value: "view.open-selected-file",
     },
   ];
+  const commandBindingLabels = new Map<string, string | undefined>([
+    ["system.command-palette", "ctrl+p"],
+    ["comparison.list", "l / ctrl+x l / space l"],
+    ["github.copy-url", "y / ctrl+x y"],
+    ["review.toggle-reviewed", "r"],
+    ["view.open-selected-file", "return / right"],
+  ]);
   const helpModal = render(
-    <HelpModal activePane="diff" commands={helpCommands} leaderKeybind="ctrl+x" theme={theme} />,
+    <HelpModal
+      activePane="diff"
+      commandBindingLabels={commandBindingLabels}
+      commands={helpCommands}
+      theme={theme}
+    />,
   );
 
   expect(collectText(branchModal.toJSON())).toContain("Working tree");
@@ -577,6 +589,7 @@ test("renders a compact modal picker overlay", () => {
     cancelStatus: "Canceled modal picker.",
     getActivateStatus: () => "modal picker active. Awaiting a space command.",
     getUnboundStatus: (keyName) => `No modal is bound to space ${keyName}.`,
+    nodeLabel: "Modal Picker",
     preserveFocusByDefault: true,
     statusLabel: "space",
     triggerKeybind: "space",
@@ -590,7 +603,7 @@ test("renders a compact modal picker overlay", () => {
         title: "Open comparison list",
         value: "comparison.list",
       },
-      label: "space l",
+      label: "l",
     },
     {
       command: {
@@ -600,7 +613,7 @@ test("renders a compact modal picker overlay", () => {
         title: "Open diagnostics",
         value: "system.diagnostics",
       },
-      label: "space d",
+      label: "d",
     },
   ];
 
@@ -640,8 +653,14 @@ test("groups suggested commands under a dedicated heading in the palette", () =>
 
   const palette = render(
     <CommandPaletteModal
+      commandBindingLabels={
+        new Map<string, string | undefined>([
+          ["system.command-palette", "ctrl+p"],
+          ["review.next-unreviewed", "u"],
+          ["comparison.list", "l / ctrl+x l / space l"],
+        ])
+      }
       commands={commands}
-      leaderKeybind="ctrl+x"
       query=""
       selectedIndex={0}
       theme={theme}
@@ -659,6 +678,7 @@ test("renders palette command descriptions on an indented second line", () => {
     "Browse the working tree, branches, pull requests, and commits from one list.";
   const palette = render(
     <CommandPaletteModal
+      commandBindingLabels={new Map<string, string | undefined>([["comparison.list", "ctrl+p"]])}
       commands={[
         {
           category: "Suggested",
@@ -669,7 +689,6 @@ test("renders palette command descriptions on an indented second line", () => {
           value: "comparison.list",
         },
       ]}
-      leaderKeybind="ctrl+x"
       query=""
       selectedIndex={0}
       theme={theme}

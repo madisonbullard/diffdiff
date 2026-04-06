@@ -78,6 +78,11 @@ const MODAL_DISMISS: readonly BindingTuple[] = [
   ["q", A.MODAL_DISMISS],
 ];
 
+const TEXT_INPUT_LEADER_NAVIGATION: readonly BindingTuple[] = [
+  ["j", A.LIST_MOVE_DOWN],
+  ["k", A.LIST_MOVE_UP],
+];
+
 // ---------------------------------------------------------------------------
 // Diff pane (default/main)
 // ---------------------------------------------------------------------------
@@ -317,17 +322,20 @@ const helpMode = buildMode([
 // Command palette
 // ---------------------------------------------------------------------------
 
-const commandsMode = buildMode([
-  ["escape", A.MODAL_DISMISS],
-  ["down", A.LIST_MOVE_DOWN],
-  ["up", A.LIST_MOVE_UP],
-  ["pagedown", A.LIST_PAGE_DOWN],
-  ["pageup", A.LIST_PAGE_UP],
-  ["home", A.LIST_FIRST],
-  ["end", A.LIST_LAST],
-  ["backspace", A.TEXT_BACKSPACE],
-  ["return", A.COMMAND_PALETTE_RUN],
-]);
+const commandsMode = buildModeWithPrefixes(
+  [
+    ["escape", A.MODAL_DISMISS],
+    ["down", A.LIST_MOVE_DOWN],
+    ["up", A.LIST_MOVE_UP],
+    ["pagedown", A.LIST_PAGE_DOWN],
+    ["pageup", A.LIST_PAGE_UP],
+    ["home", A.LIST_FIRST],
+    ["end", A.LIST_LAST],
+    ["backspace", A.TEXT_BACKSPACE],
+    ["return", A.COMMAND_PALETTE_RUN],
+  ],
+  [{ trigger: "ctrl+x", label: "Leader", bindings: TEXT_INPUT_LEADER_NAVIGATION }],
+);
 
 // ---------------------------------------------------------------------------
 // Pull request list
@@ -345,13 +353,16 @@ const pullRequestListMode = buildMode([
 // Pull request search
 // ---------------------------------------------------------------------------
 
-const pullRequestSearchMode = buildMode([
-  ["escape", A.MODAL_DISMISS],
-  ["return", A.LIST_ACCEPT],
-  ["backspace", A.TEXT_BACKSPACE],
-  ["down", A.LIST_MOVE_DOWN],
-  ["up", A.LIST_MOVE_UP],
-]);
+const pullRequestSearchMode = buildModeWithPrefixes(
+  [
+    ["escape", A.MODAL_DISMISS],
+    ["return", A.LIST_ACCEPT],
+    ["backspace", A.TEXT_BACKSPACE],
+    ["down", A.LIST_MOVE_DOWN],
+    ["up", A.LIST_MOVE_UP],
+  ],
+  [{ trigger: "ctrl+x", label: "Leader", bindings: TEXT_INPUT_LEADER_NAVIGATION }],
+);
 
 // ---------------------------------------------------------------------------
 // Compare branches
@@ -390,13 +401,16 @@ const compareCommitsMode = buildMode([
 // Commit search
 // ---------------------------------------------------------------------------
 
-const commitSearchMode = buildMode([
-  ["escape", A.MODAL_DISMISS],
-  ["return", A.LIST_ACCEPT],
-  ["backspace", A.TEXT_BACKSPACE],
-  ["down", A.LIST_MOVE_DOWN],
-  ["up", A.LIST_MOVE_UP],
-]);
+const commitSearchMode = buildModeWithPrefixes(
+  [
+    ["escape", A.MODAL_DISMISS],
+    ["return", A.LIST_ACCEPT],
+    ["backspace", A.TEXT_BACKSPACE],
+    ["down", A.LIST_MOVE_DOWN],
+    ["up", A.LIST_MOVE_UP],
+  ],
+  [{ trigger: "ctrl+x", label: "Leader", bindings: TEXT_INPUT_LEADER_NAVIGATION }],
+);
 
 // ---------------------------------------------------------------------------
 // List filter
@@ -444,14 +458,17 @@ const conversationMode = buildMode([
 // Submit review
 // ---------------------------------------------------------------------------
 
-const submitReviewMode = buildMode([
-  ["escape", A.MODAL_DISMISS],
-  ["down", A.LIST_MOVE_DOWN],
-  ["up", A.LIST_MOVE_UP],
-  ["backspace", A.TEXT_BACKSPACE],
-  ["shift+return", A.TEXT_NEWLINE],
-  ["return", A.SUBMIT_REVIEW_SUBMIT],
-]);
+const submitReviewMode = buildModeWithPrefixes(
+  [
+    ["escape", A.MODAL_DISMISS],
+    ["down", A.LIST_MOVE_DOWN],
+    ["up", A.LIST_MOVE_UP],
+    ["backspace", A.TEXT_BACKSPACE],
+    ["shift+return", A.TEXT_NEWLINE],
+    ["return", A.SUBMIT_REVIEW_SUBMIT],
+  ],
+  [{ trigger: "ctrl+x", label: "Leader", bindings: TEXT_INPUT_LEADER_NAVIGATION }],
+);
 
 // ---------------------------------------------------------------------------
 // Merge (method, title, body)

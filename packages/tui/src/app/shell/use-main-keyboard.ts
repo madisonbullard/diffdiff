@@ -11,16 +11,9 @@ interface UseMainKeyboardOptions {
   actionDispatchMap: ActionDispatchMap;
   activeKeymapMode: KeymapMode;
   commandActions: {
-    handleTextInputPrefixKeypress: (
-      key: KeyboardInput,
-      options?: { onPrefixDown?: () => void; onPrefixUp?: () => void },
-    ) => boolean;
     runCommandByValue: (value: string) => void;
   };
   dismissErrorToast: () => void;
-  filteredCommandsLength: number;
-  filteredCommitItemsLength: number;
-  filteredPullRequestsLength: number;
   state: DiffdiffAppState;
 }
 
@@ -29,9 +22,6 @@ export function useMainKeyboard({
   activeKeymapMode,
   commandActions,
   dismissErrorToast,
-  filteredCommandsLength,
-  filteredCommitItemsLength,
-  filteredPullRequestsLength,
   state,
 }: UseMainKeyboardOptions) {
   const keyboardHandlerRef = useRef<(key: KeyboardInput) => void>(() => undefined);
@@ -50,67 +40,6 @@ export function useMainKeyboard({
       mode === "merge-title" ||
       mode === "merge-body"
     );
-  }
-
-  function getTextInputPrefixOptions(
-    mode: KeymapMode,
-  ): { onPrefixDown?: () => void; onPrefixUp?: () => void } | undefined {
-    switch (mode) {
-      case "commands":
-        return {
-          onPrefixDown: () => {
-            state.setCommandIndex((currentIndex) =>
-              Math.max(0, Math.min(currentIndex + 1, Math.max(filteredCommandsLength - 1, 0))),
-            );
-          },
-          onPrefixUp: () => {
-            state.setCommandIndex((currentIndex) =>
-              Math.max(0, Math.min(currentIndex - 1, Math.max(filteredCommandsLength - 1, 0))),
-            );
-          },
-        };
-      case "pull-request-search":
-        return {
-          onPrefixDown: () => {
-            state.setPullRequestListIndex((currentIndex) =>
-              Math.max(0, Math.min(currentIndex + 1, Math.max(filteredPullRequestsLength - 1, 0))),
-            );
-          },
-          onPrefixUp: () => {
-            state.setPullRequestListIndex((currentIndex) =>
-              Math.max(0, Math.min(currentIndex - 1, Math.max(filteredPullRequestsLength - 1, 0))),
-            );
-          },
-        };
-      case "commit-search":
-        return {
-          onPrefixDown: () => {
-            state.setCommitListIndex((currentIndex) =>
-              Math.max(0, Math.min(currentIndex + 1, Math.max(filteredCommitItemsLength - 1, 0))),
-            );
-          },
-          onPrefixUp: () => {
-            state.setCommitListIndex((currentIndex) =>
-              Math.max(0, Math.min(currentIndex - 1, Math.max(filteredCommitItemsLength - 1, 0))),
-            );
-          },
-        };
-      case "submit-review":
-        return {
-          onPrefixDown: () => {
-            state.setReviewSubmissionEventIndex((currentIndex) =>
-              Math.max(0, Math.min(currentIndex + 1, 2)),
-            );
-          },
-          onPrefixUp: () => {
-            state.setReviewSubmissionEventIndex((currentIndex) =>
-              Math.max(0, Math.min(currentIndex - 1, 2)),
-            );
-          },
-        };
-      default:
-        return undefined;
-    }
   }
 
   function setTextInputValue(key: KeyboardInput): void {
@@ -152,7 +81,9 @@ export function useMainKeyboard({
       return;
     }
 
-    const prefix = label === "Leader" ? "leader" : label === "Modal Picker" ? "space" : null;
+    const prefix = (["leader", "space"] as const).find(
+      (candidate) => getPrefixMenuConfig(candidate)?.nodeLabel === label,
+    );
     if (prefix == null) {
       state.keybindController.clearPrefixMode();
       state.setStatusMessage(`${label} mode active. Awaiting next key.`);
@@ -243,13 +174,6 @@ export function useMainKeyboard({
     ) {
       dismissErrorToast();
       return;
-    }
-
-    if (isLeaderTextInputMode(activeKeymapMode)) {
-      const prefixOptions = getTextInputPrefixOptions(activeKeymapMode);
-      if (commandActions.handleTextInputPrefixKeypress(key, prefixOptions)) {
-        return;
-      }
     }
 
     handleResult(key);

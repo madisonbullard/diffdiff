@@ -44,6 +44,7 @@ interface DiffdiffAppViewProps {
   collapsedCommentStates: Record<string, boolean>;
   collapsedDirectories: ReadonlySet<string>;
   collapsedPaths: ReadonlySet<string>;
+  commandBindingLabels: ReadonlyMap<string, string | undefined>;
   commandIndex: number;
   commandQuery: string;
   commitListIndex: number;
@@ -74,7 +75,6 @@ interface DiffdiffAppViewProps {
   isDiagnosticsLoading: boolean;
   isPullRequestListLoading: boolean;
   isSubmittingReviewAction: boolean;
-  leaderKeybind: string;
   localBranchCount: number;
   mergeBodyScrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   mergeCommitMessage: string;
@@ -149,6 +149,7 @@ export function DiffdiffAppView({
   collapsedCommentStates,
   collapsedDirectories,
   collapsedPaths,
+  commandBindingLabels,
   commandIndex,
   commandQuery,
   commitListIndex,
@@ -179,7 +180,6 @@ export function DiffdiffAppView({
   isDiagnosticsLoading,
   isPullRequestListLoading,
   isSubmittingReviewAction,
-  leaderKeybind,
   localBranchCount,
   mergeBodyScrollRef,
   mergeCommitMessage,
@@ -313,6 +313,7 @@ export function DiffdiffAppView({
         cleanupCandidateIndex={cleanupCandidateIndex}
         cleanupCandidates={cleanupCandidates}
         cleanupSelection={cleanupSelection}
+        commandBindingLabels={commandBindingLabels}
         commandIndex={commandIndex}
         commandQuery={commandQuery}
         commitListIndex={commitListIndex}
@@ -330,7 +331,6 @@ export function DiffdiffAppView({
         isDiagnosticsLoading={isDiagnosticsLoading}
         isSubmittingReviewAction={isSubmittingReviewAction}
         localBranchCount={localBranchCount}
-        leaderKeybind={leaderKeybind}
         mergeBodyScrollRef={mergeBodyScrollRef}
         mergeCommitMessage={mergeCommitMessage}
         mergeCommitTitle={mergeCommitTitle}

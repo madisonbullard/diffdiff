@@ -1,9 +1,10 @@
 export * from "./action-dispatch.ts";
 export * from "./actions.ts";
+export * from "./display.ts";
 export * from "./defaults.ts";
 export * from "./key-event.ts";
 export * from "./merge.ts";
 export * from "./reverse-map.ts";
 export * from "./runtime.ts";
 export * from "./trie.ts";
-export type { ResolvedKeymaps, UserKeymapConfig } from "./types.ts";
+export type { ResolvedKeymaps, ReverseKeymaps, UserKeymapConfig } from "./types.ts";

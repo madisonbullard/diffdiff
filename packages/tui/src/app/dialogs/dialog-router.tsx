@@ -42,6 +42,7 @@ interface DiffdiffAppDialogsProps {
   cleanupCandidateIndex: number;
   cleanupCandidates: readonly GitHubRefCleanupCandidate[];
   cleanupSelection: GitHubCleanupPreferences;
+  commandBindingLabels: ReadonlyMap<string, string | undefined>;
   commandIndex: number;
   commandQuery: string;
   commitListIndex: number;
@@ -58,7 +59,6 @@ interface DiffdiffAppDialogsProps {
   filterIndex: number;
   isDiagnosticsLoading: boolean;
   isSubmittingReviewAction: boolean;
-  leaderKeybind: string;
   mergeBodyScrollRef: React.MutableRefObject<ScrollBoxRenderable | null>;
   mergeCommitMessage: string;
   mergeCommitTitle: string;
@@ -100,6 +100,7 @@ export function DiffdiffAppDialogs({
   cleanupCandidateIndex,
   cleanupCandidates,
   cleanupSelection,
+  commandBindingLabels,
   commandIndex,
   commandQuery,
   commitListIndex,
@@ -117,7 +118,6 @@ export function DiffdiffAppDialogs({
   isDiagnosticsLoading,
   isSubmittingReviewAction,
   localBranchCount,
-  leaderKeybind,
   mergeBodyScrollRef,
   mergeCommitMessage,
   mergeCommitTitle,
@@ -168,7 +168,7 @@ export function DiffdiffAppDialogs({
     return (
       <CommandPaletteModal
         commands={filteredCommands}
-        leaderKeybind={leaderKeybind}
+        commandBindingLabels={commandBindingLabels}
         query={commandQuery}
         selectedIndex={commandIndex}
         theme={theme}
@@ -270,7 +270,7 @@ export function DiffdiffAppDialogs({
       <HelpModal
         activePane={activePane}
         commands={helpCommands}
-        leaderKeybind={leaderKeybind}
+        commandBindingLabels={commandBindingLabels}
         theme={theme}
       />
     );

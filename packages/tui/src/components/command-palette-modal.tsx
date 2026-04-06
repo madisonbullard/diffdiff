@@ -1,16 +1,16 @@
-import { formatCommandShortcuts, type CommandDefinition } from "../commands.ts";
+import type { CommandDefinition } from "../commands.ts";
 import type { UiTheme } from "../theme.ts";
 import { KeyCap, ModalFrame, SPLIT_BORDER, selectItem } from "./shared.tsx";
 
 export function CommandPaletteModal({
   commands,
-  leaderKeybind,
+  commandBindingLabels,
   query,
   selectedIndex,
   theme,
 }: {
   commands: readonly CommandDefinition[];
-  leaderKeybind: string;
+  commandBindingLabels: ReadonlyMap<string, string | undefined>;
   query: string;
   selectedIndex: number;
   theme: UiTheme;
@@ -129,7 +129,7 @@ export function CommandPaletteModal({
                       ) : null}
                     </box>
                     <text fg={detail} wrapMode="none">
-                      {formatCommandShortcuts(command, leaderKeybind) ?? ""}
+                      {commandBindingLabels.get(command.value) ?? ""}
                     </text>
                   </box>
                 </box>

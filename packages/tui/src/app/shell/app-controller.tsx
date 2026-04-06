@@ -3,10 +3,11 @@ import { useCallback, useEffect, useMemo } from "react";
 import { logDiffdiffError, syncGitRemotes } from "@diffdiff/core";
 import { buildAppCommands, getPaletteCommands, type AppCommand } from "../commands/registry.ts";
 import { getPrefixMenuCommands, getPrefixMenuConfig } from "../commands/prefix-menus.ts";
-import { filterCommands, formatCommandKeybind } from "../../commands.ts";
+import { filterCommands } from "../../commands.ts";
+import { formatActionBindings, formatCommandBindings } from "../keymap/display.ts";
 import { useSessionDiagnostics } from "../diagnostics/use-session-diagnostics.ts";
 import { getPrefixModeBadge, getKeymapModeBadge, resolveActiveKeymapMode } from "./keymap-mode.ts";
-import { LEADER_KEYBIND, LOADING_INDICATOR_FRAMES } from "../shared/constants.ts";
+import { LOADING_INDICATOR_FRAMES } from "../shared/constants.ts";
 import { openDialog as openAppDialog } from "../dialogs/stack.ts";
 import { DiffdiffAppView } from "./app-frame.tsx";
 import { createCommandActions } from "../commands/command-actions.ts";
@@ -106,11 +107,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     }
   }, [props.loadComparisonBrowserData, sessionActions, state.startupOptions]);
 
-  const commandActions = createCommandActions({
-    getCommands: () => commands,
-    leaderTriggerLabel: formatCommandKeybind(LEADER_KEYBIND, LEADER_KEYBIND) ?? "ctrl+x",
-    state,
-  });
+  const commandActions = createCommandActions({ getCommands: () => commands, state });
 
   const openHelp = () => state.setDialogStack((s) => openAppDialog(s, "help"));
   const openBranchModal = useCallback(
@@ -220,9 +217,15 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     () => (state.activePrefix == null ? undefined : getPrefixMenuConfig(state.activePrefix)),
     [state.activePrefix],
   );
-  const activePrefixMenuCommands = useMemo(
-    () => (state.activePrefix == null ? [] : getPrefixMenuCommands(commands, state.activePrefix)),
-    [commands, state.activePrefix],
+  const commandBindingLabels = useMemo(
+    () =>
+      new Map(
+        commands.map((command) => [
+          command.value,
+          formatCommandBindings(state.reverseKeymaps, command),
+        ]),
+      ),
+    [commands, state.reverseKeymaps],
   );
   const filteredCommands = useMemo(
     () => filterCommands(getPaletteCommands(commands), state.commandQuery),
@@ -264,6 +267,18 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       state.pullRequestSearchActive,
     ],
   );
+  const activePrefixMenuCommands = useMemo(
+    () =>
+      state.activePrefix == null
+        ? []
+        : getPrefixMenuCommands(
+            commands,
+            state.activePrefix,
+            state.reverseKeymaps,
+            activeKeymapMode,
+          ),
+    [activeKeymapMode, commands, state.activePrefix, state.reverseKeymaps],
+  );
   const footerModeBadge = useMemo(
     () =>
       activePrefixMenu == null
@@ -272,10 +287,9 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     [activeKeymapMode, activePrefixMenu, props.theme],
   );
   const helpLabel =
-    formatCommandKeybind(
-      commands.find((command) => command.value === "system.help")?.keybind,
-      LEADER_KEYBIND,
-    ) ?? "?";
+    formatActionBindings(state.reverseKeymaps, "system.help", ["diff", "thread", "tree"])?.split(
+      " / ",
+    )[0] ?? "?";
   const footerEvent = useMemo(
     () => ({
       color:
@@ -372,9 +386,6 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     activeKeymapMode,
     commandActions,
     dismissErrorToast: persistence.persistenceApi.dismissErrorToast,
-    filteredCommandsLength: filteredCommands.length,
-    filteredCommitItemsLength: derived.filteredCommitItems.length,
-    filteredPullRequestsLength: derived.filteredPullRequests.length,
     state,
   });
 
@@ -428,6 +439,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       fileCardPreviewViewports={derived.fileCardPreviewViewports}
       fileCardRootRefs={derived.fileCardRootRefs}
       filteredCommands={filteredCommands}
+      commandBindingLabels={commandBindingLabels}
       filteredCommitItems={derived.filteredCommitItems}
       filteredPullRequests={derived.filteredPullRequests}
       filterIndex={state.filterIndex}
@@ -440,7 +452,6 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       isDiagnosticsLoading={diagnostics.isDiagnosticsLoading}
       isPullRequestListLoading={state.isPullRequestListLoading}
       isSubmittingReviewAction={state.isSubmittingReviewAction}
-      leaderKeybind={LEADER_KEYBIND}
       localBranchCount={derived.localBranchCount}
       mergeBodyScrollRef={state.mergeBodyScrollRef}
       mergeCommitMessage={state.mergeCommitMessage}

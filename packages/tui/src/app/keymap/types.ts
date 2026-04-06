@@ -110,6 +110,17 @@ export type KeymapResult =
 /** Maps action IDs to all key sequences that trigger them. */
 export type ReverseKeymap = ReadonlyMap<string, readonly (readonly KeyEvent[])[]>;
 
+/** Maps labeled trie nodes to the key sequences that enter them. */
+export type ReverseNodeKeymap = ReadonlyMap<string, readonly (readonly KeyEvent[])[]>;
+
+export interface ReverseModeKeymap {
+  readonly actions: ReverseKeymap;
+  readonly nodes: ReverseNodeKeymap;
+}
+
+/** Reverse lookup data for every resolved keymap mode. */
+export type ReverseKeymaps = ReadonlyMap<KeymapMode, ReverseModeKeymap>;
+
 // ---------------------------------------------------------------------------
 // User config schema
 // ---------------------------------------------------------------------------

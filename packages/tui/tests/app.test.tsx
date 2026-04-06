@@ -186,6 +186,26 @@ test("keeps command-palette typing isolated from global shortcuts", () => {
   expect(getAppText(tree)).toContain('Filtering commands for "?".');
 });
 
+test("derives help labels from the resolved live keymap", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialUserKeymapConfig: {
+          diff: {
+            l: "no_op",
+            z: "comparison.list",
+          },
+        },
+      })}
+    />,
+  );
+
+  emitKey({ shift: true, name: "/", sequence: "?" });
+
+  expect(getAppText(tree)).toContain("Help");
+  expect(getAppText(tree)).toContain("l / z / ctrl+x l / space l");
+});
+
 test("treats j as query text inside the command palette", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 

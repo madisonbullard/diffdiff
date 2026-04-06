@@ -5,10 +5,23 @@
  * static annotation strings.
  */
 
-import type { KeyEvent, KeyTrieEntry, KeyTrieNode, ReverseKeymap } from "./types.ts";
+import type {
+  KeyEvent,
+  KeyTrieEntry,
+  KeyTrieNode,
+  ResolvedKeymaps,
+  ReverseKeymap,
+  ReverseKeymaps,
+  ReverseModeKeymap,
+} from "./types.ts";
 
 export function buildReverseKeymap(root: KeyTrieNode): ReverseKeymap {
-  const result = new Map<string, KeyEvent[][]>();
+  return buildReverseModeKeymap(root).actions;
+}
+
+export function buildReverseModeKeymap(root: KeyTrieNode): ReverseModeKeymap {
+  const actions = new Map<string, KeyEvent[][]>();
+  const nodes = new Map<string, KeyEvent[][]>();
 
   function walk(node: KeyTrieNode, prefix: KeyEvent[]): void {
     for (const [serializedKey, child] of node.children) {
@@ -21,29 +34,44 @@ export function buildReverseKeymap(root: KeyTrieNode): ReverseKeymap {
   function collectEntry(entry: KeyTrieEntry, path: KeyEvent[]): void {
     switch (entry.kind) {
       case "action": {
-        const existing = result.get(entry.actionId) ?? [];
+        const existing = actions.get(entry.actionId) ?? [];
         existing.push(path);
-        result.set(entry.actionId, existing);
+        actions.set(entry.actionId, existing);
         break;
       }
       case "sequence": {
         // Attribute the sequence to the first action in it.
         if (entry.actionIds.length > 0) {
           const first = entry.actionIds[0]!;
-          const existing = result.get(first) ?? [];
+          const existing = actions.get(first) ?? [];
           existing.push(path);
-          result.set(first, existing);
+          actions.set(first, existing);
         }
         break;
       }
-      case "node":
+      case "node": {
+        if (entry.label != null) {
+          const existing = nodes.get(entry.label) ?? [];
+          existing.push(path);
+          nodes.set(entry.label, existing);
+        }
         walk(entry, path);
         break;
+      }
     }
   }
 
   walk(root, []);
-  return result;
+  return {
+    actions,
+    nodes,
+  } satisfies ReverseModeKeymap;
+}
+
+export function buildReverseKeymaps(keymaps: ResolvedKeymaps): ReverseKeymaps {
+  return new Map(
+    [...keymaps.entries()].map(([mode, root]) => [mode, buildReverseModeKeymap(root)]),
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -1,8 +1,7 @@
-import {
-  formatParsedCommandKeybind,
-  getCommandBindingsForPrefix,
-  type CommandKeybindPrefix,
-} from "../../commands.ts";
+import type { CommandKeybindPrefix } from "../../commands.ts";
+import { formatPrefixedActionBindings } from "../keymap/display.ts";
+import type { ReverseKeymaps } from "../keymap/types.ts";
+import type { KeymapMode } from "../shell/keymap-mode.ts";
 import { LEADER_KEYBIND } from "../shared/constants.ts";
 import type { AppCommand } from "./registry.ts";
 
@@ -11,6 +10,7 @@ export interface PrefixMenuConfig {
   cancelStatus: string;
   getActivateStatus: (triggerLabel: string) => string;
   getUnboundStatus: (keyName: string) => string;
+  nodeLabel: string;
   onEnterMode?: (controls: { clearPrefixMode: (status?: string) => void }) => void | (() => void);
   pickerDescription?: string;
   pickerTitle?: string;
@@ -31,6 +31,7 @@ const PREFIX_MENUS: readonly PrefixMenuConfig[] = [
     cancelStatus: "Canceled leader key.",
     getActivateStatus: (triggerLabel) => `Leader key active. Awaiting a ${triggerLabel} command.`,
     getUnboundStatus: (keyName) => `No command is bound to leader ${keyName}.`,
+    nodeLabel: "Leader",
     onEnterMode: ({ clearPrefixMode }) => {
       const timeout = setTimeout(() => {
         clearPrefixMode("Leader key timed out.");
@@ -48,6 +49,7 @@ const PREFIX_MENUS: readonly PrefixMenuConfig[] = [
     cancelStatus: "Canceled modal picker.",
     getActivateStatus: () => "modal picker active. Awaiting a space command.",
     getUnboundStatus: (keyName) => `No modal is bound to space ${keyName}.`,
+    nodeLabel: "Modal Picker",
     pickerDescription: "Press a key to open a modal.",
     pickerTitle: "Modal Picker",
     prefix: "space",
@@ -64,17 +66,29 @@ export function getPrefixMenuConfig(prefix: CommandKeybindPrefix): PrefixMenuCon
 export function getPrefixMenuCommands(
   commands: readonly AppCommand[],
   prefix: CommandKeybindPrefix,
+  reverseKeymaps: ReverseKeymaps,
+  mode: KeymapMode,
 ): PrefixMenuCommand[] {
+  const prefixMenu = getPrefixMenuConfig(prefix);
+  if (prefixMenu == null) {
+    return [];
+  }
+
   return commands.flatMap((command) => {
-    const [binding] = getCommandBindingsForPrefix(command.keybind, prefix);
-    if (binding == null) {
+    const label = formatPrefixedActionBindings(
+      reverseKeymaps,
+      command.value,
+      prefixMenu.nodeLabel,
+      mode,
+    );
+    if (label == null) {
       return [];
     }
 
     return [
       {
         command,
-        label: formatParsedCommandKeybind(binding, { leaderKeybind: LEADER_KEYBIND }),
+        label,
       },
     ];
   });

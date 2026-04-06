@@ -8,7 +8,12 @@ import type {
 import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core";
 import { useRenderer, useTerminalDimensions } from "@opentui/react";
 import { useMemo, useRef, useState } from "react";
-import { getDefaultKeymaps, mergeUserKeymaps, createKeymapRuntime } from "../keymap/index.ts";
+import {
+  buildReverseKeymaps,
+  createKeymapRuntime,
+  getDefaultKeymaps,
+  mergeUserKeymaps,
+} from "../keymap/index.ts";
 import type { UserKeymapConfig } from "../keymap/index.ts";
 import {
   getActiveDialogEntry,
@@ -222,6 +227,7 @@ export function useDiffdiffAppState({
       ),
     [initialUserKeymapConfig],
   );
+  const reverseKeymaps = useMemo(() => buildReverseKeymaps(resolvedKeymaps), [resolvedKeymaps]);
   const keymapRuntime = useMemo(() => createKeymapRuntime(resolvedKeymaps), [resolvedKeymaps]);
   const keybindController = useMemo(
     () =>
@@ -237,6 +243,7 @@ export function useDiffdiffAppState({
   return {
     activeFileIndex,
     resolvedKeymaps,
+    reverseKeymaps,
     keymapRuntime,
     activeOverlay,
     activePane,

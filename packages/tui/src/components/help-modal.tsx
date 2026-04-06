@@ -1,4 +1,4 @@
-import { formatCommandShortcuts, type CommandDefinition } from "../commands.ts";
+import type { CommandDefinition } from "../commands.ts";
 import type { AppPane } from "../types.ts";
 import type { UiTheme } from "../theme.ts";
 import { KeyCap, MODAL_OVERLAY, SPLIT_BORDER } from "./shared.tsx";
@@ -43,7 +43,7 @@ interface CommandWithContext extends CommandDefinition {
 
 function buildModeSections(
   commands: readonly CommandWithContext[],
-  leaderKeybind: string,
+  commandBindingLabels: ReadonlyMap<string, string | undefined>,
   activePane: AppPane,
   theme: UiTheme,
 ): HelpModeSection[] {
@@ -51,7 +51,7 @@ function buildModeSections(
 
   for (const command of commands) {
     const mode = getModeForCommand(command);
-    const keybind = formatCommandShortcuts(command, leaderKeybind);
+    const keybind = commandBindingLabels.get(command.value);
 
     const rows = rowsByMode.get(mode) ?? [];
     rows.push({
@@ -101,15 +101,15 @@ function buildModeSections(
 export function HelpModal({
   activePane,
   commands,
-  leaderKeybind,
+  commandBindingLabels,
   theme,
 }: {
   activePane: AppPane;
   commands: readonly CommandWithContext[];
-  leaderKeybind: string;
+  commandBindingLabels: ReadonlyMap<string, string | undefined>;
   theme: UiTheme;
 }) {
-  const sections = buildModeSections(commands, leaderKeybind, activePane, theme);
+  const sections = buildModeSections(commands, commandBindingLabels, activePane, theme);
 
   return (
     <box
