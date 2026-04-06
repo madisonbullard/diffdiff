@@ -27,7 +27,7 @@ describe("keymap runtime", () => {
   test("matches a direct binding", () => {
     const runtime = createKeymapRuntime(buildTestKeymaps({ j: "next-file" }));
     const result = runtime.get("diff", parseKeyString("j"));
-    expect(result).toEqual({ kind: "matched", actionId: "next-file" });
+    expect(result).toEqual({ kind: "matched", actionId: "next-file", count: null });
   });
 
   test("returns not-found for unbound key", () => {
@@ -46,7 +46,7 @@ describe("keymap runtime", () => {
     const runtime = createKeymapRuntime(buildTestKeymapsWithPrefix());
     runtime.get("diff", parseKeyString("ctrl+x"));
     const result = runtime.get("diff", parseKeyString("l"));
-    expect(result).toEqual({ kind: "matched", actionId: "open-list" });
+    expect(result).toEqual({ kind: "matched", actionId: "open-list", count: null });
   });
 
   test("cancels a pending prefix with an unbound follow-up key", () => {

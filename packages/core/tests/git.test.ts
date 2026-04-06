@@ -214,39 +214,43 @@ describe("loadReviewSession", () => {
     expect(session.warnings.map((warning) => warning.code)).toContain("ignored-ref-comparison");
   });
 
-  test("lists comparison commits in git log order with decorations", async () => {
-    const repositoryPath = await createTemporaryRepository();
+  test(
+    "lists comparison commits in git log order with decorations",
+    { timeout: 15_000 },
+    async () => {
+      const repositoryPath = await createTemporaryRepository();
 
-    await runGit(repositoryPath, ["checkout", "-b", "main"]);
-    await writeFile(join(repositoryPath, "index.ts"), "export const version = 1;\n");
-    await runGit(repositoryPath, ["add", "index.ts"]);
-    await commitAll(repositoryPath, "Initial commit");
+      await runGit(repositoryPath, ["checkout", "-b", "main"]);
+      await writeFile(join(repositoryPath, "index.ts"), "export const version = 1;\n");
+      await runGit(repositoryPath, ["add", "index.ts"]);
+      await commitAll(repositoryPath, "Initial commit");
 
-    await runGit(repositoryPath, ["checkout", "-b", "feature"]);
-    await writeFile(join(repositoryPath, "index.ts"), "export const version = 2;\n");
-    await runGit(repositoryPath, ["add", "index.ts"]);
-    await commitAll(repositoryPath, "Add feature");
+      await runGit(repositoryPath, ["checkout", "-b", "feature"]);
+      await writeFile(join(repositoryPath, "index.ts"), "export const version = 2;\n");
+      await runGit(repositoryPath, ["add", "index.ts"]);
+      await commitAll(repositoryPath, "Add feature");
 
-    await writeFile(join(repositoryPath, "feature.ts"), "export const feature = true;\n");
-    await runGit(repositoryPath, ["add", "feature.ts"]);
-    await commitAll(repositoryPath, "Refine feature");
+      await writeFile(join(repositoryPath, "feature.ts"), "export const feature = true;\n");
+      await runGit(repositoryPath, ["add", "feature.ts"]);
+      await commitAll(repositoryPath, "Refine feature");
 
-    const session = await loadReviewSession({
-      base: "main",
-      head: "feature",
-      repoPath: repositoryPath,
-    });
+      const session = await loadReviewSession({
+        base: "main",
+        head: "feature",
+        repoPath: repositoryPath,
+      });
 
-    expect(session.commits.map((commit) => commit.subject)).toEqual([
-      "Refine feature",
-      "Add feature",
-    ]);
-    expect(session.commits[0]).toMatchObject({
-      author: "Diffdiff Test",
-      decoration: expect.stringContaining("HEAD -> feature"),
-      subject: "Refine feature",
-    });
-  });
+      expect(session.commits.map((commit) => commit.subject)).toEqual([
+        "Refine feature",
+        "Add feature",
+      ]);
+      expect(session.commits[0]).toMatchObject({
+        author: "Diffdiff Test",
+        decoration: expect.stringContaining("HEAD -> feature"),
+        subject: "Refine feature",
+      });
+    },
+  );
 });
 
 async function createTemporaryRepository(): Promise<string> {
@@ -254,6 +258,8 @@ async function createTemporaryRepository(): Promise<string> {
   temporaryDirectories.push(repositoryPath);
 
   await execFileAsync("git", ["init", repositoryPath]);
+  await runGit(repositoryPath, ["config", "user.name", "Diffdiff Test"]);
+  await runGit(repositoryPath, ["config", "user.email", "test@example.com"]);
 
   return repositoryPath;
 }

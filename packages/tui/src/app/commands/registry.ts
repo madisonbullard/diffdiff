@@ -14,7 +14,6 @@ import { buildViewCommands } from "./command-groups/view.ts";
 
 export type AppCommand = CommandDefinition & {
   keybindingContexts?: readonly AppPane[];
-  keybindingPriority?: number;
   run: () => void;
 };
 
@@ -40,12 +39,6 @@ export function findAppCommandByKey(
         matchCommandKeybind(command.keybind, key, { prefix }),
     )
     .sort((left, right) => {
-      const leftPriority = left.keybindingPriority ?? 0;
-      const rightPriority = right.keybindingPriority ?? 0;
-      if (leftPriority !== rightPriority) {
-        return rightPriority - leftPriority;
-      }
-
       const leftSpecific = left.keybindingContexts == null ? 0 : 1;
       const rightSpecific = right.keybindingContexts == null ? 0 : 1;
       return rightSpecific - leftSpecific;

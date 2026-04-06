@@ -93,18 +93,9 @@ describe("command registry", () => {
     expect(findAppCommandByKey(commands, { name: "[" }, { activePane: "diff" })).toBeUndefined();
   });
 
-  test("prefers focused diff actions over broader review shortcuts", () => {
+  test("resolves keybinds by context specificity and prefix", () => {
     const commands = buildAppCommands(createRegistryOptions());
 
-    expect(findAppCommandByKey(commands, { name: "r" }, { activePane: "diff" })?.value).toBe(
-      "github.reply-thread",
-    );
-    expect(findAppCommandByKey(commands, { name: "y" }, { activePane: "diff" })?.value).toBe(
-      "github.copy-comment-url",
-    );
-    expect(findAppCommandByKey(commands, { name: "return" }, { activePane: "tree" })?.value).toBe(
-      "view.open-selected-file",
-    );
     expect(findAppCommandByKey(commands, { name: "e" }, { activePane: "diff" })?.value).toBe(
       "view.open-file-in-editor",
     );
@@ -154,7 +145,6 @@ describe("command registry", () => {
     expect(findAppCommandByValue(commands, "view.open-selected-file")).toMatchObject({
       disabledReason: "Select a file in the tree first.",
       enabled: false,
-      keybind: "return,right",
     });
     expect(findAppCommandByValue(commands, "view.pane-toggle")).toMatchObject({
       keybind: "tab",

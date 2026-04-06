@@ -1,7 +1,7 @@
 import type { KeyboardInput } from "../../commands.ts";
 import { findInitialBranchListSelection } from "../../view-model.ts";
 import { openDialog as openAppDialog } from "./stack.ts";
-import { findAppCommandByKey, type AppCommand } from "../commands/registry.ts";
+import type { AppCommand } from "../commands/registry.ts";
 import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import { createBranchListKeyHandler } from "./handlers/branch-list-keymap.ts";
@@ -20,7 +20,6 @@ interface CreateListModalHandlersOptions {
   ) => Promise<void>;
   applyPullRequestSelection: (branch: import("@diffdiff/core").BranchInfo) => Promise<void>;
   applyWorkingTreeSelection: () => Promise<void>;
-  commands: readonly AppCommand[];
   filteredCommands: readonly AppCommand[];
   handleTextInputPrefixKeypress: (
     key: KeyboardInput,
@@ -59,7 +58,6 @@ export function createListModalHandlers({
   applyDashboardPullRequestSelection,
   applyPullRequestSelection,
   applyWorkingTreeSelection,
-  commands,
   derived,
   filteredCommands,
   handleTextInputPrefixKeypress,
@@ -71,13 +69,6 @@ export function createListModalHandlers({
 }: CreateListModalHandlersOptions) {
   function openBranchModal(): void {
     openBranchListModal(state, derived.branchItems);
-  }
-
-  function findCommandByKey(
-    key: KeyboardInput,
-    prefix: import("../../commands.ts").CommandKeybindPrefix | null = null,
-  ): AppCommand | undefined {
-    return findAppCommandByKey(commands, key, { activePane: state.activePane, prefix });
   }
 
   const handlePullRequestListModalKey = createPullRequestListKeyHandler({
@@ -106,7 +97,6 @@ export function createListModalHandlers({
   });
 
   return {
-    findCommandByKey,
     handleBranchModalKey,
     handleCommandModalKey,
     handleListFilterModalKey,

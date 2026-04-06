@@ -253,7 +253,6 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     applyDashboardPullRequestSelection: launchActions.applyDashboardPullRequestSelection,
     applyPullRequestSelection: launchActions.applyPullRequestSelection,
     applyWorkingTreeSelection: launchActions.applyWorkingTreeSelection,
-    commands,
     derived: { ...derived, filteredCommands } as typeof derived & {
       filteredCommands: readonly AppCommand[];
     },
