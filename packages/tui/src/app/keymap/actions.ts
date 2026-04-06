@@ -13,6 +13,7 @@
 // ---------------------------------------------------------------------------
 export const SYSTEM_HELP = "system.help";
 export const SYSTEM_COMMAND_PALETTE = "system.command-palette";
+export const SYSTEM_DIAGNOSTICS = "system.diagnostics";
 export const SYSTEM_QUIT = "system.quit";
 
 // ---------------------------------------------------------------------------

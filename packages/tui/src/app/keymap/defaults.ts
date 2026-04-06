@@ -83,6 +83,7 @@ const MODAL_DISMISS: readonly BindingTuple[] = [
 // ---------------------------------------------------------------------------
 
 const DIFF_LEADER_BINDINGS: readonly BindingTuple[] = [
+  ["d", A.SYSTEM_DIAGNOSTICS],
   ["shift+r", A.COMPARISON_REFRESH],
   ["l", A.COMPARISON_LIST],
   ["v", A.VIEW_DIFF_TOGGLE],
@@ -103,6 +104,8 @@ const DIFF_LEADER_BINDINGS: readonly BindingTuple[] = [
 ];
 
 const DIFF_SPACE_BINDINGS: readonly BindingTuple[] = [
+  ["d", A.SYSTEM_DIAGNOSTICS],
+  ["h", A.SYSTEM_HELP],
   ["p", A.GITHUB_PULL_REQUEST_LIST],
   ["t", A.GITHUB_COMMENTS],
   ["a", A.GITHUB_ADD_COMMENT],
@@ -127,6 +130,7 @@ const diffMode = buildModeWithPrefixes(
     // System
     ["ctrl+p", A.SYSTEM_COMMAND_PALETTE],
     ["shift+/", A.SYSTEM_HELP],
+    ["d", A.SYSTEM_DIAGNOSTICS],
 
     // Navigation
     ["tab", A.VIEW_PANE_TOGGLE],
@@ -138,10 +142,14 @@ const diffMode = buildModeWithPrefixes(
     ["end", A.REVIEW_LAST_FILE],
 
     // Review
+    ["r", A.REVIEW_TOGGLE_REVIEWED],
     ["x", A.REVIEW_TOGGLE_REVIEWED],
+    ["c", A.REVIEW_TOGGLE_COLLAPSED],
     ["z", A.REVIEW_TOGGLE_COLLAPSED],
     ["u", A.REVIEW_NEXT_UNREVIEWED],
+    ["alt+r", A.REVIEW_CLEAR_REVIEWED],
     ["e", A.VIEW_OPEN_FILE_IN_EDITOR],
+    ["v", A.VIEW_DIFF_TOGGLE],
 
     // Review anchors
     ["]", A.REVIEW_NEXT_ANCHOR],
@@ -157,6 +165,11 @@ const diffMode = buildModeWithPrefixes(
 
     // GitHub shortcuts (prefixed versions also exist)
     ["p", A.GITHUB_PULL_REQUEST_LIST],
+    ["t", A.GITHUB_COMMENTS],
+    ["a", A.GITHUB_ADD_COMMENT],
+    ["shift+a", A.GITHUB_SUBMIT_REVIEW],
+    ["m", A.GITHUB_MERGE],
+    ["y", A.GITHUB_COPY_URL],
 
     // System
     ["q", A.SYSTEM_QUIT],
@@ -180,6 +193,7 @@ const threadMode = buildModeWithPrefixes(
     // System
     ["ctrl+p", A.SYSTEM_COMMAND_PALETTE],
     ["shift+/", A.SYSTEM_HELP],
+    ["d", A.SYSTEM_DIAGNOSTICS],
 
     // Pane toggle
     ["tab", A.VIEW_PANE_TOGGLE],
@@ -196,7 +210,9 @@ const threadMode = buildModeWithPrefixes(
     ["x", A.REVIEW_TOGGLE_REVIEWED],
     ["z", A.REVIEW_TOGGLE_COLLAPSED],
     ["u", A.REVIEW_NEXT_UNREVIEWED],
+    ["alt+r", A.REVIEW_CLEAR_REVIEWED],
     ["e", A.VIEW_OPEN_FILE_IN_EDITOR],
+    ["v", A.VIEW_DIFF_TOGGLE],
 
     // Anchors
     ["]", A.REVIEW_NEXT_ANCHOR],
@@ -215,6 +231,10 @@ const threadMode = buildModeWithPrefixes(
     ["shift+r", A.COMPARISON_REFRESH],
     ["l", A.COMPARISON_LIST],
     ["p", A.GITHUB_PULL_REQUEST_LIST],
+    ["t", A.GITHUB_COMMENTS],
+    ["a", A.GITHUB_ADD_COMMENT],
+    ["shift+a", A.GITHUB_SUBMIT_REVIEW],
+    ["m", A.GITHUB_MERGE],
 
     // System
     ["q", A.SYSTEM_QUIT],
@@ -238,6 +258,7 @@ const treeMode = buildModeWithPrefixes(
     // System
     ["ctrl+p", A.SYSTEM_COMMAND_PALETTE],
     ["shift+/", A.SYSTEM_HELP],
+    ["d", A.SYSTEM_DIAGNOSTICS],
 
     // Pane toggle
     ["tab", A.VIEW_PANE_TOGGLE],
@@ -259,11 +280,18 @@ const treeMode = buildModeWithPrefixes(
     ["x", A.REVIEW_TOGGLE_REVIEWED],
     ["z", A.REVIEW_TOGGLE_COLLAPSED],
     ["u", A.REVIEW_NEXT_UNREVIEWED],
+    ["alt+r", A.REVIEW_CLEAR_REVIEWED],
     ["e", A.VIEW_OPEN_FILE_IN_EDITOR],
+    ["v", A.VIEW_DIFF_TOGGLE],
 
     // Comparison
     ["shift+r", A.COMPARISON_REFRESH],
     ["p", A.GITHUB_PULL_REQUEST_LIST],
+    ["t", A.GITHUB_COMMENTS],
+    ["a", A.GITHUB_ADD_COMMENT],
+    ["shift+a", A.GITHUB_SUBMIT_REVIEW],
+    ["m", A.GITHUB_MERGE],
+    ["y", A.GITHUB_COPY_URL],
 
     // System
     ["q", A.SYSTEM_QUIT],

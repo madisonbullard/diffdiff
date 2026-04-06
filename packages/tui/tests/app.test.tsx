@@ -982,7 +982,6 @@ test("scrolls farther past the next file when marking a file reviewed", () => {
     },
   });
 
-  emitKey({ ctrl: true, name: "x" });
   emitKey({ name: "r", sequence: "r" });
 
   expect(getAppText(tree)).toContain("Reviewed src/app.ts. Jumped to src/utils.ts.");
@@ -1257,6 +1256,20 @@ test("does not render the removed key legend", () => {
   expect(getAppText(tree)).not.toContain("j/k move");
 });
 
+test("opens diagnostics with bare d", async () => {
+  const loadSessionDiagnostics = vi.fn(async () => []);
+  const tree = render(<DiffdiffApp {...createAppProps({ loadSessionDiagnostics })} />);
+
+  emitKey({ name: "d", sequence: "d" });
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(loadSessionDiagnostics).toHaveBeenCalledWith("/Users/test/.diffdiff/logs/log-test.jsonl");
+  expect(getAppText(tree)).toContain("Diagnostics");
+  expect(getAppText(tree)).toContain("No session events have been recorded yet.");
+});
+
 test("requires confirmation before clearing all reviewed files with alt+r", () => {
   const files = [createPreparedFile(), createPreparedFile({ path: "src/utils.ts" })];
   const tree = render(
@@ -1272,7 +1285,6 @@ test("requires confirmation before clearing all reviewed files with alt+r", () =
     />,
   );
 
-  emitKey({ ctrl: true, name: "x" });
   emitKey({ meta: true, name: "r", sequence: "r" });
 
   expect(getAppText(tree)).toContain("Clear Review Marks");
@@ -1300,7 +1312,6 @@ test("cancels clearing reviewed files from the confirmation modal", () => {
     />,
   );
 
-  emitKey({ ctrl: true, name: "x" });
   emitKey({ meta: true, name: "r", sequence: "r" });
   emitKey({ name: "escape" });
 
@@ -2593,7 +2604,6 @@ test("opens the PR comments modal from review mode", () => {
 
   expect(getAppText(tree)).not.toContain("Looks ready to merge.");
 
-  emitKey({ ctrl: true, name: "x" });
   emitKey({ name: "t" });
 
   expect(getAppText(tree)).toContain("PR Conversation");
@@ -2612,7 +2622,6 @@ test("copies the PR URL from review mode", async () => {
     />,
   );
 
-  emitKey({ ctrl: true, name: "x" });
   emitKey({ name: "y", sequence: "y" });
   await act(async () => {
     await Promise.resolve();
@@ -2768,7 +2777,6 @@ test("opens the comment composer and submits a pending review thread", async () 
     />,
   );
 
-  emitKey({ ctrl: true, name: "x" });
   emitKey({ name: "a" });
 
   expect(getAppText(tree)).toContain("Add Comment");
@@ -2813,7 +2821,6 @@ test("opens the comment composer when only the raw patch is available", () => {
     />,
   );
 
-  emitKey({ ctrl: true, name: "x" });
   emitKey({ name: "a" });
 
   expect(getAppText(tree)).toContain("Add Comment");
@@ -2835,7 +2842,6 @@ test("opens the submit review modal and submits the pending review", async () =>
     />,
   );
 
-  emitKey({ ctrl: true, name: "x" });
   emitKey({ name: "a", sequence: "A", shift: true });
 
   expect(getAppText(tree)).toContain("Submit Review");
@@ -2891,7 +2897,6 @@ test("opens the merge modal and merges with the selected method", async () => {
     />,
   );
 
-  emitKey({ ctrl: true, name: "x" });
   emitKey({ name: "m" });
 
   expect(getAppText(tree)).toContain("Merge Pull Request");
@@ -2939,7 +2944,6 @@ test("caps the merge body input height and scrolls to the cursor", () => {
     },
   );
 
-  emitKey({ ctrl: true, name: "x" });
   emitKey({ name: "m" });
   emitKey({ name: "tab", sequence: "\t" });
   emitKey({ name: "tab", sequence: "\t" });
@@ -3009,7 +3013,6 @@ test("opens cleanup automatically after merge and removes the selected refs", as
     />,
   );
 
-  emitKey({ ctrl: true, name: "x" });
   emitKey({ name: "m" });
   await emitAsyncKey({ name: "return" });
 
