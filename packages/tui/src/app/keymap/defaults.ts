@@ -91,11 +91,13 @@ const DIFF_LEADER_BINDINGS: readonly BindingTuple[] = [
   ["r", A.REVIEW_TOGGLE_REVIEWED],
   ["u", A.REVIEW_NEXT_UNREVIEWED],
   ["c", A.REVIEW_TOGGLE_COLLAPSED],
+  ["alt+r", A.REVIEW_CLEAR_REVIEWED],
   ["p", A.GITHUB_PULL_REQUEST_LIST],
   ["t", A.GITHUB_COMMENTS],
   ["a", A.GITHUB_ADD_COMMENT],
   ["shift+a", A.GITHUB_SUBMIT_REVIEW],
   ["m", A.GITHUB_MERGE],
+  ["q", A.SYSTEM_QUIT],
   ["shift+/", A.SYSTEM_HELP],
   ["h", A.SYSTEM_HELP],
 ];
@@ -145,12 +147,19 @@ const diffMode = buildModeWithPrefixes(
     ["]", A.REVIEW_NEXT_ANCHOR],
     ["[", A.REVIEW_PREVIOUS_ANCHOR],
 
+    // Inline thread focus (entry from diff into thread mode)
+    ["i", A.GITHUB_FOCUS_PREVIOUS_THREAD],
+    ["o", A.GITHUB_FOCUS_NEXT_THREAD],
+
     // Comparison
     ["shift+r", A.COMPARISON_REFRESH],
     ["l", A.COMPARISON_LIST],
 
     // GitHub shortcuts (prefixed versions also exist)
     ["p", A.GITHUB_PULL_REQUEST_LIST],
+
+    // System
+    ["q", A.SYSTEM_QUIT],
   ],
   [
     { trigger: "ctrl+x", label: "Leader", bindings: DIFF_LEADER_BINDINGS },
@@ -206,6 +215,9 @@ const threadMode = buildModeWithPrefixes(
     ["shift+r", A.COMPARISON_REFRESH],
     ["l", A.COMPARISON_LIST],
     ["p", A.GITHUB_PULL_REQUEST_LIST],
+
+    // System
+    ["q", A.SYSTEM_QUIT],
   ],
   [
     { trigger: "ctrl+x", label: "Leader", bindings: THREAD_LEADER_BINDINGS },
@@ -252,6 +264,9 @@ const treeMode = buildModeWithPrefixes(
     // Comparison
     ["shift+r", A.COMPARISON_REFRESH],
     ["p", A.GITHUB_PULL_REQUEST_LIST],
+
+    // System
+    ["q", A.SYSTEM_QUIT],
   ],
   [
     { trigger: "ctrl+x", label: "Leader", bindings: TREE_LEADER_BINDINGS },
