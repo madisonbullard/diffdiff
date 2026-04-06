@@ -192,30 +192,25 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
     state.mergeModalField,
   ]);
 
-  const syncActiveFileIndex = useCallback(
-    (options?: { forceViewportRefresh?: boolean }) => {
-      const scrollBox = state.scrollRef.current;
-      if (scrollBox == null) {
-        return;
-      }
+  const syncActiveFileIndex = useCallback(() => {
+    const scrollBox = state.scrollRef.current;
+    if (scrollBox == null) {
+      return;
+    }
 
-      const fileTopOffsets = getFileTopOffsets();
-      const nextIndex = getTopIntersectingFileIndex(fileTopOffsets, scrollBox.scrollTop);
-      const viewportHeight = scrollBox.viewport?.height ?? scrollBox.height ?? 0;
+    const fileTopOffsets = getFileTopOffsets();
+    const nextIndex = getTopIntersectingFileIndex(fileTopOffsets, scrollBox.scrollTop);
+    const viewportHeight = scrollBox.viewport?.height ?? scrollBox.height ?? 0;
 
-      state.setActiveFileIndex((currentIndex) =>
-        currentIndex === nextIndex ? currentIndex : nextIndex,
-      );
-      state.setDiffViewportMetrics((currentMetrics) =>
-        !options?.forceViewportRefresh &&
-        currentMetrics.scrollTop === scrollBox.scrollTop &&
-        currentMetrics.height === viewportHeight
-          ? currentMetrics
-          : { height: viewportHeight, scrollTop: scrollBox.scrollTop },
-      );
-    },
-    [getFileTopOffsets, state.scrollRef, state.setActiveFileIndex, state.setDiffViewportMetrics],
-  );
+    state.setActiveFileIndex((currentIndex) =>
+      currentIndex === nextIndex ? currentIndex : nextIndex,
+    );
+    state.setDiffViewportMetrics((currentMetrics) =>
+      currentMetrics.scrollTop === scrollBox.scrollTop && currentMetrics.height === viewportHeight
+        ? currentMetrics
+        : { height: viewportHeight, scrollTop: scrollBox.scrollTop },
+    );
+  }, [getFileTopOffsets, state.scrollRef, state.setActiveFileIndex, state.setDiffViewportMetrics]);
 
   useEffect(() => {
     const scrollBox = state.scrollRef.current;
@@ -232,7 +227,7 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
   }, [state.scrollRef, syncActiveFileIndex]);
 
   useEffect(() => {
-    syncActiveFileIndex({ forceViewportRefresh: true });
+    syncActiveFileIndex();
   }, [
     derived.diffView,
     state.collapsedPaths,

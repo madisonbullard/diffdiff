@@ -71,11 +71,8 @@ export function useDiffdiffAppPreview({
       };
     });
   }, [
-    diffPaneWidth,
-    diffView,
     state.diffViewportMetrics.height,
     state.diffViewportMetrics.scrollTop,
-    state.collapsedPaths,
     state.fileCardRefs,
     state.scrollRef,
     state.session.files,
