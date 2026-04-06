@@ -2,6 +2,7 @@ import type { GitHubMergeMethod, GitHubPullRequestDetail } from "@diffdiff/core"
 import type { ScrollBoxRenderable } from "@opentui/core";
 import type { Ref } from "react";
 import type { UiTheme } from "../theme.ts";
+import { AsciiLoadingLabel } from "../components/ascii-loading-pane.tsx";
 import { formatMergeMethod, getMergeBlockedReason } from "./formatting.ts";
 import { MODAL_OVERLAY, REVIEW_BORDER } from "./shared.tsx";
 
@@ -164,13 +165,19 @@ export function MergePullRequestModal({
             </text>
           </scrollbox>
         </box>
-        <text fg={canSubmit ? theme.textMuted : theme.warning} wrapMode="word">
-          {isSubmitting
-            ? "Merging pull request and refreshing local refs..."
-            : canSubmit
+        {isSubmitting ? (
+          <AsciiLoadingLabel
+            color={theme.accent}
+            message="Merging pull request and refreshing local refs..."
+            theme={theme}
+          />
+        ) : (
+          <text fg={canSubmit ? theme.textMuted : theme.warning} wrapMode="word">
+            {canSubmit
               ? "Edit the merge title/body, then press enter to open the confirmation step."
               : mergeBlockedReason}
-        </text>
+          </text>
+        )}
       </box>
     </box>
   );

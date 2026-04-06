@@ -1,3 +1,4 @@
+import { AsciiLoadingPane } from "../../components/ascii-loading-pane.tsx";
 import { Tag } from "../../components/shared.tsx";
 import type { UiTheme } from "../../theme.ts";
 
@@ -6,6 +7,7 @@ export interface AppFooterProps {
   footerEventMessage: string;
   footerModeBadge: { bg: string; fg: string; label: string };
   helpLabel: string;
+  showLoadingIndicator: boolean;
   theme: UiTheme;
 }
 
@@ -14,6 +16,7 @@ export function AppFooter({
   footerEventMessage,
   footerModeBadge,
   helpLabel,
+  showLoadingIndicator,
   theme,
 }: AppFooterProps) {
   return (
@@ -37,7 +40,8 @@ export function AppFooter({
           <span>{" help"}</span>
         </text>
       </box>
-      <box flexGrow={1} flexDirection="row" justifyContent="flex-end">
+      <box flexGrow={1} flexDirection="row" justifyContent="flex-end" alignItems="center" gap={1}>
+        {showLoadingIndicator ? <AsciiLoadingPane theme={theme} /> : null}
         <text fg={footerEvent.color} wrapMode="none">
           <span>{footerEventMessage}</span>
         </text>

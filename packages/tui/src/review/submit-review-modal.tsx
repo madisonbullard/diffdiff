@@ -1,4 +1,5 @@
 import type { UiTheme } from "../theme.ts";
+import { AsciiLoadingLabel } from "../components/ascii-loading-pane.tsx";
 import { formatReviewEvent, getReviewSubmissionEvent } from "./formatting.ts";
 import { MODAL_OVERLAY, REVIEW_BORDER } from "./shared.tsx";
 
@@ -111,11 +112,13 @@ export function SubmitReviewModal({
             <span fg={theme.accent}>_</span>
           </text>
         </box>
-        <text fg={isSubmitting ? theme.accent : theme.textMuted} wrapMode="none">
-          {isSubmitting
-            ? "Submitting review..."
-            : "Optional review summary. Use shift+enter for a newline."}
-        </text>
+        {isSubmitting ? (
+          <AsciiLoadingLabel color={theme.accent} message="Submitting review..." theme={theme} />
+        ) : (
+          <text fg={theme.textMuted} wrapMode="none">
+            Optional review summary. Use shift+enter for a newline.
+          </text>
+        )}
       </box>
     </box>
   );

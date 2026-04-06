@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { GitHubDashboardPullRequest } from "@diffdiff/core";
 import type { UiTheme } from "../theme.ts";
+import { AsciiLoadingLabel } from "./ascii-loading-pane.tsx";
 import { KeyCap, ModalFrame, SPLIT_BORDER, selectItem, tintHex } from "./shared.tsx";
 
 const PULL_REQUEST_LIST_MAX_VISIBLE = 10;
@@ -34,10 +35,15 @@ export function PullRequestListModal({
       theme={theme}
       maxWidth={108}
       headerRight={
-        <text fg={theme.textMuted} wrapMode="none">
-          <KeyCap label="esc" theme={theme} />
-          <span>{" close"}</span>
-        </text>
+        <box flexDirection="row" alignItems="center" gap={2}>
+          {isLoading ? (
+            <AsciiLoadingLabel color={theme.accent} message="Loading" theme={theme} />
+          ) : null}
+          <text fg={theme.textMuted} wrapMode="none">
+            <KeyCap label="esc" theme={theme} />
+            <span>{" close"}</span>
+          </text>
+        </box>
       }
     >
       <box

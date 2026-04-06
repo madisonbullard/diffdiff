@@ -366,6 +366,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       ),
     [footerEvent.message, footerModeBadge.label.length, helpLabel, state.terminalDimensions.width],
   );
+  const showFooterLoadingIndicator = state.isSubmittingReviewAction && state.activeOverlay == null;
 
   useMainKeyboard({
     activeKeymapMode,
@@ -499,6 +500,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       selectedReviewThread={derived.selectedReviewThread}
       selectedTreePath={state.selectedTreePath}
       session={state.session}
+      showFooterLoadingIndicator={showFooterLoadingIndicator}
       showMergeConfirmModal={derived.showMergeConfirmModal}
       sidebarWidth={derived.sidebarWidth}
       stickyFile={derived.stickyFile}

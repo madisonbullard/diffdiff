@@ -113,6 +113,7 @@ interface DiffdiffAppViewProps {
   selectedReviewThread?: import("@diffdiff/core").GitHubPullRequestReviewThread;
   selectedTreePath: string;
   session: PreparedReviewSession;
+  showFooterLoadingIndicator: boolean;
   showMergeConfirmModal: boolean;
   sidebarWidth: number;
   stickyFile?: PreparedReviewSession["files"][number];
@@ -210,6 +211,7 @@ export function DiffdiffAppView({
   selectedReviewThread,
   selectedTreePath,
   session,
+  showFooterLoadingIndicator,
   showMergeConfirmModal,
   sidebarWidth,
   stickyFile,
@@ -288,6 +290,7 @@ export function DiffdiffAppView({
         footerEventMessage={footerEventMessage}
         footerModeBadge={footerModeBadge}
         helpLabel={helpLabel}
+        showLoadingIndicator={showFooterLoadingIndicator}
         theme={theme}
       />
 

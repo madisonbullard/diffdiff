@@ -16,6 +16,12 @@ export interface AsciiLoadingPaneProps {
   theme: UiTheme;
 }
 
+export interface AsciiLoadingLabelProps {
+  color?: string;
+  message: string;
+  theme: UiTheme;
+}
+
 export function AsciiLoadingPane({ theme }: AsciiLoadingPaneProps) {
   const [frame, setFrame] = useState(0);
 
@@ -36,6 +42,17 @@ export function AsciiLoadingPane({ theme }: AsciiLoadingPaneProps) {
     <box width={1} height={1} alignItems="center" justifyContent="center">
       <text fg={color} wrapMode="none">
         {glyph}
+      </text>
+    </box>
+  );
+}
+
+export function AsciiLoadingLabel({ color, message, theme }: AsciiLoadingLabelProps) {
+  return (
+    <box flexDirection="row" alignItems="center" gap={1}>
+      <AsciiLoadingPane theme={theme} />
+      <text fg={color ?? theme.text} wrapMode="none">
+        {message}
       </text>
     </box>
   );

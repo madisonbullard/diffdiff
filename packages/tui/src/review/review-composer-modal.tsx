@@ -1,4 +1,5 @@
 import type { UiTheme } from "../theme.ts";
+import { AsciiLoadingLabel } from "../components/ascii-loading-pane.tsx";
 import { MODAL_OVERLAY, REVIEW_BORDER } from "./shared.tsx";
 
 export function ReviewComposerModal({
@@ -92,9 +93,17 @@ export function ReviewComposerModal({
             <span fg={theme.accent}>_</span>
           </text>
         </box>
-        <text fg={isSubmitting ? theme.accent : theme.textMuted} wrapMode="none">
-          {isSubmitting ? "Submitting review comment..." : "Type your comment body."}
-        </text>
+        {isSubmitting ? (
+          <AsciiLoadingLabel
+            color={theme.accent}
+            message="Submitting review comment..."
+            theme={theme}
+          />
+        ) : (
+          <text fg={theme.textMuted} wrapMode="none">
+            Type your comment body.
+          </text>
+        )}
       </box>
     </box>
   );
