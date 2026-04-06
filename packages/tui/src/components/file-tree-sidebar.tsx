@@ -1,7 +1,7 @@
 import type { BoxRenderable } from "@opentui/core";
 import type { AppPane, FileTreeNode, PreparedReviewFile } from "../types.ts";
 import type { UiTheme } from "../theme.ts";
-import { SPLIT_BORDER, tintHex } from "./shared.tsx";
+import { SPLIT_BORDER, getCollapseToggleGlyph, tintHex } from "./shared.tsx";
 
 export interface FileTreeSidebarProps {
   activePane: AppPane;
@@ -76,10 +76,7 @@ export function FileTreeSidebar({
             ? tintHex(theme.surface, theme.accent, 0.14)
             : theme.surface;
         const labelColor = isSelected || isCurrentFile ? theme.text : theme.textMuted;
-        const prefix =
-          node.kind === "directory"
-            ? `${"  ".repeat(node.depth)}${isDirectoryCollapsed ? ">" : "v"} `
-            : `${"  ".repeat(node.depth)}${getFileTreeStatusGlyph(node.status)} `;
+        const indentation = `${"  ".repeat(node.depth)}`;
 
         return (
           <box
@@ -102,7 +99,16 @@ export function FileTreeSidebar({
           >
             <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
               <text fg={labelColor} wrapMode="none">
-                <span fg={node.kind === "directory" ? theme.warning : accent}>{prefix}</span>
+                <span>{indentation}</span>
+                {node.kind === "directory" ? (
+                  <>
+                    <span
+                      fg={theme.textMuted}
+                    >{`${getCollapseToggleGlyph(isDirectoryCollapsed)} `}</span>
+                  </>
+                ) : (
+                  <span fg={accent}>{`${getFileTreeStatusGlyph(node.status)} `}</span>
+                )}
                 <span fg={isSelected ? theme.text : isCurrentFile ? theme.accent : labelColor}>
                   {node.name}
                 </span>

@@ -436,6 +436,30 @@ test("renders a clickable file tree sidebar", () => {
   expect(onNodeMouseUp).toHaveBeenCalledWith(expect.objectContaining({ path: "src" }));
 });
 
+test("uses the same muted swivel glyph styling as the diff header", () => {
+  const nodes = buildFileTreeNodes([createPreparedFile({ path: "src/app.ts" })]);
+  const tree = render(
+    <FileTreeSidebar
+      activePane="tree"
+      collapsedDirectories={new Set()}
+      collapsedPaths={new Set()}
+      nodes={nodes}
+      onNodeMouseUp={vi.fn()}
+      reviewedPaths={new Set()}
+      theme={theme}
+    />,
+  );
+
+  const toggles = tree.root.findAll(
+    (node) =>
+      String(node.type) === "span" &&
+      node.props.fg === theme.textMuted &&
+      collectText(node.props.children).includes("\u25BC"),
+  );
+
+  expect(toggles).toHaveLength(1);
+});
+
 test("uses only the checkmark to mark reviewed tree files", () => {
   const nodes = buildFileTreeNodes([createPreparedFile({ path: "src/app.ts" })]);
   const tree = render(
