@@ -96,7 +96,7 @@ export function FileTreeSidebar({
             paddingRight={1}
             paddingTop={0}
             paddingBottom={0}
-            onMouseUp={() => {
+            onMouseDown={() => {
               onNodeMouseUp(node);
             }}
           >

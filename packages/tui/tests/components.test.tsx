@@ -427,10 +427,10 @@ test("renders a clickable file tree sidebar", () => {
   expect(collectText(tree.toJSON())).toContain("-1");
 
   const clickableRows = tree.root.findAll(
-    (node) => String(node.type) === "box" && typeof node.props.onMouseUp === "function",
+    (node) => String(node.type) === "box" && typeof node.props.onMouseDown === "function",
   );
   act(() => {
-    clickableRows[0]?.props.onMouseUp?.();
+    clickableRows[0]?.props.onMouseDown?.();
   });
 
   expect(onNodeMouseUp).toHaveBeenCalledWith(expect.objectContaining({ path: "src" }));
@@ -450,7 +450,7 @@ test("uses only the checkmark to mark reviewed tree files", () => {
     />,
   );
   const clickableRows = tree.root.findAll(
-    (node) => String(node.type) === "box" && typeof node.props.onMouseUp === "function",
+    (node) => String(node.type) === "box" && typeof node.props.onMouseDown === "function",
   );
   const reviewedFileRow = clickableRows[1];
 
