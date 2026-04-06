@@ -228,13 +228,23 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
 
   useEffect(() => {
     syncActiveFileIndex();
-  }, [
-    derived.diffView,
-    state.collapsedPaths,
-    state.session.files,
-    syncActiveFileIndex,
-    state.terminalDimensions.width,
-  ]);
+  }, [derived.diffView, state.session.files, syncActiveFileIndex, state.terminalDimensions.width]);
+
+  const prevCollapsedPathsRef = useRef(state.collapsedPaths);
+  useEffect(() => {
+    if (prevCollapsedPathsRef.current === state.collapsedPaths) {
+      return;
+    }
+    prevCollapsedPathsRef.current = state.collapsedPaths;
+
+    // When collapsed paths change, DOM positions for file cards below the
+    // toggled file are stale until the layout engine recalculates.  Reset
+    // viewport metrics to zero so `fileCardPreviewViewports` returns
+    // undefined for every file, which falls back to rendering the first
+    // INITIAL_FILE_BODY_RENDER_COUNT files unconditionally.  The next
+    // scroll-bar "change" event restores accurate viewport-driven visibility.
+    state.setDiffViewportMetrics({ height: 0, scrollTop: 0 });
+  }, [state.collapsedPaths, state.setDiffViewportMetrics]);
 
   useEffect(() => {
     state.setBranchListIndex((currentIndex) =>
