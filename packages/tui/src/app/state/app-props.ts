@@ -46,6 +46,7 @@ export interface DiffdiffAppProps {
     input: GitHubPullRequestMergeRequest,
   ) => Promise<GitHubPullRequestMergeResult>;
   onExit: () => void;
+  openFileInEditor: (repositoryRootPath: string, filePath: string) => Promise<void>;
   resolveLaunchTarget?: (target: string, options: LaunchOptions) => Promise<LaunchOptions>;
   replyToReviewComment?: (
     reviewSession: GitHubReviewSession,

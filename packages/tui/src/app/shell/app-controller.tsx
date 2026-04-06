@@ -1,4 +1,3 @@
-import { copyTextToClipboard } from "../../clipboard.ts";
 import { copySelection } from "../../selection-copy.ts";
 import { useCallback, useEffect, useMemo } from "react";
 import { logDiffdiffError, syncGitRemotes } from "@diffdiff/core";
@@ -33,6 +32,7 @@ import { useDiffdiffAppState } from "../state/use-app-state.ts";
 import { createFileFocusController } from "../shared/file-focus.ts";
 import { truncateInlineMessage } from "../shared/text.ts";
 import { createTreeActions } from "../tree/tree-actions.ts";
+import { createViewActions } from "./view-actions.ts";
 
 export function DiffdiffAppController(props: DiffdiffAppProps) {
   const state = useDiffdiffAppState(props);
@@ -85,6 +85,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     props,
     state,
   });
+  const viewActions = createViewActions({ derived, persistence, props, state });
   const prefetchComparisonBrowserData = useCallback(async () => {
     if (props.loadComparisonBrowserData == null) {
       return;
@@ -125,23 +126,6 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     [derived.branchItems, state],
   );
 
-  async function copyPullRequestUrl(): Promise<void> {
-    if (state.session.github == null) {
-      state.setStatusMessage("Open a GitHub pull request first.");
-      return;
-    }
-
-    const copied = await copyTextToClipboard(state.session.github.pullRequest.url);
-    if (copied) {
-      persistence.persistenceApi.showToast("Copied PR URL to clipboard");
-      return;
-    }
-
-    persistence.persistenceApi.handleAppFailure("Unable to copy the PR URL.", {
-      action: "copy-pr-url",
-    });
-  }
-
   function openClearReviewedConfirmModal(): void {
     if (state.session.github != null) {
       state.setStatusMessage("GitHub PR reviewed state can only be updated one file at a time.");
@@ -173,6 +157,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   const commands = useMemo<AppCommand[]>(
     () =>
       buildAppCommands({
+        activePane: state.activePane,
         hasFocusedReviewComment:
           derived.selectedReviewThread != null && derived.selectedReviewComment != null,
         hasFocusedReviewThread: derived.selectedReviewThread != null,
@@ -182,11 +167,15 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
             ? undefined
             : "GitHub PR reviewed state can only be updated one file at a time.",
         canClearReviewed: state.reviewedPaths.size > 0,
+        canOpenFocusedFileInEditor:
+          state.activePane === "tree"
+            ? derived.selectedTreeNode?.kind === "file"
+            : derived.selectedFilePath != null,
         canMoveToNextUnreviewed: derived.hasNextUnreviewedFile,
         canOpenSelectedTreeFile: derived.selectedTreeNode?.kind === "file",
         clearReviewed: openClearReviewedConfirmModal,
         copyFocusedReviewCommentUrl: reviewActions.copyFocusedReviewCommentUrl,
-        copyPullRequestUrl,
+        copyPullRequestUrl: viewActions.copyPullRequestUrl,
         hasFiles: state.session.files.length > 0,
         hasSelectedReviewThread: derived.selectedReviewThread != null,
         isGitHubAuthenticated: props.isGitHubAuthenticated ?? false,
@@ -202,6 +191,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         openFocusedReviewThreadReplyComposer: githubActions.openFocusedReviewThreadReplyComposer,
         openGitHubPullRequestList: githubActions.openGitHubPullRequestList,
         openHelp,
+        openFocusedFileInEditor: viewActions.openFocusedFileInEditor,
         openMergeModal: githubActions.openMergeModal,
         openPullRequestCommentsModal: githubActions.openPullRequestCommentsModal,
         openSelectedTreeFile: treeActions.openSelectedTreeFile,
@@ -227,11 +217,13 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       props.isGitHubAuthenticated,
       refresh.refreshComparison,
       reviewActions,
+      state.activePane,
       state.reviewedPaths.size,
       state.selectedFileIndex,
       state.session.files.length,
       state.session.github,
       treeActions,
+      viewActions,
     ],
   );
   const activePrefixMenu = useMemo(

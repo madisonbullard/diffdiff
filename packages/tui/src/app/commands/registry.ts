@@ -64,8 +64,10 @@ export function getPaletteCommands(commands: readonly AppCommand[]): AppCommand[
 }
 
 export interface BuildAppCommandsOptions {
+  activePane: AppPane;
   bulkReviewedActionsDisabledReason?: string;
   canClearReviewed: boolean;
+  canOpenFocusedFileInEditor: boolean;
   canMoveToNextUnreviewed: boolean;
   canOpenSelectedTreeFile: boolean;
   clearReviewed: () => void;
@@ -89,6 +91,7 @@ export interface BuildAppCommandsOptions {
   openFocusedReviewThreadReplyComposer: () => void;
   openGitHubPullRequestList: () => void;
   openHelp: () => void;
+  openFocusedFileInEditor: () => Promise<void>;
   openMergeModal: () => void;
   openPullRequestCommentsModal: () => void;
   openSelectedTreeFile: () => void;

@@ -11,7 +11,9 @@ function createRegistryOptions(
   overrides: Partial<Parameters<typeof buildAppCommands>[0]> = {},
 ): Parameters<typeof buildAppCommands>[0] {
   return {
+    activePane: "diff",
     canClearReviewed: true,
+    canOpenFocusedFileInEditor: true,
     canMoveToNextUnreviewed: true,
     canOpenSelectedTreeFile: true,
     clearReviewed: vi.fn(),
@@ -35,6 +37,7 @@ function createRegistryOptions(
     openFocusedReviewThreadReplyComposer: vi.fn(),
     openGitHubPullRequestList: vi.fn(),
     openHelp: vi.fn(),
+    openFocusedFileInEditor: vi.fn(async () => undefined),
     openMergeModal: vi.fn(),
     openPullRequestCommentsModal: vi.fn(),
     openSelectedTreeFile: vi.fn(),
@@ -102,6 +105,9 @@ describe("command registry", () => {
     expect(findAppCommandByKey(commands, { name: "return" }, { activePane: "tree" })?.value).toBe(
       "view.open-selected-file",
     );
+    expect(findAppCommandByKey(commands, { name: "e" }, { activePane: "diff" })?.value).toBe(
+      "view.open-file-in-editor",
+    );
     expect(
       findAppCommandByKey(
         commands,
@@ -117,9 +123,11 @@ describe("command registry", () => {
     ).toBe("view.pane-toggle");
   });
 
-  test("models next-unreviewed and open-selected-file as command metadata", () => {
+  test("models next-unreviewed and view-open commands as command metadata", () => {
     const commands = buildAppCommands(
       createRegistryOptions({
+        activePane: "tree",
+        canOpenFocusedFileInEditor: false,
         canMoveToNextUnreviewed: false,
         canOpenSelectedTreeFile: false,
         selectedTreeNode: {
@@ -137,6 +145,11 @@ describe("command registry", () => {
       disabledReason: "All files are already reviewed.",
       enabled: false,
       keybind: "u,<leader>u",
+    });
+    expect(findAppCommandByValue(commands, "view.open-file-in-editor")).toMatchObject({
+      disabledReason: "Select a file in the tree first.",
+      enabled: false,
+      keybind: "e,<leader>e",
     });
     expect(findAppCommandByValue(commands, "view.open-selected-file")).toMatchObject({
       disabledReason: "Select a file in the tree first.",

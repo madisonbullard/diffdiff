@@ -242,6 +242,33 @@ test("runs leader key commands with ctrl+x", () => {
   expect(getAppText(tree)).toContain("Working tree");
 });
 
+test("opens the focused file in the configured editor", async () => {
+  const openFileInEditor = vi.fn(async () => undefined);
+  const tree = render(<DiffdiffApp {...createAppProps({ openFileInEditor })} />);
+
+  await act(async () => {
+    emitKey({ name: "e", sequence: "e" });
+    await Promise.resolve();
+  });
+
+  expect(openFileInEditor).toHaveBeenCalledWith("/tmp/diffdiff", "src/app.ts");
+  expect(getAppText(tree)).toContain("Opened src/app.ts in the editor.");
+});
+
+test("surfaces editor launch failures", async () => {
+  const openFileInEditor = vi.fn(async () => {
+    throw new Error("Set $VISUAL or $EDITOR to open files in an editor.");
+  });
+  const tree = render(<DiffdiffApp {...createAppProps({ openFileInEditor })} />);
+
+  await act(async () => {
+    emitKey({ name: "e", sequence: "e" });
+    await Promise.resolve();
+  });
+
+  expect(getAppText(tree)).toContain("Set $VISUAL or $EDITOR to open files in an editor.");
+});
+
 test("opens the modal picker with space and launches a modal with one key", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 
@@ -2905,6 +2932,7 @@ function createAppProps(overrides: Partial<DiffdiffAppProps> = {}): DiffdiffAppP
       sha: "mergedsha",
     }),
     onExit: vi.fn(),
+    openFileInEditor: vi.fn(async () => undefined),
     resolveLaunchTarget: vi.fn(async (_target, options) => options),
     replyToReviewComment: vi.fn(async () => undefined),
     removeCleanupRefs: async () => undefined,

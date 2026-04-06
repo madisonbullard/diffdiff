@@ -1,4 +1,5 @@
 export { runCommand } from "./command.ts";
+export { openFileInEditor, resolvePreferredEditor } from "./editor.ts";
 export { loadReviewSession } from "./load-review-session.ts";
 export { DiffdiffError, CommandError } from "./errors.ts";
 export {

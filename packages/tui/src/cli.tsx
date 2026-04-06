@@ -7,6 +7,7 @@ import {
   flushDiffdiffLogs,
   GitHubPullRequestService,
   loadDiffdiffPreferences,
+  openFileInEditor,
   loadReviewSession,
   listDiffdiffSessions,
   loadReviewCache,
@@ -313,6 +314,12 @@ async function launchTui(options: LaunchOptions): Promise<void> {
             });
           });
         }}
+        openFileInEditor={(repositoryRootPath, filePath) =>
+          openFileInEditor({
+            filePath,
+            repositoryRootPath,
+          })
+        }
         resolveLaunchTarget={(target, startupOptions) =>
           resolveLaunchOptionsFromTarget(target, startupOptions, {
             promptForRepositoryPath: async () => undefined,
