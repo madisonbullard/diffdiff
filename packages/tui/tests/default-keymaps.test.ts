@@ -1,11 +1,13 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { KeyboardInput } from "../src/commands.ts";
 import {
+  LEADER_PREFIX,
+  SPACE_PREFIX,
   createKeymapRuntime,
   getDefaultKeymaps,
   keyEventFromInput,
 } from "../src/app/keymap/index.ts";
 import * as A from "../src/app/keymap/actions.ts";
+import type { KeyboardInput } from "../src/keyboard-input.ts";
 
 function press(
   mode: "diff" | "thread" | "tree",
@@ -130,7 +132,7 @@ describe("default keymaps", () => {
 
     expect(press("diff", { name: "space", sequence: " " }, runtime)).toMatchObject({
       kind: "pending",
-      node: expect.objectContaining({ label: "Modal Picker" }),
+      node: expect.objectContaining({ label: SPACE_PREFIX.nodeLabel }),
     });
     expect(press("diff", { name: "h", sequence: "h" }, runtime)).toMatchObject({
       actionId: A.SYSTEM_HELP,
@@ -139,7 +141,7 @@ describe("default keymaps", () => {
 
     expect(press("diff", { name: "space", sequence: " " }, runtime)).toMatchObject({
       kind: "pending",
-      node: expect.objectContaining({ label: "Modal Picker" }),
+      node: expect.objectContaining({ label: SPACE_PREFIX.nodeLabel }),
     });
     expect(press("diff", { name: "d", sequence: "d" }, runtime)).toMatchObject({
       actionId: A.SYSTEM_DIAGNOSTICS,
@@ -148,7 +150,7 @@ describe("default keymaps", () => {
 
     expect(press("diff", { ctrl: true, name: "x" }, runtime)).toMatchObject({
       kind: "pending",
-      node: expect.objectContaining({ label: "Leader" }),
+      node: expect.objectContaining({ label: LEADER_PREFIX.nodeLabel }),
     });
     expect(press("diff", { name: "d", sequence: "d" }, runtime)).toMatchObject({
       actionId: A.SYSTEM_DIAGNOSTICS,

@@ -1,5 +1,4 @@
 import type { AppCommand, BuildAppCommandsOptions } from "../registry.ts";
-import { withLeaderKeybind } from "../../shared/constants.ts";
 
 export function buildViewCommands({
   activePane,
@@ -27,7 +26,6 @@ export function buildViewCommands({
     {
       category: "View",
       description: "Move focus between the file tree and diff panes.",
-      keybind: "tab",
       suggested: true,
       title: "Switch active pane",
       value: "view.pane-toggle",
@@ -36,7 +34,6 @@ export function buildViewCommands({
     {
       category: "View",
       description: "Toggle between unified and side-by-side diffs.",
-      keybind: withLeaderKeybind("v"),
       suggested: true,
       title: "Toggle diff view",
       value: "view.diff-toggle",
@@ -54,7 +51,6 @@ export function buildViewCommands({
               ? "No file is focused right now."
               : undefined,
       enabled: canOpenFocusedFileInEditor,
-      keybind: "e,<leader>e",
       keywords: ["editor", "visual", "open file"],
       title: "Open focused file in editor",
       value: "view.open-file-in-editor",

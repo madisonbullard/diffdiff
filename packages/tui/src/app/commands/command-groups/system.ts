@@ -1,7 +1,5 @@
 import type { AppCommand, BuildAppCommandsOptions } from "../registry.ts";
 
-import { withPrefixedKeybind } from "../../shared/constants.ts";
-
 export function buildSystemCommands({
   onExit,
   openCommandModal,
@@ -15,7 +13,6 @@ export function buildSystemCommands({
     {
       category: "System",
       description: "Open the searchable command palette.",
-      keybind: "ctrl+p",
       suggested: true,
       title: "Open command palette",
       value: "system.command-palette",
@@ -24,7 +21,6 @@ export function buildSystemCommands({
     {
       category: "System",
       description: "Show keyboard shortcuts and usage help.",
-      keybind: "shift+/,<leader>shift+/,<leader>h,<space>h",
       keywords: ["?", "shortcuts"],
       suggested: true,
       title: "Open help",
@@ -34,7 +30,6 @@ export function buildSystemCommands({
     {
       category: "System",
       description: "Inspect the full event log for the current session.",
-      keybind: withPrefixedKeybind("d", ["leader", "space"]),
       keywords: ["events", "logs"],
       title: "Open diagnostics",
       value: "system.diagnostics",
@@ -43,7 +38,6 @@ export function buildSystemCommands({
     {
       category: "System",
       description: "Close diffdiff.",
-      keybind: "q,<leader>q",
       title: "Quit",
       value: "system.quit",
       run: () => onExit(),

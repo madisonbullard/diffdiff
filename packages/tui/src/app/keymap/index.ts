@@ -4,6 +4,7 @@ export * from "./display.ts";
 export * from "./defaults.ts";
 export * from "./key-event.ts";
 export * from "./merge.ts";
+export * from "./prefixes.ts";
 export * from "./reverse-map.ts";
 export * from "./runtime.ts";
 export * from "./trie.ts";

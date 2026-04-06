@@ -50,9 +50,11 @@ describe("diffdiff CLI help", () => {
   });
 
   test("supports -h on the session command and its subcommands", async () => {
-    const sessionHelp = await runCli(["session", "-h"]);
-    const removeHelp = await runCli(["session", "remove", "-h"]);
-    const removeAllHelp = await runCli(["session", "remove-all", "-h"]);
+    const [sessionHelp, removeHelp, removeAllHelp] = await Promise.all([
+      runCli(["session", "-h"]),
+      runCli(["session", "remove", "-h"]),
+      runCli(["session", "remove-all", "-h"]),
+    ]);
 
     expect(sessionHelp.stdout).toContain("Usage: diffdiff session");
     expect(sessionHelp.stdout).toContain("list");

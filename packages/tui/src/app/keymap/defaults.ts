@@ -8,6 +8,7 @@
 
 import type { KeymapMode } from "../shell/keymap-mode.ts";
 import { serializeKeyEvent, parseKeyString } from "./key-event.ts";
+import { GOTO_PREFIX, LEADER_PREFIX, SPACE_PREFIX } from "./prefixes.ts";
 import { MutableTrieNode } from "./trie.ts";
 import type { KeyTrieNode, ResolvedKeymaps } from "./types.ts";
 import * as A from "./actions.ts";
@@ -180,9 +181,21 @@ const diffMode = buildModeWithPrefixes(
     ["q", A.SYSTEM_QUIT],
   ],
   [
-    { trigger: "ctrl+x", label: "Leader", bindings: DIFF_LEADER_BINDINGS },
-    { trigger: "space", label: "Modal Picker", bindings: DIFF_SPACE_BINDINGS },
-    { trigger: "g", label: "Goto", bindings: GOTO_BINDINGS },
+    {
+      trigger: LEADER_PREFIX.triggerKeybind,
+      label: LEADER_PREFIX.nodeLabel,
+      bindings: DIFF_LEADER_BINDINGS,
+    },
+    {
+      trigger: SPACE_PREFIX.triggerKeybind,
+      label: SPACE_PREFIX.nodeLabel,
+      bindings: DIFF_SPACE_BINDINGS,
+    },
+    {
+      trigger: GOTO_PREFIX.triggerKeybind,
+      label: GOTO_PREFIX.nodeLabel,
+      bindings: GOTO_BINDINGS,
+    },
   ],
 );
 
@@ -245,9 +258,21 @@ const threadMode = buildModeWithPrefixes(
     ["q", A.SYSTEM_QUIT],
   ],
   [
-    { trigger: "ctrl+x", label: "Leader", bindings: THREAD_LEADER_BINDINGS },
-    { trigger: "space", label: "Modal Picker", bindings: THREAD_SPACE_BINDINGS },
-    { trigger: "g", label: "Goto", bindings: GOTO_BINDINGS },
+    {
+      trigger: LEADER_PREFIX.triggerKeybind,
+      label: LEADER_PREFIX.nodeLabel,
+      bindings: THREAD_LEADER_BINDINGS,
+    },
+    {
+      trigger: SPACE_PREFIX.triggerKeybind,
+      label: SPACE_PREFIX.nodeLabel,
+      bindings: THREAD_SPACE_BINDINGS,
+    },
+    {
+      trigger: GOTO_PREFIX.triggerKeybind,
+      label: GOTO_PREFIX.nodeLabel,
+      bindings: GOTO_BINDINGS,
+    },
   ],
 );
 
@@ -302,9 +327,21 @@ const treeMode = buildModeWithPrefixes(
     ["q", A.SYSTEM_QUIT],
   ],
   [
-    { trigger: "ctrl+x", label: "Leader", bindings: TREE_LEADER_BINDINGS },
-    { trigger: "space", label: "Modal Picker", bindings: TREE_SPACE_BINDINGS },
-    { trigger: "g", label: "Goto", bindings: GOTO_BINDINGS },
+    {
+      trigger: LEADER_PREFIX.triggerKeybind,
+      label: LEADER_PREFIX.nodeLabel,
+      bindings: TREE_LEADER_BINDINGS,
+    },
+    {
+      trigger: SPACE_PREFIX.triggerKeybind,
+      label: SPACE_PREFIX.nodeLabel,
+      bindings: TREE_SPACE_BINDINGS,
+    },
+    {
+      trigger: GOTO_PREFIX.triggerKeybind,
+      label: GOTO_PREFIX.nodeLabel,
+      bindings: GOTO_BINDINGS,
+    },
   ],
 );
 
@@ -334,7 +371,13 @@ const commandsMode = buildModeWithPrefixes(
     ["backspace", A.TEXT_BACKSPACE],
     ["return", A.COMMAND_PALETTE_RUN],
   ],
-  [{ trigger: "ctrl+x", label: "Leader", bindings: TEXT_INPUT_LEADER_NAVIGATION }],
+  [
+    {
+      trigger: LEADER_PREFIX.triggerKeybind,
+      label: LEADER_PREFIX.nodeLabel,
+      bindings: TEXT_INPUT_LEADER_NAVIGATION,
+    },
+  ],
 );
 
 // ---------------------------------------------------------------------------
@@ -361,7 +404,13 @@ const pullRequestSearchMode = buildModeWithPrefixes(
     ["down", A.LIST_MOVE_DOWN],
     ["up", A.LIST_MOVE_UP],
   ],
-  [{ trigger: "ctrl+x", label: "Leader", bindings: TEXT_INPUT_LEADER_NAVIGATION }],
+  [
+    {
+      trigger: LEADER_PREFIX.triggerKeybind,
+      label: LEADER_PREFIX.nodeLabel,
+      bindings: TEXT_INPUT_LEADER_NAVIGATION,
+    },
+  ],
 );
 
 // ---------------------------------------------------------------------------
@@ -409,7 +458,13 @@ const commitSearchMode = buildModeWithPrefixes(
     ["down", A.LIST_MOVE_DOWN],
     ["up", A.LIST_MOVE_UP],
   ],
-  [{ trigger: "ctrl+x", label: "Leader", bindings: TEXT_INPUT_LEADER_NAVIGATION }],
+  [
+    {
+      trigger: LEADER_PREFIX.triggerKeybind,
+      label: LEADER_PREFIX.nodeLabel,
+      bindings: TEXT_INPUT_LEADER_NAVIGATION,
+    },
+  ],
 );
 
 // ---------------------------------------------------------------------------
@@ -467,7 +522,13 @@ const submitReviewMode = buildModeWithPrefixes(
     ["shift+return", A.TEXT_NEWLINE],
     ["return", A.SUBMIT_REVIEW_SUBMIT],
   ],
-  [{ trigger: "ctrl+x", label: "Leader", bindings: TEXT_INPUT_LEADER_NAVIGATION }],
+  [
+    {
+      trigger: LEADER_PREFIX.triggerKeybind,
+      label: LEADER_PREFIX.nodeLabel,
+      bindings: TEXT_INPUT_LEADER_NAVIGATION,
+    },
+  ],
 );
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 import type { Renderable } from "@opentui/core";
-import type { CommandKeybindPrefix } from "../commands.ts";
+import type { KeymapPrefixId } from "./keymap/prefixes.ts";
 
 interface PrefixModeHandlers {
   onEnter?: (controls: { clearPrefixMode: (status?: string) => void }) => void | (() => void);
@@ -14,9 +14,9 @@ interface EnterPrefixModeOptions extends PrefixModeHandlers {
 interface KeybindController {
   clearPrefixMode(status?: string): void;
   dispose(): void;
-  enterPrefixMode(prefix: CommandKeybindPrefix, options: EnterPrefixModeOptions): void;
-  getActivePrefix(): CommandKeybindPrefix | null;
-  isPrefixActive(prefix: CommandKeybindPrefix): boolean;
+  enterPrefixMode(prefix: KeymapPrefixId, options: EnterPrefixModeOptions): void;
+  getActivePrefix(): KeymapPrefixId | null;
+  isPrefixActive(prefix: KeymapPrefixId): boolean;
 }
 
 export function createKeybindController({
@@ -25,15 +25,15 @@ export function createKeybindController({
   onStatusMessage,
 }: {
   getFocusedRenderable: () => Renderable | null | undefined;
-  onActivePrefixChange: (activePrefix: CommandKeybindPrefix | null) => void;
+  onActivePrefixChange: (activePrefix: KeymapPrefixId | null) => void;
   onStatusMessage?: (status: string) => void;
 }): KeybindController {
-  let activePrefix: CommandKeybindPrefix | null = null;
+  let activePrefix: KeymapPrefixId | null = null;
   let prefixCleanup: (() => void) | null = null;
   let prefixOnClear: (() => void) | null = null;
   let prefixFocus: Renderable | null = null;
 
-  function setActivePrefix(nextPrefix: CommandKeybindPrefix | null): void {
+  function setActivePrefix(nextPrefix: KeymapPrefixId | null): void {
     if (activePrefix === nextPrefix) {
       return;
     }
@@ -81,7 +81,7 @@ export function createKeybindController({
     }
   }
 
-  function enterPrefixMode(prefix: CommandKeybindPrefix, options: EnterPrefixModeOptions): void {
+  function enterPrefixMode(prefix: KeymapPrefixId, options: EnterPrefixModeOptions): void {
     clearPrefixCleanup();
     prefixOnClear = options.onClear ?? null;
 

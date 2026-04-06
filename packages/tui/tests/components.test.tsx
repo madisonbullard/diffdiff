@@ -12,6 +12,7 @@ import { ListFilterModal } from "../src/components/list-filter-modal.tsx";
 import { PrefixPickerOverlay } from "../src/components/prefix-picker-overlay.tsx";
 import { PullRequestListModal } from "../src/components/pull-request-list-modal.tsx";
 import type { PrefixMenuCommand, PrefixMenuConfig } from "../src/app/commands/prefix-menus.ts";
+import { getPrefixMenuConfig } from "../src/app/commands/prefix-menus.ts";
 import { getUiTheme } from "../src/theme.ts";
 import type { CommandDefinition } from "../src/commands.ts";
 import type { BranchListFilters, PreparedReviewFile } from "../src/types.ts";
@@ -518,32 +519,27 @@ test("renders empty branch columns and help copy", () => {
   const helpCommands = [
     {
       category: "System",
-      keybind: "ctrl+p",
       title: "Open command palette",
       value: "system.command-palette",
     },
     {
       category: "Comparison",
-      keybind: "l,<leader>l,<space>l",
       title: "Open comparison list",
       value: "comparison.list",
     },
     {
       category: "GitHub",
-      keybind: "<leader>y,y",
       title: "Copy PR URL",
       value: "github.copy-url",
     },
     {
       category: "Review",
-      keybind: "r",
       keybindingContexts: ["diff"] as const,
       title: "Toggle reviewed",
       value: "review.toggle-reviewed",
     },
     {
       category: "View",
-      keybind: "return,right",
       keybindingContexts: ["tree"] as const,
       title: "Open selected file",
       value: "view.open-selected-file",
@@ -581,24 +577,11 @@ test("renders empty branch columns and help copy", () => {
 });
 
 test("renders a compact modal picker overlay", () => {
-  const prefixMenu: PrefixMenuConfig = {
-    badgeLabel: "SPACE",
-    pickerDescription: "Press a key to open a modal.",
-    pickerTitle: "Modal Picker",
-    prefix: "space",
-    cancelStatus: "Canceled modal picker.",
-    getActivateStatus: () => "modal picker active. Awaiting a space command.",
-    getUnboundStatus: (keyName) => `No modal is bound to space ${keyName}.`,
-    nodeLabel: "Modal Picker",
-    preserveFocusByDefault: true,
-    statusLabel: "space",
-    triggerKeybind: "space",
-  };
+  const prefixMenu: PrefixMenuConfig = getPrefixMenuConfig("space")!;
   const commands: PrefixMenuCommand[] = [
     {
       command: {
         category: "Comparison",
-        keybind: "l,<leader>l,<space>l",
         run: () => undefined,
         title: "Open comparison list",
         value: "comparison.list",
@@ -631,21 +614,18 @@ test("groups suggested commands under a dedicated heading in the palette", () =>
   const commands: CommandDefinition[] = [
     {
       category: "System",
-      keybind: "ctrl+p",
       suggested: true,
       title: "Open command palette",
       value: "system.command-palette",
     },
     {
       category: "Review",
-      keybind: "u",
       suggested: true,
       title: "Jump to next unreviewed file",
       value: "review.next-unreviewed",
     },
     {
       category: "Comparison",
-      keybind: "l,<leader>l,<space>l",
       title: "Open comparison list",
       value: "comparison.list",
     },
@@ -683,7 +663,6 @@ test("renders palette command descriptions on an indented second line", () => {
         {
           category: "Suggested",
           description,
-          keybind: "ctrl+p",
           suggested: true,
           title: "Open comparison list",
           value: "comparison.list",

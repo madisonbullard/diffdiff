@@ -3,7 +3,7 @@
  * `KeyEvent` used by the keymap trie.
  */
 
-import type { KeyboardInput } from "../../commands.ts";
+import type { KeyboardInput } from "../../keyboard-input.ts";
 import type { KeyEvent } from "./types.ts";
 
 // ---------------------------------------------------------------------------

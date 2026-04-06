@@ -14,6 +14,7 @@ import {
   getDefaultKeymaps,
   mergeUserKeymaps,
 } from "../keymap/index.ts";
+import type { KeymapPrefixId } from "../keymap/prefixes.ts";
 import type { UserKeymapConfig } from "../keymap/index.ts";
 import {
   getActiveDialogEntry,
@@ -157,9 +158,7 @@ export function useDiffdiffAppState({
   const [isCheckingForUpdates, setIsCheckingForUpdates] = useState(false);
   const [isSubmittingReviewAction, setIsSubmittingReviewAction] = useState(false);
   const [lastAccessedFileIndex, setLastAccessedFileIndex] = useState<number | null>(null);
-  const [activePrefix, setActivePrefix] = useState<
-    import("../../commands.ts").CommandKeybindPrefix | null
-  >(null);
+  const [activePrefix, setActivePrefix] = useState<KeymapPrefixId | null>(null);
   const [refreshIndicatorLabel, setRefreshIndicatorLabel] = useState<string | null>(null);
   const [diffViewPreference, setDiffViewPreference] = useState<DiffViewPreference>("unified");
   const [mergeCommitMessage, setMergeCommitMessage] = useState("");

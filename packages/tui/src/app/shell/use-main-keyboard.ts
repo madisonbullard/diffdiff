@@ -1,6 +1,7 @@
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useEffect, useRef } from "react";
-import { isPrintableKey, type KeyboardInput } from "../../commands.ts";
+import { findKeymapPrefixByNodeLabel } from "../keymap/prefixes.ts";
+import { isPrintableKey, type KeyboardInput } from "../../keyboard-input.ts";
 import { getPrefixMenuConfig } from "../commands/prefix-menus.ts";
 import { dispatchAction, type ActionDispatchMap } from "../keymap/action-dispatch.ts";
 import { keyEventFromInput } from "../keymap/key-event.ts";
@@ -81,9 +82,7 @@ export function useMainKeyboard({
       return;
     }
 
-    const prefix = (["leader", "space"] as const).find(
-      (candidate) => getPrefixMenuConfig(candidate)?.nodeLabel === label,
-    );
+    const prefix = findKeymapPrefixByNodeLabel(label)?.prefix;
     if (prefix == null) {
       state.keybindController.clearPrefixMode();
       state.setStatusMessage(`${label} mode active. Awaiting next key.`);

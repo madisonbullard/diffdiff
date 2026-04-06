@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
+import { getPrefixMenuConfig } from "../src/app/commands/prefix-menus.ts";
 import {
   getPrefixModeBadge,
   getKeymapModeBadge,
@@ -125,41 +126,11 @@ describe("keymap mode", () => {
   });
 
   test("renders prefix badges from the prefix menu registry", () => {
-    expect(
-      getPrefixModeBadge(
-        {
-          badgeLabel: "LEADER",
-          cancelStatus: "Canceled leader key.",
-          getActivateStatus: () => "Leader key active.",
-          getUnboundStatus: (keyName) => `No command is bound to leader ${keyName}.`,
-          nodeLabel: "Leader",
-          preserveFocusByDefault: false,
-          prefix: "leader",
-          statusLabel: "leader",
-          triggerKeybind: "ctrl+x",
-        },
-        DARK_THEME,
-      ),
-    ).toMatchObject({
+    expect(getPrefixModeBadge(getPrefixMenuConfig("leader")!, DARK_THEME)).toMatchObject({
       label: "LEADER",
     });
 
-    expect(
-      getPrefixModeBadge(
-        {
-          badgeLabel: "SPACE",
-          cancelStatus: "Canceled modal picker.",
-          getActivateStatus: () => "modal picker active. Awaiting a space command.",
-          getUnboundStatus: (keyName) => `No modal is bound to space ${keyName}.`,
-          nodeLabel: "Modal Picker",
-          preserveFocusByDefault: true,
-          prefix: "space",
-          statusLabel: "space",
-          triggerKeybind: "space",
-        },
-        DARK_THEME,
-      ),
-    ).toMatchObject({
+    expect(getPrefixModeBadge(getPrefixMenuConfig("space")!, DARK_THEME)).toMatchObject({
       label: "SPACE",
     });
   });

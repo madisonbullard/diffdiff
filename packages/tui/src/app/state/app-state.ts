@@ -7,9 +7,9 @@ import type {
 import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core";
 import type { useRenderer, useTerminalDimensions } from "@opentui/react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
-import type { CommandKeybindPrefix } from "../../commands.ts";
 import type { AppDialogStackEntry } from "../dialogs/stack.ts";
 import { createKeybindController } from "../keybind-controller.ts";
+import type { KeymapPrefixId } from "../keymap/prefixes.ts";
 import type { KeymapRuntime, ResolvedKeymaps, ReverseKeymaps } from "../keymap/index.ts";
 import type {
   AppPane,
@@ -77,7 +77,7 @@ export interface DiffdiffAppState {
   /** The previously selected file index for alternate-file navigation (`ga`). */
   lastAccessedFileIndex: number | null;
   latestSessionLoadIdRef: MutableRefObject<number>;
-  activePrefix: CommandKeybindPrefix | null;
+  activePrefix: KeymapPrefixId | null;
   loadingIndicatorFrame: number;
   mergeCommitMessage: string;
   mergeCommitTitle: string;
@@ -153,7 +153,7 @@ export interface DiffdiffAppState {
   setIsPullRequestListLoading: Dispatch<SetStateAction<boolean>>;
   setIsReloading: Dispatch<SetStateAction<boolean>>;
   setIsSubmittingReviewAction: Dispatch<SetStateAction<boolean>>;
-  setActivePrefix: Dispatch<SetStateAction<CommandKeybindPrefix | null>>;
+  setActivePrefix: Dispatch<SetStateAction<KeymapPrefixId | null>>;
   setLastAccessedFileIndex: Dispatch<SetStateAction<number | null>>;
   setLoadingIndicatorFrame: Dispatch<SetStateAction<number>>;
   setMergeCommitMessage: Dispatch<SetStateAction<string>>;

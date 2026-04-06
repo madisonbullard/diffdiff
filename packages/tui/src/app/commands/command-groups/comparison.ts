@@ -1,5 +1,4 @@
 import type { AppCommand, BuildAppCommandsOptions } from "../registry.ts";
-import { withLeaderKeybind, withPrefixedKeybind } from "../../shared/constants.ts";
 
 export function buildComparisonCommands({
   openBranchModal,
@@ -9,7 +8,6 @@ export function buildComparisonCommands({
     {
       category: "Comparison",
       description: "Reload refs, branches, and pull request metadata.",
-      keybind: withLeaderKeybind("shift+r"),
       title: "Refresh comparison",
       value: "comparison.refresh",
       run: () => refreshComparison(),
@@ -17,7 +15,6 @@ export function buildComparisonCommands({
     {
       category: "Comparison",
       description: "Browse the working tree, branches, PRs, and commits.",
-      keybind: withPrefixedKeybind("l", ["leader", "space"]),
       suggested: true,
       title: "Open comparison list",
       value: "comparison.list",

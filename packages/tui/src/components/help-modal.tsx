@@ -6,7 +6,7 @@ import { KeyCap, MODAL_OVERLAY, SPLIT_BORDER } from "./shared.tsx";
 type ModeKey = "global" | AppPane;
 
 interface HelpRow {
-  keybind: string | undefined;
+  bindingLabel: string | undefined;
   text: string;
 }
 
@@ -51,11 +51,11 @@ function buildModeSections(
 
   for (const command of commands) {
     const mode = getModeForCommand(command);
-    const keybind = commandBindingLabels.get(command.value);
+    const bindingLabel = commandBindingLabels.get(command.value);
 
     const rows = rowsByMode.get(mode) ?? [];
     rows.push({
-      keybind,
+      bindingLabel,
       text: formatHelpText(command),
     });
     rowsByMode.set(mode, rows);
@@ -179,10 +179,10 @@ export function HelpModal({
                     fg={section.dimmed ? theme.border : theme.textMuted}
                     wrapMode="none"
                   >
-                    {row.keybind != null ? (
+                    {row.bindingLabel != null ? (
                       <>
                         <KeyCap
-                          label={row.keybind}
+                          label={row.bindingLabel}
                           theme={
                             section.dimmed
                               ? { ...theme, accent: theme.border, surfaceMuted: theme.surface }

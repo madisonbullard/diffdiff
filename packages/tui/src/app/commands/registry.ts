@@ -1,10 +1,5 @@
 import type { GitHubReviewSession } from "@diffdiff/core";
-import {
-  matchCommandKeybind,
-  type CommandDefinition,
-  type CommandKeybindPrefix,
-  type KeyboardInput,
-} from "../../commands.ts";
+import type { CommandDefinition } from "../../commands.ts";
 import type { AppPane, FileTreeNode } from "../../types.ts";
 import { buildComparisonCommands } from "./command-groups/comparison.ts";
 import { buildGitHubCommands } from "./command-groups/github.ts";
@@ -16,34 +11,6 @@ export type AppCommand = CommandDefinition & {
   keybindingContexts?: readonly AppPane[];
   run: () => void;
 };
-
-function matchesKeybindingContext(command: AppCommand, activePane: AppPane): boolean {
-  return command.keybindingContexts == null || command.keybindingContexts.includes(activePane);
-}
-
-export function findAppCommandByKey(
-  commands: readonly AppCommand[],
-  key: KeyboardInput,
-  options: {
-    activePane: AppPane;
-    prefix?: CommandKeybindPrefix | null;
-  },
-): AppCommand | undefined {
-  const { activePane, prefix = null } = options;
-
-  return commands
-    .filter(
-      (command) =>
-        command.enabled !== false &&
-        matchesKeybindingContext(command, activePane) &&
-        matchCommandKeybind(command.keybind, key, { prefix }),
-    )
-    .sort((left, right) => {
-      const leftSpecific = left.keybindingContexts == null ? 0 : 1;
-      const rightSpecific = right.keybindingContexts == null ? 0 : 1;
-      return rightSpecific - leftSpecific;
-    })[0];
-}
 
 export function findAppCommandByValue(
   commands: readonly AppCommand[],

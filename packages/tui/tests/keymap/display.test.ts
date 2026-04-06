@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
+import { LEADER_PREFIX, SPACE_PREFIX } from "../../src/app/keymap/prefixes.ts";
 import { buildReverseKeymaps } from "../../src/app/keymap/reverse-map.ts";
 import {
   formatCommandBindings,
@@ -12,8 +13,12 @@ function buildKeymaps(): ResolvedKeymaps {
   const diff = new MutableTrieNode();
   diff.setAction("z", "comparison.list");
   diff.setAction("y", "system.help");
-  diff.getOrCreateChild("ctrl+x", { label: "Leader" }).setAction("l", "comparison.list");
-  diff.getOrCreateChild("space", { label: "Modal Picker" }).setAction("o", "comparison.list");
+  diff
+    .getOrCreateChild(LEADER_PREFIX.triggerKeybind, { label: LEADER_PREFIX.nodeLabel })
+    .setAction("l", "comparison.list");
+  diff
+    .getOrCreateChild(SPACE_PREFIX.triggerKeybind, { label: SPACE_PREFIX.nodeLabel })
+    .setAction("o", "comparison.list");
 
   const thread = new MutableTrieNode();
   thread.setAction("r", "github.reply-thread");
@@ -40,7 +45,12 @@ describe("keymap display labels", () => {
     const reverseKeymaps = buildReverseKeymaps(buildKeymaps());
 
     expect(
-      formatPrefixedActionBindings(reverseKeymaps, "comparison.list", "Modal Picker", "diff"),
+      formatPrefixedActionBindings(
+        reverseKeymaps,
+        "comparison.list",
+        SPACE_PREFIX.nodeLabel,
+        "diff",
+      ),
     ).toBe("o");
   });
 

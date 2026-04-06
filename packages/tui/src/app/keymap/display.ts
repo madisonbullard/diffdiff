@@ -1,30 +1,11 @@
 import type { AppPane } from "../../types.ts";
 import type { AppCommand } from "../commands/registry.ts";
 import type { KeymapMode } from "../shell/keymap-mode.ts";
+import { formatKeySequence } from "./key-event.ts";
 import type { KeyEvent, ReverseKeymaps } from "./types.ts";
 
-function formatKeyEvent(event: KeyEvent): string {
-  if (event.shift && event.key === "/" && !event.ctrl && !event.meta) {
-    return "?";
-  }
-
-  const parts: string[] = [];
-  if (event.ctrl) {
-    parts.push("ctrl");
-  }
-  if (event.meta) {
-    parts.push("alt");
-  }
-  if (event.shift) {
-    parts.push("shift");
-  }
-
-  parts.push(event.key === "delete" ? "del" : event.key);
-  return parts.join("+");
-}
-
 export function formatDisplayKeySequence(sequence: readonly KeyEvent[]): string {
-  return sequence.map(formatKeyEvent).join(" ");
+  return formatKeySequence(sequence);
 }
 
 function sortLabels(labels: Iterable<string>): string[] {

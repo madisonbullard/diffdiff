@@ -1,11 +1,17 @@
 import type { GitHubReviewSession } from "@diffdiff/core";
 import { describe, expect, test, vi } from "vite-plus/test";
 import {
+  formatCommandBindings,
+  buildReverseKeymaps,
+  getDefaultKeymaps,
+} from "../src/app/keymap/index.ts";
+import {
   buildAppCommands,
-  findAppCommandByKey,
   findAppCommandByValue,
   getPaletteCommands,
 } from "../src/app/commands/registry.ts";
+
+const reverseKeymaps = buildReverseKeymaps(getDefaultKeymaps());
 
 function createRegistryOptions(
   overrides: Partial<Parameters<typeof buildAppCommands>[0]> = {},
@@ -90,31 +96,32 @@ describe("command registry", () => {
     expect(
       getPaletteCommands(commands).some((command) => command.value === "github.reply-thread"),
     ).toBe(true);
-    expect(findAppCommandByKey(commands, { name: "[" }, { activePane: "diff" })).toBeUndefined();
   });
 
-  test("resolves keybinds by context specificity and prefix", () => {
+  test("derives command labels from the resolved keymaps", () => {
     const commands = buildAppCommands(createRegistryOptions());
 
-    expect(findAppCommandByKey(commands, { name: "e" }, { activePane: "diff" })?.value).toBe(
-      "view.open-file-in-editor",
-    );
     expect(
-      findAppCommandByKey(
-        commands,
-        { name: "l", sequence: "l" },
-        { activePane: "diff", prefix: "space" },
-      )?.value,
-    ).toBe("comparison.list");
+      formatCommandBindings(
+        reverseKeymaps,
+        findAppCommandByValue(commands, "view.open-file-in-editor")!,
+      ),
+    ).toBe("e / ctrl+x e");
     expect(
-      findAppCommandByKey(commands, { name: "p", sequence: "p" }, { activePane: "diff" })?.value,
-    ).toBe("github.pull-request-list");
+      formatCommandBindings(reverseKeymaps, findAppCommandByValue(commands, "comparison.list")!),
+    ).toBe("l / ctrl+x l / space l");
     expect(
-      findAppCommandByKey(commands, { name: "tab", sequence: "\t" }, { activePane: "diff" })?.value,
-    ).toBe("view.pane-toggle");
+      formatCommandBindings(
+        reverseKeymaps,
+        findAppCommandByValue(commands, "github.pull-request-list")!,
+      ),
+    ).toBe("p / ctrl+x p / space p");
+    expect(
+      formatCommandBindings(reverseKeymaps, findAppCommandByValue(commands, "view.pane-toggle")!),
+    ).toBe("tab");
   });
 
-  test("models next-unreviewed and view-open commands as command metadata", () => {
+  test("models next-unreviewed and view-open commands without duplicated keybind metadata", () => {
     const commands = buildAppCommands(
       createRegistryOptions({
         activePane: "tree",
@@ -135,45 +142,46 @@ describe("command registry", () => {
     expect(findAppCommandByValue(commands, "review.next-unreviewed")).toMatchObject({
       disabledReason: "All files are already reviewed.",
       enabled: false,
-      keybind: "u,<leader>u",
     });
     expect(findAppCommandByValue(commands, "view.open-file-in-editor")).toMatchObject({
       disabledReason: "Select a file in the tree first.",
       enabled: false,
-      keybind: "e,<leader>e",
     });
     expect(findAppCommandByValue(commands, "view.open-selected-file")).toMatchObject({
       disabledReason: "Select a file in the tree first.",
       enabled: false,
     });
-    expect(findAppCommandByValue(commands, "view.pane-toggle")).toMatchObject({
-      keybind: "tab",
-    });
-    expect(findAppCommandByValue(commands, "github.pull-request-list")).toMatchObject({
-      keybind: "p,<leader>p,<space>p",
-    });
+    expect(
+      formatCommandBindings(
+        reverseKeymaps,
+        findAppCommandByValue(commands, "review.next-unreviewed")!,
+      ),
+    ).toBe("u / ctrl+x u");
+    expect(
+      formatCommandBindings(
+        reverseKeymaps,
+        findAppCommandByValue(commands, "view.open-file-in-editor")!,
+      ),
+    ).toBe("e / ctrl+x e");
   });
 
   test("moves refresh to shift+r and leaves mark-all-reviewed palette-only", () => {
     const commands = buildAppCommands(createRegistryOptions());
 
-    expect(findAppCommandByValue(commands, "comparison.refresh")).toMatchObject({
-      keybind: "shift+r,<leader>shift+r",
-    });
     expect(
-      findAppCommandByKey(
-        commands,
-        { name: "r", sequence: "R", shift: true },
-        { activePane: "diff" },
-      )?.value,
-    ).toBe("comparison.refresh");
-    expect(findAppCommandByValue(commands, "review.mark-all-reviewed")?.keybind).toBeUndefined();
+      formatCommandBindings(reverseKeymaps, findAppCommandByValue(commands, "comparison.refresh")!),
+    ).toBe("shift+r / ctrl+x shift+r");
+    expect(
+      formatCommandBindings(
+        reverseKeymaps,
+        findAppCommandByValue(commands, "review.mark-all-reviewed")!,
+      ),
+    ).toBeUndefined();
   });
 
   test("does not register the removed key legend toggle command", () => {
     const commands = buildAppCommands(createRegistryOptions());
 
     expect(findAppCommandByValue(commands, "system.key-legend")).toBeUndefined();
-    expect(findAppCommandByKey(commands, { name: "z" }, { activePane: "diff" })).toBeUndefined();
   });
 });

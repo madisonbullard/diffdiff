@@ -1,5 +1,4 @@
 import type { AppCommand, BuildAppCommandsOptions } from "../registry.ts";
-import { withLeaderKeybind } from "../../shared/constants.ts";
 
 export function buildReviewCommands({
   bulkReviewedActionsDisabledReason,
@@ -29,7 +28,6 @@ export function buildReviewCommands({
       description: "Mark the selected file as reviewed or not reviewed.",
       disabledReason: hasFiles ? undefined : "No files are available to review.",
       enabled: hasFiles,
-      keybind: withLeaderKeybind("r"),
       keybindingContexts: ["diff"],
       suggested: true,
       title: "Toggle reviewed",
@@ -45,7 +43,6 @@ export function buildReviewCommands({
           : "No files are available to review."
         : undefined,
       enabled: canMoveToNextUnreviewed,
-      keybind: withLeaderKeybind("u"),
       suggested: canMoveToNextUnreviewed,
       title: "Jump to next unreviewed file",
       value: "review.next-unreviewed",
@@ -69,7 +66,6 @@ export function buildReviewCommands({
         bulkReviewedActionsDisabledReason ??
         (canClearReviewed ? undefined : "No files are marked reviewed."),
       enabled: bulkReviewedActionsDisabledReason == null && canClearReviewed,
-      keybind: withLeaderKeybind("alt+r"),
       title: "Unmark all reviewed",
       value: "review.clear-reviewed",
       run: () => clearReviewed(),
@@ -79,7 +75,6 @@ export function buildReviewCommands({
       description: "Collapse or expand the selected file diff.",
       disabledReason: hasFiles ? undefined : "No files are available to review.",
       enabled: hasFiles,
-      keybind: withLeaderKeybind("c"),
       keybindingContexts: ["diff"],
       title: "Toggle collapsed",
       value: "review.toggle-collapsed",

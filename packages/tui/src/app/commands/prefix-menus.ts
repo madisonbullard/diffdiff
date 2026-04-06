@@ -1,23 +1,19 @@
-import type { CommandKeybindPrefix } from "../../commands.ts";
 import { formatPrefixedActionBindings } from "../keymap/display.ts";
+import { getKeymapPrefix, type KeymapPrefixId } from "../keymap/prefixes.ts";
 import type { ReverseKeymaps } from "../keymap/types.ts";
 import type { KeymapMode } from "../shell/keymap-mode.ts";
-import { LEADER_KEYBIND } from "../shared/constants.ts";
 import type { AppCommand } from "./registry.ts";
 
 export interface PrefixMenuConfig {
   badgeLabel: string;
   cancelStatus: string;
-  getActivateStatus: (triggerLabel: string) => string;
   getUnboundStatus: (keyName: string) => string;
   nodeLabel: string;
   onEnterMode?: (controls: { clearPrefixMode: (status?: string) => void }) => void | (() => void);
   pickerDescription?: string;
   pickerTitle?: string;
   preserveFocusByDefault?: boolean;
-  prefix: CommandKeybindPrefix;
-  statusLabel: string;
-  triggerKeybind: string;
+  prefix: KeymapPrefixId;
 }
 
 export interface PrefixMenuCommand {
@@ -29,9 +25,8 @@ const PREFIX_MENUS: readonly PrefixMenuConfig[] = [
   {
     badgeLabel: "LEADER",
     cancelStatus: "Canceled leader key.",
-    getActivateStatus: (triggerLabel) => `Leader key active. Awaiting a ${triggerLabel} command.`,
     getUnboundStatus: (keyName) => `No command is bound to leader ${keyName}.`,
-    nodeLabel: "Leader",
+    nodeLabel: getKeymapPrefix("leader").nodeLabel,
     onEnterMode: ({ clearPrefixMode }) => {
       const timeout = setTimeout(() => {
         clearPrefixMode("Leader key timed out.");
@@ -41,31 +36,26 @@ const PREFIX_MENUS: readonly PrefixMenuConfig[] = [
     },
     prefix: "leader",
     preserveFocusByDefault: false,
-    statusLabel: "leader",
-    triggerKeybind: LEADER_KEYBIND,
   },
   {
     badgeLabel: "SPACE",
     cancelStatus: "Canceled modal picker.",
-    getActivateStatus: () => "modal picker active. Awaiting a space command.",
     getUnboundStatus: (keyName) => `No modal is bound to space ${keyName}.`,
-    nodeLabel: "Modal Picker",
+    nodeLabel: getKeymapPrefix("space").nodeLabel,
     pickerDescription: "Press a key to open a modal.",
     pickerTitle: "Modal Picker",
     prefix: "space",
     preserveFocusByDefault: true,
-    statusLabel: "space",
-    triggerKeybind: "space",
   },
 ] as const;
 
-export function getPrefixMenuConfig(prefix: CommandKeybindPrefix): PrefixMenuConfig | undefined {
+export function getPrefixMenuConfig(prefix: KeymapPrefixId): PrefixMenuConfig | undefined {
   return PREFIX_MENUS.find((menu) => menu.prefix === prefix);
 }
 
 export function getPrefixMenuCommands(
   commands: readonly AppCommand[],
-  prefix: CommandKeybindPrefix,
+  prefix: KeymapPrefixId,
   reverseKeymaps: ReverseKeymaps,
   mode: KeymapMode,
 ): PrefixMenuCommand[] {
