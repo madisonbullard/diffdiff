@@ -4,15 +4,15 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { ComparisonInfo } from "./types/session.ts";
 
-export type DiffdiffLogLevel = "info" | "warn" | "error";
+type DiffdiffLogLevel = "info" | "warn" | "error";
 
-export interface DiffdiffLogSession {
+interface DiffdiffLogSession {
   logFilePath: string;
   sessionFilePath: string;
   sessionId: string;
 }
 
-export interface StartDiffdiffLoggingOptions {
+interface StartDiffdiffLoggingOptions {
   command?: readonly string[];
   cwd?: string;
   logDirectoryPath?: string;
@@ -21,7 +21,7 @@ export interface StartDiffdiffLoggingOptions {
   verbose?: boolean;
 }
 
-export interface DiffdiffSessionActivity {
+interface DiffdiffSessionActivity {
   activeOverlay?: string;
   comparison?: Pick<ComparisonInfo, "base" | "head" | "mode" | "range">;
   currentBranch?: string;
@@ -34,7 +34,7 @@ export interface DiffdiffSessionActivity {
   statusMessage?: string;
 }
 
-export interface DiffdiffSessionRecord extends DiffdiffLogSession, DiffdiffSessionActivity {
+interface DiffdiffSessionRecord extends DiffdiffLogSession, DiffdiffSessionActivity {
   command: readonly string[];
   cwd: string;
   isActive: boolean;

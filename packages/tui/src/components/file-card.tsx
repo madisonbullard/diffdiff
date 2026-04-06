@@ -16,7 +16,7 @@ export interface FileCardPreviewViewport {
   top: number;
 }
 
-export interface FileCardProps {
+interface FileCardProps {
   collapsedCommentStates?: Readonly<Record<string, boolean>>;
   file: PreparedReviewFile;
   diffView: "unified" | "split";

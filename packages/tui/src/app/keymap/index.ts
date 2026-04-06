@@ -6,23 +6,4 @@ export * from "./merge.ts";
 export * from "./reverse-map.ts";
 export * from "./runtime.ts";
 export * from "./trie.ts";
-export type {
-  ActionDefinition,
-  KeyEvent,
-  KeymapAction,
-  KeymapCancelled,
-  KeymapMatched,
-  KeymapMatchedSequence,
-  KeymapNotFound,
-  KeymapPending,
-  KeymapResult,
-  KeymapSequence,
-  KeyTrieEntry,
-  KeyTrieNode,
-  ResolvedKeymaps,
-  ReverseKeymap,
-  UserKeymapConfig,
-  UserKeymapEntry,
-  UserKeymapNode,
-} from "./types.ts";
-export { NO_OP_ACTION } from "./types.ts";
+export type { ResolvedKeymaps, UserKeymapConfig } from "./types.ts";

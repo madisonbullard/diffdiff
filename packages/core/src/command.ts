@@ -5,7 +5,7 @@ import { logDiffdiffError, logDiffdiffInfo, logDiffdiffVerbose } from "./logging
 
 const execFileAsync = promisify(execFile);
 
-export interface RunCommandOptions {
+interface RunCommandOptions {
   cwd: string;
   allowedExitCodes?: readonly number[];
 }

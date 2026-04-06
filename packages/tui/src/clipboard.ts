@@ -8,18 +8,18 @@ interface ClipboardCommand {
   input?: string;
 }
 
-export interface ClipboardEnvironment {
+interface ClipboardEnvironment {
   TMUX?: string;
   STY?: string;
   WAYLAND_DISPLAY?: string;
 }
 
-export interface ClipboardOutput {
+interface ClipboardOutput {
   isTTY?: boolean;
   write(text: string): unknown;
 }
 
-export interface ClipboardCopyOptions {
+interface ClipboardCopyOptions {
   platform?: NodeJS.Platform;
   env?: ClipboardEnvironment;
   stdout?: ClipboardOutput;
@@ -27,7 +27,7 @@ export interface ClipboardCopyOptions {
   clipboardWrite?: (text: string) => Promise<void>;
 }
 
-export interface ClipboardCommandRunner {
+interface ClipboardCommandRunner {
   (command: ClipboardCommand): Promise<boolean>;
 }
 
@@ -70,7 +70,7 @@ export async function copyTextToClipboard(
   }
 }
 
-export async function copyTextWithNativeClipboard(
+async function copyTextWithNativeClipboard(
   text: string,
   options: ClipboardCopyOptions = {},
 ): Promise<boolean> {

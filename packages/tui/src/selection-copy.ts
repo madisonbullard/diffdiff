@@ -5,7 +5,7 @@ export interface SelectionClipboardRenderer {
   clearSelection(): void;
 }
 
-export interface SelectionCopyOptions {
+interface SelectionCopyOptions {
   copyText?: (text: string) => Promise<boolean>;
   onSuccess?: () => void;
   onError?: () => void;

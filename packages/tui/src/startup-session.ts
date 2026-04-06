@@ -5,7 +5,7 @@ import type { UiTheme } from "./theme.ts";
 import type { PierreThemeName, PreparedReviewSession } from "./types.ts";
 
 // Startup keeps patch parsing cheap, then hydrates syntax as files approach the viewport.
-export const STARTUP_PREPARE_REVIEW_SESSION_OPTIONS = {
+const STARTUP_PREPARE_REVIEW_SESSION_OPTIONS = {
   deferSyntaxRendering: true,
   initialDiffView: "unified",
 } satisfies PrepareReviewSessionOptions;

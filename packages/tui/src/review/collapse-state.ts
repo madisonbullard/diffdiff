@@ -1,4 +1,4 @@
-import type { GitHubPullRequestReviewGroup, GitHubPullRequestReviewThread } from "@diffdiff/core";
+import type { GitHubPullRequestReviewThread } from "@diffdiff/core";
 
 export function getReviewThreadCollapseKey(thread: GitHubPullRequestReviewThread): string {
   return `thread:${thread.id}`;
@@ -6,27 +6,6 @@ export function getReviewThreadCollapseKey(thread: GitHubPullRequestReviewThread
 
 export function getReviewThreadDefaultCollapsed(thread: GitHubPullRequestReviewThread): boolean {
   return thread.isOutdated;
-}
-
-export function getReviewGroupCollapseKey(group: GitHubPullRequestReviewGroup): string {
-  if (group.reviewNodeId != null && group.reviewNodeId !== "") {
-    return `group:${group.reviewNodeId}`;
-  }
-
-  if (group.reviewId != null) {
-    return `group:${group.reviewId}`;
-  }
-
-  const firstCommentNodeId = group.comments[0]?.nodeId;
-  if (firstCommentNodeId != null && firstCommentNodeId !== "") {
-    return `group:${firstCommentNodeId}`;
-  }
-
-  return `group:${group.author.login}:${group.submittedAt ?? group.state}`;
-}
-
-export function getReviewGroupDefaultCollapsed(): boolean {
-  return false;
 }
 
 export function getCommentCollapsed(

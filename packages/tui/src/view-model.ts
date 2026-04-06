@@ -194,10 +194,6 @@ export function findInitialBranchListSelection({
   return matchingIndex >= 0 ? matchingIndex : 0;
 }
 
-export function hasEnabledBranchListFilters(filters: BranchListFilters): boolean {
-  return Object.values(filters).some(Boolean);
-}
-
 export function formatAuthorList(authors: readonly string[], maxAuthors = 2): string {
   if (authors.length === 0) {
     return "No unique commits";

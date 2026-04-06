@@ -3,7 +3,7 @@ import type { AppPane, FileTreeNode, PreparedReviewFile } from "../types.ts";
 import type { UiTheme } from "../theme.ts";
 import { SPLIT_BORDER, getCollapseToggleGlyph, tintHex } from "./shared.tsx";
 
-export interface FileTreeSidebarProps {
+interface FileTreeSidebarProps {
   activePane: AppPane;
   collapsedDirectories: ReadonlySet<string>;
   collapsedPaths: ReadonlySet<string>;

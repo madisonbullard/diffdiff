@@ -2,7 +2,7 @@ import { AsciiLoadingPane } from "../../components/ascii-loading-pane.tsx";
 import { Tag } from "../../components/shared.tsx";
 import type { UiTheme } from "../../theme.ts";
 
-export interface AppFooterProps {
+interface AppFooterProps {
   footerEvent: { color: string; message: string };
   footerEventMessage: string;
   footerModeBadge: { bg: string; fg: string; label: string };

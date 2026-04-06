@@ -1,19 +1,7 @@
-import type {
-  GitHubPullRequestComment,
-  GitHubPullRequestReviewGroup,
-  GitHubPullRequestReviewThread,
-} from "@diffdiff/core";
+import type { GitHubPullRequestComment, GitHubPullRequestReviewThread } from "@diffdiff/core";
 import { getCollapseToggleGlyph } from "../components/shared.tsx";
-import type { SideBySideDiffRow, UnifiedDiffLine } from "../types.ts";
 import type { UiTheme } from "../theme.ts";
-import { formatTimestamp, getReviewStateColor } from "./formatting.ts";
-import {
-  getReviewGroupCollapseKey,
-  getReviewGroupDefaultCollapsed,
-  getReviewThreadCollapseKey,
-  getReviewThreadDefaultCollapsed,
-} from "./collapse-state.ts";
-import { REVIEW_BORDER } from "./shared.tsx";
+import { getReviewThreadCollapseKey, getReviewThreadDefaultCollapsed } from "./collapse-state.ts";
 
 export function ReviewThreadList({
   collapsedCommentStates,
@@ -48,119 +36,6 @@ export function ReviewThreadList({
         />
       ))}
     </box>
-  );
-}
-
-export function ReviewGroupCard({
-  collapsedCommentStates,
-  group,
-  onToggleCollapsed,
-  theme,
-}: {
-  collapsedCommentStates?: Readonly<Record<string, boolean>>;
-  group: GitHubPullRequestReviewGroup;
-  onToggleCollapsed?: (group: GitHubPullRequestReviewGroup) => void;
-  theme: UiTheme;
-}) {
-  const collapseKey = getReviewGroupCollapseKey(group);
-  const isCollapsed = collapsedCommentStates?.[collapseKey] ?? getReviewGroupDefaultCollapsed();
-
-  return (
-    <box
-      width="100%"
-      border={["left"]}
-      customBorderChars={REVIEW_BORDER}
-      borderColor={getReviewStateColor(group.state, theme)}
-      backgroundColor={theme.commentBg}
-      paddingLeft={2}
-      paddingRight={1}
-      paddingTop={1}
-      paddingBottom={1}
-      flexDirection="column"
-      gap={isCollapsed ? 0 : 1}
-    >
-      <box
-        width="100%"
-        flexDirection="row"
-        justifyContent="space-between"
-        gap={1}
-        onMouseUp={() => {
-          onToggleCollapsed?.(group);
-        }}
-      >
-        <text fg={theme.textMuted} wrapMode="none">
-          <span fg={theme.accent}>{getCollapseToggleGlyph(isCollapsed)}</span>
-          <span> </span>
-          <span fg={theme.text}>{group.author.login}</span>
-          <span fg={theme.border}>{"  │  "}</span>
-          <span fg={getReviewStateColor(group.state, theme)}>{group.state.toLowerCase()}</span>
-          {group.submittedAt != null ? (
-            <>
-              <span fg={theme.border}>{"  │  "}</span>
-              <span>{formatTimestamp(group.submittedAt)}</span>
-            </>
-          ) : null}
-        </text>
-        <text fg={theme.textMuted} wrapMode="none">
-          <span>{formatCommentCount(group.comments.length)}</span>
-        </text>
-      </box>
-      {!isCollapsed && group.body != null && group.body.trim() !== "" ? (
-        <text fg={theme.text} wrapMode="word">
-          {group.body}
-        </text>
-      ) : null}
-      {!isCollapsed && group.comments.length > 0 ? (
-        <ReviewCommentList
-          comments={group.comments}
-          suppressFirstAuthorLogin={group.author.login}
-          theme={theme}
-        />
-      ) : null}
-    </box>
-  );
-}
-
-export function getThreadsForUnifiedLine(
-  threads: readonly GitHubPullRequestReviewThread[],
-  line: UnifiedDiffLine,
-): GitHubPullRequestReviewThread[] {
-  return threads.filter((thread) => matchesUnifiedLine(thread, line));
-}
-
-export function getThreadsForSideBySideRow(
-  threads: readonly GitHubPullRequestReviewThread[],
-  row: SideBySideDiffRow,
-): GitHubPullRequestReviewThread[] {
-  if (row.kind !== "line") {
-    return [];
-  }
-
-  return threads.filter((thread) => {
-    const anchorLine = thread.line ?? thread.originalLine;
-    if (anchorLine == null) {
-      return false;
-    }
-
-    return thread.side === "LEFT"
-      ? row.left?.lineNumber === anchorLine
-      : row.right?.lineNumber === anchorLine;
-  });
-}
-
-export function getUnanchoredUnifiedThreads(
-  threads: readonly GitHubPullRequestReviewThread[],
-  lines: readonly UnifiedDiffLine[],
-): GitHubPullRequestReviewThread[] {
-  return threads.filter((thread) => !lines.some((line) => matchesUnifiedLine(thread, line)));
-}
-
-export function getUnanchoredSideBySideThreads(
-  threads: readonly GitHubPullRequestReviewThread[],
-  rows: readonly SideBySideDiffRow[],
-): GitHubPullRequestReviewThread[] {
-  return threads.filter(
-    (thread) => !rows.some((row) => getThreadsForSideBySideRow([thread], row)[0] != null),
   );
 }
 
@@ -277,21 +152,6 @@ function ReviewCommentList({
       })}
     </box>
   );
-}
-
-function matchesUnifiedLine(thread: GitHubPullRequestReviewThread, line: UnifiedDiffLine): boolean {
-  if (line.kind === "hunk" || line.kind === "gap") {
-    return false;
-  }
-
-  const anchorLine = thread.line ?? thread.originalLine;
-  if (anchorLine == null) {
-    return false;
-  }
-
-  return thread.side === "LEFT"
-    ? line.oldLineNumber === anchorLine
-    : line.newLineNumber === anchorLine;
 }
 
 export function formatThreadAnchor(thread: GitHubPullRequestReviewThread): string {

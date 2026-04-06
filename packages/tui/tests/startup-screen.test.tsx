@@ -1,18 +1,14 @@
 import type { ReactElement, ReactNode } from "react";
-import type { ReactTestRenderer } from "react-test-renderer";
+import type { ReactTestInstance, ReactTestRenderer } from "react-test-renderer";
 import { act, create } from "react-test-renderer";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
-import {
-  STARTUP_SCREEN_FINAL_FRAME,
-  getStartupScreenAnimationState,
-  getStartupScreenCharacterColor,
-  STARTUP_SCREEN_ART_LINES,
-  STARTUP_SCREEN_ART_WIDTH,
-  STARTUP_SCREEN_FRAME_MS,
-  STARTUP_SCREEN_INITIAL_FRAME_COUNT,
-  StartupScreen,
-  STARTUP_SCREEN_WIPE_FRAME_COUNT,
-} from "../src/startup-screen.tsx";
+import { StartupScreen } from "../src/startup-screen.tsx";
+
+const STARTUP_FRAME_MS = 33;
+const STARTUP_INITIAL_FRAME_COUNT = 1;
+const STARTUP_WIPE_FRAME_COUNT = 15;
+const STARTUP_FINAL_FRAME = STARTUP_INITIAL_FRAME_COUNT + STARTUP_WIPE_FRAME_COUNT;
+const mountedTrees = new Set<ReactTestRenderer>();
 
 beforeEach(() => {
   (
@@ -21,12 +17,27 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  act(() => {
+    for (const tree of mountedTrees) {
+      tree.unmount();
+    }
+  });
+  mountedTrees.clear();
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
 test("keeps the corrected leading padding on the top row", () => {
-  expect(STARTUP_SCREEN_ART_LINES[0]).toBe("   ███╗                ███╗");
+  const tree = render(
+    <StartupScreen
+      chromeBackground="#07131b"
+      path="/tmp/diffdiff"
+      text="#e6edf3"
+      textMuted="#8ea4b5"
+    />,
+  );
+
+  expect(getArtLineTexts(tree)[0]).toBe("   ███╗                ███╗");
 });
 
 test("centers the startup artwork in the viewport", () => {
@@ -38,6 +49,8 @@ test("centers the startup artwork in the viewport", () => {
       textMuted="#8ea4b5"
     />,
   );
+  const artLineTexts = getArtLineTexts(tree);
+  const artWidth = Math.max(...artLineTexts.map((line) => Array.from(line).length));
 
   const rootBox = tree.root.findByProps({
     alignItems: "center",
@@ -49,11 +62,11 @@ test("centers the startup artwork in the viewport", () => {
   const artBox = tree.root.findByProps({
     flexDirection: "column",
     gap: 0,
-    width: STARTUP_SCREEN_ART_WIDTH,
+    width: artWidth,
   });
 
   expect(rootBox.props.paddingX).toBe(1);
-  expect(artBox.children).toHaveLength(STARTUP_SCREEN_ART_LINES.length);
+  expect(artBox.children).toHaveLength(artLineTexts.length);
 });
 
 test("animates a single gradient band across white text and returns to white", () => {
@@ -68,93 +81,119 @@ test("animates a single gradient band across white text and returns to white", (
     />,
   );
 
-  expect(getStartupScreenAnimationState(0)).toEqual({ color: "#ffffff", kind: "solid" });
   expect(getFirstVisibleGlyphColor(tree)).toBe("#ffffff");
 
   act(() => {
-    vi.advanceTimersByTime(STARTUP_SCREEN_FRAME_MS * STARTUP_SCREEN_INITIAL_FRAME_COUNT);
+    vi.advanceTimersByTime(STARTUP_FRAME_MS * STARTUP_INITIAL_FRAME_COUNT);
   });
 
-  const firstBandState = getStartupScreenAnimationState(STARTUP_SCREEN_INITIAL_FRAME_COUNT);
-  expect(firstBandState.kind).toBe("band");
+  expect(getLastGlyphColor(tree, 0)).toBe("#ffffff");
 
-  // At progress=0 the band is entering from the left, so far-right columns stay white
-  expect(getStartupScreenCharacterColor(STARTUP_SCREEN_ART_WIDTH - 1, 0, firstBandState)).toBe(
-    "#ffffff",
-  );
-
-  // Mid-animation: the band is somewhere in the middle
-  const midFrame =
-    STARTUP_SCREEN_INITIAL_FRAME_COUNT + Math.floor(STARTUP_SCREEN_WIPE_FRAME_COUNT / 2);
-  const midState = getStartupScreenAnimationState(midFrame);
-  expect(midState.kind).toBe("band");
-
-  // After the band passes, everything returns to solid white
-  expect(getStartupScreenAnimationState(STARTUP_SCREEN_FINAL_FRAME)).toEqual({
-    color: "#ffffff",
-    kind: "solid",
-  });
+  const midpointDuration =
+    STARTUP_FRAME_MS * (STARTUP_INITIAL_FRAME_COUNT + Math.floor(STARTUP_WIPE_FRAME_COUNT / 2));
 
   act(() => {
-    vi.advanceTimersByTime(STARTUP_SCREEN_FRAME_MS * STARTUP_SCREEN_FINAL_FRAME);
+    vi.advanceTimersByTime(midpointDuration - STARTUP_FRAME_MS * STARTUP_INITIAL_FRAME_COUNT);
+  });
+
+  expect(getVisibleGlyphColors(tree, 0).some((color) => color !== "#ffffff")).toBe(true);
+
+  act(() => {
+    vi.advanceTimersByTime(
+      STARTUP_FRAME_MS * (STARTUP_FINAL_FRAME - Math.floor(STARTUP_WIPE_FRAME_COUNT / 2)),
+    );
   });
 
   expect(getFirstVisibleGlyphColor(tree)).toBe("#ffffff");
 });
 
-test("band has green on the trailing edge and red on the leading edge", () => {
-  // Use a mid-animation state where the band is fully over the art
-  const midFrame =
-    STARTUP_SCREEN_INITIAL_FRAME_COUNT + Math.floor(STARTUP_SCREEN_WIPE_FRAME_COUNT / 2);
-  const midState = getStartupScreenAnimationState(midFrame);
+test("band introduces non-white colors while passing through the art", () => {
+  vi.useFakeTimers();
 
-  if (midState.kind !== "band") {
-    throw new Error("Expected band state at mid-animation");
-  }
+  const tree = render(
+    <StartupScreen
+      chromeBackground="#07131b"
+      path="/tmp/diffdiff"
+      text="#e6edf3"
+      textMuted="#8ea4b5"
+    />,
+  );
 
-  // Find a column that is inside the band for row 0 by scanning
-  const colors: string[] = [];
-  for (let col = 0; col < STARTUP_SCREEN_ART_WIDTH; col++) {
-    colors.push(getStartupScreenCharacterColor(col, 0, midState));
-  }
+  act(() => {
+    vi.advanceTimersByTime(
+      STARTUP_FRAME_MS * (STARTUP_INITIAL_FRAME_COUNT + Math.floor(STARTUP_WIPE_FRAME_COUNT / 2)),
+    );
+  });
 
-  // There should be non-white colors (the band is passing through)
+  const colors = getVisibleGlyphColors(tree, 0);
+
   const nonWhiteColors = colors.filter((c) => c !== "#ffffff");
   expect(nonWhiteColors.length).toBeGreaterThan(0);
 });
 
 test("slants the band so upper rows are ahead of lower rows", () => {
-  const midFrame =
-    STARTUP_SCREEN_INITIAL_FRAME_COUNT + Math.floor(STARTUP_SCREEN_WIPE_FRAME_COUNT / 2);
-  const midState = getStartupScreenAnimationState(midFrame);
+  vi.useFakeTimers();
 
-  // Pick a column in the middle of the art
-  const testCol = Math.floor(STARTUP_SCREEN_ART_WIDTH / 2);
-  const topColor = getStartupScreenCharacterColor(testCol, 0, midState);
-  const bottomColor = getStartupScreenCharacterColor(
-    testCol,
-    STARTUP_SCREEN_ART_LINES.length - 1,
-    midState,
+  const tree = render(
+    <StartupScreen
+      chromeBackground="#07131b"
+      path="/tmp/diffdiff"
+      text="#e6edf3"
+      textMuted="#8ea4b5"
+    />,
   );
 
-  // Due to row offset, the band position differs between rows, so colors should differ
+  act(() => {
+    vi.advanceTimersByTime(
+      STARTUP_FRAME_MS * (STARTUP_INITIAL_FRAME_COUNT + Math.floor(STARTUP_WIPE_FRAME_COUNT / 2)),
+    );
+  });
+
+  const artLineLengths = getArtGlyphSpans(tree).map((line) => line.length);
+  const testCol = Math.floor(Math.max(...artLineLengths) / 2);
+  const topColor = getGlyphColor(tree, 0, testCol);
+  const bottomColor = getGlyphColor(tree, getArtGlyphSpans(tree).length - 1, testCol);
+
   expect(topColor).not.toBe(bottomColor);
 });
 
-function getFirstVisibleGlyphColor(tree: ReactTestRenderer): string | undefined {
-  const textNodes = tree.root.findAll((node) => String(node.type) === "text");
-  const artLine = textNodes[0];
-  if (artLine == null) {
-    return undefined;
-  }
+function getArtLineTexts(tree: ReactTestRenderer): string[] {
+  return getArtGlyphSpans(tree).map((line) => line.map(getSpanText).join(""));
+}
 
-  const glyphSpan = artLine.findAll(
-    (node) =>
-      String(node.type) === "span" &&
-      typeof node.children[0] === "string" &&
-      node.children[0] !== " ",
-  )[0];
-  return glyphSpan?.props.fg;
+function getArtGlyphSpans(tree: ReactTestRenderer) {
+  return tree.root
+    .findAll(
+      (node) =>
+        String(node.type) === "text" &&
+        node.findAll((child) => String(child.type) === "span").length > 0,
+    )
+    .map((line) => line.findAll((node) => String(node.type) === "span"));
+}
+
+function getVisibleGlyphColors(tree: ReactTestRenderer, row: number): string[] {
+  return (
+    getArtGlyphSpans(tree)
+      [row]?.filter((span) => getSpanText(span) !== " ")
+      .map((span) => span.props.fg as string) ?? []
+  );
+}
+
+function getGlyphColor(tree: ReactTestRenderer, row: number, column: number): string | undefined {
+  return getArtGlyphSpans(tree)[row]?.[column]?.props.fg;
+}
+
+function getFirstVisibleGlyphColor(tree: ReactTestRenderer): string | undefined {
+  return getVisibleGlyphColors(tree, 0)[0];
+}
+
+function getLastGlyphColor(tree: ReactTestRenderer, row: number): string | undefined {
+  const colors = getVisibleGlyphColors(tree, row);
+  return colors.at(-1);
+}
+
+function getSpanText(span: ReactTestInstance): string {
+  return span.children.filter((child): child is string => typeof child === "string").join("");
 }
 
 function render(element: ReactNode): ReactTestRenderer {
@@ -163,6 +202,8 @@ function render(element: ReactNode): ReactTestRenderer {
   act(() => {
     tree = create(element as ReactElement);
   });
+
+  mountedTrees.add(tree);
 
   return tree;
 }

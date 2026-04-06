@@ -9,7 +9,6 @@ export const LIVE_REFRESH_INTERVAL_MS = 5_000;
 export const INITIAL_FILE_BODY_RENDER_COUNT = 8;
 export const FILE_PREVIEW_HYDRATION_DISTANCE = 24;
 export const LEADER_KEYBIND = "ctrl+x";
-export const COMMAND_LIST_KEYBIND = "ctrl+p";
 export const GITHUB_DIALOGS = new Set<import("../dialogs/stack.ts").AppDialog>([
   "cleanup",
   "comment-composer",
@@ -18,7 +17,7 @@ export const GITHUB_DIALOGS = new Set<import("../dialogs/stack.ts").AppDialog>([
   "submit-review",
 ]);
 
-export function withKeybindPrefixes(
+function withKeybindPrefixes(
   keybind: string,
   prefixes: readonly CommandKeybindPrefix[],
 ): CommandKeybind {

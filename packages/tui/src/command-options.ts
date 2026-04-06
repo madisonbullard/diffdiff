@@ -1,11 +1,11 @@
-export interface StartupOptionValues {
+interface StartupOptionValues {
   base?: string;
   head?: string;
   repo?: string;
   verbose?: boolean;
 }
 
-export interface CommandOptionReader {
+interface CommandOptionReader {
   optsWithGlobals(): Record<string, unknown>;
 }
 

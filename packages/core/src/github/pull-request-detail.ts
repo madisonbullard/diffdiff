@@ -237,7 +237,7 @@ async function loadPullRequestChangedFiles(
   }
 }
 
-export async function loadChecksSummaryForHeadSha(
+async function loadChecksSummaryForHeadSha(
   client: GitHubApiClient,
   repository: ForgeRepository,
   headSha: string,

@@ -17,7 +17,7 @@ export function createSequence(actionIds: readonly string[]): KeymapSequence {
   return { kind: "sequence", actionIds };
 }
 
-export function createNode(
+function createNode(
   children: ReadonlyMap<string, KeyTrieEntry>,
   options?: { label?: string; sticky?: boolean },
 ): KeyTrieNode {
@@ -27,10 +27,6 @@ export function createNode(
     sticky: options?.sticky,
     children,
   };
-}
-
-export function emptyNode(options?: { label?: string; sticky?: boolean }): KeyTrieNode {
-  return createNode(new Map(), options);
 }
 
 // ---------------------------------------------------------------------------

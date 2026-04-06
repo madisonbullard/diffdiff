@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { UiTheme } from "../theme.ts";
 
-export const ASCII_LOADING_FRAME_MS = 120;
+const ASCII_LOADING_FRAME_MS = 120;
 export const ASCII_LOADING_FRAMES = [
   "\u00b7",
   "\u2022",
@@ -12,11 +12,11 @@ export const ASCII_LOADING_FRAMES = [
   "\u2022",
 ] as const;
 
-export interface AsciiLoadingPaneProps {
+interface AsciiLoadingPaneProps {
   theme: UiTheme;
 }
 
-export interface AsciiLoadingLabelProps {
+interface AsciiLoadingLabelProps {
   color?: string;
   message: string;
   theme: UiTheme;

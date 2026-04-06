@@ -4,7 +4,7 @@ import { FileTreeSidebar } from "../../components/file-tree-sidebar.tsx";
 import type { AppPane, FileTreeNode, PreparedReviewSession } from "../../types.ts";
 import type { UiTheme } from "../../theme.ts";
 
-export interface AppSidebarProps {
+interface AppSidebarProps {
   activeOverlay: import("../dialogs/stack.ts").AppDialog | null;
   activePane: AppPane;
   collapsedDirectories: ReadonlySet<string>;

@@ -10,7 +10,7 @@ interface EnterPrefixModeOptions extends PrefixModeHandlers {
   status: string;
 }
 
-export interface KeybindController {
+interface KeybindController {
   clearPrefixMode(status?: string): void;
   dispose(): void;
   enterPrefixMode(prefix: CommandKeybindPrefix, options: EnterPrefixModeOptions): void;

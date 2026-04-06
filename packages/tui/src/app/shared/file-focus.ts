@@ -102,7 +102,7 @@ export function createFileFocusController({
   return { focusFile, resolveFileIndex };
 }
 
-export function resolveFileFocusIndex({
+function resolveFileFocusIndex({
   currentIndex,
   fallback = "first-file",
   files,

@@ -20,7 +20,7 @@ import {
   shouldRenderFileCardBody,
 } from "./preview-helpers.ts";
 
-export interface DiffdiffAppPreview {
+interface DiffdiffAppPreview {
   diffRenderSurface: RenderSurfaceMetrics;
   estimatedFileCardBodyHeights: number[];
   fileCardBodyVisibility: boolean[];

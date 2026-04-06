@@ -13,7 +13,6 @@
 // ---------------------------------------------------------------------------
 export const SYSTEM_HELP = "system.help";
 export const SYSTEM_COMMAND_PALETTE = "system.command-palette";
-export const SYSTEM_DIAGNOSTICS = "system.diagnostics";
 export const SYSTEM_QUIT = "system.quit";
 
 // ---------------------------------------------------------------------------
@@ -39,7 +38,6 @@ export const REVIEW_LAST_FILE = "review.last-file";
 export const REVIEW_TOGGLE_REVIEWED = "review.toggle-reviewed";
 export const REVIEW_TOGGLE_COLLAPSED = "review.toggle-collapsed";
 export const REVIEW_NEXT_UNREVIEWED = "review.next-unreviewed";
-export const REVIEW_MARK_ALL_REVIEWED = "review.mark-all-reviewed";
 export const REVIEW_CLEAR_REVIEWED = "review.clear-reviewed";
 export const REVIEW_NEXT_ANCHOR = "review.next-anchor";
 export const REVIEW_PREVIOUS_ANCHOR = "review.previous-anchor";

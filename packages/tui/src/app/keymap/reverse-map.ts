@@ -46,26 +46,6 @@ export function buildReverseKeymap(root: KeyTrieNode): ReverseKeymap {
   return result;
 }
 
-/**
- * Merge reverse maps from multiple modes into a single combined map.
- * Later entries for the same action ID are appended, not replaced.
- */
-export function mergeReverseMaps(...maps: readonly ReverseKeymap[]): ReverseKeymap {
-  const merged = new Map<string, KeyEvent[][]>();
-
-  for (const map of maps) {
-    for (const [actionId, sequences] of map) {
-      const existing = merged.get(actionId) ?? [];
-      for (const seq of sequences) {
-        existing.push(seq as KeyEvent[]);
-      }
-      merged.set(actionId, existing);
-    }
-  }
-
-  return merged;
-}
-
 // ---------------------------------------------------------------------------
 // Key serialization round-trip
 // ---------------------------------------------------------------------------

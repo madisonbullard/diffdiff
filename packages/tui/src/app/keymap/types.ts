@@ -128,16 +128,5 @@ export interface UserKeymapNode {
 
 export type UserKeymapEntry = string | readonly string[] | UserKeymapNode;
 
-// ---------------------------------------------------------------------------
-// Action registry
-// ---------------------------------------------------------------------------
-
-export interface ActionDefinition {
-  id: string;
-  title: string;
-  category: string;
-  description?: string;
-}
-
 /** Sentinel action ID used to unbind a key in user config. */
 export const NO_OP_ACTION = "no_op" as const;

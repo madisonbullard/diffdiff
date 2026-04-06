@@ -27,13 +27,13 @@ export type KeymapMode =
   | "confirm-merge"
   | "cleanup";
 
-export interface KeymapModeBadge {
+interface KeymapModeBadge {
   bg: string;
   fg: string;
   label: string;
 }
 
-export interface ResolveActiveKeymapModeOptions {
+interface ResolveActiveKeymapModeOptions {
   activeDialog: AppDialog | null;
   activeListView: ListModalView;
   activePane: AppPane;

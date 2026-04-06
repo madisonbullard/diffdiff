@@ -3,7 +3,7 @@ import { PullRequestBanner } from "../../review/banner.tsx";
 import type { PreparedReviewSession } from "../../types.ts";
 import type { UiTheme } from "../../theme.ts";
 
-export interface AppHeaderProps {
+interface AppHeaderProps {
   currentBranchLabel: string;
   refreshIndicatorLabel: string | null;
   session: PreparedReviewSession;

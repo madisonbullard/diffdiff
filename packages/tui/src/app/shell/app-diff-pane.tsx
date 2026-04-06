@@ -9,7 +9,7 @@ import type { PreparedReviewSession } from "../../types.ts";
 import type { UiTheme } from "../../theme.ts";
 import { EMPTY_REVIEW_THREADS } from "../review/review-constants.ts";
 
-export interface AppDiffPaneProps {
+interface AppDiffPaneProps {
   activeFileIndex: number;
   activeOverlay: import("../dialogs/stack.ts").AppDialog | null;
   activePane: import("../../types.ts").AppPane;

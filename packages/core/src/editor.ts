@@ -3,14 +3,14 @@ import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { logDiffdiffError, logDiffdiffInfo, logDiffdiffWarn } from "./logging.ts";
 
-export interface EditorInputController {
+interface EditorInputController {
   isTTY?: boolean;
   pause(): void;
   resume(): void;
   setRawMode?(mode: boolean): void;
 }
 
-export interface OpenFileInEditorOptions {
+interface OpenFileInEditorOptions {
   env?: NodeJS.ProcessEnv;
   filePath: string;
   repositoryRootPath: string;
@@ -18,14 +18,14 @@ export interface OpenFileInEditorOptions {
   stdin?: EditorInputController;
 }
 
-export interface EditorCommandRequest {
+interface EditorCommandRequest {
   args: string[];
   command: string;
   cwd: string;
   env: NodeJS.ProcessEnv;
 }
 
-export interface EditorCommandRunner {
+interface EditorCommandRunner {
   (request: EditorCommandRequest): Promise<void>;
 }
 

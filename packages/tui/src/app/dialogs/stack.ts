@@ -12,8 +12,8 @@ export type AppDialog =
   | "merge"
   | "submit-review";
 
-export type AppDialogExitReason = "dismiss" | "complete";
-export type AppDialogExitAction = "close-all" | "restore-parent";
+type AppDialogExitReason = "dismiss" | "complete";
+type AppDialogExitAction = "close-all" | "restore-parent";
 
 export interface AppDialogStackEntry {
   dialog: AppDialog;

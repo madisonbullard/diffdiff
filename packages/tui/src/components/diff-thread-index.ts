@@ -11,14 +11,14 @@ const EMPTY_ANNOTATIONS: readonly LineAnnotation[] = [];
  * - "middle": interior line of a multi-line range
  * - "end": last line where the comment is anchored (threads render after this line)
  */
-export type CommentRangePosition = "single" | "start" | "middle" | "end";
+type CommentRangePosition = "single" | "start" | "middle" | "end";
 
 export interface LineAnnotation {
   position: CommentRangePosition;
   thread: GitHubPullRequestReviewThread;
 }
 
-export interface ThreadIndex {
+interface ThreadIndex {
   leftThreads: Map<number, GitHubPullRequestReviewThread[]>;
   rightThreads: Map<number, GitHubPullRequestReviewThread[]>;
   /** Lines inside a comment range, keyed by "left:N" or "right:N". */

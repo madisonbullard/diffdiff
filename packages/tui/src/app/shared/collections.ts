@@ -138,7 +138,7 @@ export function buildSessionReviewCacheState(
   };
 }
 
-export function restoreReviewedPaths(
+function restoreReviewedPaths(
   files: PreparedReviewSession["files"],
   cacheState?: Pick<ReviewCacheState, "reviewedFiles" | "reviewedPaths">,
 ): Set<string> {

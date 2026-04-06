@@ -1,7 +1,7 @@
 import { parseArgs } from "node:util";
 import type { ParsedStartupOptions, StartupOptions } from "./types/startup.ts";
 
-export interface StartupOptionValues {
+interface StartupOptionValues {
   repo?: string;
   base?: string;
   head?: string;

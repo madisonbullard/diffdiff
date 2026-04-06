@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-export interface GitHubAuthConfigPaths {
+interface GitHubAuthConfigPaths {
   primaryDirectoryPath: string;
   primaryFilePath: string;
   legacyDirectoryPath: string;

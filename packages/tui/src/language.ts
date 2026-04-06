@@ -1,7 +1,7 @@
 import path from "node:path";
 
 // Copied from OpenCode's TUI language mapping and normalized for OpenTUI diffs.
-export const LANGUAGE_EXTENSIONS: Record<string, string> = {
+const LANGUAGE_EXTENSIONS: Record<string, string> = {
   ".abap": "abap",
   ".astro": "astro",
   ".bat": "bat",

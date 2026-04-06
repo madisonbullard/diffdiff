@@ -9,7 +9,6 @@ export interface KeyboardInput {
 
 export type CommandKeybindPrefix = "leader" | "space" | "g";
 
-export type PrefixedCommandKeybindSegment = `<${CommandKeybindPrefix}>${string}`;
 export type CommandKeybind = string;
 
 export interface CommandDefinition {
@@ -25,7 +24,7 @@ export interface CommandDefinition {
   suggested?: boolean;
 }
 
-export interface ParsedCommandKeybind {
+interface ParsedCommandKeybind {
   ctrl: boolean;
   meta: boolean;
   name: string;
@@ -96,7 +95,7 @@ function consumePrefixToken(entry: string): {
   };
 }
 
-export function parseCommandKeybinds(keybind: CommandKeybind | undefined): ParsedCommandKeybind[] {
+function parseCommandKeybinds(keybind: CommandKeybind | undefined): ParsedCommandKeybind[] {
   if (keybind == null || keybind === "none") {
     return [];
   }

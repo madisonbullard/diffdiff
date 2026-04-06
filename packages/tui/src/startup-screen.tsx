@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getStartupTraceNow } from "./startup-tracing.ts";
 
-export const STARTUP_SCREEN_ART_LINES = [
+const STARTUP_SCREEN_ART_LINES = [
   "   ███╗                ███╗",
   "   ███║███╗ ███╗███╗   ███║███╗ ███╗███╗",
   "██████║╚══╝██╔═██╔═╝██████║╚══╝██╔═██╔═╝",
@@ -11,12 +11,12 @@ export const STARTUP_SCREEN_ART_LINES = [
   "           ╚═╝ ╚═╝             ╚═╝ ╚═╝",
 ] as const;
 
-export const STARTUP_SCREEN_FRAME_MS = 33;
-export const STARTUP_SCREEN_FRAME_DELAY_THRESHOLD_MS = 40;
-export const STARTUP_SCREEN_BAND_WIDTH = 40;
-export const STARTUP_SCREEN_BAND_EDGE_WIDTH = 8;
-export const STARTUP_SCREEN_WIPE_ROW_OFFSET = 1;
-export const STARTUP_SCREEN_ART_WIDTH = Math.max(
+const STARTUP_SCREEN_FRAME_MS = 33;
+const STARTUP_SCREEN_FRAME_DELAY_THRESHOLD_MS = 40;
+const STARTUP_SCREEN_BAND_WIDTH = 40;
+const STARTUP_SCREEN_BAND_EDGE_WIDTH = 8;
+const STARTUP_SCREEN_WIPE_ROW_OFFSET = 1;
+const STARTUP_SCREEN_ART_WIDTH = Math.max(
   ...STARTUP_SCREEN_ART_LINES.map((line) => Array.from(line).length),
 );
 
@@ -25,12 +25,12 @@ const STARTUP_SCREEN_COLORS = {
   red: "#e34d5f",
   white: "#ffffff",
 } as const;
-export const STARTUP_SCREEN_INITIAL_FRAME_COUNT = 1;
-export const STARTUP_SCREEN_WIPE_FRAME_COUNT = 15;
-export const STARTUP_SCREEN_FINAL_FRAME =
+const STARTUP_SCREEN_INITIAL_FRAME_COUNT = 1;
+const STARTUP_SCREEN_WIPE_FRAME_COUNT = 15;
+const STARTUP_SCREEN_FINAL_FRAME =
   STARTUP_SCREEN_INITIAL_FRAME_COUNT + STARTUP_SCREEN_WIPE_FRAME_COUNT;
 
-export interface StartupScreenProps {
+interface StartupScreenProps {
   chromeBackground: string;
   onFrameDelay?: (details: StartupScreenFrameDelay) => void;
   path: string;
@@ -38,13 +38,13 @@ export interface StartupScreenProps {
   textMuted: string;
 }
 
-export interface StartupScreenFrameDelay {
+interface StartupScreenFrameDelay {
   actualIntervalMs: number;
   delayMs: number;
   frame: number;
 }
 
-export type StartupScreenAnimationState =
+type StartupScreenAnimationState =
   | {
       color: string;
       kind: "solid";
@@ -132,7 +132,7 @@ export function StartupScreen({
   );
 }
 
-export function getStartupScreenAnimationState(frame: number): StartupScreenAnimationState {
+function getStartupScreenAnimationState(frame: number): StartupScreenAnimationState {
   const normalizedFrame = Math.max(0, Math.floor(frame));
 
   if (normalizedFrame < STARTUP_SCREEN_INITIAL_FRAME_COUNT) {
@@ -151,7 +151,7 @@ export function getStartupScreenAnimationState(frame: number): StartupScreenAnim
   return { color: STARTUP_SCREEN_COLORS.white, kind: "solid" };
 }
 
-export function getStartupScreenCharacterColor(
+function getStartupScreenCharacterColor(
   column: number,
   row: number,
   state: StartupScreenAnimationState,
