@@ -19,7 +19,7 @@ export function buildViewCommands({
     {
       category: "View",
       description: "Move focus between the file tree and diff panes.",
-      keybind: withLeaderKeybind("p", "tab"),
+      keybind: "tab",
       suggested: true,
       title: "Switch active pane",
       value: "view.pane-toggle",

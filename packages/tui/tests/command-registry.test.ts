@@ -109,6 +109,12 @@ describe("command registry", () => {
         { activePane: "diff", prefix: "space" },
       )?.value,
     ).toBe("comparison.list");
+    expect(
+      findAppCommandByKey(commands, { name: "p", sequence: "p" }, { activePane: "diff" })?.value,
+    ).toBe("github.pull-request-list");
+    expect(
+      findAppCommandByKey(commands, { name: "tab", sequence: "\t" }, { activePane: "diff" })?.value,
+    ).toBe("view.pane-toggle");
   });
 
   test("models next-unreviewed and open-selected-file as command metadata", () => {
@@ -136,6 +142,12 @@ describe("command registry", () => {
       disabledReason: "Select a file in the tree first.",
       enabled: false,
       keybind: "return,right",
+    });
+    expect(findAppCommandByValue(commands, "view.pane-toggle")).toMatchObject({
+      keybind: "tab",
+    });
+    expect(findAppCommandByValue(commands, "github.pull-request-list")).toMatchObject({
+      keybind: "p,<leader>p,<space>p",
     });
   });
 

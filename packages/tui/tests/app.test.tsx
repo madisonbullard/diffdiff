@@ -280,6 +280,16 @@ test("opens the GitHub PR list on launch when requested", async () => {
   expect(getAppText(tree)).toContain("madison");
 });
 
+test("opens the GitHub PR list with p", async () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  await emitAsyncKey({ name: "p", sequence: "p" });
+
+  expect(getAppText(tree)).toContain("Opened pull request list.");
+  expect(getAppText(tree)).toContain("GitHub PRs");
+  expect(getAppText(tree)).toContain("Ship the PR dashboard");
+});
+
 test("prefetches pull requests on startup", async () => {
   const listGitHubPullRequests = vi.fn(async () => createDashboardPullRequests());
 

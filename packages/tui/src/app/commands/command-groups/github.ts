@@ -62,7 +62,7 @@ export function buildGitHubCommands({
         ? undefined
         : "GitHub auth is required. Run `diffdiff auth login --token-stdin` first.",
       enabled: isGitHubAuthenticated,
-      keybind: withPrefixedKeybind("shift+p", ["leader", "space"]),
+      keybind: withPrefixedKeybind("p", ["leader", "space"]),
       keywords: ["pr", "pull request", "review requested", "inbox"],
       suggested: isGitHubAuthenticated,
       title: "Open GitHub PR list",
