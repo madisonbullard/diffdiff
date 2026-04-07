@@ -1,19 +1,13 @@
-import { formatPrefixedActionBindings } from "../keymap/display.ts";
-import * as A from "../keymap/actions.ts";
+import { formatDisplayKeySequence } from "../keymap/display.ts";
+import { parseKeyString } from "../keymap/key-event.ts";
 import { getKeymapPrefix, type KeymapPrefixId } from "../keymap/prefixes.ts";
-import type { ReverseKeymaps } from "../keymap/types.ts";
+import type { KeyTrieEntry, KeyTrieNode, ResolvedKeymaps } from "../keymap/types.ts";
+import { NO_OP_ACTION } from "../keymap/types.ts";
 import type { KeymapMode } from "../shell/keymap-mode.ts";
 import type { AppCommand } from "./registry.ts";
 
-export interface PrefixPickerItem {
-  actionId: string;
-  enabled?: boolean;
-  title?: string;
-}
-
 export interface PrefixPickerConfig {
   description: string;
-  items: readonly PrefixPickerItem[];
   title: string;
 }
 
@@ -37,7 +31,7 @@ export interface PrefixMenuCommand {
 
 interface PrefixMenuDefinition extends Omit<PrefixMenuConfig, "nodeLabel"> {}
 
-interface CommandPickerPrefixMenuDefinition extends Omit<PrefixMenuDefinition, "picker"> {
+interface PrefixPickerMenuDefinition extends Omit<PrefixMenuDefinition, "picker"> {
   picker: Omit<PrefixPickerConfig, "title"> & { title?: string };
 }
 
@@ -48,9 +42,7 @@ function definePrefixMenu(config: PrefixMenuDefinition): PrefixMenuConfig {
   };
 }
 
-function defineCommandPickerPrefixMenu(
-  config: CommandPickerPrefixMenuDefinition,
-): PrefixMenuConfig {
+function definePrefixPickerMenu(config: PrefixPickerMenuDefinition): PrefixMenuConfig {
   const keymapPrefix = getKeymapPrefix(config.prefix);
 
   return definePrefixMenu({
@@ -62,34 +54,20 @@ function defineCommandPickerPrefixMenu(
   });
 }
 
-const SPACE_PICKER_ITEMS: readonly PrefixPickerItem[] = [
-  { actionId: A.SYSTEM_DIAGNOSTICS },
-  { actionId: A.SYSTEM_HELP },
-  { actionId: A.GITHUB_PULL_REQUEST_LIST },
-  { actionId: A.GITHUB_COMMENTS },
-  { actionId: A.GITHUB_ADD_COMMENT },
-  { actionId: A.GITHUB_SUBMIT_REVIEW },
-  { actionId: A.GITHUB_MERGE },
-  { actionId: A.COMPARISON_LIST },
-];
+const ACTION_DISPLAY_TITLES: Readonly<Record<string, string>> = {
+  "goto.first-file": "Jump to first file",
+  "goto.last-file": "Jump to last file",
+  "goto.last-accessed-file": "Jump to alternate file",
+  "goto.next-hunk": "Jump to next hunk",
+  "goto.previous-hunk": "Jump to previous hunk",
+  "goto.selected-file-line": "Jump to selected file line",
+  "goto.window-bottom": "Jump to bottom",
+  "goto.window-center": "Jump to center",
+  "goto.window-top": "Jump to top",
+};
 
-const GOTO_PICKER_ITEMS: readonly PrefixPickerItem[] = [
-  { actionId: A.GOTO_FIRST_FILE, title: "Jump to first file" },
-  { actionId: A.GOTO_LAST_FILE, title: "Jump to last file" },
-  { actionId: A.GOTO_WINDOW_TOP, title: "Jump to top" },
-  { actionId: A.GOTO_WINDOW_CENTER, title: "Jump to center" },
-  { actionId: A.GOTO_WINDOW_BOTTOM, title: "Jump to bottom" },
-  { actionId: A.GOTO_NEXT_HUNK, title: "Jump to next hunk" },
-  { actionId: A.GOTO_PREVIOUS_HUNK, title: "Jump to previous hunk" },
-  { actionId: A.GOTO_LAST_ACCESSED_FILE, title: "Jump to alternate file" },
-];
-
-const IN_FILE_PICKER_ITEMS: readonly PrefixPickerItem[] = [
-  { actionId: A.GOTO_SELECTED_FILE_LINE, title: "Jump to selected file line" },
-];
-
-const PREFIX_MENUS: readonly PrefixMenuConfig[] = [
-  definePrefixMenu({
+const PREFIX_MENUS: Readonly<Record<KeymapPrefixId, PrefixMenuConfig>> = {
+  leader: definePrefixMenu({
     badgeLabel: "LEADER",
     cancelStatus: "Canceled leader key.",
     getUnboundStatus: (keyName) => `No command is bound to leader ${keyName}.`,
@@ -103,47 +81,115 @@ const PREFIX_MENUS: readonly PrefixMenuConfig[] = [
     prefix: "leader",
     preserveFocusByDefault: false,
   }),
-  defineCommandPickerPrefixMenu({
+  space: definePrefixPickerMenu({
     badgeLabel: "SPACE",
     cancelStatus: "Canceled modal picker.",
     getUnboundStatus: (keyName) => `No modal is bound to space ${keyName}.`,
     picker: {
       description: "Press a key to open a modal.",
-      items: SPACE_PICKER_ITEMS,
     },
     prefix: "space",
     preserveFocusByDefault: true,
   }),
-  defineCommandPickerPrefixMenu({
+  g: definePrefixPickerMenu({
     badgeLabel: "GOTO",
     cancelStatus: "Canceled goto picker.",
     getUnboundStatus: (keyName) => `No jump is bound to goto ${keyName}.`,
     picker: {
       description: "Press a key to jump around the comparison.",
-      items: GOTO_PICKER_ITEMS,
     },
     prefix: "g",
   }),
-  defineCommandPickerPrefixMenu({
+  s: definePrefixPickerMenu({
     badgeLabel: "IN FILE",
     cancelStatus: "Canceled in-file picker.",
     getUnboundStatus: (keyName) => `No in-file jump is bound to s ${keyName}.`,
     picker: {
       description: "Press a key to jump within the selected file.",
-      items: IN_FILE_PICKER_ITEMS,
     },
     prefix: "s",
   }),
-] as const;
+} as const;
 
 export function getPrefixMenuConfig(prefix: KeymapPrefixId): PrefixMenuConfig | undefined {
-  return PREFIX_MENUS.find((menu) => menu.prefix === prefix);
+  return PREFIX_MENUS[prefix];
+}
+
+function findLabeledNodes(root: KeyTrieNode | undefined, label: string): KeyTrieNode[] {
+  if (root == null) {
+    return [];
+  }
+
+  const matches: KeyTrieNode[] = [];
+
+  function walk(node: KeyTrieNode): void {
+    if (node.label === label) {
+      matches.push(node);
+    }
+
+    for (const child of node.children.values()) {
+      if (child.kind === "node") {
+        walk(child);
+      }
+    }
+  }
+
+  walk(root);
+  return matches;
+}
+
+function groupPrefixLabels(labels: readonly string[]): string {
+  return [...new Set(labels)].sort((left, right) => left.localeCompare(right)).join(" / ");
+}
+
+function fallbackActionTitle(actionId: string): string {
+  return actionId
+    .split(".")
+    .flatMap((part) => part.split("-"))
+    .map((part, index) => (index === 0 ? part.charAt(0).toUpperCase() + part.slice(1) : part))
+    .join(" ");
+}
+
+function getActionTitle(actionId: string, command: AppCommand | undefined): string {
+  return command?.title ?? ACTION_DISPLAY_TITLES[actionId] ?? fallbackActionTitle(actionId);
+}
+
+function getEntryDescriptor(
+  entry: KeyTrieEntry,
+  serializedKey: string,
+  command: AppCommand | undefined,
+): { actionId: string; enabled: boolean; title: string } | undefined {
+  switch (entry.kind) {
+    case "action": {
+      if (entry.actionId === NO_OP_ACTION) {
+        return undefined;
+      }
+
+      return {
+        actionId: entry.actionId,
+        enabled: command?.enabled !== false,
+        title: getActionTitle(entry.actionId, command),
+      };
+    }
+    case "sequence":
+      return {
+        actionId: entry.actionIds.join(" "),
+        enabled: true,
+        title: "Multiple commands",
+      };
+    case "node":
+      return {
+        actionId: entry.label ?? serializedKey,
+        enabled: true,
+        title: entry.label ?? "Submenu",
+      };
+  }
 }
 
 export function getPrefixMenuCommands(
   commands: readonly AppCommand[],
   prefix: KeymapPrefixId,
-  reverseKeymaps: ReverseKeymaps,
+  resolvedKeymaps: ResolvedKeymaps,
   mode: KeymapMode,
 ): PrefixMenuCommand[] {
   const prefixMenu = getPrefixMenuConfig(prefix);
@@ -152,31 +198,42 @@ export function getPrefixMenuCommands(
   }
 
   const commandsByValue = new Map(commands.map((command) => [command.value, command]));
+  const groupedCommands = new Map<
+    string,
+    { actionId: string; enabled: boolean; labels: string[]; title: string }
+  >();
 
-  return prefixMenu.picker.items.flatMap((item) => {
-    const label = formatPrefixedActionBindings(
-      reverseKeymaps,
-      item.actionId,
-      prefixMenu.nodeLabel,
-      mode,
-    );
-    if (label == null) {
-      return [];
+  for (const node of findLabeledNodes(resolvedKeymaps.get(mode), prefixMenu.nodeLabel)) {
+    for (const [serializedKey, child] of node.children) {
+      const descriptor = getEntryDescriptor(
+        child,
+        serializedKey,
+        child.kind === "action" ? commandsByValue.get(child.actionId) : undefined,
+      );
+      if (descriptor == null) {
+        continue;
+      }
+
+      const existing = groupedCommands.get(descriptor.actionId);
+      const label = formatDisplayKeySequence([parseKeyString(serializedKey)]);
+
+      if (existing == null) {
+        groupedCommands.set(descriptor.actionId, {
+          ...descriptor,
+          labels: [label],
+        });
+        continue;
+      }
+
+      existing.labels.push(label);
+      existing.enabled = existing.enabled && descriptor.enabled;
     }
+  }
 
-    const command = commandsByValue.get(item.actionId);
-    const title = item.title ?? command?.title;
-    if (title == null) {
-      return [];
-    }
-
-    return [
-      {
-        actionId: item.actionId,
-        enabled: item.enabled ?? command?.enabled !== false,
-        label,
-        title,
-      },
-    ];
-  });
+  return [...groupedCommands.values()].map(({ actionId, enabled, labels, title }) => ({
+    actionId,
+    enabled,
+    label: groupPrefixLabels(labels),
+    title,
+  }));
 }

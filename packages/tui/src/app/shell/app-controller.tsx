@@ -276,10 +276,10 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         : getPrefixMenuCommands(
             commands,
             state.activePrefix,
-            state.reverseKeymaps,
+            state.resolvedKeymaps,
             activeKeymapMode,
           ),
-    [activeKeymapMode, commands, state.activePrefix, state.reverseKeymaps],
+    [activeKeymapMode, commands, state.activePrefix, state.resolvedKeymaps],
   );
   const footerModeBadge = useMemo(
     () =>

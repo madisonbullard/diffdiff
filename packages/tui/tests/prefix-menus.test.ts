@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vite-plus/test";
-import { buildReverseKeymaps, getDefaultKeymaps } from "../src/app/keymap/index.ts";
+import type { KeyTrieNode } from "../src/app/keymap/types.ts";
 import * as A from "../src/app/keymap/actions.ts";
 import { getPrefixMenuCommands, getPrefixMenuConfig } from "../src/app/commands/prefix-menus.ts";
+import { MutableTrieNode } from "../src/app/keymap/trie.ts";
+import type { KeymapMode } from "../src/app/shell/keymap-mode.ts";
 
 describe("prefix menus", () => {
   test("registers picker metadata for the shared command-picker prefixes", () => {
@@ -19,63 +21,48 @@ describe("prefix menus", () => {
     });
   });
 
-  test("builds goto picker commands from prefix metadata without app commands", () => {
-    const reverseKeymaps = buildReverseKeymaps(getDefaultKeymaps());
+  test("derives picker commands from the live prefix node", () => {
+    const diff = new MutableTrieNode();
+    const goto = diff.getOrCreateChild("g", { label: "Goto" });
+    goto.setAction("x", A.SYSTEM_HELP);
+    goto.setAction("y", A.GOTO_FIRST_FILE);
+    goto.setAction("z", A.GOTO_FIRST_FILE);
+    const keymaps = new Map<KeymapMode, KeyTrieNode>([["diff", diff.freeze()]]);
 
-    expect(getPrefixMenuCommands([], "g", reverseKeymaps, "diff")).toEqual([
+    expect(
+      getPrefixMenuCommands(
+        [
+          {
+            category: "System",
+            run: () => undefined,
+            title: "Open help",
+            value: A.SYSTEM_HELP,
+          },
+        ],
+        "g",
+        keymaps,
+        "diff",
+      ),
+    ).toEqual([
+      {
+        actionId: A.SYSTEM_HELP,
+        enabled: true,
+        label: "x",
+        title: "Open help",
+      },
       {
         actionId: A.GOTO_FIRST_FILE,
         enabled: true,
-        label: "g",
+        label: "y / z",
         title: "Jump to first file",
-      },
-      {
-        actionId: A.GOTO_LAST_FILE,
-        enabled: true,
-        label: "e",
-        title: "Jump to last file",
-      },
-      {
-        actionId: A.GOTO_WINDOW_TOP,
-        enabled: true,
-        label: "t",
-        title: "Jump to top",
-      },
-      {
-        actionId: A.GOTO_WINDOW_CENTER,
-        enabled: true,
-        label: "c",
-        title: "Jump to center",
-      },
-      {
-        actionId: A.GOTO_WINDOW_BOTTOM,
-        enabled: true,
-        label: "b",
-        title: "Jump to bottom",
-      },
-      {
-        actionId: A.GOTO_NEXT_HUNK,
-        enabled: true,
-        label: "n",
-        title: "Jump to next hunk",
-      },
-      {
-        actionId: A.GOTO_PREVIOUS_HUNK,
-        enabled: true,
-        label: "p",
-        title: "Jump to previous hunk",
-      },
-      {
-        actionId: A.GOTO_LAST_ACCESSED_FILE,
-        enabled: true,
-        label: "a",
-        title: "Jump to alternate file",
       },
     ]);
   });
 
   test("uses app command metadata for shared modal picker entries", () => {
-    const reverseKeymaps = buildReverseKeymaps(getDefaultKeymaps());
+    const diff = new MutableTrieNode();
+    diff.getOrCreateChild("space", { label: "Modal Picker" }).setAction("l", A.COMPARISON_LIST);
+    const keymaps = new Map<KeymapMode, KeyTrieNode>([["diff", diff.freeze()]]);
 
     expect(
       getPrefixMenuCommands(
@@ -89,7 +76,7 @@ describe("prefix menus", () => {
           },
         ],
         "space",
-        reverseKeymaps,
+        keymaps,
         "diff",
       ),
     ).toContainEqual({
