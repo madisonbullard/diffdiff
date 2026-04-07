@@ -10,6 +10,7 @@ import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/c
 import type { MutableRefObject } from "react";
 import type { FileCardPreviewViewport } from "../../components/file-card.tsx";
 import { PrefixPickerOverlay } from "../../components/prefix-picker-overlay.tsx";
+import { VisibleCommentRelativeTimeProvider } from "../review/visible-comment-relative-time.tsx";
 import type { SessionDiagnosticEvent } from "../diagnostics/session-events.ts";
 import type { AppCommand } from "../commands/registry.ts";
 import type { PrefixMenuCommand, PrefixMenuConfig } from "../commands/prefix-menus.ts";
@@ -264,127 +265,135 @@ export function DiffdiffAppView({
         theme={theme}
       />
 
-      <box width="100%" flexGrow={1}>
-        <box width="100%" height="100%" flexDirection="row">
-          <AppSidebar
-            activeOverlay={activeOverlay}
-            activePane={activePane}
-            collapsedDirectories={collapsedDirectories}
-            collapsedPaths={collapsedPaths}
-            handleFileTreeMouseUp={handleFileTreeMouseUp}
-            reviewedPaths={reviewedPaths}
-            selectedFileIndex={selectedFileIndex}
-            selectedTreePath={selectedTreePath}
-            session={session}
-            sidebarWidth={sidebarWidth}
-            theme={theme}
-            treeRowRefCallbacks={treeRowRefCallbacks}
-            treeScrollRef={treeScrollRef}
-            treeSummaryLabels={treeSummaryLabels}
-            visibleTreeNodes={visibleTreeNodes}
-          />
+      <VisibleCommentRelativeTimeProvider
+        activeOverlay={activeOverlay}
+        collapsedCommentStates={collapsedCommentStates}
+        fileCardBodyVisibility={fileCardBodyVisibility}
+        reviewThreadsByPath={reviewThreadsByPath}
+        session={session}
+      >
+        <box width="100%" flexGrow={1}>
+          <box width="100%" height="100%" flexDirection="row">
+            <AppSidebar
+              activeOverlay={activeOverlay}
+              activePane={activePane}
+              collapsedDirectories={collapsedDirectories}
+              collapsedPaths={collapsedPaths}
+              handleFileTreeMouseUp={handleFileTreeMouseUp}
+              reviewedPaths={reviewedPaths}
+              selectedFileIndex={selectedFileIndex}
+              selectedTreePath={selectedTreePath}
+              session={session}
+              sidebarWidth={sidebarWidth}
+              theme={theme}
+              treeRowRefCallbacks={treeRowRefCallbacks}
+              treeScrollRef={treeScrollRef}
+              treeSummaryLabels={treeSummaryLabels}
+              visibleTreeNodes={visibleTreeNodes}
+            />
 
-          <AppDiffPane
-            activeFileIndex={activeFileIndex}
-            activeOverlay={activeOverlay}
+            <AppDiffPane
+              activeFileIndex={activeFileIndex}
+              activeOverlay={activeOverlay}
+              activePane={activePane}
+              collapsedCommentStates={collapsedCommentStates}
+              collapsedPaths={collapsedPaths}
+              diffPaneWidth={diffPaneWidth}
+              diffView={diffView}
+              estimatedFileCardBodyHeights={estimatedFileCardBodyHeights}
+              fileCardBodyVisibility={fileCardBodyVisibility}
+              fileCardPreviewViewports={fileCardPreviewViewports}
+              fileCardRootRefs={fileCardRootRefs}
+              reviewThreadsByPath={reviewThreadsByPath}
+              reviewedPaths={reviewedPaths}
+              scrollRef={scrollRef}
+              selectedFileIndex={selectedFileIndex}
+              selectedDiffRowRef={selectedDiffRowRef}
+              showSelectedReviewAnchor={showSelectedReviewAnchor}
+              selectedReviewAnchor={selectedReviewAnchor}
+              selectedReviewComment={selectedReviewComment}
+              selectedReviewThread={selectedReviewThread}
+              session={session}
+              stickyFile={stickyFile}
+              syntaxStyle={syntaxStyle}
+              theme={theme}
+              toggleReviewThreadCollapsed={toggleReviewThreadCollapsed}
+            />
+          </box>
+
+          {activePrefixMenu?.picker != null ? (
+            <PrefixPickerOverlay
+              commands={activePrefixMenuCommands}
+              prefixMenu={activePrefixMenu}
+              theme={theme}
+            />
+          ) : null}
+
+          <DiffdiffAppDialogs
+            activeDialog={activeOverlay}
+            activeListView={activeListView}
             activePane={activePane}
-            collapsedCommentStates={collapsedCommentStates}
-            collapsedPaths={collapsedPaths}
-            diffPaneWidth={diffPaneWidth}
-            diffView={diffView}
-            estimatedFileCardBodyHeights={estimatedFileCardBodyHeights}
-            fileCardBodyVisibility={fileCardBodyVisibility}
-            fileCardPreviewViewports={fileCardPreviewViewports}
-            fileCardRootRefs={fileCardRootRefs}
-            reviewThreadsByPath={reviewThreadsByPath}
-            reviewedPaths={reviewedPaths}
-            scrollRef={scrollRef}
-            selectedFileIndex={selectedFileIndex}
-            selectedDiffRowRef={selectedDiffRowRef}
-            showSelectedReviewAnchor={showSelectedReviewAnchor}
-            selectedReviewAnchor={selectedReviewAnchor}
-            selectedReviewComment={selectedReviewComment}
-            selectedReviewThread={selectedReviewThread}
+            branchItems={branchItems}
+            branchListFilters={branchListFilters}
+            branchListIndex={branchListIndex}
+            canApplyCleanup={canApplyCleanup}
+            cleanupCandidateIndex={cleanupCandidateIndex}
+            cleanupCandidates={cleanupCandidates}
+            cleanupSelection={cleanupSelection}
+            commandBindingLabels={commandBindingLabels}
+            commandIndex={commandIndex}
+            commandQuery={commandQuery}
+            commandQueryCursorOffset={commandQueryCursorOffset}
+            commitListIndex={commitListIndex}
+            commitSearchActive={commitSearchActive}
+            commitSearchQuery={commitSearchQuery}
+            commitSearchCursorOffset={commitSearchCursorOffset}
+            diagnosticErrorMessage={diagnosticErrorMessage}
+            diagnosticEventIndex={diagnosticEventIndex}
+            diagnosticEvents={diagnosticEvents}
+            diagnosticLogFilePath={diagnosticLogFilePath}
+            draftPrCount={draftPrCount}
+            filteredCommands={filteredCommands}
+            helpCommands={helpCommands}
+            filteredCommitItems={filteredCommitItems}
+            filterIndex={filterIndex}
+            isDiagnosticsLoading={isDiagnosticsLoading}
+            isSubmittingReviewAction={isSubmittingReviewAction}
+            localBranchCount={localBranchCount}
+            mergeBodyScrollRef={mergeBodyScrollRef}
+            mergeCommitMessage={mergeCommitMessage}
+            mergeCommitMessageCursorOffset={mergeCommitMessageCursorOffset}
+            mergeCommitTitle={mergeCommitTitle}
+            mergeCommitTitleCursorOffset={mergeCommitTitleCursorOffset}
+            mergeConfirmOpen={showMergeConfirmModal}
+            mergeMethod={mergeMethod}
+            mergeModalField={mergeModalField}
+            openPrCount={openPrCount}
+            pullRequestListIndex={pullRequestListIndex}
+            pullRequestSearchActive={pullRequestSearchActive}
+            pullRequestSearchQuery={pullRequestSearchQuery}
+            pullRequestSearchCursorOffset={pullRequestSearchCursorOffset}
+            reviewRequestedPrCount={reviewRequestedPrCount}
+            filteredPullRequests={filteredPullRequests}
+            isPullRequestListLoading={isPullRequestListLoading}
+            remoteBranchCount={remoteBranchCount}
+            reviewComposerBody={reviewComposerBody}
+            reviewComposerCursorOffset={reviewComposerCursorOffset}
+            reviewComposerAutocomplete={reviewComposerAutocomplete}
+            reviewComposerAutocompleteIndex={reviewComposerAutocompleteIndex}
+            reviewComposerContext={reviewComposerContext}
+            reviewComposerHistoryEntries={reviewComposerHistoryEntries}
+            reviewedCount={reviewedCount}
+            reviewSubmissionBody={reviewSubmissionBody}
+            reviewSubmissionCursorOffset={reviewSubmissionCursorOffset}
+            reviewSubmissionEventIndex={reviewSubmissionEventIndex}
+            selectedPullRequestConversationItemId={pullRequestConversationItemId}
             session={session}
-            stickyFile={stickyFile}
-            syntaxStyle={syntaxStyle}
+            terminalWidth={terminalWidth}
             theme={theme}
-            toggleReviewThreadCollapsed={toggleReviewThreadCollapsed}
           />
         </box>
-
-        {activePrefixMenu?.picker != null ? (
-          <PrefixPickerOverlay
-            commands={activePrefixMenuCommands}
-            prefixMenu={activePrefixMenu}
-            theme={theme}
-          />
-        ) : null}
-
-        <DiffdiffAppDialogs
-          activeDialog={activeOverlay}
-          activeListView={activeListView}
-          activePane={activePane}
-          branchItems={branchItems}
-          branchListFilters={branchListFilters}
-          branchListIndex={branchListIndex}
-          canApplyCleanup={canApplyCleanup}
-          cleanupCandidateIndex={cleanupCandidateIndex}
-          cleanupCandidates={cleanupCandidates}
-          cleanupSelection={cleanupSelection}
-          commandBindingLabels={commandBindingLabels}
-          commandIndex={commandIndex}
-          commandQuery={commandQuery}
-          commandQueryCursorOffset={commandQueryCursorOffset}
-          commitListIndex={commitListIndex}
-          commitSearchActive={commitSearchActive}
-          commitSearchQuery={commitSearchQuery}
-          commitSearchCursorOffset={commitSearchCursorOffset}
-          diagnosticErrorMessage={diagnosticErrorMessage}
-          diagnosticEventIndex={diagnosticEventIndex}
-          diagnosticEvents={diagnosticEvents}
-          diagnosticLogFilePath={diagnosticLogFilePath}
-          draftPrCount={draftPrCount}
-          filteredCommands={filteredCommands}
-          helpCommands={helpCommands}
-          filteredCommitItems={filteredCommitItems}
-          filterIndex={filterIndex}
-          isDiagnosticsLoading={isDiagnosticsLoading}
-          isSubmittingReviewAction={isSubmittingReviewAction}
-          localBranchCount={localBranchCount}
-          mergeBodyScrollRef={mergeBodyScrollRef}
-          mergeCommitMessage={mergeCommitMessage}
-          mergeCommitMessageCursorOffset={mergeCommitMessageCursorOffset}
-          mergeCommitTitle={mergeCommitTitle}
-          mergeCommitTitleCursorOffset={mergeCommitTitleCursorOffset}
-          mergeConfirmOpen={showMergeConfirmModal}
-          mergeMethod={mergeMethod}
-          mergeModalField={mergeModalField}
-          openPrCount={openPrCount}
-          pullRequestListIndex={pullRequestListIndex}
-          pullRequestSearchActive={pullRequestSearchActive}
-          pullRequestSearchQuery={pullRequestSearchQuery}
-          pullRequestSearchCursorOffset={pullRequestSearchCursorOffset}
-          reviewRequestedPrCount={reviewRequestedPrCount}
-          filteredPullRequests={filteredPullRequests}
-          isPullRequestListLoading={isPullRequestListLoading}
-          remoteBranchCount={remoteBranchCount}
-          reviewComposerBody={reviewComposerBody}
-          reviewComposerCursorOffset={reviewComposerCursorOffset}
-          reviewComposerAutocomplete={reviewComposerAutocomplete}
-          reviewComposerAutocompleteIndex={reviewComposerAutocompleteIndex}
-          reviewComposerContext={reviewComposerContext}
-          reviewComposerHistoryEntries={reviewComposerHistoryEntries}
-          reviewedCount={reviewedCount}
-          reviewSubmissionBody={reviewSubmissionBody}
-          reviewSubmissionCursorOffset={reviewSubmissionCursorOffset}
-          reviewSubmissionEventIndex={reviewSubmissionEventIndex}
-          selectedPullRequestConversationItemId={pullRequestConversationItemId}
-          session={session}
-          terminalWidth={terminalWidth}
-          theme={theme}
-        />
-      </box>
+      </VisibleCommentRelativeTimeProvider>
 
       <AppFooter
         footerEvent={footerEvent}

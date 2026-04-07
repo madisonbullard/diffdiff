@@ -1,6 +1,7 @@
 import type { GitHubPullRequestComment, GitHubPullRequestReviewThread } from "@diffdiff/core";
 import { getCollapseToggleGlyph } from "../components/shared.tsx";
 import type { UiTheme } from "../theme.ts";
+import { CommentTimestamp, ReviewMetaSeparator } from "./comment-metadata.tsx";
 import { getReviewThreadCollapseKey, getReviewThreadDefaultCollapsed } from "./collapse-state.ts";
 
 export function ReviewThreadList({
@@ -91,11 +92,11 @@ function ReviewThreadCard({
             <span fg={theme.accent}>{getCollapseToggleGlyph(isCollapsed)}</span>
             <span> </span>
             <span fg={theme.text}>{thread.comments[0]?.author.login ?? "unknown"}</span>
-            <span fg={theme.border}>{"  │  "}</span>
+            <ReviewMetaSeparator theme={theme} />
             <span>{formatThreadAnchor(thread)}</span>
             {thread.isOutdated ? (
               <>
-                <span fg={theme.border}>{"  │  "}</span>
+                <ReviewMetaSeparator theme={theme} />
                 <span fg={theme.warning}>outdated</span>
               </>
             ) : null}
@@ -144,7 +145,9 @@ function ReviewCommentList({
           >
             {selectedCommentId === comment.id ? <span fg={theme.accent}>{"> "}</span> : null}
             {hideAuthor ? null : <span fg={theme.accent}>{comment.author.login}</span>}
-            {hideAuthor ? null : <span fg={theme.border}>{": "}</span>}
+            {hideAuthor ? null : <ReviewMetaSeparator theme={theme} />}
+            <CommentTimestamp theme={theme} value={comment.createdAt} />
+            <span fg={theme.border}>{": "}</span>
             <span>{comment.body}</span>
             {comment.isOutdated ? <span fg={theme.warning}>{"  [outdated]"}</span> : null}
           </text>

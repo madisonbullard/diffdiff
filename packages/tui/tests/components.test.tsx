@@ -11,6 +11,7 @@ import { HelpModal } from "../src/components/help-modal.tsx";
 import { ListFilterModal } from "../src/components/list-filter-modal.tsx";
 import { PrefixPickerOverlay } from "../src/components/prefix-picker-overlay.tsx";
 import { PullRequestListModal } from "../src/components/pull-request-list-modal.tsx";
+import { ReviewRelativeTimeProvider } from "../src/review/comment-metadata.tsx";
 import { PullRequestCommentsModal } from "../src/review/comments-modal.tsx";
 import type { PrefixMenuCommand, PrefixMenuConfig } from "../src/app/commands/prefix-menus.ts";
 import { getPrefixMenuConfig } from "../src/app/commands/prefix-menus.ts";
@@ -25,6 +26,7 @@ import {
 
 const theme = getUiTheme("pierre-dark");
 const syntaxStyle = { kind: "syntax-style" } as unknown as import("@opentui/core").SyntaxStyle;
+const NOW_MS = Date.parse("2026-04-07T12:01:00Z");
 
 beforeEach(() => {
   (
@@ -888,49 +890,66 @@ test("renders syntax-highlighted side-by-side rows", () => {
 
 test("renders inline GitHub review threads under matching diff lines", () => {
   const tree = render(
-    <FileCard
-      file={createPreparedFile()}
-      diffView="unified"
-      isCollapsed={false}
-      isReviewed={false}
-      isSelected={false}
-      reviewThreads={[
-        {
-          comments: [
-            {
-              author: { login: "octocat", url: "https://github.com/octocat" },
-              body: "Please rename this variable.",
-              createdAt: "2026-04-01T12:01:00Z",
-              id: 101,
-              isOutdated: false,
-              line: 1,
-              nodeId: "PRRC_101",
-              path: "src/app.ts",
-              reviewId: 700,
-              side: "RIGHT",
-              updatedAt: "2026-04-01T12:01:00Z",
-              url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r101",
-            },
-          ],
-          id: "101",
-          isOutdated: false,
-          line: 1,
-          path: "src/app.ts",
-          reviewId: 700,
-          side: "RIGHT",
-        },
-      ]}
-      syntaxStyle={syntaxStyle}
-      terminalWidth={160}
-      theme={theme}
-    />,
+    <ReviewRelativeTimeProvider nowMs={NOW_MS}>
+      <FileCard
+        file={createPreparedFile()}
+        diffView="unified"
+        isCollapsed={false}
+        isReviewed={false}
+        isSelected={false}
+        reviewThreads={[
+          {
+            comments: [
+              {
+                author: { login: "octocat", url: "https://github.com/octocat" },
+                body: "Please rename this variable.",
+                createdAt: "2026-04-01T12:01:00Z",
+                id: 101,
+                isOutdated: false,
+                line: 1,
+                nodeId: "PRRC_101",
+                path: "src/app.ts",
+                reviewId: 700,
+                side: "RIGHT",
+                updatedAt: "2026-04-01T12:01:00Z",
+                url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r101",
+              },
+            ],
+            id: "101",
+            isOutdated: false,
+            line: 1,
+            path: "src/app.ts",
+            reviewId: 700,
+            side: "RIGHT",
+          },
+        ]}
+        syntaxStyle={syntaxStyle}
+        terminalWidth={160}
+        theme={theme}
+      />
+    </ReviewRelativeTimeProvider>,
   );
 
   const text = collectText(tree.toJSON());
 
   expect(text).toContain("Please rename this variable.");
   expect(text).toContain("src/app.ts:1");
+  expect(text).toContain("6 days ago");
   expect(text.match(/octocat/g)).toHaveLength(1);
+});
+
+test("renders relative timestamps for PR conversation items", () => {
+  const tree = render(
+    <ReviewRelativeTimeProvider nowMs={NOW_MS}>
+      <PullRequestCommentsModal
+        pullRequest={createPullRequestDetail()}
+        selectedItemId="review:700"
+        theme={theme}
+      />
+    </ReviewRelativeTimeProvider>,
+  );
+
+  expect(collectText(tree.toJSON())).toContain("6 days ago");
 });
 
 test("shows an empty file placeholder for empty added files", () => {

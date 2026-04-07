@@ -12,6 +12,16 @@ const REVIEW_SUBMISSION_EVENTS: readonly GitHubReviewSubmissionEvent[] = [
 ];
 
 const MERGE_METHODS: readonly GitHubMergeMethod[] = ["merge", "squash"];
+const SECOND_IN_MS = 1_000;
+const MINUTE_IN_MS = 60 * SECOND_IN_MS;
+const HOUR_IN_MS = 60 * MINUTE_IN_MS;
+const DAY_IN_MS = 24 * HOUR_IN_MS;
+const WEEK_IN_MS = 7 * DAY_IN_MS;
+
+export interface RelativeTimestampInfo {
+  label: string;
+  nextRefreshAt?: number;
+}
 
 export function formatChecksSummary(pullRequest: GitHubPullRequestDetail): string {
   if (pullRequest.checks.total === 0) {
@@ -64,13 +74,60 @@ export function getMergeStatusLabel(pullRequest: GitHubPullRequestDetail): strin
   return pullRequest.merge.mergeableState ?? "merge blocked";
 }
 
-export function formatTimestamp(value: string): string {
+export function formatRelativeTimestamp(value: string, nowMs = Date.now()): string {
+  return getRelativeTimestampInfo(value, nowMs).label;
+}
+
+export function getRelativeTimestampInfo(value: string, nowMs = Date.now()): RelativeTimestampInfo {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return value;
+    return { label: value };
   }
 
-  return date.toISOString().slice(0, 16).replace("T", " ");
+  const timestampMs = date.getTime();
+  const elapsedMs = Math.max(0, nowMs - timestampMs);
+
+  if (elapsedMs < MINUTE_IN_MS) {
+    const seconds = Math.floor(elapsedMs / SECOND_IN_MS);
+    return {
+      label: formatRelativeUnit(seconds, "second"),
+      nextRefreshAt: timestampMs + (seconds + 1) * SECOND_IN_MS,
+    };
+  }
+
+  if (elapsedMs < DAY_IN_MS) {
+    if (elapsedMs < HOUR_IN_MS) {
+      const minutes = Math.floor(elapsedMs / MINUTE_IN_MS);
+      return {
+        label: formatRelativeUnit(minutes, "minute"),
+        nextRefreshAt: timestampMs + (minutes + 1) * MINUTE_IN_MS,
+      };
+    }
+
+    const hours = Math.floor(elapsedMs / HOUR_IN_MS);
+    return {
+      label: formatRelativeUnit(hours, "hour"),
+      nextRefreshAt: timestampMs + (hours + 1) * HOUR_IN_MS,
+    };
+  }
+
+  if (elapsedMs < WEEK_IN_MS) {
+    const days = Math.floor(elapsedMs / DAY_IN_MS);
+    return {
+      label: formatRelativeUnit(days, "day"),
+      nextRefreshAt: timestampMs + (days + 1) * DAY_IN_MS,
+    };
+  }
+
+  const weeks = Math.floor(elapsedMs / WEEK_IN_MS);
+  return {
+    label: formatRelativeUnit(weeks, "week"),
+    nextRefreshAt: timestampMs + (weeks + 1) * WEEK_IN_MS,
+  };
+}
+
+function formatRelativeUnit(value: number, unit: "second" | "minute" | "hour" | "day" | "week") {
+  return `${value} ${unit}${value === 1 ? "" : "s"} ago`;
 }
 
 export function getChecksColor(pullRequest: GitHubPullRequestDetail, theme: UiTheme): string {

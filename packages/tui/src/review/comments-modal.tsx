@@ -1,7 +1,8 @@
 import type { GitHubPullRequestConversationItem, GitHubPullRequestDetail } from "@diffdiff/core";
 import type { UiTheme } from "../theme.ts";
+import { CommentTimestamp, ReviewMetaSeparator } from "./comment-metadata.tsx";
 import { MODAL_OVERLAY } from "./shared.tsx";
-import { formatTimestamp, getReviewStateColor } from "./formatting.ts";
+import { getReviewStateColor } from "./formatting.ts";
 
 export function PullRequestCommentsModal({
   selectedItemId,
@@ -140,12 +141,12 @@ function ConversationItemCard({
       <text fg={theme.textMuted} wrapMode="none">
         <span fg={isSelected ? theme.accent : theme.border}>{isSelected ? "> " : "  "}</span>
         <span fg={theme.text}>{item.author.login}</span>
-        <span fg={theme.border}>{"  │  "}</span>
+        <ReviewMetaSeparator theme={theme} />
         <span fg={accentColor}>
           {item.kind === "review" ? (item.reviewState ?? "review").toLowerCase() : "pr comment"}
         </span>
-        <span fg={theme.border}>{"  │  "}</span>
-        <span>{formatTimestamp(item.createdAt)}</span>
+        <ReviewMetaSeparator theme={theme} />
+        <CommentTimestamp theme={theme} value={item.createdAt || item.updatedAt} />
       </text>
       <text fg={theme.text} wrapMode="word">
         {item.body}

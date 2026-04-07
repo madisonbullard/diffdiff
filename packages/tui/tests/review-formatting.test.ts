@@ -1,6 +1,12 @@
 import type { GitHubPullRequestDetail } from "@diffdiff/core";
 import { expect, test } from "vite-plus/test";
-import { formatChecksSummary } from "../src/review/formatting.ts";
+import {
+  formatChecksSummary,
+  formatRelativeTimestamp,
+  getRelativeTimestampInfo,
+} from "../src/review/formatting.ts";
+
+const NOW_MS = Date.parse("2026-04-07T12:00:00Z");
 
 function createPullRequest(
   overrides: Partial<GitHubPullRequestDetail["checks"]> = {},
@@ -82,4 +88,50 @@ test("formatChecksSummary shows no checks when none ran", () => {
   });
 
   expect(formatChecksSummary(pullRequest)).toBe("no checks");
+});
+
+test("formatRelativeTimestamp renders second-level labels for fresh comments", () => {
+  expect(formatRelativeTimestamp("2026-04-07T11:59:31Z", NOW_MS)).toBe("29 seconds ago");
+});
+
+test("formatRelativeTimestamp renders minute-level labels after the first minute", () => {
+  expect(formatRelativeTimestamp("2026-04-07T11:01:00Z", NOW_MS)).toBe("59 minutes ago");
+});
+
+test("formatRelativeTimestamp renders hour-level labels after the first hour", () => {
+  expect(formatRelativeTimestamp("2026-04-06T13:00:00Z", NOW_MS)).toBe("23 hours ago");
+});
+
+test("formatRelativeTimestamp renders day-level labels for the first week", () => {
+  expect(formatRelativeTimestamp("2026-04-01T12:00:00Z", NOW_MS)).toBe("6 days ago");
+});
+
+test("formatRelativeTimestamp renders week-level labels after the first week", () => {
+  expect(formatRelativeTimestamp("2026-03-24T12:00:00Z", NOW_MS)).toBe("2 weeks ago");
+});
+
+test("getRelativeTimestampInfo reports the next second boundary", () => {
+  expect(getRelativeTimestampInfo("2026-04-07T11:59:01Z", NOW_MS)).toEqual({
+    label: "59 seconds ago",
+    nextRefreshAt: Date.parse("2026-04-07T12:00:01Z"),
+  });
+});
+
+test("getRelativeTimestampInfo reports the next minute, hour, day, and week boundaries", () => {
+  expect(getRelativeTimestampInfo("2026-04-07T11:01:00Z", NOW_MS)).toEqual({
+    label: "59 minutes ago",
+    nextRefreshAt: Date.parse("2026-04-07T12:01:00Z"),
+  });
+  expect(getRelativeTimestampInfo("2026-04-06T13:00:00Z", NOW_MS)).toEqual({
+    label: "23 hours ago",
+    nextRefreshAt: Date.parse("2026-04-07T13:00:00Z"),
+  });
+  expect(getRelativeTimestampInfo("2026-04-01T12:00:00Z", NOW_MS)).toEqual({
+    label: "6 days ago",
+    nextRefreshAt: Date.parse("2026-04-08T12:00:00Z"),
+  });
+  expect(getRelativeTimestampInfo("2026-03-31T12:00:00Z", NOW_MS)).toEqual({
+    label: "1 week ago",
+    nextRefreshAt: Date.parse("2026-04-14T12:00:00Z"),
+  });
 });
