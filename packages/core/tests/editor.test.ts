@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
-import { openFileInEditor, resolvePreferredEditor } from "../src/editor.ts";
+import { openExternalEditor, openFileInEditor, resolvePreferredEditor } from "../src/editor.ts";
 
 const temporaryDirectories: string[] = [];
 
@@ -91,5 +91,57 @@ describe("openFileInEditor", () => {
         runEditorCommand: vi.fn(async () => undefined),
       }),
     ).rejects.toThrow("missing.ts is not available in the working tree.");
+  });
+});
+
+describe("openExternalEditor", () => {
+  test("opens a temporary buffer in the preferred editor and returns the edited contents", async () => {
+    const repositoryRootPath = await mkdtemp(join(tmpdir(), "diffdiff-editor-"));
+    temporaryDirectories.push(repositoryRootPath);
+
+    const runEditorCommand = vi.fn(async ({ args }: { args: string[] }) => {
+      await writeFile(args[0]!, "updated body\n", "utf8");
+    });
+    const stdin = {
+      isTTY: true,
+      pause: vi.fn(),
+      resume: vi.fn(),
+      setRawMode: vi.fn(),
+    };
+
+    const result = await openExternalEditor({
+      env: { EDITOR: "vim" },
+      fileExtension: ".md",
+      initialValue: "original body\n",
+      repositoryRootPath,
+      runEditorCommand,
+      stdin,
+      tempFileName: "REVIEW_COMMENT.md",
+    });
+
+    expect(result).toBe("updated body\n");
+    expect(runEditorCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        args: [expect.stringMatching(/REVIEW_COMMENT\.md$/u)],
+        command: "vim",
+        cwd: repositoryRootPath,
+      }),
+    );
+    expect(stdin.setRawMode).toHaveBeenNthCalledWith(1, false);
+    expect(stdin.setRawMode).toHaveBeenNthCalledWith(2, true);
+  });
+
+  test("fails when no editor environment variable is configured", async () => {
+    const repositoryRootPath = await mkdtemp(join(tmpdir(), "diffdiff-editor-"));
+    temporaryDirectories.push(repositoryRootPath);
+
+    await expect(
+      openExternalEditor({
+        env: { EDITOR: "", VISUAL: "" },
+        initialValue: "draft",
+        repositoryRootPath,
+        runEditorCommand: vi.fn(async () => undefined),
+      }),
+    ).rejects.toThrow("Set $VISUAL or $EDITOR to open files in an editor.");
   });
 });

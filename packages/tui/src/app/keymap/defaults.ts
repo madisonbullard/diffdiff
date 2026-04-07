@@ -505,7 +505,11 @@ const filtersMode = buildMode([
 const commentMode = buildMode([
   ["escape", A.MODAL_DISMISS],
   ["backspace", A.TEXT_BACKSPACE],
+  ["ctrl+e", A.TEXT_OPEN_EXTERNAL_EDITOR],
+  ["down", A.LIST_MOVE_DOWN],
+  ["up", A.LIST_MOVE_UP],
   ["shift+return", A.TEXT_NEWLINE],
+  ["tab", A.LIST_ACCEPT],
   ["return", A.LIST_ACCEPT],
 ]);
 
@@ -531,6 +535,7 @@ const submitReviewMode = buildModeWithPrefixes(
     ["down", A.LIST_MOVE_DOWN],
     ["up", A.LIST_MOVE_UP],
     ["backspace", A.TEXT_BACKSPACE],
+    ["ctrl+e", A.TEXT_OPEN_EXTERNAL_EDITOR],
     ["shift+return", A.TEXT_NEWLINE],
     ["return", A.SUBMIT_REVIEW_SUBMIT],
   ],
@@ -561,6 +566,7 @@ const mergeTitleMode = buildMode([
   ["escape", A.MODAL_DISMISS],
   ["tab", A.MERGE_NEXT_FIELD],
   ["backspace", A.TEXT_BACKSPACE],
+  ["ctrl+e", A.TEXT_OPEN_EXTERNAL_EDITOR],
   ["return", A.MERGE_CONFIRM],
 ]);
 
@@ -568,6 +574,7 @@ const mergeBodyMode = buildMode([
   ["escape", A.MODAL_DISMISS],
   ["tab", A.MERGE_NEXT_FIELD],
   ["backspace", A.TEXT_BACKSPACE],
+  ["ctrl+e", A.TEXT_OPEN_EXTERNAL_EDITOR],
   ["shift+return", A.TEXT_NEWLINE],
   ["return", A.MERGE_CONFIRM],
 ]);

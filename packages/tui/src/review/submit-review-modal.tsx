@@ -55,6 +55,10 @@ export function SubmitReviewModal({
             </span>
             <span>{" move while typing  "}</span>
             <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" ctrl+e "}
+            </span>
+            <span>{" editor  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
               {" enter "}
             </span>
             <span>{" submit  "}</span>
@@ -116,7 +120,8 @@ export function SubmitReviewModal({
           <AsciiLoadingLabel color={theme.accent} message="Submitting review..." theme={theme} />
         ) : (
           <text fg={theme.textMuted} wrapMode="none">
-            Optional review summary. Use shift+enter for a newline.
+            Optional review summary. Use shift+enter for a newline or ctrl+e for the external
+            editor.
           </text>
         )}
       </box>

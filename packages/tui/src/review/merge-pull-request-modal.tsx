@@ -68,6 +68,10 @@ export function MergePullRequestModal({
             </span>
             <span>{" next field  "}</span>
             <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" ctrl+e "}
+            </span>
+            <span>{" editor  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
               {" enter "}
             </span>
             <span>{" confirm  "}</span>
@@ -174,7 +178,7 @@ export function MergePullRequestModal({
         ) : (
           <text fg={canSubmit ? theme.textMuted : theme.warning} wrapMode="word">
             {canSubmit
-              ? "Edit the merge title/body, then press enter to open the confirmation step."
+              ? "Edit the merge title/body, use ctrl+e for the external editor, then press enter to open the confirmation step."
               : mergeBlockedReason}
           </text>
         )}

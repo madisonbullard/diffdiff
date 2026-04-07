@@ -7,7 +7,7 @@ import type {
 } from "@diffdiff/core";
 import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core";
 import { useRenderer, useTerminalDimensions } from "@opentui/react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   buildReverseKeymaps,
   createKeymapRuntime,
@@ -30,7 +30,10 @@ import type {
   SessionActivityUpdate,
 } from "./app-props.ts";
 import type { ComparisonBrowserData, DiffdiffAppState } from "./app-state.ts";
-import type { ReviewComposerTarget } from "../review/review-composer.ts";
+import {
+  createReviewComposerState,
+  loadReviewComposerHistoryEntries,
+} from "../review/review-composer-state.ts";
 import {
   buildBranchListItems,
   DEFAULT_BRANCH_LIST_FILTERS,
@@ -61,6 +64,7 @@ export function useDiffdiffAppState({
   initialOptions,
   initialReviewCache,
   initialSession,
+  loadReviewComposerHistory,
   initialUserKeymapConfig,
 }: Pick<
   DiffdiffAppProps,
@@ -68,6 +72,7 @@ export function useDiffdiffAppState({
   | "initialOptions"
   | "initialReviewCache"
   | "initialSession"
+  | "loadReviewComposerHistory"
   | "initialUserKeymapConfig"
 >): DiffdiffAppState {
   const launchInPullRequestList = initialOptions.initialListMode === "pull-requests";
@@ -170,10 +175,7 @@ export function useDiffdiffAppState({
     initialGitHubPreferences?.defaultMergeMethod == null ? "method" : "title",
   );
   const [mergeConfirmOpen, setMergeConfirmOpen] = useState(false);
-  const [reviewComposerTarget, setReviewComposerTarget] = useState<ReviewComposerTarget | null>(
-    null,
-  );
-  const [reviewComposerBody, setReviewComposerBody] = useState("");
+  const [reviewComposer, setReviewComposer] = useState(createReviewComposerState);
   const [pullRequestList, setPullRequestList] = useState<GitHubDashboardPullRequest[]>([]);
   const [pullRequestListIndex, setPullRequestListIndex] = useState(0);
   const [pullRequestSearchActive, setPullRequestSearchActive] = useState(false);
@@ -242,6 +244,29 @@ export function useDiffdiffAppState({
   );
   const terminalDimensions = useTerminalDimensions();
 
+  useEffect(() => {
+    if (loadReviewComposerHistory == null) {
+      return;
+    }
+
+    let cancelled = false;
+    void loadReviewComposerHistory()
+      .then((history) => {
+        if (cancelled) {
+          return;
+        }
+
+        setReviewComposer((currentReviewComposer) =>
+          loadReviewComposerHistoryEntries(currentReviewComposer, history),
+        );
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadReviewComposerHistory]);
+
   return {
     activeFileIndex,
     resolvedKeymaps,
@@ -307,8 +332,7 @@ export function useDiffdiffAppState({
     renderer,
     reviewCacheTimeoutRef,
     reviewedPaths,
-    reviewComposerBody,
-    reviewComposerTarget,
+    reviewComposer,
     reviewSubmissionBody,
     reviewSubmissionEventIndex,
     scrollRef,
@@ -364,8 +388,7 @@ export function useDiffdiffAppState({
     setPullRequestSearchQuery,
     setRefreshIndicatorLabel,
     setReviewedPaths,
-    setReviewComposerBody,
-    setReviewComposerTarget,
+    setReviewComposer,
     setReviewSubmissionBody,
     setReviewSubmissionEventIndex,
     setSelectedFileIndex,

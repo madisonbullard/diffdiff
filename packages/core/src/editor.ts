@@ -1,6 +1,7 @@
-import { access } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
-import { resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { logDiffdiffError, logDiffdiffInfo, logDiffdiffWarn } from "./logging.ts";
 
 interface EditorInputController {
@@ -16,6 +17,16 @@ interface OpenFileInEditorOptions {
   repositoryRootPath: string;
   runEditorCommand?: EditorCommandRunner;
   stdin?: EditorInputController;
+}
+
+interface OpenExternalEditorOptions {
+  env?: NodeJS.ProcessEnv;
+  fileExtension?: string;
+  initialValue: string;
+  repositoryRootPath: string;
+  runEditorCommand?: EditorCommandRunner;
+  stdin?: EditorInputController;
+  tempFileName?: string;
 }
 
 interface EditorCommandRequest {
@@ -46,19 +57,17 @@ export async function openFileInEditor({
   runEditorCommand,
   stdin,
 }: OpenFileInEditorOptions): Promise<void> {
-  const resolvedEnv = {
-    ...process.env,
-    ...env,
-  };
-  const editorCommand = resolvePreferredEditor(resolvedEnv);
-  if (editorCommand == null) {
-    logDiffdiffWarn("editor", "editor_launch_skipped", {
+  const { editorCommand, launchEditor, resolvedEnv, restoreTerminalInput } = prepareEditorLaunch({
+    env,
+    repositoryRootPath,
+    runEditorCommand,
+    scope: "editor",
+    skippedData: {
       filePath,
-      reason: "missing-editor-env",
       repositoryRootPath,
-    });
-    throw new Error("Set $VISUAL or $EDITOR to open files in an editor.");
-  }
+    },
+    stdin,
+  });
 
   const absoluteFilePath = resolve(repositoryRootPath, filePath);
 
@@ -74,9 +83,6 @@ export async function openFileInEditor({
     });
     throw new Error(`${filePath} is not available in the working tree.`);
   }
-
-  const restoreTerminalInput = suspendTerminalInput(stdin ?? process.stdin);
-  const launchEditor = runEditorCommand ?? runEditorCommandInShell;
 
   logDiffdiffInfo("editor", "editor_launch_started", {
     absoluteFilePath,
@@ -109,6 +115,119 @@ export async function openFileInEditor({
   } finally {
     restoreTerminalInput();
   }
+}
+
+export async function openExternalEditor({
+  env,
+  fileExtension,
+  initialValue,
+  repositoryRootPath,
+  runEditorCommand,
+  stdin,
+  tempFileName,
+}: OpenExternalEditorOptions): Promise<string> {
+  const { editorCommand, launchEditor, resolvedEnv, restoreTerminalInput } = prepareEditorLaunch({
+    env,
+    repositoryRootPath,
+    runEditorCommand,
+    scope: "external-editor",
+    skippedData: {
+      repositoryRootPath,
+      tempFileName,
+    },
+    stdin,
+  });
+  const temporaryDirectoryPath = await mkdtemp(join(tmpdir(), "diffdiff-editor-"));
+  const temporaryFilePath = join(
+    temporaryDirectoryPath,
+    tempFileName == null || tempFileName.trim() === ""
+      ? `diffdiff-edit${normalizeEditorFileExtension(fileExtension)}`
+      : tempFileName,
+  );
+
+  await writeFile(temporaryFilePath, initialValue, "utf8");
+
+  logDiffdiffInfo("external-editor", "external_editor_launch_started", {
+    command: editorCommand,
+    repositoryRootPath,
+    temporaryFilePath,
+  });
+
+  try {
+    await launchEditor({
+      args: [temporaryFilePath],
+      command: editorCommand,
+      cwd: repositoryRootPath,
+      env: resolvedEnv,
+    });
+    const content = await readFile(temporaryFilePath, "utf8");
+    logDiffdiffInfo("external-editor", "external_editor_launch_completed", {
+      command: editorCommand,
+      repositoryRootPath,
+      temporaryFilePath,
+    });
+    return content;
+  } catch (error) {
+    logDiffdiffError("external-editor", "external_editor_launch_failed", error, {
+      command: editorCommand,
+      repositoryRootPath,
+      temporaryFilePath,
+    });
+    throw error;
+  } finally {
+    restoreTerminalInput();
+    await rm(temporaryDirectoryPath, { force: true, recursive: true });
+  }
+}
+
+function normalizeEditorFileExtension(fileExtension: string | undefined): string {
+  if (fileExtension == null || fileExtension.trim() === "") {
+    return ".md";
+  }
+
+  return fileExtension.startsWith(".") ? fileExtension : `.${fileExtension}`;
+}
+
+function prepareEditorLaunch({
+  env,
+  repositoryRootPath,
+  runEditorCommand,
+  scope,
+  skippedData,
+  stdin,
+}: {
+  env?: NodeJS.ProcessEnv;
+  repositoryRootPath: string;
+  runEditorCommand?: EditorCommandRunner;
+  scope: "editor" | "external-editor";
+  skippedData: Record<string, unknown>;
+  stdin?: EditorInputController;
+}): {
+  editorCommand: string;
+  launchEditor: EditorCommandRunner;
+  resolvedEnv: NodeJS.ProcessEnv;
+  restoreTerminalInput: () => void;
+} {
+  const resolvedEnv = {
+    ...process.env,
+    ...env,
+  };
+  const editorCommand = resolvePreferredEditor(resolvedEnv);
+  if (editorCommand == null) {
+    logDiffdiffWarn(scope, `${scope}_launch_skipped`, {
+      ...skippedData,
+      reason: "missing-editor-env",
+      repositoryRootPath,
+    });
+    throw new Error("Set $VISUAL or $EDITOR to open files in an editor.");
+  }
+
+  return {
+    editorCommand,
+    launchEditor: runEditorCommand ?? runEditorCommandInShell,
+    resolvedEnv,
+    restoreTerminalInput: suspendTerminalInput(stdin ?? process.stdin),
+  };
 }
 
 function suspendTerminalInput(stdin: EditorInputController): () => void {

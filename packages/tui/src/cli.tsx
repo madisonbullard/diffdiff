@@ -8,10 +8,12 @@ import {
   flushDiffdiffLogs,
   GitHubPullRequestService,
   getRepositorySearchPath,
+  appendReviewComposerHistory,
   loadDiffdiffPreferences,
+  loadReviewComposerHistory,
   openFileInEditor,
+  openExternalEditor,
   loadReviewSession,
-  listDiffdiffSessions,
   loadReviewCache,
   logDiffdiffError,
   logDiffdiffInfo,
@@ -27,6 +29,13 @@ import {
 } from "@diffdiff/core";
 import { Command } from "commander";
 import packageJson from "../package.json";
+import {
+  describeSecureStore,
+  printSessionList,
+  resolveAuthToken,
+  type AuthLoginCommandOptions,
+  type SessionListCommandOptions,
+} from "./cli-helpers.ts";
 import { getStartupOptionValues } from "./command-options.ts";
 import { resolveLaunchOptionsFromTarget } from "./launch-target.ts";
 import { loadStartupPreparedReviewSession } from "./startup-session.ts";
@@ -46,15 +55,6 @@ interface LaunchCommandOptions {
   head?: string;
   repo?: string;
   verbose?: boolean;
-}
-
-interface AuthLoginCommandOptions {
-  token?: string;
-  tokenStdin?: boolean;
-}
-
-interface SessionListCommandOptions {
-  json?: boolean;
 }
 
 async function main(): Promise<void> {
@@ -314,6 +314,7 @@ async function launchTui(options: LaunchOptions): Promise<void> {
         initialOptions={launchOptions}
         initialSession={initialSession}
         listGitHubPullRequests={() => gitHubPullRequestService.listDashboardPullRequests()}
+        loadReviewComposerHistory={() => loadReviewComposerHistory()}
         loadComparisonBrowserData={async (nextOptions) => {
           const session = await loadReviewSession(nextOptions);
           return {
@@ -330,6 +331,7 @@ async function launchTui(options: LaunchOptions): Promise<void> {
         mergePullRequest={(reviewSession, input) =>
           gitHubPullRequestService.mergePullRequest(reviewSession, input)
         }
+        appendReviewComposerHistory={(entry) => appendReviewComposerHistory(entry)}
         onExit={() => {
           logDiffdiffInfo("cli", "tui_exit_requested", {
             logFilePath: logSession?.logFilePath,
@@ -341,6 +343,14 @@ async function launchTui(options: LaunchOptions): Promise<void> {
             });
           });
         }}
+        openExternalEditor={(repositoryRootPath, initialValue, options) =>
+          openExternalEditor({
+            fileExtension: options?.fileExtension,
+            initialValue,
+            repositoryRootPath,
+            tempFileName: options?.tempFileName,
+          })
+        }
         openFileInEditor={(repositoryRootPath, filePath) =>
           openFileInEditor({
             filePath,
@@ -443,95 +453,6 @@ async function runAuthLogout(): Promise<void> {
   await markDiffdiffSessionEnded("Completed diffdiff auth logout.");
   await flushDiffdiffLogs();
   process.stdout.write("Cleared stored GitHub auth.\n");
-}
-
-async function printSessionList(options: SessionListCommandOptions): Promise<void> {
-  const sessions = await listDiffdiffSessions();
-
-  if (options.json) {
-    process.stdout.write(`${JSON.stringify(sessions, null, 2)}\n`);
-    return;
-  }
-
-  if (sessions.length === 0) {
-    process.stdout.write("No diffdiff sessions found.\n");
-    return;
-  }
-
-  process.stdout.write(`${formatSessionList(sessions)}\n`);
-}
-
-function formatSessionList(sessions: Awaited<ReturnType<typeof listDiffdiffSessions>>): string {
-  return sessions
-    .map((session) => {
-      const comparisonLabel =
-        session.comparison == null
-          ? "unknown"
-          : `${session.comparison.base} -> ${session.comparison.head} (${session.comparison.mode})`;
-      const lines = [
-        `${session.sessionId}  ${session.state}  ${session.repositoryName ?? "unknown repo"}`,
-        `  activity: ${session.statusMessage ?? "No activity recorded."}`,
-        `  focus: ${session.selectedFilePath ?? "No file selected."}`,
-        `  comparison: ${comparisonLabel}`,
-        `  branch: ${session.currentBranch ?? "detached"}`,
-        `  updated: ${session.updatedAt}`,
-        `  log: ${session.logFilePath}`,
-      ];
-
-      if (session.activeOverlay != null) {
-        lines.splice(5, 0, `  overlay: ${session.activeOverlay}`);
-      }
-
-      if (session.lastErrorMessage != null) {
-        lines.push(`  last error: ${session.lastErrorMessage}`);
-      }
-
-      return lines.join("\n");
-    })
-    .join("\n\n");
-}
-
-async function resolveAuthToken(options: AuthLoginCommandOptions): Promise<string | undefined> {
-  if (options.token != null) {
-    return options.token.trim() || undefined;
-  }
-
-  if (options.tokenStdin) {
-    const stdin = await readStandardInput();
-    const token = stdin.trim();
-    return token === "" ? undefined : token;
-  }
-
-  const token =
-    process.env.DIFFDIFF_GITHUB_TOKEN ?? process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
-  return token?.trim() === "" ? undefined : token?.trim();
-}
-
-function describeSecureStore(platform: NodeJS.Platform): string {
-  switch (platform) {
-    case "darwin":
-      return "the macOS Keychain";
-    case "linux":
-      return "the Secret Service keyring";
-    case "win32":
-      return "Windows Credential Manager";
-    default:
-      return "the OS credential store";
-  }
-}
-
-async function readStandardInput(): Promise<string> {
-  if (process.stdin.isTTY) {
-    return "";
-  }
-
-  const chunks: Uint8Array[] = [];
-
-  for await (const chunk of process.stdin) {
-    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
-  }
-
-  return Buffer.concat(chunks).toString("utf8");
 }
 
 void main().catch(async (error) => {

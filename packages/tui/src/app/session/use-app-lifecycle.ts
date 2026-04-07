@@ -12,6 +12,7 @@ import type { DiffdiffAppPersistence } from "./use-app-persistence.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import { GITHUB_DIALOGS } from "../shared/constants.ts";
 import { EMPTY_REVIEW_THREADS } from "../review/review-constants.ts";
+import { clearReviewComposer } from "../review/review-composer-state.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 
 interface UseLifecycleOptions {
@@ -64,8 +65,9 @@ export function useDiffdiffAppLifecycle({
     if (state.session.github == null) {
       state.setCleanupCandidates([]);
       state.setMergeConfirmOpen(false);
-      state.setReviewComposerTarget(null);
-      state.setReviewComposerBody("");
+      state.setReviewComposer((currentReviewComposer) =>
+        clearReviewComposer(currentReviewComposer),
+      );
       state.setDialogStack((currentStack) => {
         const nextStack = currentStack.filter((entry) => !GITHUB_DIALOGS.has(entry.dialog));
         return nextStack.length === currentStack.length ? currentStack : nextStack;
@@ -76,8 +78,7 @@ export function useDiffdiffAppLifecycle({
     state.setCleanupCandidates,
     state.setDialogStack,
     state.setMergeConfirmOpen,
-    state.setReviewComposerBody,
-    state.setReviewComposerTarget,
+    state.setReviewComposer,
   ]);
 
   useEffect(() => {

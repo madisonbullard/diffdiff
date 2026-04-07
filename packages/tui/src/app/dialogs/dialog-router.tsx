@@ -3,6 +3,7 @@ import type {
   GitHubCleanupPreferences,
   GitHubMergeMethod,
   GitHubRefCleanupCandidate,
+  ReviewComposerHistoryEntry,
 } from "@diffdiff/core";
 import type { ScrollBoxRenderable } from "@opentui/core";
 import { BranchModal } from "../../components/branch-modal.tsx";
@@ -76,11 +77,14 @@ interface DiffdiffAppDialogsProps {
   localBranchCount: number;
   remoteBranchCount: number;
   reviewComposerBody: string;
+  reviewComposerAutocomplete: import("../../review/composer-autocomplete.ts").ReviewComposerAutocompleteState;
+  reviewComposerAutocompleteIndex: number;
   reviewComposerContext: {
     snippet: string;
     subtitle: string;
     title: string;
   } | null;
+  reviewComposerHistoryEntries: readonly ReviewComposerHistoryEntry[];
   reviewSubmissionBody: string;
   reviewSubmissionEventIndex: number;
   selectedPullRequestConversationItemId?: string;
@@ -134,7 +138,10 @@ export function DiffdiffAppDialogs({
   isPullRequestListLoading,
   remoteBranchCount,
   reviewComposerBody,
+  reviewComposerAutocomplete,
+  reviewComposerAutocompleteIndex,
   reviewComposerContext,
+  reviewComposerHistoryEntries,
   reviewSubmissionBody,
   reviewSubmissionEventIndex,
   selectedPullRequestConversationItemId,
@@ -204,8 +211,11 @@ export function DiffdiffAppDialogs({
   if (activeDialog === "comment-composer" && reviewComposerContext != null) {
     return (
       <ReviewComposerModal
+        autocomplete={reviewComposerAutocomplete}
+        autocompleteIndex={reviewComposerAutocompleteIndex}
         body={reviewComposerBody}
         context={reviewComposerContext}
+        historyEntryCount={reviewComposerHistoryEntries.length}
         isSubmitting={isSubmittingReviewAction}
         theme={theme}
       />

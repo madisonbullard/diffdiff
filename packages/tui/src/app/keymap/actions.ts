@@ -105,6 +105,7 @@ export const MODAL_DISMISS = "modal.dismiss";
 // ---------------------------------------------------------------------------
 export const TEXT_BACKSPACE = "text.backspace";
 export const TEXT_NEWLINE = "text.newline";
+export const TEXT_OPEN_EXTERNAL_EDITOR = "text.open-external-editor";
 
 // ---------------------------------------------------------------------------
 // Command palette specific

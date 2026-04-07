@@ -1,5 +1,6 @@
 import { updateDiffdiffSessionActivity } from "@diffdiff/core";
 import type {
+  ReviewComposerHistoryEntry,
   DiffdiffPreferences,
   GitHubCleanupPreferences,
   GitHubDashboardPullRequest,
@@ -26,6 +27,7 @@ export interface DiffdiffAppProps {
     body: string,
   ) => Promise<void>;
   addPullRequestComment?: (reviewSession: GitHubReviewSession, body: string) => Promise<void>;
+  appendReviewComposerHistory?: (entry: ReviewComposerHistoryEntry) => Promise<void>;
   initialGitHubPreferences?: GitHubUserPreferences;
   initialUserKeymapConfig?: Record<string, Record<string, unknown>>;
   isGitHubAuthenticated?: boolean;
@@ -39,6 +41,7 @@ export interface DiffdiffAppProps {
     workingTreeSummary: PreparedReviewSession["workingTreeSummary"];
   }>;
   loadSessionDiagnostics?: (logFilePath: string) => Promise<SessionDiagnosticEvent[]>;
+  loadReviewComposerHistory?: () => Promise<ReviewComposerHistoryEntry[]>;
   loadSession: (options: LaunchOptions) => Promise<PreparedReviewSession>;
   logFilePath?: string;
   markFileAsViewed?: (reviewSession: GitHubReviewSession, path: string) => Promise<void>;
@@ -47,6 +50,14 @@ export interface DiffdiffAppProps {
     input: GitHubPullRequestMergeRequest,
   ) => Promise<GitHubPullRequestMergeResult>;
   onExit: () => void;
+  openExternalEditor: (
+    repositoryRootPath: string,
+    initialValue: string,
+    options?: {
+      fileExtension?: string;
+      tempFileName?: string;
+    },
+  ) => Promise<string>;
   openFileInEditor: (repositoryRootPath: string, filePath: string) => Promise<void>;
   resolveLaunchTarget?: (target: string, options: LaunchOptions) => Promise<LaunchOptions>;
   replyToReviewComment?: (

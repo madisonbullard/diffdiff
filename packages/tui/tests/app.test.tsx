@@ -286,7 +286,7 @@ test("runs leader key commands with ctrl+x", () => {
   expect(getAppText(tree)).toContain("Working tree");
 });
 
-test("jumps to a diff line with a count through the in-file prefix", () => {
+test("jumps to a diff line with a count through the in-file prefix one-third down the viewport", () => {
   const scrollboxes: ReturnType<typeof createMockScrollbox>[] = [];
   const fileCardYs = [0];
   let fileCardRefIndex = 0;
@@ -385,7 +385,7 @@ test("jumps to a diff line with a count through the in-file prefix", () => {
   emitKey({ name: "s", sequence: "s" });
 
   expect(getAppText(tree)).toContain("Jumped to src/app.ts:11.");
-  expect(scrollboxes[1]?.scrollTo).toHaveBeenLastCalledWith({ x: 0, y: 42 });
+  expect(scrollboxes[1]?.scrollTo).toHaveBeenLastCalledWith({ x: 0, y: 36 });
 });
 
 test("warns when an in-file line jump targets a line missing from the diff", () => {
@@ -2984,6 +2984,80 @@ test("opens the comment composer when only the raw patch is available", () => {
   expect(getAppText(tree)).toContain("const count = 0");
 });
 
+test("inserts file references into the comment composer autocomplete", () => {
+  const addReviewThread = vi.fn(async () => undefined);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        addReviewThread,
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+      })}
+    />,
+  );
+
+  emitKey({ name: "a" });
+  emitText("Please check @app#12-18");
+
+  expect(getAppText(tree)).toContain("src/app.ts#12-18");
+
+  emitKey({ name: "tab", sequence: "\t" });
+
+  expect(addReviewThread).not.toHaveBeenCalled();
+  expect(getAppText(tree)).toContain("`src/app.ts#12-18`");
+});
+
+test("restores the latest dismissed draft when reopening the same comment target", async () => {
+  const appendReviewComposerHistory = vi.fn(async () => undefined);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        appendReviewComposerHistory,
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+      })}
+    />,
+  );
+
+  emitKey({ name: "a" });
+  emitText("Needs follow-up");
+  emitKey({ name: "escape" });
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(appendReviewComposerHistory).toHaveBeenCalledWith(
+    expect.objectContaining({ body: "Needs follow-up", outcome: "dismissed" }),
+  );
+
+  emitKey({ name: "a" });
+
+  expect(getAppText(tree)).toContain("Needs follow-up");
+  expect(getAppText(tree)).toContain("Restored draft.");
+});
+
+test("opens the external editor for comment composition", async () => {
+  const openExternalEditor = vi.fn(async () => "Edited in vim");
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        openExternalEditor,
+      })}
+    />,
+  );
+
+  emitKey({ name: "a" });
+  emitKey({ ctrl: true, name: "e" });
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(openExternalEditor).toHaveBeenCalledWith("/tmp/diffdiff", "", {
+    fileExtension: ".md",
+    tempFileName: "REVIEW_COMMENT.md",
+  });
+  expect(getAppText(tree)).toContain("Edited in vim");
+});
+
 test("opens the submit review modal and submits the pending review", async () => {
   const submitPendingReview = vi.fn(async () => undefined);
   const loadSession = vi.fn(async () =>
@@ -3013,6 +3087,30 @@ test("opens the submit review modal and submits the pending review", async () =>
     "APPROVE",
     "Ship it",
   );
+});
+
+test("opens the external editor for submit review", async () => {
+  const openExternalEditor = vi.fn(async () => "Summary from editor");
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        openExternalEditor,
+      })}
+    />,
+  );
+
+  emitKey({ name: "a", sequence: "A", shift: true });
+  emitKey({ ctrl: true, name: "e" });
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(openExternalEditor).toHaveBeenCalledWith("/tmp/diffdiff", "", {
+    fileExtension: ".md",
+    tempFileName: "SUBMIT_REVIEW.md",
+  });
+  expect(getAppText(tree)).toContain("Summary from editor");
 });
 
 test("opens the merge modal and merges with the selected method", async () => {
@@ -3078,6 +3176,36 @@ test("opens the merge modal and merges with the selected method", async () => {
     base: "origin/main",
     head: "feature/tui",
   });
+});
+
+test("opens the external editor for merge composition", async () => {
+  const openExternalEditor = vi.fn(async () => "Edited title\n\nEdited body");
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialGitHubPreferences: createGitHubPreferences({ defaultMergeMethod: "merge" }),
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        openExternalEditor,
+      })}
+    />,
+  );
+
+  emitKey({ name: "m" });
+  emitKey({ ctrl: true, name: "e" });
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(openExternalEditor).toHaveBeenCalledWith(
+    "/tmp/diffdiff",
+    "Build TUI reviewer\n\nAdds PR review mode.",
+    {
+      fileExtension: ".txt",
+      tempFileName: "MERGE_MSG",
+    },
+  );
+  expect(getAppText(tree)).toContain("Edited title");
+  expect(getAppText(tree)).toContain("Edited body");
 });
 
 test("caps the merge body input height and scrolls to the cursor", () => {
@@ -3205,12 +3333,14 @@ function createAppProps(overrides: Partial<DiffdiffAppProps> = {}): DiffdiffAppP
 
   return {
     addPullRequestComment: vi.fn(async () => undefined),
+    appendReviewComposerHistory: vi.fn(async () => undefined),
     addReviewThread: vi.fn(async () => undefined),
     initialGitHubPreferences: createGitHubPreferences(),
     isGitHubAuthenticated: true,
     initialOptions,
     initialSession,
     listGitHubPullRequests: vi.fn(async () => createDashboardPullRequests()),
+    loadReviewComposerHistory: vi.fn(async () => []),
     loadComparisonBrowserData: vi.fn(async () => ({
       branches: initialSession.branches,
       commits: initialSession.commits,
@@ -3226,6 +3356,7 @@ function createAppProps(overrides: Partial<DiffdiffAppProps> = {}): DiffdiffAppP
       sha: "mergedsha",
     }),
     onExit: vi.fn(),
+    openExternalEditor: vi.fn(async (_repositoryRootPath, initialValue) => initialValue),
     openFileInEditor: vi.fn(async () => undefined),
     resolveLaunchTarget: vi.fn(async (_target, options) => options),
     replyToReviewComment: vi.fn(async () => undefined),

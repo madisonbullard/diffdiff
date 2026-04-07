@@ -5,6 +5,7 @@ import { isPrintableKey, type KeyboardInput } from "../../keyboard-input.ts";
 import { getPrefixMenuConfig } from "../commands/prefix-menus.ts";
 import { dispatchAction, type ActionDispatchMap } from "../keymap/action-dispatch.ts";
 import { keyEventFromInput } from "../keymap/key-event.ts";
+import { updateReviewComposerBody } from "../review/review-composer-state.ts";
 import type { KeymapMode } from "./keymap-mode.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 
@@ -62,7 +63,12 @@ export function useMainKeyboard({
         state.setCommitListIndex(0);
         return;
       case "comment":
-        state.setReviewComposerBody((currentBody) => currentBody + key.sequence);
+        state.setReviewComposer((currentReviewComposer) =>
+          updateReviewComposerBody(
+            currentReviewComposer,
+            (currentBody) => currentBody + key.sequence,
+          ),
+        );
         return;
       case "submit-review":
         state.setReviewSubmissionBody((currentBody) => currentBody + key.sequence);

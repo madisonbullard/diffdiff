@@ -1,5 +1,6 @@
 import { formatThreadAnchor } from "../../review/threads.tsx";
 import type { GitHubPullRequestComment, GitHubPullRequestConversationItem } from "@diffdiff/core";
+import type { PreparedReviewSession } from "../../types.ts";
 
 export type ReviewComposerTarget =
   | {
@@ -17,6 +18,14 @@ export type ReviewComposerTarget =
       rootCommentId: number;
       thread: import("@diffdiff/core").GitHubPullRequestReviewThread;
     };
+
+export interface ReviewComposerHistoryScope {
+  path?: string;
+  pullRequestNumber?: number;
+  repositoryRootPath: string;
+  targetKey: string;
+  targetKind: ReviewComposerTarget["kind"];
+}
 
 export function getReviewComposerContext(target: ReviewComposerTarget): {
   snippet: string;
@@ -56,4 +65,38 @@ export function buildQuotedPullRequestReply(
     .join("\n");
 
   return [`Replying to ${item.author.login}:`, quotedBody, "", body].join("\n");
+}
+
+export function getReviewComposerHistoryScope(
+  session: PreparedReviewSession,
+  target: ReviewComposerTarget,
+): ReviewComposerHistoryScope {
+  switch (target.kind) {
+    case "review-thread": {
+      const { anchor } = target;
+      const rangeStart = anchor.startLine ?? anchor.line;
+      return {
+        path: anchor.path,
+        pullRequestNumber: session.github?.pullRequest.number,
+        repositoryRootPath: session.repository.rootPath,
+        targetKey: `review-thread:${anchor.path}:${rangeStart}-${anchor.line}:${anchor.side}`,
+        targetKind: target.kind,
+      };
+    }
+    case "review-thread-reply":
+      return {
+        path: target.thread.path,
+        pullRequestNumber: session.github?.pullRequest.number,
+        repositoryRootPath: session.repository.rootPath,
+        targetKey: `review-thread-reply:${target.thread.id}`,
+        targetKind: target.kind,
+      };
+    case "pull-request-comment-reply":
+      return {
+        pullRequestNumber: session.github?.pullRequest.number,
+        repositoryRootPath: session.repository.rootPath,
+        targetKey: `pull-request-comment-reply:${target.item.id}`,
+        targetKind: target.kind,
+      };
+  }
 }

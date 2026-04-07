@@ -1,5 +1,5 @@
 export { runCommand } from "./command.ts";
-export { openFileInEditor, resolvePreferredEditor } from "./editor.ts";
+export { openExternalEditor, openFileInEditor, resolvePreferredEditor } from "./editor.ts";
 export { loadReviewSession } from "./load-review-session.ts";
 export { DiffdiffError, CommandError } from "./errors.ts";
 export {
@@ -47,6 +47,12 @@ export {
 export { GitHubPullRequestService } from "./github/pull-request-service.ts";
 export { loadReviewCache, saveReviewCache } from "./review-cache.ts";
 export {
+  appendReviewComposerHistory,
+  getReviewComposerHistoryFilePath,
+  loadReviewComposerHistory,
+  MAX_REVIEW_COMPOSER_HISTORY_ENTRIES,
+} from "./review-composer-history.ts";
+export {
   arePullRequestFingerprintsEqual,
   areReviewSessionFingerprintsEqual,
   buildPullRequestFingerprint,
@@ -68,6 +74,12 @@ export type {
   ReviewCacheState,
 } from "./review-cache.ts";
 export type { ReviewedFileState } from "./reviewed-file-fingerprint.ts";
+export type {
+  ReviewComposerHistoryEntry,
+  ReviewComposerHistoryOutcome,
+  ReviewComposerHistoryTarget,
+  ReviewComposerHistoryTargetKind,
+} from "./review-composer-history.ts";
 export type {
   DiffdiffPreferences,
   ForgeRepository,

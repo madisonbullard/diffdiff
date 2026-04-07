@@ -2,10 +2,11 @@ import { logDiffdiffError } from "@diffdiff/core";
 import { closeDialog as closeAppDialog, openDialog as openAppDialog } from "../dialogs/stack.ts";
 import { formatThreadAnchor } from "../../review/threads.tsx";
 import { getReviewSubmissionEvent } from "../../review/formatting.ts";
+import { createReviewComposerInteractions } from "./review-composer-interactions.ts";
 import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
 import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
-import { buildQuotedPullRequestReply } from "./review-composer.ts";
+import { buildQuotedPullRequestReply, type ReviewComposerTarget } from "./review-composer.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 
 interface CreateGitHubReviewActionsOptions {
@@ -25,9 +26,11 @@ interface CreateGitHubReviewActionsOptions {
   props: Pick<
     DiffdiffAppProps,
     | "addPullRequestComment"
+    | "appendReviewComposerHistory"
     | "addReviewThread"
     | "listGitHubPullRequests"
     | "loadSession"
+    | "openExternalEditor"
     | "mergePullRequest"
     | "replyToReviewComment"
     | "removeCleanupRefs"
@@ -55,6 +58,12 @@ export function createGitHubReviewActions({
   props,
   state,
 }: CreateGitHubReviewActionsOptions) {
+  const reviewComposerInteractions = createReviewComposerInteractions({
+    persistence,
+    props,
+    state,
+  });
+
   function beginPullRequestListLoad(): number {
     state.pullRequestListLoadIdRef.current += 1;
     return state.pullRequestListLoadIdRef.current;
@@ -140,10 +149,8 @@ export function createGitHubReviewActions({
       state.setStatusMessage("No commentable line is selected.");
       return;
     }
-    state.setReviewComposerTarget({ anchor: derived.selectedReviewAnchor, kind: "review-thread" });
-    state.setReviewComposerBody("");
-    state.setDialogStack((currentStack) => openAppDialog(currentStack, "comment-composer"));
-    state.setStatusMessage(
+    openReviewComposer(
+      { anchor: derived.selectedReviewAnchor, kind: "review-thread" },
       `Commenting on ${derived.selectedReviewAnchor.path}:${derived.selectedReviewAnchor.line}.`,
     );
   }
@@ -167,15 +174,15 @@ export function createGitHubReviewActions({
       return;
     }
 
-    state.setReviewComposerTarget({
-      comment: derived.selectedReviewComment,
-      kind: "review-thread-reply",
-      rootCommentId: rootComment.id,
-      thread: derived.selectedReviewThread,
-    });
-    state.setReviewComposerBody("");
-    state.setDialogStack((currentStack) => openAppDialog(currentStack, "comment-composer"));
-    state.setStatusMessage(`Replying in ${formatThreadAnchor(derived.selectedReviewThread)}.`);
+    openReviewComposer(
+      {
+        comment: derived.selectedReviewComment,
+        kind: "review-thread-reply",
+        rootCommentId: rootComment.id,
+        thread: derived.selectedReviewThread,
+      },
+      `Replying in ${formatThreadAnchor(derived.selectedReviewThread)}.`,
+    );
   }
 
   function openPullRequestConversationReplyComposer(): void {
@@ -189,14 +196,12 @@ export function createGitHubReviewActions({
       return;
     }
 
-    state.setReviewComposerTarget({
-      item: derived.selectedPullRequestConversationItem,
-      kind: "pull-request-comment-reply",
-      quotedBody: derived.selectedPullRequestConversationItem.body,
-    });
-    state.setReviewComposerBody("");
-    state.setDialogStack((currentStack) => openAppDialog(currentStack, "comment-composer"));
-    state.setStatusMessage(
+    openReviewComposer(
+      {
+        item: derived.selectedPullRequestConversationItem,
+        kind: "pull-request-comment-reply",
+        quotedBody: derived.selectedPullRequestConversationItem.body,
+      },
       `Replying to ${derived.selectedPullRequestConversationItem.author.login}.`,
     );
   }
@@ -240,49 +245,44 @@ export function createGitHubReviewActions({
   async function submitCommentComposer(): Promise<void> {
     if (
       state.session.github == null ||
-      state.reviewComposerTarget == null ||
-      state.reviewComposerBody.trim() === ""
+      state.reviewComposer.target == null ||
+      state.reviewComposer.body.trim() === ""
     ) {
       return;
     }
 
-    const nextBody = state.reviewComposerBody.trim();
+    const composerTarget = state.reviewComposer.target;
+    const nextBody = state.reviewComposer.body.trim();
     let sessionLoadId: number | undefined;
     state.setIsSubmittingReviewAction(true);
 
     try {
-      if (state.reviewComposerTarget.kind === "review-thread") {
+      if (composerTarget.kind === "review-thread") {
         if (props.addReviewThread == null) {
           return;
         }
         state.setStatusMessage(
-          `Adding review comment on ${state.reviewComposerTarget.anchor.path}:${state.reviewComposerTarget.anchor.line}...`,
+          `Adding review comment on ${composerTarget.anchor.path}:${composerTarget.anchor.line}...`,
         );
-        await props.addReviewThread(
-          state.session.github,
-          state.reviewComposerTarget.anchor,
-          nextBody,
-        );
-      } else if (state.reviewComposerTarget.kind === "review-thread-reply") {
+        await props.addReviewThread(state.session.github, composerTarget.anchor, nextBody);
+      } else if (composerTarget.kind === "review-thread-reply") {
         if (props.replyToReviewComment == null) {
           return;
         }
-        state.setStatusMessage(
-          `Replying in ${formatThreadAnchor(state.reviewComposerTarget.thread)}...`,
-        );
+        state.setStatusMessage(`Replying in ${formatThreadAnchor(composerTarget.thread)}...`);
         await props.replyToReviewComment(
           state.session.github,
-          state.reviewComposerTarget.rootCommentId,
+          composerTarget.rootCommentId,
           nextBody,
         );
       } else {
         if (props.addPullRequestComment == null) {
           return;
         }
-        state.setStatusMessage(`Replying to ${state.reviewComposerTarget.item.author.login}...`);
+        state.setStatusMessage(`Replying to ${composerTarget.item.author.login}...`);
         await props.addPullRequestComment(
           state.session.github,
-          buildQuotedPullRequestReply(state.reviewComposerTarget.item, nextBody),
+          buildQuotedPullRequestReply(composerTarget.item, nextBody),
         );
       }
 
@@ -291,15 +291,17 @@ export function createGitHubReviewActions({
       if (actions.isLatestSessionLoad(sessionLoadId)) {
         actions.applyLoadedSession(nextSession);
       }
+      void reviewComposerInteractions
+        .persistReviewComposerHistory("submitted", nextBody, composerTarget)
+        .catch(() => undefined);
       state.setDialogStack((currentStack) =>
         closeAppDialog(currentStack, "comment-composer", "complete"),
       );
-      state.setReviewComposerTarget(null);
-      state.setReviewComposerBody("");
+      reviewComposerInteractions.resetReviewComposer();
       state.setStatusMessage(
-        state.reviewComposerTarget.kind === "review-thread"
+        composerTarget.kind === "review-thread"
           ? "Added review comment."
-          : state.reviewComposerTarget.kind === "review-thread-reply"
+          : composerTarget.kind === "review-thread-reply"
             ? "Added review reply."
             : "Added PR reply comment.",
       );
@@ -308,7 +310,7 @@ export function createGitHubReviewActions({
         return;
       }
       persistence.persistenceApi.handleAppError(error, "Unable to submit the comment.", {
-        action: state.reviewComposerTarget.kind,
+        action: composerTarget.kind,
       });
     } finally {
       state.setIsSubmittingReviewAction(false);
@@ -444,16 +446,51 @@ export function createGitHubReviewActions({
 
   return {
     applyCleanupSelection,
+    closeCommentComposer,
     openCommentComposer,
     openFocusedReviewThreadReplyComposer,
     openGitHubPullRequestList,
     openMergeModal,
+    openMergeModalInExternalEditor,
     openPullRequestCommentsModal,
     openPullRequestConversationReplyComposer,
     openSubmitReviewModal,
+    openSubmitReviewModalInExternalEditor,
+    openReviewComposerInExternalEditor,
     refreshGitHubPullRequestList,
     submitCommentComposer,
     submitMergeFromModal,
     submitReviewFromModal,
   };
+
+  function openReviewComposer(target: ReviewComposerTarget, statusMessage: string): void {
+    reviewComposerInteractions.openReviewComposerForTarget(target, statusMessage);
+    state.setDialogStack((currentStack) => openAppDialog(currentStack, "comment-composer"));
+  }
+
+  function closeCommentComposer(): void {
+    const target = state.reviewComposer.target;
+    const body = state.reviewComposer.body;
+    state.setDialogStack((currentStack) =>
+      closeAppDialog(currentStack, "comment-composer", "dismiss"),
+    );
+    if (reviewComposerInteractions.closeCommentComposer(target, body)) {
+      state.setStatusMessage("Closed comment composer. Draft saved.");
+      return;
+    }
+
+    state.setStatusMessage("Closed comment composer.");
+  }
+
+  async function openReviewComposerInExternalEditor(): Promise<void> {
+    await reviewComposerInteractions.openReviewComposerInExternalEditor();
+  }
+
+  async function openSubmitReviewModalInExternalEditor(): Promise<void> {
+    await reviewComposerInteractions.openSubmitReviewModalInExternalEditor();
+  }
+
+  async function openMergeModalInExternalEditor(): Promise<void> {
+    await reviewComposerInteractions.openMergeModalInExternalEditor();
+  }
 }

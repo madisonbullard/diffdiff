@@ -4,6 +4,7 @@ import type {
   GitHubMergeMethod,
   GitHubPullRequestComment,
   GitHubRefCleanupCandidate,
+  ReviewComposerHistoryEntry,
 } from "@diffdiff/core";
 import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
 import type { MutableRefObject } from "react";
@@ -92,11 +93,14 @@ interface DiffdiffAppViewProps {
   refreshIndicatorLabel: string | null;
   remoteBranchCount: number;
   reviewComposerBody: string;
+  reviewComposerAutocomplete: import("../../review/composer-autocomplete.ts").ReviewComposerAutocompleteState;
+  reviewComposerAutocompleteIndex: number;
   reviewComposerContext: {
     snippet: string;
     subtitle: string;
     title: string;
   } | null;
+  reviewComposerHistoryEntries: readonly ReviewComposerHistoryEntry[];
   reviewedPaths: ReadonlySet<string>;
   reviewedCount: number;
   reviewRequestedPrCount: number;
@@ -199,7 +203,10 @@ export function DiffdiffAppView({
   refreshIndicatorLabel,
   remoteBranchCount,
   reviewComposerBody,
+  reviewComposerAutocomplete,
+  reviewComposerAutocompleteIndex,
   reviewComposerContext,
+  reviewComposerHistoryEntries,
   reviewedPaths,
   reviewedCount,
   reviewRequestedPrCount,
@@ -344,7 +351,10 @@ export function DiffdiffAppView({
           isPullRequestListLoading={isPullRequestListLoading}
           remoteBranchCount={remoteBranchCount}
           reviewComposerBody={reviewComposerBody}
+          reviewComposerAutocomplete={reviewComposerAutocomplete}
+          reviewComposerAutocompleteIndex={reviewComposerAutocompleteIndex}
           reviewComposerContext={reviewComposerContext}
+          reviewComposerHistoryEntries={reviewComposerHistoryEntries}
           reviewedCount={reviewedCount}
           reviewSubmissionBody={reviewSubmissionBody}
           reviewSubmissionEventIndex={reviewSubmissionEventIndex}

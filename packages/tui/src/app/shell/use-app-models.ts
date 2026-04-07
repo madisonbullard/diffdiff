@@ -17,8 +17,17 @@ import {
 import { getTreeSummaryLabels } from "../tree/tree-summary.ts";
 import { useDiffdiffAppPreview } from "../layout/use-app-preview.ts";
 import { EMPTY_CONVERSATION_ITEMS, EMPTY_REVIEW_THREADS } from "../review/review-constants.ts";
+import {
+  buildReviewComposerAutocompleteState,
+  type ReviewComposerAutocompleteState,
+} from "../../review/composer-autocomplete.ts";
+import { getReviewComposerHistoryEntriesForBrowsing } from "../../review/composer-history.ts";
 import type { RenderSurfaceMetrics } from "../state/app-props.ts";
-import { getReviewComposerContext } from "../review/review-composer.ts";
+import {
+  getReviewComposerContext,
+  getReviewComposerHistoryScope,
+  type ReviewComposerHistoryScope,
+} from "../review/review-composer.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 
 export interface DiffdiffAppDerived {
@@ -48,6 +57,9 @@ export interface DiffdiffAppDerived {
   pullRequestConversationItems: readonly import("@diffdiff/core").GitHubPullRequestConversationItem[];
   remoteBranchCount: number;
   reviewComposerContext: ReturnType<typeof getReviewComposerContext> | null;
+  reviewComposerAutocomplete: ReviewComposerAutocompleteState;
+  reviewComposerHistoryEntries: readonly import("@diffdiff/core").ReviewComposerHistoryEntry[];
+  reviewComposerHistoryScope: ReviewComposerHistoryScope | null;
   reviewRequestedPrCount: number;
   reviewThreadsByPath: Map<string, import("@diffdiff/core").GitHubPullRequestReviewThread[]>;
   selectedBranchItem?: ReturnType<typeof buildBranchListItems>[number];
@@ -259,6 +271,26 @@ export function useDiffdiffAppDerived(
   ).length;
   const showMergeModal = state.activeOverlay === "merge";
   const showMergeConfirmModal = showMergeModal && state.mergeConfirmOpen;
+  const reviewComposerHistoryScope =
+    state.reviewComposer.target == null
+      ? null
+      : getReviewComposerHistoryScope(state.session, state.reviewComposer.target);
+  const reviewComposerAutocomplete =
+    state.reviewComposer.target == null
+      ? { isVisible: false, options: [], query: "" }
+      : buildReviewComposerAutocompleteState({
+          body: state.reviewComposer.body,
+          dismissedTokenKey: state.reviewComposer.dismissedAutocompleteTokenKey,
+          paths: state.session.files.map((file) => file.path),
+          selectedPath: selectedFilePath,
+        });
+  const reviewComposerHistoryEntries =
+    reviewComposerHistoryScope == null
+      ? []
+      : getReviewComposerHistoryEntriesForBrowsing(
+          state.reviewComposer.history,
+          reviewComposerHistoryScope,
+        );
 
   return {
     branchItems,
@@ -283,10 +315,13 @@ export function useDiffdiffAppDerived(
     openPrCount,
     pullRequestConversationItems,
     remoteBranchCount,
+    reviewComposerAutocomplete,
     reviewComposerContext:
-      state.reviewComposerTarget == null
+      state.reviewComposer.target == null
         ? null
-        : getReviewComposerContext(state.reviewComposerTarget),
+        : getReviewComposerContext(state.reviewComposer.target),
+    reviewComposerHistoryEntries,
+    reviewComposerHistoryScope,
     reviewRequestedPrCount,
     reviewThreadsByPath,
     selectedBranchItem,

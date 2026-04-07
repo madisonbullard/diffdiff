@@ -25,8 +25,8 @@ import type {
   PendingInteraction,
   SessionActivityUpdate,
 } from "./app-props.ts";
-import type { ReviewComposerTarget } from "../review/review-composer.ts";
 import type { PendingFileFocusRequest } from "../shared/file-focus.ts";
+import type { ReviewComposerUiState } from "../review/review-composer-state.ts";
 
 export interface ComparisonBrowserData {
   branches: PreparedReviewSession["branches"];
@@ -104,8 +104,7 @@ export interface DiffdiffAppState {
   renderer: ReturnType<typeof useRenderer>;
   reviewCacheTimeoutRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
   reviewedPaths: Set<string>;
-  reviewComposerBody: string;
-  reviewComposerTarget: ReviewComposerTarget | null;
+  reviewComposer: ReviewComposerUiState;
   reviewSubmissionBody: string;
   reviewSubmissionEventIndex: number;
   selectedFileIndex: number;
@@ -171,8 +170,7 @@ export interface DiffdiffAppState {
   setPullRequestSearchQuery: Dispatch<SetStateAction<string>>;
   setRefreshIndicatorLabel: Dispatch<SetStateAction<string | null>>;
   setReviewedPaths: Dispatch<SetStateAction<Set<string>>>;
-  setReviewComposerBody: Dispatch<SetStateAction<string>>;
-  setReviewComposerTarget: Dispatch<SetStateAction<ReviewComposerTarget | null>>;
+  setReviewComposer: Dispatch<SetStateAction<ReviewComposerUiState>>;
   setReviewSubmissionBody: Dispatch<SetStateAction<string>>;
   setReviewSubmissionEventIndex: Dispatch<SetStateAction<number>>;
   setSelectedFileIndex: Dispatch<SetStateAction<number>>;

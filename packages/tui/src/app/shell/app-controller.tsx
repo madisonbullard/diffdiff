@@ -28,7 +28,7 @@ import { createFileFocusController } from "../shared/file-focus.ts";
 import { truncateInlineMessage } from "../shared/text.ts";
 import { createTreeActions } from "../tree/tree-actions.ts";
 import { createViewActions } from "./view-actions.ts";
-import { buildActionDispatchMap } from "./action-dispatch-map.ts";
+import { buildControllerActionDispatchMap } from "./controller-action-dispatch.ts";
 
 export function DiffdiffAppController(props: DiffdiffAppProps) {
   const state = useDiffdiffAppState(props);
@@ -337,52 +337,25 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   );
   const showFooterLoadingIndicator = state.isSubmittingReviewAction && state.activeOverlay == null;
 
-  const actionDispatchMap = buildActionDispatchMap({
+  const actionDispatchMap = buildControllerActionDispatchMap({
     activeKeymapMode,
-    applyBranchSelection: launchActions.applyBranchSelection,
-    applyCleanupSelection: githubActions.applyCleanupSelection,
-    applyCommitSelection: launchActions.applyCommitSelection,
-    applyDashboardPullRequestSelection: launchActions.applyDashboardPullRequestSelection,
-    applyPullRequestSelection: launchActions.applyPullRequestSelection,
-    applyWorkingTreeSelection: launchActions.applyWorkingTreeSelection,
-    clearReviewed: reviewActions.clearReviewed,
-    closeCommandModal: commandActions.closeCommandModal,
-    closeDiagnostics: diagnostics.closeDiagnostics,
-    copyPullRequestUrl: viewActions.copyPullRequestUrl,
-    copySelectedPullRequestConversationItemUrl:
-      reviewActions.copySelectedPullRequestConversationItemUrl,
+    commandActions,
+    diagnostics,
     derived,
-    filteredCommands,
     fileFocus,
-    jumpToFirstDiagnostic: diagnostics.jumpToFirstDiagnostic,
-    jumpToLastDiagnostic: diagnostics.jumpToLastDiagnostic,
-    moveDiagnosticSelection: diagnostics.moveDiagnosticSelection,
+    filteredCommands,
+    githubActions,
+    launchActions,
     openBranchModal,
-    openCommandModal: commandActions.openCommandModal,
-    openCommentComposer: githubActions.openCommentComposer,
     openClearReviewedConfirmModal,
-    openDiagnostics: diagnostics.openDiagnostics,
-    openFocusedFileInEditor: viewActions.openFocusedFileInEditor,
-    openFocusedReviewThreadReplyComposer: githubActions.openFocusedReviewThreadReplyComposer,
-    openGitHubPullRequestList: githubActions.openGitHubPullRequestList,
     openHelp,
     openMergeConfirmModal,
-    openMergeModal: githubActions.openMergeModal,
-    openPullRequestCommentsModal: githubActions.openPullRequestCommentsModal,
-    openPullRequestConversationReplyComposer:
-      githubActions.openPullRequestConversationReplyComposer,
-    openSubmitReviewModal: githubActions.openSubmitReviewModal,
-    persistenceApi: persistence.persistenceApi,
-    refreshComparison: refresh.refreshComparison,
-    refreshGitHubPullRequestList: githubActions.refreshGitHubPullRequestList,
+    persistence,
+    refresh,
     reviewActions,
-    runCommand: commandActions.runCommand,
     state,
-    submitCommentComposer: githubActions.submitCommentComposer,
-    submitMergeFromModal: githubActions.submitMergeFromModal,
-    submitReviewFromModal: githubActions.submitReviewFromModal,
-    toggleBranchFilter: launchActions.toggleBranchFilter,
     treeActions,
+    viewActions,
   });
   useMainKeyboard({
     actionDispatchMap,
@@ -484,8 +457,11 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       pullRequestSearchQuery={state.pullRequestSearchQuery}
       refreshIndicatorLabel={state.refreshIndicatorLabel}
       remoteBranchCount={derived.remoteBranchCount}
-      reviewComposerBody={state.reviewComposerBody}
+      reviewComposerBody={state.reviewComposer.body}
+      reviewComposerAutocomplete={derived.reviewComposerAutocomplete}
+      reviewComposerAutocompleteIndex={state.reviewComposer.autocompleteIndex}
       reviewComposerContext={derived.reviewComposerContext}
+      reviewComposerHistoryEntries={derived.reviewComposerHistoryEntries}
       reviewedPaths={state.reviewedPaths}
       reviewedCount={state.reviewedPaths.size}
       reviewRequestedPrCount={derived.reviewRequestedPrCount}

@@ -1,5 +1,13 @@
 /* eslint-disable max-lines */
 
+import { insertReviewComposerAutocomplete } from "../../review/composer-autocomplete.ts";
+import {
+  dismissReviewComposerAutocomplete,
+  moveReviewComposerAutocompleteIndex,
+  moveReviewComposerHistory as moveReviewComposerHistoryState,
+  setReviewComposerAutocompleteIndex,
+  updateReviewComposerBody as updateReviewComposerStateBody,
+} from "../review/review-composer-state.ts";
 import { clampIndex } from "../../view-model.ts";
 import * as A from "../keymap/actions.ts";
 import type { ActionDispatchMap } from "../keymap/action-dispatch.ts";
@@ -27,6 +35,7 @@ export interface BuildModalActionDispatchMapOptions {
   applyWorkingTreeSelection: () => Promise<void>;
   clearReviewed: () => void;
   closeCommandModal: () => void;
+  closeCommentComposer: () => void;
   closeDiagnostics: () => void;
   copySelectedPullRequestConversationItemUrl: () => Promise<void>;
   derived: DiffdiffAppDerived;
@@ -35,7 +44,10 @@ export interface BuildModalActionDispatchMapOptions {
   jumpToLastDiagnostic: () => void;
   moveDiagnosticSelection: (delta: number) => void;
   openMergeConfirmModal: () => void;
+  openMergeModalInExternalEditor: () => Promise<void>;
   openPullRequestConversationReplyComposer: () => void;
+  openReviewComposerInExternalEditor: () => Promise<void>;
+  openSubmitReviewModalInExternalEditor: () => Promise<void>;
   persistenceApi: DiffdiffAppPersistenceApi;
   refreshGitHubPullRequestList: () => Promise<void>;
   runCommand: (command: AppCommand) => void;
@@ -56,6 +68,7 @@ export function buildModalActionDispatchMap({
   applyWorkingTreeSelection,
   clearReviewed,
   closeCommandModal,
+  closeCommentComposer: dismissCommentComposer,
   closeDiagnostics,
   copySelectedPullRequestConversationItemUrl,
   derived,
@@ -64,7 +77,10 @@ export function buildModalActionDispatchMap({
   jumpToLastDiagnostic,
   moveDiagnosticSelection,
   openMergeConfirmModal,
+  openMergeModalInExternalEditor,
   openPullRequestConversationReplyComposer,
+  openReviewComposerInExternalEditor,
+  openSubmitReviewModalInExternalEditor,
   persistenceApi,
   refreshGitHubPullRequestList,
   runCommand,
@@ -75,6 +91,60 @@ export function buildModalActionDispatchMap({
   toggleBranchFilter,
 }: BuildModalActionDispatchMapOptions): ActionDispatchMap {
   const map: ActionDispatchMap = new Map();
+
+  function updateReviewComposerBody(updater: (currentBody: string) => string): void {
+    state.setReviewComposer((currentReviewComposer) =>
+      updateReviewComposerStateBody(currentReviewComposer, updater),
+    );
+  }
+
+  function moveReviewComposerHistory(delta: number): void {
+    state.setReviewComposer((currentReviewComposer) =>
+      moveReviewComposerHistoryState(
+        currentReviewComposer,
+        derived.reviewComposerHistoryEntries,
+        delta,
+      ),
+    );
+  }
+
+  function moveReviewComposerAutocomplete(delta: number): void {
+    if (!derived.reviewComposerAutocomplete.isVisible) {
+      moveReviewComposerHistory(delta);
+      return;
+    }
+
+    state.setReviewComposer((currentReviewComposer) =>
+      setReviewComposerAutocompleteIndex(
+        currentReviewComposer,
+        moveReviewComposerAutocompleteIndex(
+          currentReviewComposer.autocompleteIndex,
+          derived.reviewComposerAutocomplete.options.length,
+          delta,
+        ),
+      ),
+    );
+  }
+
+  function acceptReviewComposerSelection(): void {
+    if (derived.reviewComposerAutocomplete.isVisible) {
+      const option =
+        derived.reviewComposerAutocomplete.options[
+          clampIndex(
+            state.reviewComposer.autocompleteIndex,
+            derived.reviewComposerAutocomplete.options.length,
+          )
+        ];
+      if (option != null) {
+        updateReviewComposerBody((currentBody) =>
+          insertReviewComposerAutocomplete(currentBody, option),
+        );
+        return;
+      }
+    }
+
+    void submitCommentComposer();
+  }
 
   function closeBranchModal(): void {
     state.setDialogStack((currentStack) => closeAppDialog(currentStack, "branch", "dismiss"));
@@ -98,12 +168,7 @@ export function buildModalActionDispatchMap({
   }
 
   function closeCommentComposer(): void {
-    state.setDialogStack((currentStack) =>
-      closeAppDialog(currentStack, "comment-composer", "dismiss"),
-    );
-    state.setReviewComposerTarget(null);
-    state.setReviewComposerBody("");
-    state.setStatusMessage("Closed comment composer.");
+    dismissCommentComposer();
   }
 
   function closePullRequestConversation(): void {
@@ -203,6 +268,9 @@ export function buildModalActionDispatchMap({
       case "submit-review":
         state.setReviewSubmissionEventIndex((currentIndex) => clampIndex(currentIndex + delta, 3));
         return;
+      case "comment":
+        moveReviewComposerAutocomplete(delta);
+        return;
       case "merge-method":
         updateMergeMethod(delta);
         return;
@@ -276,6 +344,17 @@ export function buildModalActionDispatchMap({
         closeListFilters();
         return;
       case "comment":
+        if (derived.reviewComposerAutocomplete.isVisible) {
+          state.setReviewComposer((currentReviewComposer) =>
+            dismissReviewComposerAutocomplete(
+              currentReviewComposer,
+              derived.reviewComposerAutocomplete.tokenKey ?? null,
+            ),
+          );
+          state.setStatusMessage("Dismissed file reference suggestions.");
+          return;
+        }
+
         closeCommentComposer();
         return;
       case "conversation":
@@ -327,7 +406,7 @@ export function buildModalActionDispatchMap({
         state.setCommitSearchActive(false);
         return;
       case "comment":
-        void submitCommentComposer();
+        acceptReviewComposerSelection();
         return;
     }
   }
@@ -347,7 +426,7 @@ export function buildModalActionDispatchMap({
         state.setCommitListIndex(0);
         return;
       case "comment":
-        state.setReviewComposerBody((currentBody) => currentBody.slice(0, -1));
+        updateReviewComposerBody((currentBody) => currentBody.slice(0, -1));
         return;
       case "submit-review":
         state.setReviewSubmissionBody((currentBody) => currentBody.slice(0, -1));
@@ -364,7 +443,7 @@ export function buildModalActionDispatchMap({
   function insertNewline(): void {
     switch (activeKeymapMode) {
       case "comment":
-        state.setReviewComposerBody((currentBody) => `${currentBody}\n`);
+        updateReviewComposerBody((currentBody) => `${currentBody}\n`);
         return;
       case "submit-review":
         state.setReviewSubmissionBody((currentBody) => `${currentBody}\n`);
@@ -421,6 +500,21 @@ export function buildModalActionDispatchMap({
 
   map.set(A.TEXT_NEWLINE, () => {
     insertNewline();
+  });
+
+  map.set(A.TEXT_OPEN_EXTERNAL_EDITOR, () => {
+    switch (activeKeymapMode) {
+      case "comment":
+        void openReviewComposerInExternalEditor();
+        return;
+      case "submit-review":
+        void openSubmitReviewModalInExternalEditor();
+        return;
+      case "merge-title":
+      case "merge-body":
+        void openMergeModalInExternalEditor();
+        return;
+    }
   });
 
   map.set(A.COMMAND_PALETTE_RUN, () => {

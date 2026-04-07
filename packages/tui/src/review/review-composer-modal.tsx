@@ -3,17 +3,23 @@ import { AsciiLoadingLabel } from "../components/ascii-loading-pane.tsx";
 import { MODAL_OVERLAY, REVIEW_BORDER } from "./shared.tsx";
 
 export function ReviewComposerModal({
+  autocomplete,
+  autocompleteIndex,
   body,
   context,
+  historyEntryCount,
   isSubmitting,
   theme,
 }: {
+  autocomplete: import("./composer-autocomplete.ts").ReviewComposerAutocompleteState;
+  autocompleteIndex: number;
   body: string;
   context: {
     snippet: string;
     subtitle: string;
     title: string;
   };
+  historyEntryCount: number;
   isSubmitting: boolean;
   theme: UiTheme;
 }) {
@@ -47,6 +53,18 @@ export function ReviewComposerModal({
             </text>
           </box>
           <text fg={theme.textMuted} wrapMode="none">
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" ctrl+e "}
+            </span>
+            <span>{" editor  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" up/down "}
+            </span>
+            <span>{" drafts  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" @ "}
+            </span>
+            <span>{" files  "}</span>
             <span fg={theme.accent} bg={theme.surfaceMuted}>
               {" enter "}
             </span>
@@ -93,6 +111,40 @@ export function ReviewComposerModal({
             <span fg={theme.accent}>_</span>
           </text>
         </box>
+        {autocomplete.isVisible ? (
+          <box
+            width="100%"
+            border={["left"]}
+            customBorderChars={REVIEW_BORDER}
+            borderColor={theme.border}
+            backgroundColor={theme.surface}
+            paddingLeft={2}
+            paddingRight={1}
+            paddingTop={1}
+            paddingBottom={1}
+            flexDirection="column"
+            gap={0}
+          >
+            <text fg={theme.textMuted} wrapMode="none">
+              {autocomplete.options.length === 0
+                ? `No files match @${autocomplete.query}.`
+                : `Insert file reference for @${autocomplete.query || ""}.`}
+            </text>
+            {autocomplete.options.map((option, index) => {
+              const isSelected = index === autocompleteIndex;
+              return (
+                <text
+                  key={`${option.path}:${option.insertText}`}
+                  fg={isSelected ? theme.accent : theme.text}
+                  wrapMode="none"
+                >
+                  <span>{isSelected ? "> " : "  "}</span>
+                  <span>{option.insertText}</span>
+                </text>
+              );
+            })}
+          </box>
+        ) : null}
         {isSubmitting ? (
           <AsciiLoadingLabel
             color={theme.accent}
@@ -100,8 +152,10 @@ export function ReviewComposerModal({
             theme={theme}
           />
         ) : (
-          <text fg={theme.textMuted} wrapMode="none">
-            Type your comment body.
+          <text fg={theme.textMuted} wrapMode="word">
+            {historyEntryCount > 0
+              ? `Type your comment body. ${historyEntryCount} saved draft${historyEntryCount === 1 ? "" : "s"} available for browsing.`
+              : "Type your comment body. Use up/down for recent drafts and @ to reference changed files."}
           </text>
         )}
       </box>
