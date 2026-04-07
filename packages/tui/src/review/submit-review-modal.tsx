@@ -1,15 +1,18 @@
 import type { UiTheme } from "../theme.ts";
 import { AsciiLoadingLabel } from "../components/ascii-loading-pane.tsx";
+import { TextInputContent } from "../components/text-input-content.tsx";
 import { formatReviewEvent, getReviewSubmissionEvent } from "./formatting.ts";
 import { MODAL_OVERLAY, REVIEW_BORDER } from "./shared.tsx";
 
 export function SubmitReviewModal({
   body,
+  bodyCursorOffset,
   eventIndex,
   isSubmitting,
   theme,
 }: {
   body: string;
+  bodyCursorOffset: number;
   eventIndex: number;
   isSubmitting: boolean;
   theme: UiTheme;
@@ -112,8 +115,11 @@ export function SubmitReviewModal({
           minHeight={6}
         >
           <text fg={theme.text} wrapMode="word">
-            {body !== "" ? body : ""}
-            <span fg={theme.accent}>_</span>
+            <TextInputContent
+              cursorColor={theme.accent}
+              cursorOffset={bodyCursorOffset}
+              value={body}
+            />
           </text>
         </box>
         {isSubmitting ? (

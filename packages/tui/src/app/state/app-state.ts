@@ -11,6 +11,7 @@ import type { AppDialogStackEntry } from "../dialogs/stack.ts";
 import { createKeybindController } from "../keybind-controller.ts";
 import type { KeymapPrefixId } from "../keymap/prefixes.ts";
 import type { KeymapRuntime, ResolvedKeymaps, ReverseKeymaps } from "../keymap/index.ts";
+import type { TextInputState } from "../text-input/input-state.ts";
 import type {
   AppPane,
   BranchListFilters,
@@ -57,10 +58,10 @@ export interface DiffdiffAppState {
   commentCollapseStates: Record<string, boolean>;
   comparisonBrowserData: ComparisonBrowserData;
   commandIndex: number;
-  commandQuery: string;
+  commandInput: TextInputState;
   commitListIndex: number;
   commitSearchActive: boolean;
-  commitSearchQuery: string;
+  commitSearchInput: TextInputState;
   dialogStack: readonly AppDialogStackEntry[];
   diffViewportMetrics: DiffViewportMetrics;
   diffViewPreference: DiffViewPreference;
@@ -80,8 +81,8 @@ export interface DiffdiffAppState {
   latestSessionLoadIdRef: MutableRefObject<number>;
   activePrefix: KeymapPrefixId | null;
   loadingIndicatorFrame: number;
-  mergeCommitMessage: string;
-  mergeCommitTitle: string;
+  mergeCommitMessageInput: TextInputState;
+  mergeCommitTitleInput: TextInputState;
   mergeConfirmOpen: boolean;
   mergeMethod: GitHubMergeMethod | undefined;
   mergeModalField: MergeModalField;
@@ -103,13 +104,13 @@ export interface DiffdiffAppState {
   pullRequestListIndex: number;
   pullRequestListLoadIdRef: MutableRefObject<number>;
   pullRequestSearchActive: boolean;
-  pullRequestSearchQuery: string;
+  pullRequestSearchInput: TextInputState;
   refreshIndicatorLabel: string | null;
   renderer: ReturnType<typeof useRenderer>;
   reviewCacheTimeoutRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
   reviewedPaths: Set<string>;
   reviewComposer: ReviewComposerUiState;
-  reviewSubmissionBody: string;
+  reviewSubmissionInput: TextInputState;
   reviewSubmissionEventIndex: number;
   selectedFileIndex: number;
   showSelectedReviewAnchor: boolean;
@@ -145,10 +146,10 @@ export interface DiffdiffAppState {
   setCommentCollapseStates: Dispatch<SetStateAction<Record<string, boolean>>>;
   setComparisonBrowserData: Dispatch<SetStateAction<ComparisonBrowserData>>;
   setCommandIndex: Dispatch<SetStateAction<number>>;
-  setCommandQuery: Dispatch<SetStateAction<string>>;
+  setCommandInput: Dispatch<SetStateAction<TextInputState>>;
   setCommitListIndex: Dispatch<SetStateAction<number>>;
   setCommitSearchActive: Dispatch<SetStateAction<boolean>>;
-  setCommitSearchQuery: Dispatch<SetStateAction<string>>;
+  setCommitSearchInput: Dispatch<SetStateAction<TextInputState>>;
   setDialogStack: Dispatch<SetStateAction<readonly AppDialogStackEntry[]>>;
   setDiffViewPreference: Dispatch<SetStateAction<DiffViewPreference>>;
   setDiffViewportMetrics: Dispatch<SetStateAction<DiffViewportMetrics>>;
@@ -162,8 +163,8 @@ export interface DiffdiffAppState {
   setActivePrefix: Dispatch<SetStateAction<KeymapPrefixId | null>>;
   setLastAccessedFileIndex: Dispatch<SetStateAction<number | null>>;
   setLoadingIndicatorFrame: Dispatch<SetStateAction<number>>;
-  setMergeCommitMessage: Dispatch<SetStateAction<string>>;
-  setMergeCommitTitle: Dispatch<SetStateAction<string>>;
+  setMergeCommitMessageInput: Dispatch<SetStateAction<TextInputState>>;
+  setMergeCommitTitleInput: Dispatch<SetStateAction<TextInputState>>;
   setMergeConfirmOpen: Dispatch<SetStateAction<boolean>>;
   setMergeMethod: Dispatch<SetStateAction<GitHubMergeMethod | undefined>>;
   setMergeModalField: Dispatch<SetStateAction<MergeModalField>>;
@@ -172,11 +173,11 @@ export interface DiffdiffAppState {
   setPullRequestList: Dispatch<SetStateAction<GitHubDashboardPullRequest[]>>;
   setPullRequestListIndex: Dispatch<SetStateAction<number>>;
   setPullRequestSearchActive: Dispatch<SetStateAction<boolean>>;
-  setPullRequestSearchQuery: Dispatch<SetStateAction<string>>;
+  setPullRequestSearchInput: Dispatch<SetStateAction<TextInputState>>;
   setRefreshIndicatorLabel: Dispatch<SetStateAction<string | null>>;
   setReviewedPaths: Dispatch<SetStateAction<Set<string>>>;
   setReviewComposer: Dispatch<SetStateAction<ReviewComposerUiState>>;
-  setReviewSubmissionBody: Dispatch<SetStateAction<string>>;
+  setReviewSubmissionInput: Dispatch<SetStateAction<TextInputState>>;
   setReviewSubmissionEventIndex: Dispatch<SetStateAction<number>>;
   setSelectedFileIndex: Dispatch<SetStateAction<number>>;
   setShowSelectedReviewAnchor: Dispatch<SetStateAction<boolean>>;

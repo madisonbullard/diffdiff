@@ -8,6 +8,7 @@ import {
 import type { BranchListItem, CommitListItem } from "../types.ts";
 import type { UiTheme } from "../theme.ts";
 import { BranchName, Tag, getRemoteShortName, shortSha, tintHex } from "./shared.tsx";
+import { TextInputContent } from "./text-input-content.tsx";
 
 const COMMIT_LIST_MAX_VISIBLE = 7;
 
@@ -49,12 +50,14 @@ export function BranchListView({
 export function CommitListView({
   commitItems,
   searchQuery,
+  searchCursorOffset,
   searchActive,
   selectedIndex,
   theme,
 }: {
   commitItems: readonly CommitListItem[];
   searchQuery: string;
+  searchCursorOffset: number;
   searchActive: boolean;
   selectedIndex: number;
   theme: UiTheme;
@@ -89,9 +92,15 @@ export function CommitListView({
         <text fg={theme.textMuted} wrapMode="none">
           <span fg={searchActive ? theme.accent : theme.textMuted}>/</span>
           <span fg={searchQuery !== "" ? theme.text : theme.textMuted}>
-            {searchQuery !== "" ? searchQuery : searchActive ? "" : "search commits..."}
+            <TextInputContent
+              cursorColor={theme.accent}
+              cursorOffset={searchCursorOffset}
+              placeholder={searchActive ? undefined : "search commits..."}
+              placeholderColor={theme.textMuted}
+              showCursor={searchActive}
+              value={searchQuery}
+            />
           </span>
-          {searchActive ? <span fg={theme.accent}>_</span> : null}
         </text>
       </box>
       {commitItems.length === 0 ? (

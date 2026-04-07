@@ -34,6 +34,7 @@ import {
   createReviewComposerState,
   loadReviewComposerHistoryEntries,
 } from "../review/review-composer-state.ts";
+import { createTextInputState } from "../text-input/input-state.ts";
 import {
   buildBranchListItems,
   DEFAULT_BRANCH_LIST_FILTERS,
@@ -153,10 +154,10 @@ export function useDiffdiffAppState({
       items: initialBranchItems,
     }),
   );
-  const [commandQuery, setCommandQuery] = useState("");
+  const [commandInput, setCommandInput] = useState(() => createTextInputState());
   const [commandIndex, setCommandIndex] = useState(0);
   const [commitListIndex, setCommitListIndex] = useState(0);
-  const [commitSearchQuery, setCommitSearchQuery] = useState("");
+  const [commitSearchInput, setCommitSearchInput] = useState(() => createTextInputState());
   const [commitSearchActive, setCommitSearchActive] = useState(false);
   const [filterIndex, setFilterIndex] = useState(0);
   const [isPullRequestListLoading, setIsPullRequestListLoading] = useState(false);
@@ -167,8 +168,10 @@ export function useDiffdiffAppState({
   const [activePrefix, setActivePrefix] = useState<KeymapPrefixId | null>(null);
   const [refreshIndicatorLabel, setRefreshIndicatorLabel] = useState<string | null>(null);
   const [diffViewPreference, setDiffViewPreference] = useState<DiffViewPreference>("unified");
-  const [mergeCommitMessage, setMergeCommitMessage] = useState("");
-  const [mergeCommitTitle, setMergeCommitTitle] = useState("");
+  const [mergeCommitMessageInput, setMergeCommitMessageInput] = useState(() =>
+    createTextInputState(),
+  );
+  const [mergeCommitTitleInput, setMergeCommitTitleInput] = useState(() => createTextInputState());
   const [mergeMethod, setMergeMethod] = useState<GitHubMergeMethod | undefined>(
     initialGitHubPreferences?.defaultMergeMethod,
   );
@@ -183,7 +186,9 @@ export function useDiffdiffAppState({
   const [pullRequestList, setPullRequestList] = useState<GitHubDashboardPullRequest[]>([]);
   const [pullRequestListIndex, setPullRequestListIndex] = useState(0);
   const [pullRequestSearchActive, setPullRequestSearchActive] = useState(false);
-  const [pullRequestSearchQuery, setPullRequestSearchQuery] = useState("");
+  const [pullRequestSearchInput, setPullRequestSearchInput] = useState(() =>
+    createTextInputState(),
+  );
   const [pullRequestConversationIndex, setPullRequestConversationIndex] = useState(0);
   const [selectedReviewCommentIndexByThreadId, setSelectedReviewCommentIndexByThreadId] = useState<
     Record<string, number>
@@ -191,7 +196,7 @@ export function useDiffdiffAppState({
   const [selectedReviewThreadIndexByFilePath, setSelectedReviewThreadIndexByFilePath] = useState<
     Record<string, number>
   >({});
-  const [reviewSubmissionBody, setReviewSubmissionBody] = useState("");
+  const [reviewSubmissionInput, setReviewSubmissionInput] = useState(() => createTextInputState());
   const [reviewSubmissionEventIndex, setReviewSubmissionEventIndex] = useState(0);
   const [showSelectedReviewAnchor, setShowSelectedReviewAnchor] = useState(false);
   const [selectedReviewAnchorIndex, setSelectedReviewAnchorIndex] = useState(0);
@@ -293,10 +298,10 @@ export function useDiffdiffAppState({
     commentCollapseStates,
     comparisonBrowserData,
     commandIndex,
-    commandQuery,
+    commandInput,
     commitListIndex,
     commitSearchActive,
-    commitSearchQuery,
+    commitSearchInput,
     dialogStack,
     diffViewportMetrics,
     diffViewPreference,
@@ -317,8 +322,8 @@ export function useDiffdiffAppState({
     activePrefix,
     loadingIndicatorFrame,
     mergeBodyScrollRef,
-    mergeCommitMessage,
-    mergeCommitTitle,
+    mergeCommitMessageInput,
+    mergeCommitTitleInput,
     mergeConfirmOpen,
     mergeMethod,
     mergeModalField,
@@ -337,13 +342,13 @@ export function useDiffdiffAppState({
     pullRequestListIndex,
     pullRequestListLoadIdRef,
     pullRequestSearchActive,
-    pullRequestSearchQuery,
+    pullRequestSearchInput,
     refreshIndicatorLabel,
     renderer,
     reviewCacheTimeoutRef,
     reviewedPaths,
     reviewComposer,
-    reviewSubmissionBody,
+    reviewSubmissionInput,
     reviewSubmissionEventIndex,
     scrollRef,
     selectedFileIndex,
@@ -369,10 +374,10 @@ export function useDiffdiffAppState({
     setCommentCollapseStates,
     setComparisonBrowserData,
     setCommandIndex,
-    setCommandQuery,
+    setCommandInput,
     setCommitListIndex,
     setCommitSearchActive,
-    setCommitSearchQuery,
+    setCommitSearchInput,
     setDialogStack,
     setDiffViewPreference,
     setDiffViewportMetrics,
@@ -386,8 +391,8 @@ export function useDiffdiffAppState({
     setActivePrefix,
     setLastAccessedFileIndex,
     setLoadingIndicatorFrame,
-    setMergeCommitMessage,
-    setMergeCommitTitle,
+    setMergeCommitMessageInput,
+    setMergeCommitTitleInput,
     setMergeConfirmOpen,
     setMergeMethod,
     setMergeModalField,
@@ -396,11 +401,11 @@ export function useDiffdiffAppState({
     setPullRequestList,
     setPullRequestListIndex,
     setPullRequestSearchActive,
-    setPullRequestSearchQuery,
+    setPullRequestSearchInput,
     setRefreshIndicatorLabel,
     setReviewedPaths,
     setReviewComposer,
-    setReviewSubmissionBody,
+    setReviewSubmissionInput,
     setReviewSubmissionEventIndex,
     setSelectedFileIndex,
     setShowSelectedReviewAnchor,

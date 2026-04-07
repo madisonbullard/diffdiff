@@ -3,6 +3,7 @@ import {
   appendReviewComposerHistoryEntry,
   clearReviewComposer,
   openReviewComposer,
+  updateReviewComposerInput,
 } from "./review-composer-state.ts";
 import { findLatestDismissedReviewComposerDraft } from "../../review/composer-history.ts";
 import { formatMergeMessageBuffer, parseMergeMessageBuffer } from "../../review/merge-message.ts";
@@ -10,6 +11,7 @@ import { getReviewComposerHistoryScope, type ReviewComposerTarget } from "./revi
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
+import { createTextInputState } from "../text-input/input-state.ts";
 
 interface CreateReviewComposerInteractionsOptions {
   persistence: DiffdiffAppPersistence;
@@ -67,17 +69,12 @@ export function createReviewComposerInteractions({
 
     try {
       const nextBody = await openExternalTextEditor({
-        initialValue: state.reviewComposer.body,
+        initialValue: state.reviewComposer.input.value,
         tempFileName: "REVIEW_COMMENT.md",
       });
-      state.setReviewComposer((currentReviewComposer) => ({
-        ...currentReviewComposer,
-        autocompleteIndex: 0,
-        body: nextBody,
-        dismissedAutocompleteTokenKey: null,
-        historyDraft: null,
-        historyIndex: 0,
-      }));
+      state.setReviewComposer((currentReviewComposer) =>
+        updateReviewComposerInput(currentReviewComposer, createTextInputState(nextBody)),
+      );
       state.setStatusMessage("Updated comment draft from external editor.");
     } catch (error) {
       handleExternalEditorError(error, "open-review-composer-external-editor");
@@ -87,10 +84,10 @@ export function createReviewComposerInteractions({
   async function openSubmitReviewModalInExternalEditor(): Promise<void> {
     try {
       const nextBody = await openExternalTextEditor({
-        initialValue: state.reviewSubmissionBody,
+        initialValue: state.reviewSubmissionInput.value,
         tempFileName: "SUBMIT_REVIEW.md",
       });
-      state.setReviewSubmissionBody(nextBody);
+      state.setReviewSubmissionInput(createTextInputState(nextBody));
       state.setStatusMessage("Updated review summary from external editor.");
     } catch (error) {
       handleExternalEditorError(error, "open-submit-review-external-editor");
@@ -101,12 +98,15 @@ export function createReviewComposerInteractions({
     try {
       const nextBuffer = await openExternalTextEditor({
         fileExtension: ".txt",
-        initialValue: formatMergeMessageBuffer(state.mergeCommitTitle, state.mergeCommitMessage),
+        initialValue: formatMergeMessageBuffer(
+          state.mergeCommitTitleInput.value,
+          state.mergeCommitMessageInput.value,
+        ),
         tempFileName: "MERGE_MSG",
       });
       const nextMessage = parseMergeMessageBuffer(nextBuffer);
-      state.setMergeCommitTitle(nextMessage.title);
-      state.setMergeCommitMessage(nextMessage.body);
+      state.setMergeCommitTitleInput(createTextInputState(nextMessage.title));
+      state.setMergeCommitMessageInput(createTextInputState(nextMessage.body));
       state.setStatusMessage("Updated merge message from external editor.");
     } catch (error) {
       handleExternalEditorError(error, "open-merge-external-editor");

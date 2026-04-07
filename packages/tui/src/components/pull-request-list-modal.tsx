@@ -3,6 +3,7 @@ import type { GitHubDashboardPullRequest } from "@diffdiff/core";
 import type { UiTheme } from "../theme.ts";
 import { AsciiLoadingLabel } from "./ascii-loading-pane.tsx";
 import { KeyCap, ModalFrame, SPLIT_BORDER, selectItem, tintHex } from "./shared.tsx";
+import { TextInputContent } from "./text-input-content.tsx";
 
 const PULL_REQUEST_LIST_MAX_VISIBLE = 10;
 const PULL_REQUEST_LIST_CONTENT_WIDTH = 96;
@@ -14,6 +15,7 @@ export function PullRequestListModal({
   reviewRequestedCount,
   searchActive,
   searchQuery,
+  searchCursorOffset,
   selectedIndex,
   theme,
 }: {
@@ -23,6 +25,7 @@ export function PullRequestListModal({
   reviewRequestedCount: number;
   searchActive: boolean;
   searchQuery: string;
+  searchCursorOffset: number;
   selectedIndex: number;
   theme: UiTheme;
 }) {
@@ -92,9 +95,15 @@ export function PullRequestListModal({
           <text fg={theme.textMuted} wrapMode="none">
             <span fg={searchActive ? theme.accent : theme.textMuted}>/</span>
             <span fg={searchQuery !== "" ? theme.text : theme.textMuted}>
-              {searchQuery !== "" ? searchQuery : searchActive ? "" : "search pull requests..."}
+              <TextInputContent
+                cursorColor={theme.accent}
+                cursorOffset={searchCursorOffset}
+                placeholder={searchActive ? undefined : "search pull requests..."}
+                placeholderColor={theme.textMuted}
+                showCursor={searchActive}
+                value={searchQuery}
+              />
             </span>
-            {searchActive ? <span fg={theme.accent}>_</span> : null}
           </text>
         </box>
 

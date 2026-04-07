@@ -8,6 +8,7 @@ import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import { clearReviewComposer } from "./review-composer-state.ts";
 import { buildQuotedPullRequestReply } from "./review-composer.ts";
 import type { ReviewComposerTarget } from "./review-composer.ts";
+import { createTextInputState } from "../text-input/input-state.ts";
 import {
   buildOptimisticMergeOperation,
   buildOptimisticPullRequestCommentOperation,
@@ -60,14 +61,14 @@ export function createGitHubMutationActions({
     if (
       state.session.github == null ||
       state.reviewComposer.target == null ||
-      state.reviewComposer.body.trim() === ""
+      state.reviewComposer.input.value.trim() === ""
     ) {
       return;
     }
 
     const reviewSession = state.session.github;
     const reviewComposerTarget = state.reviewComposer.target;
-    const nextBody = state.reviewComposer.body.trim();
+    const nextBody = state.reviewComposer.input.value.trim();
 
     if (reviewComposerTarget.kind === "review-thread" && props.addReviewThread == null) {
       return;
@@ -192,7 +193,9 @@ export function createGitHubMutationActions({
     const reviewSession = state.session.github;
     const event = getReviewSubmissionEvent(state.reviewSubmissionEventIndex);
     const nextBody =
-      state.reviewSubmissionBody.trim() === "" ? undefined : state.reviewSubmissionBody.trim();
+      state.reviewSubmissionInput.value.trim() === ""
+        ? undefined
+        : state.reviewSubmissionInput.value.trim();
     const operationId = optimisticOperations.reserveId();
 
     optimisticOperations.push(
@@ -216,7 +219,7 @@ export function createGitHubMutationActions({
       state.setDialogStack((currentStack) =>
         closeAppDialog(currentStack, "submit-review", "complete"),
       );
-      state.setReviewSubmissionBody("");
+      state.setReviewSubmissionInput(createTextInputState());
       state.setStatusMessage("Submitted review.");
       sessionLoadId = actions.beginSessionLoad();
       const nextSession = await props.loadSession(state.startupOptions);
@@ -275,9 +278,13 @@ export function createGitHubMutationActions({
     try {
       mergeResult = await props.mergePullRequest(reviewSession, {
         commitMessage:
-          state.mergeCommitMessage.trim() === "" ? undefined : state.mergeCommitMessage.trim(),
+          state.mergeCommitMessageInput.value.trim() === ""
+            ? undefined
+            : state.mergeCommitMessageInput.value.trim(),
         commitTitle:
-          state.mergeCommitTitle.trim() === "" ? undefined : state.mergeCommitTitle.trim(),
+          state.mergeCommitTitleInput.value.trim() === ""
+            ? undefined
+            : state.mergeCommitTitleInput.value.trim(),
         comparison: state.session.comparison,
         method: state.mergeMethod,
       });

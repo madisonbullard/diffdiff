@@ -46,9 +46,11 @@ interface DiffdiffAppDialogsProps {
   commandBindingLabels: ReadonlyMap<string, string | undefined>;
   commandIndex: number;
   commandQuery: string;
+  commandQueryCursorOffset: number;
   commitListIndex: number;
   commitSearchActive: boolean;
   commitSearchQuery: string;
+  commitSearchCursorOffset: number;
   diagnosticErrorMessage: string | null;
   diagnosticEventIndex: number;
   diagnosticEvents: readonly import("../diagnostics/session-events.ts").SessionDiagnosticEvent[];
@@ -62,7 +64,9 @@ interface DiffdiffAppDialogsProps {
   isSubmittingReviewAction: boolean;
   mergeBodyScrollRef: React.MutableRefObject<ScrollBoxRenderable | null>;
   mergeCommitMessage: string;
+  mergeCommitMessageCursorOffset: number;
   mergeCommitTitle: string;
+  mergeCommitTitleCursorOffset: number;
   mergeConfirmOpen: boolean;
   mergeMethod: GitHubMergeMethod | undefined;
   mergeModalField: "method" | "title" | "body";
@@ -70,6 +74,7 @@ interface DiffdiffAppDialogsProps {
   pullRequestListIndex: number;
   pullRequestSearchActive: boolean;
   pullRequestSearchQuery: string;
+  pullRequestSearchCursorOffset: number;
   reviewRequestedPrCount: number;
   reviewedCount: number;
   filteredPullRequests: readonly GitHubDashboardPullRequest[];
@@ -77,6 +82,7 @@ interface DiffdiffAppDialogsProps {
   localBranchCount: number;
   remoteBranchCount: number;
   reviewComposerBody: string;
+  reviewComposerCursorOffset: number;
   reviewComposerAutocomplete: import("../../review/composer-autocomplete.ts").ReviewComposerAutocompleteState;
   reviewComposerAutocompleteIndex: number;
   reviewComposerContext: {
@@ -86,6 +92,7 @@ interface DiffdiffAppDialogsProps {
   } | null;
   reviewComposerHistoryEntries: readonly ReviewComposerHistoryEntry[];
   reviewSubmissionBody: string;
+  reviewSubmissionCursorOffset: number;
   reviewSubmissionEventIndex: number;
   selectedPullRequestConversationItemId?: string;
   session: PreparedReviewSession;
@@ -107,9 +114,11 @@ export function DiffdiffAppDialogs({
   commandBindingLabels,
   commandIndex,
   commandQuery,
+  commandQueryCursorOffset,
   commitListIndex,
   commitSearchActive,
   commitSearchQuery,
+  commitSearchCursorOffset,
   diagnosticErrorMessage,
   diagnosticEventIndex,
   diagnosticEvents,
@@ -124,7 +133,9 @@ export function DiffdiffAppDialogs({
   localBranchCount,
   mergeBodyScrollRef,
   mergeCommitMessage,
+  mergeCommitMessageCursorOffset,
   mergeCommitTitle,
+  mergeCommitTitleCursorOffset,
   mergeConfirmOpen,
   mergeMethod,
   mergeModalField,
@@ -132,17 +143,20 @@ export function DiffdiffAppDialogs({
   pullRequestListIndex,
   pullRequestSearchActive,
   pullRequestSearchQuery,
+  pullRequestSearchCursorOffset,
   reviewRequestedPrCount,
   reviewedCount,
   filteredPullRequests,
   isPullRequestListLoading,
   remoteBranchCount,
   reviewComposerBody,
+  reviewComposerCursorOffset,
   reviewComposerAutocomplete,
   reviewComposerAutocompleteIndex,
   reviewComposerContext,
   reviewComposerHistoryEntries,
   reviewSubmissionBody,
+  reviewSubmissionCursorOffset,
   reviewSubmissionEventIndex,
   selectedPullRequestConversationItemId,
   session,
@@ -159,6 +173,7 @@ export function DiffdiffAppDialogs({
         commitItems={filteredCommitItems}
         commitIndex={commitListIndex}
         commitSearchQuery={commitSearchQuery}
+        commitSearchCursorOffset={commitSearchCursorOffset}
         commitSearchActive={commitSearchActive}
         comparisonMode={session.comparison.mode}
         filters={branchListFilters}
@@ -177,6 +192,7 @@ export function DiffdiffAppDialogs({
         commands={filteredCommands}
         commandBindingLabels={commandBindingLabels}
         query={commandQuery}
+        queryCursorOffset={commandQueryCursorOffset}
         selectedIndex={commandIndex}
         theme={theme}
       />
@@ -192,6 +208,7 @@ export function DiffdiffAppDialogs({
         reviewRequestedCount={reviewRequestedPrCount}
         searchActive={pullRequestSearchActive}
         searchQuery={pullRequestSearchQuery}
+        searchCursorOffset={pullRequestSearchCursorOffset}
         selectedIndex={pullRequestListIndex}
         theme={theme}
       />
@@ -214,6 +231,7 @@ export function DiffdiffAppDialogs({
         autocomplete={reviewComposerAutocomplete}
         autocompleteIndex={reviewComposerAutocompleteIndex}
         body={reviewComposerBody}
+        bodyCursorOffset={reviewComposerCursorOffset}
         context={reviewComposerContext}
         historyEntryCount={reviewComposerHistoryEntries.length}
         isSubmitting={isSubmittingReviewAction}
@@ -236,6 +254,7 @@ export function DiffdiffAppDialogs({
     return (
       <SubmitReviewModal
         body={reviewSubmissionBody}
+        bodyCursorOffset={reviewSubmissionCursorOffset}
         eventIndex={reviewSubmissionEventIndex}
         isSubmitting={isSubmittingReviewAction}
         theme={theme}
@@ -248,6 +267,7 @@ export function DiffdiffAppDialogs({
       <>
         <MergePullRequestModal
           body={mergeCommitMessage}
+          bodyCursorOffset={mergeCommitMessageCursorOffset}
           bodyScrollRef={mergeBodyScrollRef}
           canSubmit={session.github.pullRequest.merge.canMerge && mergeMethod != null}
           field={mergeModalField}
@@ -256,6 +276,7 @@ export function DiffdiffAppDialogs({
           pullRequest={session.github.pullRequest}
           theme={theme}
           title={mergeCommitTitle}
+          titleCursorOffset={mergeCommitTitleCursorOffset}
         />
         {mergeConfirmOpen ? <MergeConfirmModal method={mergeMethod} theme={theme} /> : null}
       </>

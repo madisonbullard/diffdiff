@@ -1,11 +1,12 @@
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useEffect, useRef } from "react";
 import { findKeymapPrefixByNodeLabel } from "../keymap/prefixes.ts";
-import { isPrintableKey, type KeyboardInput } from "../../keyboard-input.ts";
+import type { KeyboardInput } from "../../keyboard-input.ts";
 import { getPrefixMenuConfig } from "../commands/prefix-menus.ts";
 import { dispatchAction, type ActionDispatchMap } from "../keymap/action-dispatch.ts";
 import { keyEventFromInput } from "../keymap/key-event.ts";
-import { updateReviewComposerBody } from "../review/review-composer-state.ts";
+import { updateReviewComposerInput } from "../review/review-composer-state.ts";
+import { applyTextInputKey } from "../text-input/input-state.ts";
 import type { KeymapMode } from "./keymap-mode.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 
@@ -44,42 +45,93 @@ export function useMainKeyboard({
     );
   }
 
-  function setTextInputValue(key: KeyboardInput): void {
-    if (!isPrintableKey(key)) {
-      return;
+  function handleTextInputKey(key: KeyboardInput): boolean {
+    switch (activeKeymapMode) {
+      case "commands": {
+        let handled = false;
+        let textChanged = false;
+        state.setCommandInput((currentInput) => {
+          const result = applyTextInputKey(currentInput, key, { allowCtrlELineEnd: true });
+          handled = result.handled;
+          textChanged = result.nextState.value !== currentInput.value;
+          return result.nextState;
+        });
+        if (textChanged) {
+          state.setCommandIndex(0);
+        }
+        return handled;
+      }
+      case "pull-request-search": {
+        let handled = false;
+        let textChanged = false;
+        state.setPullRequestSearchInput((currentInput) => {
+          const result = applyTextInputKey(currentInput, key, { allowCtrlELineEnd: true });
+          handled = result.handled;
+          textChanged = result.nextState.value !== currentInput.value;
+          return result.nextState;
+        });
+        if (textChanged) {
+          state.setPullRequestListIndex(0);
+        }
+        return handled;
+      }
+      case "commit-search": {
+        let handled = false;
+        let textChanged = false;
+        state.setCommitSearchInput((currentInput) => {
+          const result = applyTextInputKey(currentInput, key, { allowCtrlELineEnd: true });
+          handled = result.handled;
+          textChanged = result.nextState.value !== currentInput.value;
+          return result.nextState;
+        });
+        if (textChanged) {
+          state.setCommitListIndex(0);
+        }
+        return handled;
+      }
+      case "comment": {
+        let handled = false;
+        state.setReviewComposer((currentReviewComposer) => {
+          const result = applyTextInputKey(currentReviewComposer.input, key, {
+            multiline: true,
+          });
+          handled = result.handled;
+          return handled
+            ? updateReviewComposerInput(currentReviewComposer, result.nextState)
+            : currentReviewComposer;
+        });
+        return handled;
+      }
+      case "submit-review": {
+        let handled = false;
+        state.setReviewSubmissionInput((currentInput) => {
+          const result = applyTextInputKey(currentInput, key, { multiline: true });
+          handled = result.handled;
+          return result.nextState;
+        });
+        return handled;
+      }
+      case "merge-title": {
+        let handled = false;
+        state.setMergeCommitTitleInput((currentInput) => {
+          const result = applyTextInputKey(currentInput, key, { allowCtrlELineEnd: false });
+          handled = result.handled;
+          return result.nextState;
+        });
+        return handled;
+      }
+      case "merge-body": {
+        let handled = false;
+        state.setMergeCommitMessageInput((currentInput) => {
+          const result = applyTextInputKey(currentInput, key, { multiline: true });
+          handled = result.handled;
+          return result.nextState;
+        });
+        return handled;
+      }
     }
 
-    switch (activeKeymapMode) {
-      case "commands":
-        state.setCommandQuery((currentQuery) => currentQuery + key.sequence);
-        state.setCommandIndex(0);
-        return;
-      case "pull-request-search":
-        state.setPullRequestSearchQuery((query) => query + key.sequence);
-        state.setPullRequestListIndex(0);
-        return;
-      case "commit-search":
-        state.setCommitSearchQuery((query) => query + key.sequence);
-        state.setCommitListIndex(0);
-        return;
-      case "comment":
-        state.setReviewComposer((currentReviewComposer) =>
-          updateReviewComposerBody(
-            currentReviewComposer,
-            (currentBody) => currentBody + key.sequence,
-          ),
-        );
-        return;
-      case "submit-review":
-        state.setReviewSubmissionBody((currentBody) => currentBody + key.sequence);
-        return;
-      case "merge-title":
-        state.setMergeCommitTitle((currentTitle) => currentTitle + key.sequence);
-        return;
-      case "merge-body":
-        state.setMergeCommitMessage((currentBody) => currentBody + key.sequence);
-        return;
-    }
+    return false;
   }
 
   function syncPendingPrefix(label: string | undefined): void {
@@ -111,6 +163,10 @@ export function useMainKeyboard({
   }
 
   function handleResult(key: KeyboardInput): void {
+    if (key.super === true && isLeaderTextInputMode(activeKeymapMode) && handleTextInputKey(key)) {
+      return;
+    }
+
     const event = keyEventFromInput(key);
     const result = state.keymapRuntime.get(activeKeymapMode, event);
 
@@ -166,7 +222,7 @@ export function useMainKeyboard({
           return;
         }
 
-        setTextInputValue(key);
+        handleTextInputKey(key);
       }
     }
   }

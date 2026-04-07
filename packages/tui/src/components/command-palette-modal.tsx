@@ -2,17 +2,20 @@ import type { CommandDefinition } from "../commands.ts";
 import type { UiTheme } from "../theme.ts";
 import { CommandBindingLabel, CommandListItem, CommandListRow } from "./command-list.tsx";
 import { KeyCap, ModalFrame, SPLIT_BORDER, selectItem } from "./shared.tsx";
+import { TextInputContent } from "./text-input-content.tsx";
 
 export function CommandPaletteModal({
   commands,
   commandBindingLabels,
   query,
+  queryCursorOffset,
   selectedIndex,
   theme,
 }: {
   commands: readonly CommandDefinition[];
   commandBindingLabels: ReadonlyMap<string, string | undefined>;
   query: string;
+  queryCursorOffset: number;
   selectedIndex: number;
   theme: UiTheme;
 }) {
@@ -56,8 +59,14 @@ export function CommandPaletteModal({
           <text fg={theme.textMuted} wrapMode="none">
             <span fg={theme.text}>fuzzy filter</span>
             <span>{": "}</span>
-            <span fg={normalizedQuery === "" ? theme.textMuted : theme.text}>
-              {normalizedQuery === "" ? "type to fuzzy filter commands" : normalizedQuery}
+            <span fg={query === "" ? theme.textMuted : theme.text}>
+              <TextInputContent
+                cursorColor={theme.accent}
+                cursorOffset={queryCursorOffset}
+                placeholder="type to fuzzy filter commands"
+                placeholderColor={theme.textMuted}
+                value={query}
+              />
             </span>
           </text>
         </box>

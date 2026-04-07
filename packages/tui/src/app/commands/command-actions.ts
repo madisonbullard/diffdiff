@@ -2,6 +2,7 @@ import type { AppCommand } from "./registry.ts";
 import { findAppCommandByValue } from "./registry.ts";
 import { closeDialog as closeAppDialog, openDialog as openAppDialog } from "../dialogs/stack.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
+import { createTextInputState } from "../text-input/input-state.ts";
 
 interface CreateCommandActionsOptions {
   getCommands: () => readonly AppCommand[];
@@ -23,7 +24,7 @@ export function createCommandActions({ getCommands, state }: CreateCommandAction
 
     clearPrefixMode();
     state.setDialogStack((currentStack) => closeAppDialog(currentStack, "command-palette"));
-    state.setCommandQuery("");
+    state.setCommandInput(createTextInputState());
     state.setCommandIndex(0);
     command.run();
   }
@@ -37,7 +38,7 @@ export function createCommandActions({ getCommands, state }: CreateCommandAction
 
   function openCommandModal(): void {
     clearPrefixMode();
-    state.setCommandQuery("");
+    state.setCommandInput(createTextInputState());
     state.setCommandIndex(0);
     state.setDialogStack((currentStack) => openAppDialog(currentStack, "command-palette"));
     state.setStatusMessage("Opened command palette.");
@@ -47,7 +48,7 @@ export function createCommandActions({ getCommands, state }: CreateCommandAction
     state.setDialogStack((currentStack) =>
       closeAppDialog(currentStack, "command-palette", "dismiss"),
     );
-    state.setCommandQuery("");
+    state.setCommandInput(createTextInputState());
     state.setCommandIndex(0);
     state.setStatusMessage("Closed command palette.");
   }

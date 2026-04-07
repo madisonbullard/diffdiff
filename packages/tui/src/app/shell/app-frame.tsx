@@ -48,9 +48,11 @@ interface DiffdiffAppViewProps {
   commandBindingLabels: ReadonlyMap<string, string | undefined>;
   commandIndex: number;
   commandQuery: string;
+  commandQueryCursorOffset: number;
   commitListIndex: number;
   commitSearchActive: boolean;
   commitSearchQuery: string;
+  commitSearchCursorOffset: number;
   currentBranchLabel: string;
   diagnosticErrorMessage: string | null;
   diagnosticEventIndex: number;
@@ -79,7 +81,9 @@ interface DiffdiffAppViewProps {
   localBranchCount: number;
   mergeBodyScrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   mergeCommitMessage: string;
+  mergeCommitMessageCursorOffset: number;
   mergeCommitTitle: string;
+  mergeCommitTitleCursorOffset: number;
   mergeMethod: GitHubMergeMethod | undefined;
   mergeModalField: "method" | "title" | "body";
   activePrefixMenu?: PrefixMenuConfig;
@@ -90,9 +94,11 @@ interface DiffdiffAppViewProps {
   pullRequestListIndex: number;
   pullRequestSearchActive: boolean;
   pullRequestSearchQuery: string;
+  pullRequestSearchCursorOffset: number;
   refreshIndicatorLabel: string | null;
   remoteBranchCount: number;
   reviewComposerBody: string;
+  reviewComposerCursorOffset: number;
   reviewComposerAutocomplete: import("../../review/composer-autocomplete.ts").ReviewComposerAutocompleteState;
   reviewComposerAutocompleteIndex: number;
   reviewComposerContext: {
@@ -105,6 +111,7 @@ interface DiffdiffAppViewProps {
   reviewedCount: number;
   reviewRequestedPrCount: number;
   reviewSubmissionBody: string;
+  reviewSubmissionCursorOffset: number;
   reviewSubmissionEventIndex: number;
   reviewThreadsByPath: ReadonlyMap<
     string,
@@ -158,9 +165,11 @@ export function DiffdiffAppView({
   commandBindingLabels,
   commandIndex,
   commandQuery,
+  commandQueryCursorOffset,
   commitListIndex,
   commitSearchActive,
   commitSearchQuery,
+  commitSearchCursorOffset,
   currentBranchLabel,
   diagnosticErrorMessage,
   diagnosticEventIndex,
@@ -189,7 +198,9 @@ export function DiffdiffAppView({
   localBranchCount,
   mergeBodyScrollRef,
   mergeCommitMessage,
+  mergeCommitMessageCursorOffset,
   mergeCommitTitle,
+  mergeCommitTitleCursorOffset,
   mergeMethod,
   mergeModalField,
   activePrefixMenu,
@@ -200,9 +211,11 @@ export function DiffdiffAppView({
   pullRequestListIndex,
   pullRequestSearchActive,
   pullRequestSearchQuery,
+  pullRequestSearchCursorOffset,
   refreshIndicatorLabel,
   remoteBranchCount,
   reviewComposerBody,
+  reviewComposerCursorOffset,
   reviewComposerAutocomplete,
   reviewComposerAutocompleteIndex,
   reviewComposerContext,
@@ -211,6 +224,7 @@ export function DiffdiffAppView({
   reviewedCount,
   reviewRequestedPrCount,
   reviewSubmissionBody,
+  reviewSubmissionCursorOffset,
   reviewSubmissionEventIndex,
   reviewThreadsByPath,
   scrollRef,
@@ -321,9 +335,11 @@ export function DiffdiffAppView({
           commandBindingLabels={commandBindingLabels}
           commandIndex={commandIndex}
           commandQuery={commandQuery}
+          commandQueryCursorOffset={commandQueryCursorOffset}
           commitListIndex={commitListIndex}
           commitSearchActive={commitSearchActive}
           commitSearchQuery={commitSearchQuery}
+          commitSearchCursorOffset={commitSearchCursorOffset}
           diagnosticErrorMessage={diagnosticErrorMessage}
           diagnosticEventIndex={diagnosticEventIndex}
           diagnosticEvents={diagnosticEvents}
@@ -338,7 +354,9 @@ export function DiffdiffAppView({
           localBranchCount={localBranchCount}
           mergeBodyScrollRef={mergeBodyScrollRef}
           mergeCommitMessage={mergeCommitMessage}
+          mergeCommitMessageCursorOffset={mergeCommitMessageCursorOffset}
           mergeCommitTitle={mergeCommitTitle}
+          mergeCommitTitleCursorOffset={mergeCommitTitleCursorOffset}
           mergeConfirmOpen={showMergeConfirmModal}
           mergeMethod={mergeMethod}
           mergeModalField={mergeModalField}
@@ -346,17 +364,20 @@ export function DiffdiffAppView({
           pullRequestListIndex={pullRequestListIndex}
           pullRequestSearchActive={pullRequestSearchActive}
           pullRequestSearchQuery={pullRequestSearchQuery}
+          pullRequestSearchCursorOffset={pullRequestSearchCursorOffset}
           reviewRequestedPrCount={reviewRequestedPrCount}
           filteredPullRequests={filteredPullRequests}
           isPullRequestListLoading={isPullRequestListLoading}
           remoteBranchCount={remoteBranchCount}
           reviewComposerBody={reviewComposerBody}
+          reviewComposerCursorOffset={reviewComposerCursorOffset}
           reviewComposerAutocomplete={reviewComposerAutocomplete}
           reviewComposerAutocompleteIndex={reviewComposerAutocompleteIndex}
           reviewComposerContext={reviewComposerContext}
           reviewComposerHistoryEntries={reviewComposerHistoryEntries}
           reviewedCount={reviewedCount}
           reviewSubmissionBody={reviewSubmissionBody}
+          reviewSubmissionCursorOffset={reviewSubmissionCursorOffset}
           reviewSubmissionEventIndex={reviewSubmissionEventIndex}
           selectedPullRequestConversationItemId={pullRequestConversationItemId}
           session={session}

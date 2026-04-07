@@ -19,6 +19,7 @@ export function BranchModal({
   commitItems,
   commitIndex,
   commitSearchQuery,
+  commitSearchCursorOffset,
   commitSearchActive,
   comparisonMode,
   filters,
@@ -35,6 +36,7 @@ export function BranchModal({
   commitItems: readonly CommitListItem[];
   commitIndex: number;
   commitSearchQuery: string;
+  commitSearchCursorOffset: number;
   commitSearchActive: boolean;
   comparisonMode: "range" | "working-tree";
   filters: BranchListFilters;
@@ -160,6 +162,7 @@ export function BranchModal({
         <CommitListView
           commitItems={commitItems}
           searchQuery={commitSearchQuery}
+          searchCursorOffset={commitSearchCursorOffset}
           searchActive={commitSearchActive}
           selectedIndex={commitIndex}
           theme={theme}

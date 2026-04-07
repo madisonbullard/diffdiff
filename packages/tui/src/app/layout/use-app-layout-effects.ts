@@ -224,7 +224,7 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
   }, [
     derived.showMergeModal,
     state.mergeBodyScrollRef,
-    state.mergeCommitMessage,
+    state.mergeCommitMessageInput.value,
     state.mergeModalField,
   ]);
 

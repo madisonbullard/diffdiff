@@ -2,6 +2,7 @@ import { findInitialBranchListSelection } from "../../view-model.ts";
 import { openDialog as openAppDialog } from "./stack.ts";
 import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
+import { createTextInputState } from "../text-input/input-state.ts";
 
 export function openBranchListModal(
   state: DiffdiffAppState,
@@ -15,7 +16,7 @@ export function openBranchListModal(
     }),
   );
   state.setCommitListIndex(0);
-  state.setCommitSearchQuery("");
+  state.setCommitSearchInput(createTextInputState());
   state.setCommitSearchActive(false);
   state.setActiveListView("branch");
   state.setDialogStack((currentStack) => openAppDialog(currentStack, "branch", { clear: true }));

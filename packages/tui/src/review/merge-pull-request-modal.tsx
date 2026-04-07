@@ -3,6 +3,7 @@ import type { ScrollBoxRenderable } from "@opentui/core";
 import type { Ref } from "react";
 import type { UiTheme } from "../theme.ts";
 import { AsciiLoadingLabel } from "../components/ascii-loading-pane.tsx";
+import { TextInputContent } from "../components/text-input-content.tsx";
 import { formatMergeMethod, getMergeBlockedReason } from "./formatting.ts";
 import { MODAL_OVERLAY, REVIEW_BORDER } from "./shared.tsx";
 
@@ -11,6 +12,7 @@ const MERGE_BODY_MAX_HEIGHT = 8;
 
 export function MergePullRequestModal({
   body,
+  bodyCursorOffset,
   bodyScrollRef,
   canSubmit,
   field,
@@ -19,8 +21,10 @@ export function MergePullRequestModal({
   pullRequest,
   theme,
   title,
+  titleCursorOffset,
 }: {
   body: string;
+  bodyCursorOffset: number;
   bodyScrollRef?: Ref<ScrollBoxRenderable | null>;
   canSubmit: boolean;
   field: "method" | "title" | "body";
@@ -29,6 +33,7 @@ export function MergePullRequestModal({
   pullRequest: GitHubPullRequestDetail;
   theme: UiTheme;
   title: string;
+  titleCursorOffset: number;
 }) {
   const mergeBlockedReason = getMergeBlockedReason(pullRequest);
 
@@ -129,8 +134,12 @@ export function MergePullRequestModal({
         >
           <text fg={theme.text} wrapMode="word">
             <span fg={theme.textMuted}>{"Title: "}</span>
-            {title !== "" ? title : ""}
-            {field === "title" ? <span fg={theme.accent}>_</span> : null}
+            <TextInputContent
+              cursorColor={theme.accent}
+              cursorOffset={titleCursorOffset}
+              showCursor={field === "title"}
+              value={title}
+            />
           </text>
         </box>
         <box
@@ -164,8 +173,12 @@ export function MergePullRequestModal({
             verticalScrollbarOptions={{ trackOptions: { backgroundColor: theme.border } }}
           >
             <text fg={theme.text} wrapMode="word">
-              {body !== "" ? body : ""}
-              {field === "body" ? <span fg={theme.accent}>_</span> : null}
+              <TextInputContent
+                cursorColor={theme.accent}
+                cursorOffset={bodyCursorOffset}
+                showCursor={field === "body"}
+                value={body}
+              />
             </text>
           </scrollbox>
         </box>

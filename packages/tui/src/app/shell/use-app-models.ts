@@ -198,8 +198,8 @@ export function useDiffdiffAppDerived(
     [state.comparisonBrowserData.commits],
   );
   const filteredCommitItems = useMemo(
-    () => filterCommitListItems(commitItems, state.commitSearchQuery),
-    [commitItems, state.commitSearchQuery],
+    () => filterCommitListItems(commitItems, state.commitSearchInput.value),
+    [commitItems, state.commitSearchInput.value],
   );
   const orderedPullRequests = useMemo(
     () =>
@@ -210,8 +210,8 @@ export function useDiffdiffAppDerived(
     [state.pullRequestList, state.session.repository.currentForgeRepository],
   );
   const filteredPullRequests = useMemo(
-    () => filterPullRequests(orderedPullRequests, state.pullRequestSearchQuery),
-    [orderedPullRequests, state.pullRequestSearchQuery],
+    () => filterPullRequests(orderedPullRequests, state.pullRequestSearchInput.value),
+    [orderedPullRequests, state.pullRequestSearchInput.value],
   );
   const stickyFile = displaySession.files[state.activeFileIndex];
   const selectedBranchItem = branchItems[clampIndex(state.branchListIndex, branchItems.length)];
@@ -285,7 +285,8 @@ export function useDiffdiffAppDerived(
     state.reviewComposer.target == null
       ? { isVisible: false, options: [], query: "" }
       : buildReviewComposerAutocompleteState({
-          body: state.reviewComposer.body,
+          body: state.reviewComposer.input.value,
+          cursorOffset: state.reviewComposer.input.cursorOffset,
           dismissedTokenKey: state.reviewComposer.dismissedAutocompleteTokenKey,
           paths: state.session.files.map((file) => file.path),
           selectedPath: selectedFilePath,

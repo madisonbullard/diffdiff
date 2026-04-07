@@ -13,6 +13,7 @@ describe("composer ux helpers", () => {
   test("preserves typed line ranges when inserting file references", () => {
     const autocomplete = buildReviewComposerAutocompleteState({
       body: "Please check @app#12-18",
+      cursorOffset: "Please check @app#12-18".length,
       dismissedTokenKey: null,
       paths: ["src/app.ts", "src/utils.ts"],
       selectedPath: "src/app.ts",
@@ -23,8 +24,15 @@ describe("composer ux helpers", () => {
       path: "src/app.ts",
     });
     expect(
-      insertReviewComposerAutocomplete("Please check @app#12-18", autocomplete.options[0]!),
-    ).toBe("Please check `src/app.ts#12-18` ");
+      insertReviewComposerAutocomplete(
+        "Please check @app#12-18",
+        "Please check @app#12-18".length,
+        autocomplete.options[0]!,
+      ),
+    ).toEqual({
+      body: "Please check `src/app.ts#12-18` ",
+      cursorOffset: "Please check `src/app.ts#12-18` ".length,
+    });
   });
 
   test("formats and parses merge message buffers like a commit message", () => {

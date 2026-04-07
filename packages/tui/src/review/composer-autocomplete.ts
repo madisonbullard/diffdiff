@@ -7,6 +7,7 @@ interface ReferenceLineRange {
 
 interface ParsedReferenceQuery {
   baseQuery: string;
+  queryEnd: number;
   lineRange?: ReferenceLineRange;
   query: string;
   queryStart: number;
@@ -27,16 +28,18 @@ export interface ReviewComposerAutocompleteState {
 
 export function buildReviewComposerAutocompleteState({
   body,
+  cursorOffset,
   dismissedTokenKey,
   paths,
   selectedPath,
 }: {
   body: string;
+  cursorOffset: number;
   dismissedTokenKey: string | null;
   paths: readonly string[];
   selectedPath?: string;
 }): ReviewComposerAutocompleteState {
-  const query = parseReferenceQuery(body);
+  const query = parseReferenceQuery(body, cursorOffset);
   if (query == null || query.tokenKey === dismissedTokenKey) {
     return {
       isVisible: false,
@@ -64,28 +67,35 @@ export function buildReviewComposerAutocompleteState({
 
 export function insertReviewComposerAutocomplete(
   body: string,
+  cursorOffset: number,
   option: ReviewComposerAutocompleteOption,
-): string {
-  const query = parseReferenceQuery(body);
+): { body: string; cursorOffset: number } {
+  const query = parseReferenceQuery(body, cursorOffset);
   if (query == null) {
-    return body;
+    return { body, cursorOffset };
   }
 
-  return `${body.slice(0, query.queryStart)}\`${option.insertText}\` `;
+  const insertedReference = `\`${option.insertText}\` `;
+  return {
+    body: `${body.slice(0, query.queryStart)}${insertedReference}${body.slice(query.queryEnd)}`,
+    cursorOffset: query.queryStart + insertedReference.length,
+  };
 }
 
-function parseReferenceQuery(body: string): ParsedReferenceQuery | null {
-  const match = /(^|\s)@([^\s`]*)$/u.exec(body);
+function parseReferenceQuery(body: string, cursorOffset: number): ParsedReferenceQuery | null {
+  const prefix = body.slice(0, cursorOffset);
+  const match = /(^|\s)@([^\s`]*)$/u.exec(prefix);
   if (match == null) {
     return null;
   }
 
   const query = match[2] ?? "";
-  const queryStart = body.length - query.length - 1;
+  const queryStart = prefix.length - query.length - 1;
   const { baseQuery, lineRange } = extractLineRange(query);
 
   return {
     baseQuery,
+    queryEnd: prefix.length,
     lineRange,
     query,
     queryStart,

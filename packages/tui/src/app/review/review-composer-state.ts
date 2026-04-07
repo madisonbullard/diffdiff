@@ -1,11 +1,16 @@
 import type { ReviewComposerHistoryEntry } from "@diffdiff/core";
 import { MAX_REVIEW_COMPOSER_HISTORY_ENTRIES } from "@diffdiff/core";
 import { clampIndex } from "../../view-model.ts";
+import {
+  createTextInputState,
+  replaceTextInput,
+  type TextInputState,
+} from "../text-input/input-state.ts";
 import type { ReviewComposerTarget } from "./review-composer.ts";
 
 export interface ReviewComposerUiState {
   autocompleteIndex: number;
-  body: string;
+  input: TextInputState;
   dismissedAutocompleteTokenKey: string | null;
   history: ReviewComposerHistoryEntry[];
   historyDraft: string | null;
@@ -16,7 +21,7 @@ export interface ReviewComposerUiState {
 export function createReviewComposerState(): ReviewComposerUiState {
   return {
     autocompleteIndex: 0,
-    body: "",
+    input: createTextInputState(),
     dismissedAutocompleteTokenKey: null,
     history: [],
     historyDraft: null,
@@ -28,7 +33,7 @@ export function createReviewComposerState(): ReviewComposerUiState {
 export function clearReviewComposer(state: ReviewComposerUiState): ReviewComposerUiState {
   return {
     ...resetReviewComposerTransientState(state),
-    body: "",
+    input: createTextInputState(),
     target: null,
   };
 }
@@ -40,7 +45,7 @@ export function openReviewComposer(
 ): ReviewComposerUiState {
   return {
     ...resetReviewComposerTransientState(state),
-    body,
+    input: createTextInputState(body),
     target,
   };
 }
@@ -49,11 +54,24 @@ export function updateReviewComposerBody(
   state: ReviewComposerUiState,
   updater: string | ((currentBody: string) => string),
 ): ReviewComposerUiState {
-  const nextBody = typeof updater === "function" ? updater(state.body) : updater;
+  const nextBody = typeof updater === "function" ? updater(state.input.value) : updater;
   return {
     ...resetReviewComposerTransientState(state),
-    body: nextBody,
+    input: replaceTextInput(state.input, nextBody),
   };
+}
+
+export function updateReviewComposerInput(
+  state: ReviewComposerUiState,
+  updater: TextInputState | ((currentInput: TextInputState) => TextInputState),
+): ReviewComposerUiState {
+  const nextInput = typeof updater === "function" ? updater(state.input) : updater;
+  return nextInput === state.input
+    ? state
+    : {
+        ...resetReviewComposerTransientState(state),
+        input: nextInput,
+      };
 }
 
 export function dismissReviewComposerAutocomplete(
@@ -90,11 +108,14 @@ export function moveReviewComposerHistory(
     return state;
   }
 
-  const nextDraft = state.historyIndex === 0 ? state.body : state.historyDraft;
+  const nextDraft = state.historyIndex === 0 ? state.input.value : state.historyDraft;
   return {
     ...state,
     autocompleteIndex: 0,
-    body: nextIndex === 0 ? (nextDraft ?? "") : (entries[nextIndex - 1]?.body ?? ""),
+    input: replaceTextInput(
+      state.input,
+      nextIndex === 0 ? (nextDraft ?? "") : (entries[nextIndex - 1]?.body ?? ""),
+    ),
     dismissedAutocompleteTokenKey: null,
     historyDraft: nextDraft,
     historyIndex: nextIndex,
@@ -152,6 +173,7 @@ function resetReviewComposerTransientState(
   | "history"
   | "historyDraft"
   | "historyIndex"
+  | "input"
   | "target"
 > {
   return {
@@ -160,6 +182,7 @@ function resetReviewComposerTransientState(
     history: state.history,
     historyDraft: null,
     historyIndex: 0,
+    input: state.input,
     target: state.target,
   };
 }

@@ -6,7 +6,7 @@ import {
   moveReviewComposerAutocompleteIndex,
   moveReviewComposerHistory as moveReviewComposerHistoryState,
   setReviewComposerAutocompleteIndex,
-  updateReviewComposerBody as updateReviewComposerStateBody,
+  updateReviewComposerInput,
 } from "../review/review-composer-state.ts";
 import { clampIndex } from "../../view-model.ts";
 import * as A from "../keymap/actions.ts";
@@ -19,6 +19,15 @@ import type { KeymapMode } from "./keymap-mode.ts";
 import type { AppCommand } from "../commands/registry.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import type { DiffdiffAppDerived } from "./use-app-models.ts";
+import {
+  backspaceTextInput,
+  createTextInputState,
+  insertTextInputNewline,
+  isTextInputOnFirstLine,
+  isTextInputOnLastLine,
+  moveTextInputCursorDown,
+  moveTextInputCursorUp,
+} from "../text-input/input-state.ts";
 
 export interface BuildModalActionDispatchMapOptions {
   activeKeymapMode: KeymapMode;
@@ -92,9 +101,13 @@ export function buildModalActionDispatchMap({
 }: BuildModalActionDispatchMapOptions): ActionDispatchMap {
   const map: ActionDispatchMap = new Map();
 
-  function updateReviewComposerBody(updater: (currentBody: string) => string): void {
+  function updateReviewComposerTextInput(
+    updater: (
+      currentInput: import("../text-input/input-state.ts").TextInputState,
+    ) => import("../text-input/input-state.ts").TextInputState,
+  ): void {
     state.setReviewComposer((currentReviewComposer) =>
-      updateReviewComposerStateBody(currentReviewComposer, updater),
+      updateReviewComposerInput(currentReviewComposer, updater),
     );
   }
 
@@ -136,9 +149,19 @@ export function buildModalActionDispatchMap({
           )
         ];
       if (option != null) {
-        updateReviewComposerBody((currentBody) =>
-          insertReviewComposerAutocomplete(currentBody, option),
-        );
+        updateReviewComposerTextInput((currentInput) => {
+          const nextAutocomplete = insertReviewComposerAutocomplete(
+            currentInput.value,
+            currentInput.cursorOffset,
+            option,
+          );
+          return {
+            ...currentInput,
+            cursorOffset: nextAutocomplete.cursorOffset,
+            preferredColumn: null,
+            value: nextAutocomplete.body,
+          };
+        });
         return;
       }
     }
@@ -148,7 +171,7 @@ export function buildModalActionDispatchMap({
 
   function closeBranchModal(): void {
     state.setDialogStack((currentStack) => closeAppDialog(currentStack, "branch", "dismiss"));
-    state.setCommitSearchQuery("");
+    state.setCommitSearchInput(createTextInputState());
     state.setCommitSearchActive(false);
     state.setStatusMessage("Closed list modal.");
   }
@@ -158,7 +181,7 @@ export function buildModalActionDispatchMap({
       closeAppDialog(currentStack, "pull-request-list", "dismiss"),
     );
     state.setPullRequestSearchActive(false);
-    state.setPullRequestSearchQuery("");
+    state.setPullRequestSearchInput(createTextInputState());
     state.setStatusMessage("Closed pull request list.");
   }
 
@@ -180,7 +203,7 @@ export function buildModalActionDispatchMap({
     state.setDialogStack((currentStack) =>
       closeAppDialog(currentStack, "submit-review", "dismiss"),
     );
-    state.setReviewSubmissionBody("");
+    state.setReviewSubmissionInput(createTextInputState());
     state.setStatusMessage("Closed submit review modal.");
   }
 
@@ -262,12 +285,41 @@ export function buildModalActionDispatchMap({
           clampIndex(currentIndex + delta, derived.pullRequestConversationItems.length),
         );
         return;
-      case "submit-review":
-        state.setReviewSubmissionEventIndex((currentIndex) => clampIndex(currentIndex + delta, 3));
+      case "submit-review": {
+        const currentInput = state.reviewSubmissionInput;
+        if (
+          delta < 0 ? isTextInputOnFirstLine(currentInput) : isTextInputOnLastLine(currentInput)
+        ) {
+          state.setReviewSubmissionEventIndex((currentIndex) =>
+            clampIndex(currentIndex + delta, 3),
+          );
+          return;
+        }
+
+        state.setReviewSubmissionInput((input) =>
+          delta < 0 ? moveTextInputCursorUp(input) : moveTextInputCursorDown(input),
+        );
         return;
-      case "comment":
-        moveReviewComposerAutocomplete(delta);
+      }
+      case "comment": {
+        if (derived.reviewComposerAutocomplete.isVisible) {
+          moveReviewComposerAutocomplete(delta);
+          return;
+        }
+
+        const currentInput = state.reviewComposer.input;
+        if (
+          delta < 0 ? isTextInputOnFirstLine(currentInput) : isTextInputOnLastLine(currentInput)
+        ) {
+          moveReviewComposerHistory(delta);
+          return;
+        }
+
+        updateReviewComposerTextInput((input) =>
+          delta < 0 ? moveTextInputCursorUp(input) : moveTextInputCursorDown(input),
+        );
         return;
+      }
       case "merge-method":
         updateMergeMethod(delta);
         return;
@@ -325,7 +377,7 @@ export function buildModalActionDispatchMap({
         return;
       case "pull-request-search":
         state.setPullRequestSearchActive(false);
-        state.setPullRequestSearchQuery("");
+        state.setPullRequestSearchInput(createTextInputState());
         state.setPullRequestListIndex(0);
         return;
       case "compare-branches":
@@ -333,7 +385,7 @@ export function buildModalActionDispatchMap({
         closeBranchModal();
         return;
       case "commit-search":
-        state.setCommitSearchQuery("");
+        state.setCommitSearchInput(createTextInputState());
         state.setCommitSearchActive(false);
         state.setCommitListIndex(0);
         return;
@@ -411,28 +463,28 @@ export function buildModalActionDispatchMap({
   function backspaceText(): void {
     switch (activeKeymapMode) {
       case "commands":
-        state.setCommandQuery((currentQuery) => currentQuery.slice(0, -1));
+        state.setCommandInput((currentInput) => backspaceTextInput(currentInput));
         state.setCommandIndex(0);
         return;
       case "pull-request-search":
-        state.setPullRequestSearchQuery((query) => query.slice(0, -1));
+        state.setPullRequestSearchInput((currentInput) => backspaceTextInput(currentInput));
         state.setPullRequestListIndex(0);
         return;
       case "commit-search":
-        state.setCommitSearchQuery((query) => query.slice(0, -1));
+        state.setCommitSearchInput((currentInput) => backspaceTextInput(currentInput));
         state.setCommitListIndex(0);
         return;
       case "comment":
-        updateReviewComposerBody((currentBody) => currentBody.slice(0, -1));
+        updateReviewComposerTextInput((currentInput) => backspaceTextInput(currentInput));
         return;
       case "submit-review":
-        state.setReviewSubmissionBody((currentBody) => currentBody.slice(0, -1));
+        state.setReviewSubmissionInput((currentInput) => backspaceTextInput(currentInput));
         return;
       case "merge-title":
-        state.setMergeCommitTitle((currentTitle) => currentTitle.slice(0, -1));
+        state.setMergeCommitTitleInput((currentInput) => backspaceTextInput(currentInput));
         return;
       case "merge-body":
-        state.setMergeCommitMessage((currentBody) => currentBody.slice(0, -1));
+        state.setMergeCommitMessageInput((currentInput) => backspaceTextInput(currentInput));
         return;
     }
   }
@@ -440,13 +492,13 @@ export function buildModalActionDispatchMap({
   function insertNewline(): void {
     switch (activeKeymapMode) {
       case "comment":
-        updateReviewComposerBody((currentBody) => `${currentBody}\n`);
+        updateReviewComposerTextInput((currentInput) => insertTextInputNewline(currentInput));
         return;
       case "submit-review":
-        state.setReviewSubmissionBody((currentBody) => `${currentBody}\n`);
+        state.setReviewSubmissionInput((currentInput) => insertTextInputNewline(currentInput));
         return;
       case "merge-body":
-        state.setMergeCommitMessage((currentBody) => `${currentBody}\n`);
+        state.setMergeCommitMessageInput((currentInput) => insertTextInputNewline(currentInput));
         return;
     }
   }

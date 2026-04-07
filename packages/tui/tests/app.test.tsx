@@ -239,6 +239,44 @@ test("treats j as query text inside the command palette", () => {
   expect(getAppText(tree)).toContain('Filtering commands for "j".');
 });
 
+test("supports command-style line jumps inside the command palette", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ ctrl: true, name: "p" });
+  emitText("alpha");
+  emitKey({ super: true, name: "left" });
+  emitText("z");
+  emitKey({ super: true, name: "right" });
+  emitText("!");
+
+  expect(getAppText(tree)).toContain('Filtering commands for "zalpha!".');
+});
+
+test("supports word jumps and mid-string backspace inside the command palette", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ ctrl: true, name: "p" });
+  emitText("alpha beta");
+  emitKey({ super: true, name: "left" });
+  emitKey({ meta: true, name: "right" });
+  emitText(" big");
+  emitKey({ meta: true, name: "left" });
+  emitKey({ name: "backspace" });
+
+  expect(getAppText(tree)).toContain('Filtering commands for "alphabig beta".');
+});
+
+test("supports cmd+backspace line deletion inside the command palette", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ ctrl: true, name: "p" });
+  emitText("alpha beta");
+  emitKey({ super: true, name: "backspace" });
+
+  expect(getAppText(tree)).toContain("type to fuzzy filter commands");
+  expect(getAppText(tree)).not.toContain('Filtering commands for "alpha beta".');
+});
+
 test("closes nested list filters back to the list modal", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 

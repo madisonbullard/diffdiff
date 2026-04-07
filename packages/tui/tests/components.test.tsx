@@ -133,6 +133,7 @@ test("renders a branch modal snapshot", () => {
       commitItems={buildCommitListItems(createComparisonCommits())}
       commitIndex={0}
       commitSearchQuery=""
+      commitSearchCursorOffset={0}
       commitSearchActive={false}
       comparisonMode="range"
       filters={filters}
@@ -172,6 +173,7 @@ test("shows the PR review action when a PR entry is selected", () => {
       commitItems={buildCommitListItems(createComparisonCommits())}
       commitIndex={0}
       commitSearchQuery=""
+      commitSearchCursorOffset={0}
       commitSearchActive={false}
       comparisonMode="range"
       filters={filters}
@@ -211,6 +213,7 @@ test("renders a commit view snapshot", () => {
       commitItems={buildCommitListItems(createComparisonCommits())}
       commitIndex={1}
       commitSearchQuery=""
+      commitSearchCursorOffset={0}
       commitSearchActive={false}
       comparisonMode="range"
       filters={filters}
@@ -249,6 +252,7 @@ test("shows commit history in working tree commit view", () => {
       commitItems={buildCommitListItems(createComparisonCommits())}
       commitIndex={0}
       commitSearchQuery=""
+      commitSearchCursorOffset={0}
       commitSearchActive={false}
       comparisonMode="working-tree"
       filters={filters}
@@ -294,6 +298,7 @@ test("renders a pull request list modal with truncated titles", () => {
       reviewRequestedCount={0}
       searchActive={false}
       searchQuery=""
+      searchCursorOffset={0}
       selectedIndex={0}
       theme={theme}
     />,
@@ -329,6 +334,7 @@ test("shows more pull requests at once in the pull request list modal", () => {
       reviewRequestedCount={0}
       searchActive={false}
       searchQuery=""
+      searchCursorOffset={0}
       selectedIndex={0}
       theme={theme}
     />,
@@ -525,6 +531,7 @@ test("renders empty branch columns and help copy", () => {
       commitItems={[]}
       commitIndex={0}
       commitSearchQuery=""
+      commitSearchCursorOffset={0}
       commitSearchActive={false}
       comparisonMode="working-tree"
       filters={filters}
@@ -707,6 +714,7 @@ test("groups suggested commands under a dedicated heading in the palette", () =>
       }
       commands={commands}
       query=""
+      queryCursorOffset={0}
       selectedIndex={0}
       theme={theme}
     />,
@@ -755,6 +763,7 @@ test("renders palette command descriptions on an indented second line", () => {
         },
       ]}
       query=""
+      queryCursorOffset={0}
       selectedIndex={0}
       theme={theme}
     />,

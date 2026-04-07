@@ -230,8 +230,8 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     [commands, state.reverseKeymaps],
   );
   const filteredCommands = useMemo(
-    () => filterCommands(getPaletteCommands(commands), state.commandQuery),
-    [commands, state.commandQuery],
+    () => filterCommands(getPaletteCommands(commands), state.commandInput.value),
+    [commands, state.commandInput.value],
   );
 
   useEffect(() => {
@@ -397,10 +397,12 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       collapsedDirectories={state.collapsedDirectories}
       collapsedPaths={state.collapsedPaths}
       commandIndex={state.commandIndex}
-      commandQuery={state.commandQuery}
+      commandQuery={state.commandInput.value}
+      commandQueryCursorOffset={state.commandInput.cursorOffset}
       commitListIndex={state.commitListIndex}
       commitSearchActive={state.commitSearchActive}
-      commitSearchQuery={state.commitSearchQuery}
+      commitSearchQuery={state.commitSearchInput.value}
+      commitSearchCursorOffset={state.commitSearchInput.cursorOffset}
       currentBranchLabel={state.session.repository.currentBranch ?? "detached"}
       diagnosticErrorMessage={diagnostics.diagnosticErrorMessage}
       diagnosticEventIndex={diagnostics.diagnosticEventIndex}
@@ -429,8 +431,10 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       isSubmittingReviewAction={state.isSubmittingReviewAction}
       localBranchCount={derived.localBranchCount}
       mergeBodyScrollRef={state.mergeBodyScrollRef}
-      mergeCommitMessage={state.mergeCommitMessage}
-      mergeCommitTitle={state.mergeCommitTitle}
+      mergeCommitMessage={state.mergeCommitMessageInput.value}
+      mergeCommitMessageCursorOffset={state.mergeCommitMessageInput.cursorOffset}
+      mergeCommitTitle={state.mergeCommitTitleInput.value}
+      mergeCommitTitleCursorOffset={state.mergeCommitTitleInput.cursorOffset}
       mergeMethod={state.mergeMethod}
       mergeModalField={state.mergeModalField}
       activePrefixMenu={activePrefixMenu}
@@ -453,10 +457,12 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       }
       pullRequestListIndex={state.pullRequestListIndex}
       pullRequestSearchActive={state.pullRequestSearchActive}
-      pullRequestSearchQuery={state.pullRequestSearchQuery}
+      pullRequestSearchQuery={state.pullRequestSearchInput.value}
+      pullRequestSearchCursorOffset={state.pullRequestSearchInput.cursorOffset}
       refreshIndicatorLabel={state.refreshIndicatorLabel}
       remoteBranchCount={derived.remoteBranchCount}
-      reviewComposerBody={state.reviewComposer.body}
+      reviewComposerBody={state.reviewComposer.input.value}
+      reviewComposerCursorOffset={state.reviewComposer.input.cursorOffset}
       reviewComposerAutocomplete={derived.reviewComposerAutocomplete}
       reviewComposerAutocompleteIndex={state.reviewComposer.autocompleteIndex}
       reviewComposerContext={derived.reviewComposerContext}
@@ -464,7 +470,8 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       reviewedPaths={state.reviewedPaths}
       reviewedCount={state.reviewedPaths.size}
       reviewRequestedPrCount={derived.reviewRequestedPrCount}
-      reviewSubmissionBody={state.reviewSubmissionBody}
+      reviewSubmissionBody={state.reviewSubmissionInput.value}
+      reviewSubmissionCursorOffset={state.reviewSubmissionInput.cursorOffset}
       reviewSubmissionEventIndex={state.reviewSubmissionEventIndex}
       reviewThreadsByPath={derived.reviewThreadsByPath}
       scrollRef={state.scrollRef}

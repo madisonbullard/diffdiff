@@ -6,6 +6,7 @@ import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
 import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
+import { createTextInputState } from "../text-input/input-state.ts";
 import { createGitHubMutationActions } from "./github-mutation-actions.ts";
 import type { ReviewComposerTarget } from "./review-composer.ts";
 
@@ -140,7 +141,7 @@ export function createGitHubReviewActions({
   function openGitHubPullRequestList(): void {
     state.setPullRequestListIndex(0);
     state.setPullRequestSearchActive(false);
-    state.setPullRequestSearchQuery("");
+    state.setPullRequestSearchInput(createTextInputState());
     state.setDialogStack((currentStack) =>
       openAppDialog(currentStack, "pull-request-list", { clear: true }),
     );
@@ -227,8 +228,8 @@ export function createGitHubReviewActions({
       state.setStatusMessage(authMessage);
       return;
     }
-    state.setReviewSubmissionBody(
-      derived.displaySession.github?.pullRequest.pendingReview?.body ?? "",
+    state.setReviewSubmissionInput(
+      createTextInputState(derived.displaySession.github?.pullRequest.pendingReview?.body ?? ""),
     );
     state.setReviewSubmissionEventIndex(0);
     state.setDialogStack((currentStack) => openAppDialog(currentStack, "submit-review"));
@@ -242,8 +243,12 @@ export function createGitHubReviewActions({
       return;
     }
 
-    state.setMergeCommitTitle(derived.displaySession.github!.pullRequest.title);
-    state.setMergeCommitMessage(derived.displaySession.github!.pullRequest.body ?? "");
+    state.setMergeCommitTitleInput(
+      createTextInputState(derived.displaySession.github!.pullRequest.title),
+    );
+    state.setMergeCommitMessageInput(
+      createTextInputState(derived.displaySession.github!.pullRequest.body ?? ""),
+    );
     state.setMergeMethod(state.gitHubPreferencesRef.current.defaultMergeMethod);
     state.setMergeConfirmOpen(false);
     state.setMergeModalField(
@@ -276,7 +281,7 @@ export function createGitHubReviewActions({
 
   function closeCommentComposer(): void {
     const target = state.reviewComposer.target;
-    const body = state.reviewComposer.body;
+    const body = state.reviewComposer.input.value;
     state.setDialogStack((currentStack) =>
       closeAppDialog(currentStack, "comment-composer", "dismiss"),
     );
