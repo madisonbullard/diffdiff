@@ -1,6 +1,6 @@
 import type { PrefixMenuCommand, PrefixMenuConfig } from "../app/commands/prefix-menus.ts";
 import type { UiTheme } from "../theme.ts";
-import { KeyCap } from "./shared.tsx";
+import { CommandBindingLabel, CommandListItem, CommandListRow } from "./command-list.tsx";
 
 export function PrefixPickerOverlay({
   commands,
@@ -20,7 +20,7 @@ export function PrefixPickerOverlay({
       position="absolute"
       right={2}
       bottom={1}
-      width={40}
+      width={52}
       zIndex={15}
       backgroundColor={theme.modalBg}
       paddingLeft={2}
@@ -36,13 +36,19 @@ export function PrefixPickerOverlay({
       <text fg={theme.textMuted} wrapMode="none">
         {prefixMenu.picker.description}
       </text>
-      {commands.map(({ actionId, enabled, label, title }) => {
+      {commands.map(({ actionId, enabled, label, title }, index) => {
         const textColor = enabled ? theme.text : theme.textMuted;
         return (
-          <text key={actionId} fg={textColor} wrapMode="none">
-            <KeyCap label={label} theme={theme} />
-            <span>{` ${title}`}</span>
-          </text>
+          <CommandListItem key={actionId} accentColor={theme.accent} index={index} theme={theme}>
+            <CommandListRow
+              left={
+                <text fg={textColor} wrapMode="word">
+                  {title}
+                </text>
+              }
+              right={<CommandBindingLabel label={label} dimmed={!enabled} theme={theme} />}
+            />
+          </CommandListItem>
         );
       })}
     </box>

@@ -1,6 +1,33 @@
 import type { ReactNode } from "react";
 import type { UiTheme } from "../theme.ts";
-import { KeyCap } from "./shared.tsx";
+import { KeyCap, tintHex } from "./shared.tsx";
+
+export function CommandListItem({
+  accentColor,
+  children,
+  index,
+  isSelected = false,
+  theme,
+}: {
+  accentColor?: string;
+  children: ReactNode;
+  index: number;
+  isSelected?: boolean;
+  theme: UiTheme;
+}) {
+  const stripeColor = accentColor ?? theme.border;
+  const backgroundColor = isSelected
+    ? tintHex(theme.surface, stripeColor, 0.16)
+    : index % 2 === 0
+      ? theme.surface
+      : tintHex(theme.surface, stripeColor, 0.05);
+
+  return (
+    <box width="100%" backgroundColor={backgroundColor}>
+      {children}
+    </box>
+  );
+}
 
 export function CommandListRow({ left, right }: { left: ReactNode; right?: ReactNode }) {
   return (

@@ -604,10 +604,20 @@ test("renders empty branch columns and help copy", () => {
   const comparisonColumns = comparisonRow.children.filter(
     (child): child is ReactTestInstance => typeof child !== "string",
   );
+  const copyUrlRow = helpModal.root.find(
+    (node) =>
+      String(node.type) === "box" &&
+      node.props.justifyContent === "space-between" &&
+      collectText(node).includes("copy PR URL"),
+  );
+  const comparisonItem = findAncestor(comparisonRow, (node) => node.props.backgroundColor != null)!;
+  const copyUrlItem = findAncestor(copyUrlRow, (node) => node.props.backgroundColor != null)!;
 
   expect(comparisonRow.props.gap).toBe(2);
   expect(comparisonColumns[0]?.props.flexGrow).toBe(1);
   expect(comparisonColumns[1]?.props.flexShrink).toBe(0);
+  expect(comparisonItem.props.paddingLeft).toBeUndefined();
+  expect(comparisonItem.props.backgroundColor).not.toBe(copyUrlItem.props.backgroundColor);
 });
 
 test("renders a compact modal picker overlay", () => {
@@ -635,6 +645,34 @@ test("renders a compact modal picker overlay", () => {
   expect(collectText(overlay.toJSON())).toContain("Press a key to open a modal.");
   expect(collectText(overlay.toJSON())).toContain("Open comparison list");
   expect(collectText(overlay.toJSON())).toContain("Open diagnostics");
+
+  const overlayRows = overlay.root.findAll(
+    (node) =>
+      String(node.type) === "box" &&
+      node.props.justifyContent === "space-between" &&
+      (collectText(node).includes("Open comparison list") ||
+        collectText(node).includes("Open diagnostics")),
+  );
+  const firstOverlayRow = overlayRows[0]!;
+  const secondOverlayRow = overlayRows[1]!;
+  const overlayColumns = firstOverlayRow.children.filter(
+    (child): child is ReactTestInstance => typeof child !== "string",
+  );
+  const firstOverlayItem = findAncestor(
+    firstOverlayRow,
+    (node) => node.props.backgroundColor != null,
+  )!;
+  const secondOverlayItem = findAncestor(
+    secondOverlayRow,
+    (node) => node.props.backgroundColor != null,
+  )!;
+
+  expect(firstOverlayRow.props.gap).toBe(2);
+  expect(overlayColumns[0]?.props.flexGrow).toBe(1);
+  expect(overlayColumns[1]?.props.flexShrink).toBe(0);
+  expect(firstOverlayItem.props.paddingLeft).toBeUndefined();
+  expect(firstOverlayItem.props.paddingTop).toBeUndefined();
+  expect(firstOverlayItem.props.backgroundColor).not.toBe(secondOverlayItem.props.backgroundColor);
 });
 
 test("groups suggested commands under a dedicated heading in the palette", () => {
@@ -678,6 +716,26 @@ test("groups suggested commands under a dedicated heading in the palette", () =>
   expect(text).toContain("Suggested");
   expect(text).toContain("Comparison");
   expect(text.indexOf("Suggested")).toBeLessThan(text.indexOf("Comparison"));
+
+  const paletteRows = palette.root.findAll(
+    (node) =>
+      String(node.type) === "box" &&
+      node.props.justifyContent === "space-between" &&
+      (collectText(node).includes("Open command palette") ||
+        collectText(node).includes("Jump to next unreviewed file") ||
+        collectText(node).includes("Open comparison list")),
+  );
+  const firstPaletteItem = findAncestor(
+    paletteRows[0]!,
+    (node) => node.props.backgroundColor != null,
+  )!;
+  const secondPaletteItem = findAncestor(
+    paletteRows[1]!,
+    (node) => node.props.backgroundColor != null,
+  )!;
+
+  expect(firstPaletteItem.props.paddingLeft).toBeUndefined();
+  expect(firstPaletteItem.props.backgroundColor).not.toBe(secondPaletteItem.props.backgroundColor);
 });
 
 test("renders palette command descriptions on an indented second line", () => {
@@ -718,6 +776,7 @@ test("renders palette command descriptions on an indented second line", () => {
   const commandColumns = commandRow.children.filter(
     (child): child is ReactTestInstance => typeof child !== "string",
   );
+  const commandItem = findAncestor(commandRow, (node) => node.props.backgroundColor != null)!;
 
   expect(descriptionNode.props.wrapMode).toBe("word");
   expect(descriptionNode.parent?.props.paddingLeft).toBe(2);
@@ -725,6 +784,7 @@ test("renders palette command descriptions on an indented second line", () => {
   expect(commandRow.props.gap).toBe(2);
   expect(commandColumns[0]?.props.flexGrow).toBe(1);
   expect(commandColumns[1]?.props.flexShrink).toBe(0);
+  expect(commandItem.props.paddingLeft).toBeUndefined();
   expect(collectText(palette.toJSON())).toContain("fuzzy filter");
 });
 
@@ -1131,6 +1191,22 @@ function render(node: ReactNode): ReactTestRenderer {
   });
 
   return tree!;
+}
+
+function findAncestor(
+  node: ReactTestInstance,
+  predicate: (candidate: ReactTestInstance) => boolean,
+): ReactTestInstance | undefined {
+  let current = node.parent;
+
+  while (current != null) {
+    if (predicate(current)) {
+      return current;
+    }
+    current = current.parent;
+  }
+
+  return undefined;
 }
 
 function collectText(node: unknown): string {

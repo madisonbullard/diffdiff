@@ -1,7 +1,7 @@
 import type { CommandDefinition } from "../commands.ts";
 import type { AppPane } from "../types.ts";
 import type { UiTheme } from "../theme.ts";
-import { CommandBindingLabel, CommandListRow } from "./command-list.tsx";
+import { CommandBindingLabel, CommandListItem, CommandListRow } from "./command-list.tsx";
 import { KeyCap, ModalFrame, SPLIT_BORDER } from "./shared.tsx";
 
 type ModeKey = "global" | AppPane;
@@ -155,23 +155,29 @@ export function HelpModal({
               <text fg={section.dimmed ? theme.border : section.color} wrapMode="none">
                 {section.title}
               </text>
-              {section.rows.map((row) => (
-                <CommandListRow
+              {section.rows.map((row, index) => (
+                <CommandListItem
                   key={`${section.mode}:${row.text}`}
-                  left={
-                    <text fg={section.dimmed ? theme.border : theme.text} wrapMode="word">
-                      {row.text}
-                    </text>
-                  }
-                  right={
-                    <CommandBindingLabel
-                      accentColor={section.color}
-                      dimmed={section.dimmed}
-                      label={row.bindingLabel}
-                      theme={theme}
-                    />
-                  }
-                />
+                  accentColor={section.color}
+                  index={index}
+                  theme={theme}
+                >
+                  <CommandListRow
+                    left={
+                      <text fg={section.dimmed ? theme.border : theme.text} wrapMode="word">
+                        {row.text}
+                      </text>
+                    }
+                    right={
+                      <CommandBindingLabel
+                        accentColor={section.color}
+                        dimmed={section.dimmed}
+                        label={row.bindingLabel}
+                        theme={theme}
+                      />
+                    }
+                  />
+                </CommandListItem>
               ))}
             </box>
           ))}

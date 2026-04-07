@@ -1,6 +1,6 @@
 import type { CommandDefinition } from "../commands.ts";
 import type { UiTheme } from "../theme.ts";
-import { CommandBindingLabel, CommandListRow } from "./command-list.tsx";
+import { CommandBindingLabel, CommandListItem, CommandListRow } from "./command-list.tsx";
 import { KeyCap, ModalFrame, SPLIT_BORDER, selectItem } from "./shared.tsx";
 
 export function CommandPaletteModal({
@@ -87,7 +87,6 @@ export function CommandPaletteModal({
               activeCategory = categoryLabel;
               const isSelected = index === selectedIndex;
               const isEnabled = command.enabled !== false;
-              const backgroundColor = isSelected ? theme.surfaceMuted : theme.surface;
               const foreground = isEnabled ? theme.text : theme.textMuted;
               const detail = isEnabled ? theme.textMuted : theme.border;
               const detailText =
@@ -102,13 +101,11 @@ export function CommandPaletteModal({
                       {categoryLabel}
                     </text>
                   ) : null}
-                  <box
-                    width="100%"
-                    backgroundColor={backgroundColor}
-                    paddingLeft={1}
-                    paddingRight={1}
-                    paddingTop={1}
-                    paddingBottom={1}
+                  <CommandListItem
+                    accentColor={theme.accent}
+                    index={index}
+                    isSelected={isSelected}
+                    theme={theme}
                   >
                     <CommandListRow
                       left={
@@ -136,7 +133,7 @@ export function CommandPaletteModal({
                         />
                       }
                     />
-                  </box>
+                  </CommandListItem>
                 </box>
               );
             })
