@@ -147,7 +147,7 @@ describe("loadReviewSession", () => {
 
     const nestedRepositoryPath = join(repositoryPath, "nested-repo");
     await mkdir(join(nestedRepositoryPath, "src"), { recursive: true });
-    await execFileAsync("git", ["init", nestedRepositoryPath]);
+    await execGit(["init", "--initial-branch=master", nestedRepositoryPath]);
     await writeFile(join(nestedRepositoryPath, "README.md"), "# nested\n");
     await writeFile(join(nestedRepositoryPath, "src", "index.ts"), "export const nested = true;\n");
 
@@ -315,7 +315,7 @@ async function createTemporaryRepository(): Promise<string> {
   const repositoryPath = await mkdtemp(join(tmpdir(), "diffdiff-core-"));
   temporaryDirectories.push(repositoryPath);
 
-  await execFileAsync("git", ["init", repositoryPath]);
+  await execGit(["init", "--initial-branch=master", repositoryPath]);
   await runGit(repositoryPath, ["config", "user.name", "Diffdiff Test"]);
   await runGit(repositoryPath, ["config", "user.email", "test@example.com"]);
 
@@ -325,25 +325,19 @@ async function createTemporaryRepository(): Promise<string> {
 async function createBareRepository(): Promise<string> {
   const repositoryPath = await mkdtemp(join(tmpdir(), "diffdiff-core-remote-"));
   temporaryDirectories.push(repositoryPath);
-  await execFileAsync("git", ["init", "--bare", repositoryPath]);
+  await execGit(["init", "--bare", "--initial-branch=master", repositoryPath]);
   return repositoryPath;
 }
 
 async function cloneRepository(remoteRepositoryPath: string, branchName: string): Promise<string> {
   const repositoryPath = await mkdtemp(join(tmpdir(), "diffdiff-core-clone-"));
   temporaryDirectories.push(repositoryPath);
-  await execFileAsync("git", [
-    "clone",
-    "--branch",
-    branchName,
-    remoteRepositoryPath,
-    repositoryPath,
-  ]);
+  await execGit(["clone", "--branch", branchName, remoteRepositoryPath, repositoryPath]);
   return repositoryPath;
 }
 
 async function runGit(repositoryPath: string, args: string[]): Promise<void> {
-  await execFileAsync("git", args, { cwd: repositoryPath });
+  await execGit(args, { cwd: repositoryPath });
 }
 
 async function expectGitRef(
@@ -351,9 +345,7 @@ async function expectGitRef(
   ref: string,
   expectedToExist: boolean,
 ): Promise<void> {
-  const result = await execFileAsync("git", ["rev-parse", "--verify", ref], {
-    cwd: repositoryPath,
-  }).then(
+  const result = await execGit(["rev-parse", "--verify", ref], { cwd: repositoryPath }).then(
     () => true,
     () => false,
   );
@@ -371,4 +363,42 @@ async function commitAll(repositoryPath: string, message: string): Promise<void>
     "-m",
     message,
   ]);
+}
+
+async function execGit(args: string[], options?: { cwd?: string }) {
+  return execFileAsync("git", args, {
+    cwd: options?.cwd,
+    env: buildGitEnv(),
+  });
+}
+
+function buildGitEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+
+  for (const key of Object.keys(env)) {
+    if (
+      key === "GIT_ALTERNATE_OBJECT_DIRECTORIES" ||
+      key === "GIT_COMMON_DIR" ||
+      key === "GIT_CONFIG" ||
+      key === "GIT_CONFIG_COUNT" ||
+      key === "GIT_CONFIG_PARAMETERS" ||
+      key === "GIT_DIR" ||
+      key === "GIT_GRAFT_FILE" ||
+      key === "GIT_IMPLICIT_WORK_TREE" ||
+      key === "GIT_INDEX_FILE" ||
+      key === "GIT_INTERNAL_SUPER_PREFIX" ||
+      key === "GIT_NO_REPLACE_OBJECTS" ||
+      key === "GIT_OBJECT_DIRECTORY" ||
+      key === "GIT_PREFIX" ||
+      key === "GIT_REPLACE_REF_BASE" ||
+      key === "GIT_SHALLOW_FILE" ||
+      key === "GIT_WORK_TREE" ||
+      /^GIT_CONFIG_KEY_\d+$/u.test(key) ||
+      /^GIT_CONFIG_VALUE_\d+$/u.test(key)
+    ) {
+      delete env[key];
+    }
+  }
+
+  return env;
 }

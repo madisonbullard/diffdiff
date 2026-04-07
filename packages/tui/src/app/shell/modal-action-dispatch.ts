@@ -259,10 +259,7 @@ export function buildModalActionDispatchMap({
         return;
       case "conversation":
         state.setPullRequestConversationIndex((currentIndex) =>
-          clampIndex(
-            currentIndex + delta,
-            state.session.github?.pullRequest.conversationItems.length ?? 0,
-          ),
+          clampIndex(currentIndex + delta, derived.pullRequestConversationItems.length),
         );
         return;
       case "submit-review":

@@ -39,6 +39,7 @@ import {
   DEFAULT_BRANCH_LIST_FILTERS,
   findInitialBranchListSelection,
 } from "../../view-model.ts";
+import type { GitHubOptimisticOperation } from "../review/optimistic-github-overlay.ts";
 import type { PendingFileFocusRequest } from "../shared/file-focus.ts";
 import type {
   AppPane,
@@ -174,6 +175,9 @@ export function useDiffdiffAppState({
   const [mergeModalField, setMergeModalField] = useState<MergeModalField>(
     initialGitHubPreferences?.defaultMergeMethod == null ? "method" : "title",
   );
+  const [optimisticGitHubOperations, setOptimisticGitHubOperations] = useState<
+    GitHubOptimisticOperation[]
+  >([]);
   const [mergeConfirmOpen, setMergeConfirmOpen] = useState(false);
   const [reviewComposer, setReviewComposer] = useState(createReviewComposerState);
   const [pullRequestList, setPullRequestList] = useState<GitHubDashboardPullRequest[]>([]);
@@ -215,6 +219,8 @@ export function useDiffdiffAppState({
   const pendingSessionActivityRef = useRef<SessionActivityUpdate | null>(null);
   const pendingSyntaxHydrationPathsRef = useRef<Set<string>>(new Set());
   const pendingInteractionTokenRef = useRef(0);
+  const optimisticGitHubOperationIdRef = useRef(0);
+  const optimisticGitHubOperationsRef = useRef<GitHubOptimisticOperation[]>([]);
   const initialRenderSurfaceLoggedRef = useRef(false);
   const reviewCacheTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionActivityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -223,6 +229,7 @@ export function useDiffdiffAppState({
   const pullRequestListLoadIdRef = useRef(0);
   const selectedDiffRowRef = useRef<BoxRenderable | null>(null);
   const renderer = useRenderer();
+  optimisticGitHubOperationsRef.current = optimisticGitHubOperations;
   const resolvedKeymaps = useMemo(
     () =>
       mergeUserKeymaps(
@@ -315,6 +322,9 @@ export function useDiffdiffAppState({
     mergeConfirmOpen,
     mergeMethod,
     mergeModalField,
+    optimisticGitHubOperations,
+    optimisticGitHubOperationIdRef,
+    optimisticGitHubOperationsRef,
     pendingInteractionRef,
     pendingInteractionTokenRef,
     pendingReviewCacheRef,
@@ -381,6 +391,7 @@ export function useDiffdiffAppState({
     setMergeConfirmOpen,
     setMergeMethod,
     setMergeModalField,
+    setOptimisticGitHubOperations,
     setPullRequestConversationIndex,
     setPullRequestList,
     setPullRequestListIndex,

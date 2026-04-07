@@ -119,13 +119,18 @@ This split is deliberate: data acquisition and shared review behavior live in
   reviewed state.
 - PR-backed comparisons use GitHub's per-file viewed state as the source of
   truth.
+- PR-backed review interactions also maintain a local optimistic overlay in the
+  TUI for in-flight GitHub mutations such as viewed-state toggles, new review
+  comments, submitted review bodies, and merge state so the UI can respond
+  immediately before the next authoritative session reload lands.
 - When a comparison becomes PR-backed, diffdiff overwrites any existing local
   reviewed-file cache entry for that comparison with a GitHub-sourced cache
   record that keeps only local UI state such as collapsed paths, selected file,
   and comment collapse state.
 - This split is intentional: `packages/core` owns the cache model, GitHub viewed
   state loading, and GitHub viewed-state mutations, while `packages/tui`
-  reconciles those sources into its `reviewedPaths` UI model.
+  reconciles the authoritative session snapshot and optimistic overlay into its
+  UI models.
 
 ## Extension guidance
 

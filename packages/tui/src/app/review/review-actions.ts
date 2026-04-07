@@ -18,6 +18,10 @@ import type { DiffdiffAppProps, PendingInteraction } from "../state/app-props.ts
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import { haveSamePaths } from "../shared/collections.ts";
 import type { FileFocusController } from "../shared/file-focus.ts";
+import {
+  buildOptimisticViewedStateOperation,
+  createGitHubOptimisticOperationController,
+} from "./optimistic-github-operations.ts";
 
 interface CreateReviewActionsOptions {
   derived: DiffdiffAppDerived;
@@ -39,6 +43,16 @@ export function createReviewActions({
   startInteraction,
   state,
 }: CreateReviewActionsOptions) {
+  const optimisticOperations = createGitHubOptimisticOperationController(state);
+
+  function addOptimisticViewedState(filePath: string, viewedState: "VIEWED" | "UNVIEWED"): number {
+    const operationId = optimisticOperations.reserveId();
+    optimisticOperations.push(
+      buildOptimisticViewedStateOperation(operationId, filePath, viewedState),
+    );
+    return operationId;
+  }
+
   function applyReviewedStateToFile(fileIndex: number): void {
     const file = state.session.files[fileIndex];
     if (file == null) {
@@ -302,6 +316,13 @@ export function createReviewActions({
       return;
     }
 
+    const operationId = addOptimisticViewedState(filePath, isReviewed ? "UNVIEWED" : "VIEWED");
+    if (isReviewed) {
+      applyUnreviewedStateToFile(filePath);
+    } else {
+      applyReviewedStateToFile(fileIndex);
+    }
+
     state.setIsSubmittingReviewAction(true);
     state.setStatusMessage(
       isReviewed
@@ -311,12 +332,13 @@ export function createReviewActions({
 
     try {
       await updateViewedState(reviewSession, filePath);
-      if (isReviewed) {
-        applyUnreviewedStateToFile(filePath);
-      } else {
-        applyReviewedStateToFile(fileIndex);
-      }
     } catch (error) {
+      optimisticOperations.remove(operationId);
+      if (isReviewed) {
+        applyReviewedStateToFile(fileIndex);
+      } else {
+        applyUnreviewedStateToFile(filePath);
+      }
       persistence.persistenceApi.handleAppError(error, "Unable to update GitHub viewed state.", {
         action: isReviewed ? "unmark-file-as-viewed" : "mark-file-as-viewed",
         path: filePath,

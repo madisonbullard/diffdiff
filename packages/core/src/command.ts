@@ -4,6 +4,24 @@ import { CommandError } from "./errors.ts";
 import { logDiffdiffError, logDiffdiffInfo, logDiffdiffVerbose } from "./logging.ts";
 
 const execFileAsync = promisify(execFile);
+const GIT_LOCAL_ENV_KEYS = [
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_COMMON_DIR",
+  "GIT_CONFIG",
+  "GIT_CONFIG_COUNT",
+  "GIT_CONFIG_PARAMETERS",
+  "GIT_DIR",
+  "GIT_GRAFT_FILE",
+  "GIT_IMPLICIT_WORK_TREE",
+  "GIT_INDEX_FILE",
+  "GIT_INTERNAL_SUPER_PREFIX",
+  "GIT_NO_REPLACE_OBJECTS",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_PREFIX",
+  "GIT_REPLACE_REF_BASE",
+  "GIT_SHALLOW_FILE",
+  "GIT_WORK_TREE",
+] as const;
 
 interface RunCommandOptions {
   cwd: string;
@@ -26,7 +44,7 @@ export async function runCommand(
   try {
     const { stderr, stdout } = await execFileAsync(command, args, {
       cwd: options.cwd,
-      env: process.env,
+      env: buildCommandEnv(command),
       maxBuffer: 32 * 1024 * 1024,
       encoding: "utf8",
     });
@@ -102,6 +120,25 @@ export async function runCommand(
       exitCode,
     );
   }
+}
+
+function buildCommandEnv(command: string): NodeJS.ProcessEnv {
+  if (command !== "git") {
+    return process.env;
+  }
+
+  const env = { ...process.env };
+  for (const key of GIT_LOCAL_ENV_KEYS) {
+    delete env[key];
+  }
+
+  for (const key of Object.keys(env)) {
+    if (/^GIT_CONFIG_KEY_\d+$/u.test(key) || /^GIT_CONFIG_VALUE_\d+$/u.test(key)) {
+      delete env[key];
+    }
+  }
+
+  return env;
 }
 
 function summarizeTextOutput(text: string): {

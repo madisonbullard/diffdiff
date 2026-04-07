@@ -25,6 +25,7 @@ import type {
   PendingInteraction,
   SessionActivityUpdate,
 } from "./app-props.ts";
+import type { GitHubOptimisticOperation } from "../review/optimistic-github-overlay.ts";
 import type { PendingFileFocusRequest } from "../shared/file-focus.ts";
 import type { ReviewComposerUiState } from "../review/review-composer-state.ts";
 
@@ -84,6 +85,9 @@ export interface DiffdiffAppState {
   mergeConfirmOpen: boolean;
   mergeMethod: GitHubMergeMethod | undefined;
   mergeModalField: MergeModalField;
+  optimisticGitHubOperations: GitHubOptimisticOperation[];
+  optimisticGitHubOperationIdRef: MutableRefObject<number>;
+  optimisticGitHubOperationsRef: MutableRefObject<GitHubOptimisticOperation[]>;
   pendingInteractionRef: MutableRefObject<PendingInteraction | null>;
   pendingInteractionTokenRef: MutableRefObject<number>;
   pendingReviewCacheRef: MutableRefObject<{
@@ -163,6 +167,7 @@ export interface DiffdiffAppState {
   setMergeConfirmOpen: Dispatch<SetStateAction<boolean>>;
   setMergeMethod: Dispatch<SetStateAction<GitHubMergeMethod | undefined>>;
   setMergeModalField: Dispatch<SetStateAction<MergeModalField>>;
+  setOptimisticGitHubOperations: Dispatch<SetStateAction<GitHubOptimisticOperation[]>>;
   setPullRequestConversationIndex: Dispatch<SetStateAction<number>>;
   setPullRequestList: Dispatch<SetStateAction<GitHubDashboardPullRequest[]>>;
   setPullRequestListIndex: Dispatch<SetStateAction<number>>;

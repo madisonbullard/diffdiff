@@ -2228,11 +2228,15 @@ test("keeps reviewed files across refresh when their diffs are unchanged", async
   emitKey({ name: "x", sequence: "x" });
   emitKey({ name: "x", sequence: "x" });
   expect(getAppText(tree)).toContain("2 / 2 reviewed");
+  expect(getSelectedFileCard(tree).props.file.path).toBe("src/utils.ts");
+  expect(getSelectedFileCard(tree).props.isCollapsed).toBe(true);
 
   await emitAsyncKey({ name: "r", sequence: "R", shift: true });
 
   expect(getAppText(tree)).toContain("1 / 2 reviewed");
   expect(getAppText(tree)).not.toContain("2 / 2 reviewed");
+  expect(getSelectedFileCard(tree).props.file.path).toBe("src/utils.ts");
+  expect(getSelectedFileCard(tree).props.isCollapsed).toBe(false);
 });
 
 test("uses GitHub viewed state instead of stale cached reviewed files for PR sessions", () => {
@@ -2330,6 +2334,44 @@ test("updates PR reviewed state through the GitHub viewed-file flow", async () =
   expect(markFileAsViewed).toHaveBeenCalledWith(expect.any(Object), "src/app.ts");
   expect(getAppText(tree)).toContain("1 / 2 reviewed");
   expect(getAppText(tree)).not.toContain("Reply to Thread");
+});
+
+test("optimistically updates and rolls back PR reviewed state", async () => {
+  const deferredViewedState = createDeferred<void>();
+  const markFileAsViewed = vi.fn(() => deferredViewedState.promise);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({
+          github: createGitHubReviewSession({
+            pullRequest: {
+              ...createGitHubReviewSession().pullRequest,
+              changedFiles: createGitHubChangedFilesByPath({
+                "src/app.ts": "UNVIEWED",
+                "src/utils.ts": "UNVIEWED",
+              }),
+            },
+          }),
+        }),
+        markFileAsViewed,
+      })}
+    />,
+  );
+
+  emitKey({ name: "x", sequence: "x" });
+
+  expect(getAppText(tree)).toContain("1 / 2 reviewed");
+
+  deferredViewedState.reject(new Error("boom"));
+  await act(async () => {
+    try {
+      await deferredViewedState.promise;
+    } catch {
+      // expected test failure path
+    }
+  });
+
+  expect(getAppText(tree)).toContain("0 / 2 reviewed");
 });
 
 test("stays in diff mode until an inline review thread is explicitly focused", () => {
@@ -2953,6 +2995,48 @@ test("opens the comment composer and submits a pending review thread", async () 
   });
 });
 
+test("shows an optimistic review thread while the session reload is pending", async () => {
+  const deferredSession = createDeferred<PreparedReviewSession>();
+  const addReviewThread = vi.fn(async () => undefined);
+  const loadSession = vi.fn(() => deferredSession.promise);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        addReviewThread,
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        loadSession,
+      })}
+    />,
+  );
+
+  emitKey({ name: "a" });
+  emitText("Looks good");
+  emitKey({ name: "return" });
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  expect(loadSession).toHaveBeenCalledWith({
+    base: "origin/main",
+    head: "feature/tui",
+  });
+  expect(getSelectedFileCard(tree).props.reviewThreads).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        comments: expect.arrayContaining([expect.objectContaining({ body: "Looks good" })]),
+      }),
+    ]),
+  );
+
+  deferredSession.resolve(createPreparedSession({ github: createGitHubReviewSession() }));
+  await act(async () => {
+    await deferredSession.promise;
+  });
+
+  expect(getAppText(tree)).toContain("Looks good");
+});
+
 test("opens the comment composer when only the raw patch is available", () => {
   const tree = render(
     <DiffdiffApp
@@ -3113,6 +3197,45 @@ test("opens the external editor for submit review", async () => {
   expect(getAppText(tree)).toContain("Summary from editor");
 });
 
+test("shows an optimistic submitted review while the session reload is pending", async () => {
+  const deferredSession = createDeferred<PreparedReviewSession>();
+  const submitPendingReview = vi.fn(async () => undefined);
+  const loadSession = vi.fn(() => deferredSession.promise);
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        loadSession,
+        submitPendingReview,
+      })}
+    />,
+  );
+
+  emitKey({ name: "a", sequence: "A", shift: true });
+  emitKey({ name: "down" });
+  emitText("Ship it");
+  emitKey({ name: "return" });
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  emitKey({ name: "t" });
+
+  expect(loadSession).toHaveBeenCalledWith({
+    base: "origin/main",
+    head: "feature/tui",
+  });
+  expect(getAppText(tree)).toContain("Ship it");
+
+  deferredSession.resolve(createPreparedSession({ github: createGitHubReviewSession() }));
+  await act(async () => {
+    await deferredSession.promise;
+  });
+
+  expect(getAppText(tree)).toContain("Ship it");
+});
+
 test("opens the merge modal and merges with the selected method", async () => {
   const mergePullRequestSpy = vi.fn();
   const mergePullRequest: NonNullable<DiffdiffAppProps["mergePullRequest"]> = async (
@@ -3206,6 +3329,66 @@ test("opens the external editor for merge composition", async () => {
   );
   expect(getAppText(tree)).toContain("Edited title");
   expect(getAppText(tree)).toContain("Edited body");
+});
+
+test("shows an optimistic merged state while the session reload is pending", async () => {
+  const deferredSession = createDeferred<PreparedReviewSession>();
+  const loadSession = vi.fn(() => deferredSession.promise);
+  const mergePullRequest: NonNullable<DiffdiffAppProps["mergePullRequest"]> = async () => ({
+    cleanupCandidates: [],
+    deletedRemoteRefs: [],
+    message: "Pull Request successfully merged",
+    sha: "mergedsha",
+  });
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialGitHubPreferences: createGitHubPreferences({ defaultMergeMethod: "merge" }),
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        loadSession,
+        mergePullRequest,
+      })}
+    />,
+  );
+
+  emitKey({ name: "m" });
+  emitKey({ name: "return" });
+  emitKey({ name: "return" });
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  expect(loadSession).toHaveBeenCalledWith({
+    base: "origin/main",
+    head: "feature/tui",
+  });
+  expect(getAppText(tree)).toContain("CLOSED PR");
+  expect(getAppText(tree)).toContain("merged");
+
+  deferredSession.resolve(
+    createPreparedSession({
+      github: createGitHubReviewSession({
+        pullRequest: {
+          ...createGitHubReviewSession().pullRequest,
+          isMerged: true,
+          merge: {
+            ...createGitHubReviewSession().pullRequest.merge,
+            canMerge: false,
+            isMerged: true,
+            mergedAt: "2026-04-01T13:00:00Z",
+          },
+          state: "closed",
+        },
+      }),
+    }),
+  );
+  await act(async () => {
+    await deferredSession.promise;
+  });
+
+  expect(getAppText(tree)).toContain("CLOSED PR");
+  expect(getAppText(tree)).toContain("merged");
 });
 
 test("caps the merge body input height and scrolls to the cursor", () => {

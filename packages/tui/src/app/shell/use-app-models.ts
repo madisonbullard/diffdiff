@@ -22,6 +22,7 @@ import {
   type ReviewComposerAutocompleteState,
 } from "../../review/composer-autocomplete.ts";
 import { getReviewComposerHistoryEntriesForBrowsing } from "../../review/composer-history.ts";
+import { applyOptimisticGitHubSession } from "../review/optimistic-github-overlay.ts";
 import type { RenderSurfaceMetrics } from "../state/app-props.ts";
 import {
   getReviewComposerContext,
@@ -49,6 +50,7 @@ export interface DiffdiffAppDerived {
   fileTreeNodes: import("../../types.ts").FileTreeNode[];
   filteredCommitItems: ReturnType<typeof filterCommitListItems>;
   filteredPullRequests: import("@diffdiff/core").GitHubDashboardPullRequest[];
+  displaySession: import("../../types.ts").PreparedReviewSession;
   hasNextUnreviewedFile: boolean;
   hasSelectedReviewThread: boolean;
   hasThreadKeymap: boolean;
@@ -89,6 +91,10 @@ export function useDiffdiffAppDerived(
   state: DiffdiffAppState,
   theme: import("../../theme.ts").UiTheme,
 ): DiffdiffAppDerived {
+  const displaySession = useMemo(
+    () => applyOptimisticGitHubSession(state.session, state.optimisticGitHubOperations),
+    [state.optimisticGitHubOperations, state.session],
+  );
   const sidebarWidth = useMemo(
     () => getFileTreeSidebarWidth(state.terminalDimensions.width),
     [state.terminalDimensions.width],
@@ -98,8 +104,8 @@ export function useDiffdiffAppDerived(
     [sidebarWidth, state.terminalDimensions.width],
   );
   const fileTreeNodes = useMemo(
-    () => buildFileTreeNodes(state.session.files),
-    [state.session.files],
+    () => buildFileTreeNodes(displaySession.files),
+    [displaySession.files],
   );
   const fileTreeNodeByPath = useMemo(
     () => new Map(fileTreeNodes.map((node) => [node.path, node])),
@@ -119,7 +125,7 @@ export function useDiffdiffAppDerived(
       string,
       import("@diffdiff/core").GitHubPullRequestReviewThread[]
     >();
-    for (const thread of state.session.github?.pullRequest.reviewThreads ?? EMPTY_REVIEW_THREADS) {
+    for (const thread of displaySession.github?.pullRequest.reviewThreads ?? EMPTY_REVIEW_THREADS) {
       const pathThreads = threadsByPath.get(thread.path);
       if (pathThreads == null) {
         threadsByPath.set(thread.path, [thread]);
@@ -128,15 +134,15 @@ export function useDiffdiffAppDerived(
       }
     }
     return threadsByPath;
-  }, [state.session.github?.pullRequest.reviewThreads]);
+  }, [displaySession.github?.pullRequest.reviewThreads]);
   const pullRequestConversationItems =
-    state.session.github?.pullRequest.conversationItems ?? EMPTY_CONVERSATION_ITEMS;
+    displaySession.github?.pullRequest.conversationItems ?? EMPTY_CONVERSATION_ITEMS;
   const fileCardRootRefs = useMemo(
     () =>
-      state.session.files.map((_, index) => (node: BoxRenderable | null) => {
+      displaySession.files.map((_, index) => (node: BoxRenderable | null) => {
         state.fileCardRefs.current[index] = node;
       }),
-    [state.fileCardRefs, state.session.files],
+    [displaySession.files, state.fileCardRefs],
   );
   const treeRowRefCallbacks = useMemo(
     () =>
@@ -148,21 +154,21 @@ export function useDiffdiffAppDerived(
   const treeSummaryLabels = useMemo(
     () =>
       getTreeSummaryLabels({
-        additions: state.session.files.reduce((sum, file) => sum + file.additions, 0),
-        deletions: state.session.files.reduce((sum, file) => sum + file.deletions, 0),
+        additions: displaySession.files.reduce((sum, file) => sum + file.additions, 0),
+        deletions: displaySession.files.reduce((sum, file) => sum + file.deletions, 0),
         reviewedCount: state.reviewedPaths.size,
         sidebarWidth,
-        totalFiles: state.session.files.length,
+        totalFiles: displaySession.files.length,
       }),
-    [sidebarWidth, state.reviewedPaths.size, state.session.files],
+    [displaySession.files, sidebarWidth, state.reviewedPaths.size],
   );
   const diffView = useMemo(
     () => resolveDiffView(state.diffViewPreference, diffPaneWidth),
     [diffPaneWidth, state.diffViewPreference],
   );
   const selectedFileHasReviewAnchors = useMemo(
-    () => getReviewAnchors(state.session.files[state.selectedFileIndex], diffView).length > 0,
-    [diffView, state.selectedFileIndex, state.session.files],
+    () => getReviewAnchors(displaySession.files[state.selectedFileIndex], diffView).length > 0,
+    [diffView, displaySession.files, state.selectedFileIndex],
   );
   const preview = useDiffdiffAppPreview({
     diffPaneWidth,
@@ -207,7 +213,7 @@ export function useDiffdiffAppDerived(
     () => filterPullRequests(orderedPullRequests, state.pullRequestSearchQuery),
     [orderedPullRequests, state.pullRequestSearchQuery],
   );
-  const stickyFile = state.session.files[state.activeFileIndex];
+  const stickyFile = displaySession.files[state.activeFileIndex];
   const selectedBranchItem = branchItems[clampIndex(state.branchListIndex, branchItems.length)];
   const selectedCommitItem =
     filteredCommitItems[clampIndex(state.commitListIndex, filteredCommitItems.length)];
@@ -215,7 +221,7 @@ export function useDiffdiffAppDerived(
     filteredPullRequests[clampIndex(state.pullRequestListIndex, filteredPullRequests.length)];
   const selectedTreeNode =
     state.selectedTreePath === "" ? undefined : fileTreeNodeByPath.get(state.selectedTreePath);
-  const selectedFilePath = state.session.files[state.selectedFileIndex]?.path;
+  const selectedFilePath = displaySession.files[state.selectedFileIndex]?.path;
   const selectedFileReviewThreads =
     selectedFilePath == null
       ? EMPTY_REVIEW_THREADS
@@ -244,8 +250,8 @@ export function useDiffdiffAppDerived(
       clampIndex(state.pullRequestConversationIndex, pullRequestConversationItems.length)
     ];
   const selectedReviewAnchors = useMemo(
-    () => getReviewAnchors(state.session.files[state.selectedFileIndex], diffView),
-    [diffView, state.selectedFileIndex, state.session.files],
+    () => getReviewAnchors(displaySession.files[state.selectedFileIndex], diffView),
+    [diffView, displaySession.files, state.selectedFileIndex],
   );
   const selectedReviewAnchor =
     selectedReviewAnchors[
@@ -255,10 +261,10 @@ export function useDiffdiffAppDerived(
   const hasThreadKeymap = selectedReviewThread != null;
   const hasNextUnreviewedFile = useMemo(
     () =>
-      state.session.files.some(
+      displaySession.files.some(
         (file, index) => index !== state.selectedFileIndex && !state.reviewedPaths.has(file.path),
       ),
-    [state.reviewedPaths, state.selectedFileIndex, state.session.files],
+    [displaySession.files, state.reviewedPaths, state.selectedFileIndex],
   );
   const localBranchCount = state.comparisonBrowserData.branches.local.length;
   const openPrCount = state.comparisonBrowserData.branches.remote.filter(
@@ -295,6 +301,7 @@ export function useDiffdiffAppDerived(
   return {
     branchItems,
     commitItems,
+    displaySession,
     diffPaneWidth,
     diffRenderSurface: preview.diffRenderSurface,
     diffView,

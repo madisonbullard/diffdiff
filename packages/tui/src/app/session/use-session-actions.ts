@@ -1,10 +1,16 @@
+import { getReviewedPathsFromGitHubViewedState } from "@diffdiff/core";
 import type { ReviewCacheState } from "@diffdiff/core";
 import { useCallback } from "react";
+import {
+  applyOptimisticViewedStateToChangedFiles,
+  rebaseOptimisticGitHubOperations,
+} from "../review/optimistic-github-overlay.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import { getMonotonicNow } from "../layout/preview-helpers.ts";
 import {
   buildReviewedFiles,
   getSessionReviewedPaths,
+  reconcileCollapsedPaths,
   restoreCollapsedPaths,
 } from "../shared/collections.ts";
 import type { FileFocusController, FileFocusRevealMode } from "../shared/file-focus.ts";
@@ -71,6 +77,14 @@ export function useSessionActions({
       let nextFocusTarget: { index: number } | { path: string } = { index: 0 };
       let nextFocusReveal: FileFocusRevealMode = "default";
       let nextFocusRelativeOffset: number | undefined;
+      const nextOptimisticGitHubOperations = options.resetReviewState
+        ? []
+        : rebaseOptimisticGitHubOperations(
+            nextSession.github?.pullRequest,
+            state.optimisticGitHubOperationsRef.current,
+          );
+
+      state.setOptimisticGitHubOperations(nextOptimisticGitHubOperations);
 
       if (options.resetReviewState) {
         state.setReviewedPaths(getSessionReviewedPaths(nextSession, options.reviewCacheState));
@@ -90,13 +104,31 @@ export function useSessionActions({
           }
         }
       } else {
-        state.setReviewedPaths(
+        const nextReviewedPaths =
           nextSession.github != null
-            ? getSessionReviewedPaths(nextSession)
+            ? getReviewedPathsFromGitHubViewedState(
+                nextSession.files,
+                applyOptimisticViewedStateToChangedFiles(
+                  nextSession.github.pullRequest.changedFiles,
+                  nextOptimisticGitHubOperations,
+                ),
+              )
             : getSessionReviewedPaths(nextSession, {
                 reviewedFiles: buildReviewedFiles(state.session.files, state.reviewedPaths),
-              }),
-        );
+              });
+
+        state.setReviewedPaths(nextReviewedPaths);
+        state.setCollapsedPaths((currentPaths) => {
+          const nextPaths = reconcileCollapsedPaths(currentPaths, nextSession.files);
+
+          for (const path of state.reviewedPaths) {
+            if (!nextReviewedPaths.has(path)) {
+              nextPaths.delete(path);
+            }
+          }
+
+          return nextPaths;
+        });
 
         if (currentSelectedFilePath != null) {
           nextFocusTarget = { path: currentSelectedFilePath };

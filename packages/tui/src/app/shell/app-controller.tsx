@@ -135,9 +135,9 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
 
   function openMergeConfirmModal(): void {
     if (
-      state.session.github == null ||
+      derived.displaySession.github == null ||
       state.mergeMethod == null ||
-      !state.session.github.pullRequest.merge.canMerge
+      !derived.displaySession.github.pullRequest.merge.canMerge
     )
       return;
     state.setMergeConfirmOpen(true);
@@ -188,7 +188,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         openSubmitReviewModal: githubActions.openSubmitReviewModal,
         refreshComparison: refresh.refreshComparison,
         selectedTreeNode: derived.selectedTreeNode,
-        sessionGitHub: state.session.github,
+        sessionGitHub: derived.displaySession.github,
         toggleActivePane: treeActions.toggleActivePane,
         toggleCollapsedSelectedFile: () => reviewActions.toggleCollapsed(state.selectedFileIndex),
         toggleDiffView: reviewActions.toggleDiffView,
@@ -211,7 +211,6 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       state.reviewedPaths.size,
       state.selectedFileIndex,
       state.session.files.length,
-      state.session.github,
       treeActions,
       viewActions,
     ],
@@ -476,7 +475,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       selectedReviewComment={derived.selectedReviewComment}
       selectedReviewThread={derived.selectedReviewThread}
       selectedTreePath={state.selectedTreePath}
-      session={state.session}
+      session={derived.displaySession}
       showFooterLoadingIndicator={showFooterLoadingIndicator}
       showMergeConfirmModal={derived.showMergeConfirmModal}
       sidebarWidth={derived.sidebarWidth}
