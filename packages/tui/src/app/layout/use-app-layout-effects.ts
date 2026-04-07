@@ -176,7 +176,12 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
     }
 
     state.pendingSelectedDiffAnchorKeyRef.current = null;
-    scrollBox.scrollTo({ x: 0, y: Math.max(selectedRow.y - scrollBox.content.y, 0) });
+    const viewportHeight = scrollBox.viewport?.height ?? scrollBox.height ?? 0;
+    const focusOffset = Math.floor(viewportHeight / 3);
+    scrollBox.scrollTo({
+      x: 0,
+      y: Math.max(selectedRow.y - scrollBox.content.y - focusOffset, 0),
+    });
   }, [
     derived.selectedReviewAnchor?.key,
     state.pendingSelectedDiffAnchorKeyRef,
