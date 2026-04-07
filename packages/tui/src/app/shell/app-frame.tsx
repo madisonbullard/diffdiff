@@ -108,6 +108,8 @@ interface DiffdiffAppViewProps {
   >;
   scrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   selectedFileIndex: number;
+  selectedDiffRowRef: MutableRefObject<BoxRenderable | null>;
+  showSelectedReviewAnchor: boolean;
   selectedReviewAnchor?: import("../../review-anchors.ts").SelectedReviewAnchor;
   selectedReviewComment?: GitHubPullRequestComment;
   selectedReviewThread?: import("@diffdiff/core").GitHubPullRequestReviewThread;
@@ -206,6 +208,8 @@ export function DiffdiffAppView({
   reviewThreadsByPath,
   scrollRef,
   selectedFileIndex,
+  selectedDiffRowRef,
+  showSelectedReviewAnchor,
   selectedReviewAnchor,
   selectedReviewComment,
   selectedReviewThread,
@@ -275,6 +279,8 @@ export function DiffdiffAppView({
             reviewedPaths={reviewedPaths}
             scrollRef={scrollRef}
             selectedFileIndex={selectedFileIndex}
+            selectedDiffRowRef={selectedDiffRowRef}
+            showSelectedReviewAnchor={showSelectedReviewAnchor}
             selectedReviewAnchor={selectedReviewAnchor}
             selectedReviewComment={selectedReviewComment}
             selectedReviewThread={selectedReviewThread}

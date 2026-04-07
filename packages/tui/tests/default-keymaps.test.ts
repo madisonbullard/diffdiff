@@ -161,4 +161,20 @@ describe("default keymaps", () => {
       kind: "matched",
     });
   });
+
+  test("preserves numeric counts through the in-file prefix", () => {
+    const runtime = createKeymapRuntime(getDefaultKeymaps());
+
+    expect(press("diff", { name: "1", sequence: "1" }, runtime)).toEqual({ kind: "not-found" });
+    expect(press("diff", { name: "1", sequence: "1" }, runtime)).toEqual({ kind: "not-found" });
+    expect(press("diff", { name: "s", sequence: "s" }, runtime)).toMatchObject({
+      kind: "pending",
+      node: expect.objectContaining({ label: "In File" }),
+    });
+    expect(press("diff", { name: "s", sequence: "s" }, runtime)).toMatchObject({
+      actionId: A.GOTO_SELECTED_FILE_LINE,
+      count: 11,
+      kind: "matched",
+    });
+  });
 });

@@ -286,6 +286,119 @@ test("runs leader key commands with ctrl+x", () => {
   expect(getAppText(tree)).toContain("Working tree");
 });
 
+test("jumps to a diff line with a count through the in-file prefix", () => {
+  const scrollboxes: ReturnType<typeof createMockScrollbox>[] = [];
+  const fileCardYs = [0];
+  let fileCardRefIndex = 0;
+  let selectedRowRefIndex = 0;
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({
+          files: [
+            createPreparedFile({
+              lineNumberWidth: 2,
+              sideBySideRows: [
+                {
+                  kind: "hunk",
+                  segments: [{ text: "@@ -11 +11 @@" }],
+                },
+                {
+                  kind: "line",
+                  left: {
+                    kind: "context",
+                    lineNumber: 11,
+                    segments: [{ text: "const target = 11;" }],
+                  },
+                  right: {
+                    kind: "context",
+                    lineNumber: 11,
+                    segments: [{ text: "const target = 11;" }],
+                  },
+                },
+              ],
+              unifiedLines: [
+                {
+                  kind: "hunk",
+                  segments: [{ text: "@@ -11 +11 @@" }],
+                },
+                {
+                  kind: "context",
+                  oldLineNumber: 11,
+                  newLineNumber: 11,
+                  segments: [{ text: "const target = 11;" }],
+                },
+              ],
+            }),
+          ],
+        }),
+      })}
+    />,
+    {
+      createNodeMock(element) {
+        const props =
+          typeof element.props === "object" && element.props != null
+            ? (element.props as {
+                border?: unknown;
+                flexDirection?: unknown;
+                gap?: unknown;
+                paddingLeft?: unknown;
+                width?: unknown;
+              })
+            : undefined;
+
+        if (element.type === "scrollbox") {
+          const scrollbox = createMockScrollbox(false);
+          scrollboxes.push(scrollbox);
+          return scrollbox;
+        }
+
+        if (
+          element.type === "box" &&
+          Array.isArray(props?.border) &&
+          props.border[0] === "left" &&
+          props.paddingLeft === 2 &&
+          props.flexDirection === "column" &&
+          props.gap === 1
+        ) {
+          return { y: fileCardYs[fileCardRefIndex++] ?? 0 };
+        }
+
+        if (element.type === "box" && props?.flexDirection === "row" && props.width === "100%") {
+          return { y: [42][selectedRowRefIndex++] ?? 42 };
+        }
+
+        if (element.type === "box") {
+          return { y: 0 };
+        }
+
+        return null;
+      },
+    },
+  );
+
+  scrollboxes[1]?.scrollTo.mockClear();
+
+  emitKey({ name: "1", sequence: "1" });
+  emitKey({ name: "1", sequence: "1" });
+  emitKey({ name: "s", sequence: "s" });
+  emitKey({ name: "s", sequence: "s" });
+
+  expect(getAppText(tree)).toContain("Jumped to src/app.ts:11.");
+  expect(scrollboxes[1]?.scrollTo).toHaveBeenLastCalledWith({ x: 0, y: 42 });
+});
+
+test("warns when an in-file line jump targets a line missing from the diff", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ name: "1", sequence: "1" });
+  emitKey({ name: "1", sequence: "1" });
+  emitKey({ name: "s", sequence: "s" });
+  emitKey({ name: "s", sequence: "s" });
+
+  expect(getAppText(tree)).toContain("Line 11 is not present in src/app.ts.");
+});
+
 test("opens the focused file in the configured editor", async () => {
   const openFileInEditor = vi.fn(async () => undefined);
   const tree = render(<DiffdiffApp {...createAppProps({ openFileInEditor })} />);

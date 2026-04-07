@@ -187,6 +187,7 @@ export function useDiffdiffAppState({
   >({});
   const [reviewSubmissionBody, setReviewSubmissionBody] = useState("");
   const [reviewSubmissionEventIndex, setReviewSubmissionEventIndex] = useState(0);
+  const [showSelectedReviewAnchor, setShowSelectedReviewAnchor] = useState(false);
   const [selectedReviewAnchorIndex, setSelectedReviewAnchorIndex] = useState(0);
   const [activeFileIndex, setActiveFileIndex] = useState(0);
   const [activePane, setActivePane] = useState<AppPane>("diff");
@@ -203,6 +204,7 @@ export function useDiffdiffAppState({
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
   const fileCardRefs = useRef<(BoxRenderable | null)[]>([]);
   const pendingFileFocusRequestRef = useRef<PendingFileFocusRequest | null>(null);
+  const pendingSelectedDiffAnchorKeyRef = useRef<string | null>(null);
   const pendingInteractionRef = useRef<import("./app-props.ts").PendingInteraction | null>(null);
   const pendingReviewCacheRef = useRef<{
     key: import("@diffdiff/core").ReviewCacheKey;
@@ -217,6 +219,7 @@ export function useDiffdiffAppState({
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const terminalFocusedRef = useRef(true);
   const pullRequestListLoadIdRef = useRef(0);
+  const selectedDiffRowRef = useRef<BoxRenderable | null>(null);
   const renderer = useRenderer();
   const resolvedKeymaps = useMemo(
     () =>
@@ -291,6 +294,7 @@ export function useDiffdiffAppState({
     pendingInteractionTokenRef,
     pendingReviewCacheRef,
     pendingFileFocusRequestRef,
+    pendingSelectedDiffAnchorKeyRef,
     pendingSessionActivityRef,
     pendingSyntaxHydrationPathsRef,
     pullRequestConversationIndex,
@@ -309,6 +313,8 @@ export function useDiffdiffAppState({
     reviewSubmissionEventIndex,
     scrollRef,
     selectedFileIndex,
+    selectedDiffRowRef,
+    showSelectedReviewAnchor,
     selectedReviewAnchorIndex,
     selectedReviewCommentIndexByThreadId,
     selectedReviewThreadIndexByFilePath,
@@ -363,6 +369,7 @@ export function useDiffdiffAppState({
     setReviewSubmissionBody,
     setReviewSubmissionEventIndex,
     setSelectedFileIndex,
+    setShowSelectedReviewAnchor,
     setSelectedReviewAnchorIndex,
     setSelectedReviewCommentIndexByThreadId,
     setSelectedReviewThreadIndexByFilePath,

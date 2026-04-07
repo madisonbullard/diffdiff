@@ -1,4 +1,4 @@
-export type KeymapPrefixId = "leader" | "space" | "g";
+export type KeymapPrefixId = "leader" | "space" | "g" | "s";
 
 export interface KeymapPrefixDefinition {
   readonly nodeLabel: string;
@@ -24,9 +24,16 @@ export const GOTO_PREFIX: KeymapPrefixDefinition = {
   triggerKeybind: "g",
 };
 
+export const IN_FILE_PREFIX: KeymapPrefixDefinition = {
+  nodeLabel: "In File",
+  prefix: "s",
+  triggerKeybind: "s",
+};
+
 const KEYMAP_PREFIXES: Readonly<Record<KeymapPrefixId, KeymapPrefixDefinition>> = {
   g: GOTO_PREFIX,
   leader: LEADER_PREFIX,
+  s: IN_FILE_PREFIX,
   space: SPACE_PREFIX,
 };
 

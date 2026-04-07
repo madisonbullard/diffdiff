@@ -164,6 +164,28 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
   ]);
 
   useEffect(() => {
+    const pendingAnchorKey = state.pendingSelectedDiffAnchorKeyRef.current;
+    if (pendingAnchorKey == null || derived.selectedReviewAnchor?.key !== pendingAnchorKey) {
+      return;
+    }
+
+    const scrollBox = state.scrollRef.current;
+    const selectedRow = state.selectedDiffRowRef.current;
+    if (scrollBox == null || selectedRow == null) {
+      return;
+    }
+
+    state.pendingSelectedDiffAnchorKeyRef.current = null;
+    scrollBox.scrollTo({ x: 0, y: Math.max(selectedRow.y - scrollBox.content.y, 0) });
+  }, [
+    derived.selectedReviewAnchor?.key,
+    state.pendingSelectedDiffAnchorKeyRef,
+    state.scrollRef,
+    state.selectedDiffRowRef,
+    state.showSelectedReviewAnchor,
+  ]);
+
+  useEffect(() => {
     const selectedTreeIndex = derived.visibleTreeNodeIndexByPath.get(state.selectedTreePath) ?? -1;
     const offset = getTreeTopOffsets()[selectedTreeIndex];
     const scrollBox = state.treeScrollRef.current;
@@ -177,6 +199,15 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
     getTreeTopOffsets,
     state.selectedTreePath,
     state.treeScrollRef,
+  ]);
+
+  useEffect(() => {
+    state.pendingSelectedDiffAnchorKeyRef.current = null;
+    state.setShowSelectedReviewAnchor(false);
+  }, [
+    state.pendingSelectedDiffAnchorKeyRef,
+    state.selectedFileIndex,
+    state.setShowSelectedReviewAnchor,
   ]);
 
   useEffect(() => {

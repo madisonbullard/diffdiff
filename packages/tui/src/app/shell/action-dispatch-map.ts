@@ -278,6 +278,10 @@ export function buildActionDispatchMap(options: BuildActionDispatchMapOptions): 
     );
   });
 
+  map.set(A.GOTO_SELECTED_FILE_LINE, (count) => {
+    jumpToSelectedFileLine(count, derived, state);
+  });
+
   map.set(A.TREE_MOVE_DOWN, (count) => {
     treeActions.moveTreeSelection(count ?? 1);
   });
@@ -399,9 +403,52 @@ function moveToHunk(
     return;
   }
 
+  state.setShowSelectedReviewAnchor(true);
   state.setSelectedReviewAnchorIndex(clampIndex(anchorIndex, derived.selectedReviewAnchors.length));
   const anchor = derived.selectedReviewAnchors[anchorIndex];
   state.setStatusMessage(
     anchor != null ? `Jumped to hunk at ${anchor.path}:${anchor.line}.` : "Jumped to hunk.",
+  );
+}
+
+function jumpToSelectedFileLine(
+  count: number | null,
+  derived: DiffdiffAppDerived,
+  state: DiffdiffAppState,
+): void {
+  const selectedFile = state.session.files[state.selectedFileIndex];
+  if (selectedFile == null) {
+    state.setStatusMessage("No file is selected.");
+    return;
+  }
+
+  const targetIndex =
+    count == null ? 0 : derived.selectedReviewAnchors.findIndex((anchor) => anchor.line === count);
+  const targetAnchor = targetIndex < 0 ? undefined : derived.selectedReviewAnchors[targetIndex];
+
+  if (targetAnchor == null) {
+    state.setStatusMessage(
+      count == null
+        ? `No diff lines are available in ${selectedFile.path}.`
+        : `Line ${count} is not present in ${selectedFile.path}.`,
+    );
+    return;
+  }
+
+  if (state.collapsedPaths.has(selectedFile.path)) {
+    state.setCollapsedPaths((currentPaths) => {
+      const nextPaths = new Set(currentPaths);
+      nextPaths.delete(selectedFile.path);
+      return nextPaths;
+    });
+  }
+
+  state.pendingSelectedDiffAnchorKeyRef.current = targetAnchor.key;
+  state.setShowSelectedReviewAnchor(true);
+  state.setSelectedReviewAnchorIndex(targetIndex);
+  state.setStatusMessage(
+    count == null
+      ? `Jumped to first diff line: ${targetAnchor.path}:${targetAnchor.line}.`
+      : `Jumped to ${targetAnchor.path}:${targetAnchor.line}.`,
   );
 }

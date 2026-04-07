@@ -91,6 +91,7 @@ export interface DiffdiffAppState {
     state: import("@diffdiff/core").ReviewCacheState;
   } | null>;
   pendingFileFocusRequestRef: MutableRefObject<PendingFileFocusRequest | null>;
+  pendingSelectedDiffAnchorKeyRef: MutableRefObject<string | null>;
   pendingSessionActivityRef: MutableRefObject<SessionActivityUpdate | null>;
   pendingSyntaxHydrationPathsRef: MutableRefObject<Set<string>>;
   pullRequestConversationIndex: number;
@@ -108,6 +109,7 @@ export interface DiffdiffAppState {
   reviewSubmissionBody: string;
   reviewSubmissionEventIndex: number;
   selectedFileIndex: number;
+  showSelectedReviewAnchor: boolean;
   selectedReviewAnchorIndex: number;
   selectedReviewCommentIndexByThreadId: Record<string, number>;
   selectedReviewThreadIndexByFilePath: Record<string, number>;
@@ -125,6 +127,7 @@ export interface DiffdiffAppState {
   scrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   mergeBodyScrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   fileCardRefs: MutableRefObject<(BoxRenderable | null)[]>;
+  selectedDiffRowRef: MutableRefObject<BoxRenderable | null>;
   setActiveFileIndex: Dispatch<SetStateAction<number>>;
   setActivePane: Dispatch<SetStateAction<AppPane>>;
   setActiveListView: Dispatch<SetStateAction<ListModalView>>;
@@ -173,6 +176,7 @@ export interface DiffdiffAppState {
   setReviewSubmissionBody: Dispatch<SetStateAction<string>>;
   setReviewSubmissionEventIndex: Dispatch<SetStateAction<number>>;
   setSelectedFileIndex: Dispatch<SetStateAction<number>>;
+  setShowSelectedReviewAnchor: Dispatch<SetStateAction<boolean>>;
   setSelectedReviewAnchorIndex: Dispatch<SetStateAction<number>>;
   setSelectedReviewCommentIndexByThreadId: Dispatch<SetStateAction<Record<string, number>>>;
   setSelectedReviewThreadIndexByFilePath: Dispatch<SetStateAction<Record<string, number>>>;

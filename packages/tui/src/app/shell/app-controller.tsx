@@ -494,6 +494,8 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       reviewThreadsByPath={derived.reviewThreadsByPath}
       scrollRef={state.scrollRef}
       selectedFileIndex={state.selectedFileIndex}
+      selectedDiffRowRef={state.selectedDiffRowRef}
+      showSelectedReviewAnchor={state.showSelectedReviewAnchor}
       selectedReviewAnchor={derived.selectedReviewAnchor}
       selectedReviewComment={derived.selectedReviewComment}
       selectedReviewThread={derived.selectedReviewThread}

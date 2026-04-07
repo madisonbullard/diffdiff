@@ -82,6 +82,7 @@ export const GOTO_WINDOW_BOTTOM = "goto.window-bottom";
 export const GOTO_NEXT_HUNK = "goto.next-hunk";
 export const GOTO_PREVIOUS_HUNK = "goto.previous-hunk";
 export const GOTO_LAST_ACCESSED_FILE = "goto.last-accessed-file";
+export const GOTO_SELECTED_FILE_LINE = "goto.selected-file-line";
 
 // ---------------------------------------------------------------------------
 // Generic list/modal navigation (shared across many modals)

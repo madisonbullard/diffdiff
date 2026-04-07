@@ -8,7 +8,7 @@
 
 import type { KeymapMode } from "../shell/keymap-mode.ts";
 import { serializeKeyEvent, parseKeyString } from "./key-event.ts";
-import { GOTO_PREFIX, LEADER_PREFIX, SPACE_PREFIX } from "./prefixes.ts";
+import { GOTO_PREFIX, IN_FILE_PREFIX, LEADER_PREFIX, SPACE_PREFIX } from "./prefixes.ts";
 import { MutableTrieNode } from "./trie.ts";
 import type { KeyTrieNode, ResolvedKeymaps } from "./types.ts";
 import * as A from "./actions.ts";
@@ -131,6 +131,8 @@ const GOTO_BINDINGS: readonly BindingTuple[] = [
   ["a", A.GOTO_LAST_ACCESSED_FILE],
 ];
 
+const IN_FILE_BINDINGS: readonly BindingTuple[] = [["s", A.GOTO_SELECTED_FILE_LINE]];
+
 const diffMode = buildModeWithPrefixes(
   [
     // System
@@ -195,6 +197,11 @@ const diffMode = buildModeWithPrefixes(
       trigger: GOTO_PREFIX.triggerKeybind,
       label: GOTO_PREFIX.nodeLabel,
       bindings: GOTO_BINDINGS,
+    },
+    {
+      trigger: IN_FILE_PREFIX.triggerKeybind,
+      label: IN_FILE_PREFIX.nodeLabel,
+      bindings: IN_FILE_BINDINGS,
     },
   ],
 );
@@ -272,6 +279,11 @@ const threadMode = buildModeWithPrefixes(
       trigger: GOTO_PREFIX.triggerKeybind,
       label: GOTO_PREFIX.nodeLabel,
       bindings: GOTO_BINDINGS,
+    },
+    {
+      trigger: IN_FILE_PREFIX.triggerKeybind,
+      label: IN_FILE_PREFIX.nodeLabel,
+      bindings: IN_FILE_BINDINGS,
     },
   ],
 );

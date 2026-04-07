@@ -1,6 +1,6 @@
 import type { GitHubPullRequestReviewThread } from "@diffdiff/core";
-import type { ColorInput } from "@opentui/core";
-import { useMemo } from "react";
+import type { BoxRenderable, ColorInput } from "@opentui/core";
+import { useMemo, type Ref } from "react";
 import { ReviewThreadList } from "../review/threads.tsx";
 import type { UiTheme } from "../theme.ts";
 import type {
@@ -37,6 +37,7 @@ export function UnifiedDiffPreview({
   file,
   onToggleReviewThreadCollapsed,
   previewViewport,
+  selectedDiffRowRef,
   selectedReviewCommentId,
   reviewThreads,
   selectedReviewThreadId,
@@ -48,6 +49,7 @@ export function UnifiedDiffPreview({
   file: PreparedReviewFile;
   onToggleReviewThreadCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
   previewViewport?: PreviewViewport;
+  selectedDiffRowRef?: Ref<BoxRenderable>;
   selectedReviewCommentId?: number;
   reviewThreads: readonly GitHubPullRequestReviewThread[];
   selectedReviewThreadId?: string;
@@ -94,6 +96,9 @@ export function UnifiedDiffPreview({
               isSelected={matchesUnifiedAnchor(line, selectedReviewAnchor)}
               line={line}
               lineNumberWidth={file.lineNumberWidth}
+              selectedRowRef={
+                matchesUnifiedAnchor(line, selectedReviewAnchor) ? selectedDiffRowRef : undefined
+              }
               theme={theme}
             />
             <ReviewThreadList
@@ -126,6 +131,7 @@ export function SideBySideDiffPreview({
   collapsedCommentStates,
   file,
   onToggleReviewThreadCollapsed,
+  selectedDiffRowRef,
   selectedReviewCommentId,
   reviewThreads,
   selectedReviewThreadId,
@@ -136,6 +142,7 @@ export function SideBySideDiffPreview({
   collapsedCommentStates?: Readonly<Record<string, boolean>>;
   file: PreparedReviewFile;
   onToggleReviewThreadCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
+  selectedDiffRowRef?: Ref<BoxRenderable>;
   selectedReviewCommentId?: number;
   reviewThreads: readonly GitHubPullRequestReviewThread[];
   selectedReviewThreadId?: string;
@@ -165,6 +172,9 @@ export function SideBySideDiffPreview({
               lineNumberWidth={file.lineNumberWidth}
               paneWidth={paneWidth}
               row={row}
+              selectedRowRef={
+                matchesSideBySideAnchor(row, selectedReviewAnchor) ? selectedDiffRowRef : undefined
+              }
               theme={theme}
             />
             <ReviewThreadList
@@ -197,6 +207,7 @@ function SideBySideDiffRowView({
   lineNumberWidth,
   paneWidth,
   row,
+  selectedRowRef,
   theme,
 }: {
   annotations: { left: readonly LineAnnotation[]; right: readonly LineAnnotation[] };
@@ -205,6 +216,7 @@ function SideBySideDiffRowView({
   lineNumberWidth: number;
   paneWidth: number;
   row: SideBySideDiffRow;
+  selectedRowRef?: Ref<BoxRenderable>;
   theme: UiTheme;
 }) {
   if (row.kind === "hunk" || row.kind === "gap") {
@@ -220,7 +232,7 @@ function SideBySideDiffRowView({
   const rowBackground = isSelected ? tintHex(theme.surfaceMuted, theme.accent, 0.2) : undefined;
 
   return (
-    <box width="100%" flexDirection="row" backgroundColor={rowBackground}>
+    <box ref={selectedRowRef} width="100%" flexDirection="row" backgroundColor={rowBackground}>
       <SideBySideDiffCellView
         annotations={annotations.left}
         cell={row.left ?? { kind: "empty", segments: [] }}
@@ -331,12 +343,14 @@ function UnifiedDiffRow({
   isSelected,
   line,
   lineNumberWidth,
+  selectedRowRef,
   theme,
 }: {
   annotations: readonly LineAnnotation[];
   isSelected: boolean;
   line: UnifiedDiffLine;
   lineNumberWidth: number;
+  selectedRowRef?: Ref<BoxRenderable>;
   theme: UiTheme;
 }) {
   if (line.kind === "hunk" || line.kind === "gap") {
@@ -386,7 +400,7 @@ function UnifiedDiffRow({
   const borderColor = hasAnnotation ? getAnnotationBorderColor(annotations, theme) : undefined;
 
   return (
-    <box width="100%" flexDirection="row">
+    <box ref={selectedRowRef} width="100%" flexDirection="row">
       {borderColor != null ? (
         <box width={1} backgroundColor={lineNumberBg}>
           <text fg={borderColor} wrapMode="none">

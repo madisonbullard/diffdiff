@@ -28,6 +28,8 @@ interface AppDiffPaneProps {
   reviewedPaths: ReadonlySet<string>;
   scrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   selectedFileIndex: number;
+  selectedDiffRowRef: MutableRefObject<BoxRenderable | null>;
+  showSelectedReviewAnchor: boolean;
   selectedReviewAnchor?: import("../../review-anchors.ts").SelectedReviewAnchor;
   selectedReviewComment?: import("@diffdiff/core").GitHubPullRequestComment;
   selectedReviewThread?: import("@diffdiff/core").GitHubPullRequestReviewThread;
@@ -56,6 +58,8 @@ export function AppDiffPane({
   reviewedPaths,
   scrollRef,
   selectedFileIndex,
+  selectedDiffRowRef,
+  showSelectedReviewAnchor,
   selectedReviewAnchor,
   selectedReviewComment,
   selectedReviewThread,
@@ -138,10 +142,11 @@ export function AppDiffPane({
                 reviewThreads={reviewThreadsByPath.get(file.path) ?? EMPTY_REVIEW_THREADS}
                 rootRef={fileCardRootRefs[index]}
                 shouldRenderBody={fileCardBodyVisibility[index]}
+                selectedDiffRowRef={isSelected ? selectedDiffRowRef : undefined}
                 selectedReviewCommentId={isSelected ? selectedReviewComment?.id : undefined}
                 selectedReviewThreadId={isSelected ? selectedReviewThread?.id : undefined}
                 selectedReviewAnchor={
-                  isSelected && session.github != null ? selectedReviewAnchor : undefined
+                  isSelected && showSelectedReviewAnchor ? selectedReviewAnchor : undefined
                 }
                 syntaxStyle={syntaxStyle}
                 terminalWidth={diffPaneWidth}

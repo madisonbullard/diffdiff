@@ -211,6 +211,7 @@ export function createReviewActions({
       return;
     }
 
+    state.setShowSelectedReviewAnchor(true);
     state.setSelectedReviewAnchorIndex((currentIndex) => {
       const nextIndex = clampIndex(currentIndex + delta, derived.selectedReviewAnchors.length);
       const nextAnchor = derived.selectedReviewAnchors[nextIndex];
