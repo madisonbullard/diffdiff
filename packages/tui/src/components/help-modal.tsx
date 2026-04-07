@@ -1,7 +1,8 @@
 import type { CommandDefinition } from "../commands.ts";
 import type { AppPane } from "../types.ts";
 import type { UiTheme } from "../theme.ts";
-import { KeyCap, MODAL_OVERLAY, SPLIT_BORDER } from "./shared.tsx";
+import { CommandBindingLabel, CommandListRow } from "./command-list.tsx";
+import { KeyCap, ModalFrame, SPLIT_BORDER } from "./shared.tsx";
 
 type ModeKey = "global" | AppPane;
 
@@ -112,95 +113,70 @@ export function HelpModal({
   const sections = buildModeSections(commands, commandBindingLabels, activePane, theme);
 
   return (
-    <box
-      position="absolute"
-      top={0}
-      right={0}
-      bottom={0}
-      left={0}
-      alignItems="center"
-      justifyContent="center"
+    <ModalFrame
+      title="Help"
+      subtitle="All keyboard shortcuts by mode."
+      theme={theme}
+      maxHeight="80%"
+      maxWidth={92}
+      width="92%"
       zIndex={30}
-      backgroundColor={MODAL_OVERLAY}
+      headerRight={
+        <text fg={theme.textMuted} wrapMode="none">
+          <KeyCap label="esc" theme={theme} />
+          <span>{" close"}</span>
+        </text>
+      }
     >
-      <box
-        width="92%"
-        maxWidth={92}
-        maxHeight="80%"
-        backgroundColor={theme.modalBg}
-        padding={1}
-        flexDirection="column"
-        gap={1}
+      <scrollbox
+        width="100%"
+        flexGrow={1}
+        focused={true}
+        viewportOptions={{ backgroundColor: theme.modalBg }}
+        contentOptions={{ backgroundColor: theme.modalBg }}
+        verticalScrollbarOptions={{ trackOptions: { backgroundColor: theme.border } }}
       >
-        <box width="100%" flexDirection="column">
-          <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
-            <text fg={theme.accent} wrapMode="none">
-              Help
-            </text>
-            <text fg={theme.textMuted} wrapMode="none">
-              <KeyCap label="esc" theme={theme} />
-              <span>{" close"}</span>
-            </text>
-          </box>
-          <text fg={theme.textMuted} wrapMode="none">
-            All keyboard shortcuts by mode.
-          </text>
+        <box width="100%" flexDirection="column" gap={1}>
+          {sections.map((section) => (
+            <box
+              key={section.mode}
+              width="100%"
+              border={["left"]}
+              customBorderChars={SPLIT_BORDER}
+              borderColor={section.dimmed ? theme.border : section.color}
+              backgroundColor={theme.surface}
+              paddingLeft={2}
+              paddingRight={1}
+              paddingTop={1}
+              paddingBottom={1}
+              flexDirection="column"
+              gap={1}
+            >
+              <text fg={section.dimmed ? theme.border : section.color} wrapMode="none">
+                {section.title}
+              </text>
+              {section.rows.map((row) => (
+                <CommandListRow
+                  key={`${section.mode}:${row.text}`}
+                  left={
+                    <text fg={section.dimmed ? theme.border : theme.text} wrapMode="word">
+                      {row.text}
+                    </text>
+                  }
+                  right={
+                    <CommandBindingLabel
+                      accentColor={section.color}
+                      dimmed={section.dimmed}
+                      label={row.bindingLabel}
+                      theme={theme}
+                    />
+                  }
+                />
+              ))}
+            </box>
+          ))}
         </box>
-        <scrollbox
-          width="100%"
-          flexGrow={1}
-          focused={true}
-          viewportOptions={{ backgroundColor: theme.modalBg }}
-          contentOptions={{ backgroundColor: theme.modalBg }}
-          verticalScrollbarOptions={{ trackOptions: { backgroundColor: theme.border } }}
-        >
-          <box width="100%" flexDirection="column" gap={1}>
-            {sections.map((section) => (
-              <box
-                key={section.mode}
-                width="100%"
-                border={["left"]}
-                customBorderChars={SPLIT_BORDER}
-                borderColor={section.dimmed ? theme.border : section.color}
-                backgroundColor={theme.surface}
-                paddingLeft={2}
-                paddingRight={1}
-                paddingTop={1}
-                paddingBottom={1}
-                flexDirection="column"
-                gap={0}
-              >
-                <text fg={section.dimmed ? theme.border : section.color} wrapMode="none">
-                  {section.title}
-                </text>
-                {section.rows.map((row) => (
-                  <text
-                    key={`${section.mode}:${row.text}`}
-                    fg={section.dimmed ? theme.border : theme.textMuted}
-                    wrapMode="none"
-                  >
-                    {row.bindingLabel != null ? (
-                      <>
-                        <KeyCap
-                          label={row.bindingLabel}
-                          theme={
-                            section.dimmed
-                              ? { ...theme, accent: theme.border, surfaceMuted: theme.surface }
-                              : theme
-                          }
-                        />
-                        <span>{` ${row.text}`}</span>
-                      </>
-                    ) : (
-                      <span>{`  ${row.text}`}</span>
-                    )}
-                  </text>
-                ))}
-              </box>
-            ))}
-          </box>
-        </scrollbox>
-      </box>
-    </box>
+      </scrollbox>
+    </ModalFrame>
   );
 }

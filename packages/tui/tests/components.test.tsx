@@ -1,6 +1,6 @@
 import type { BranchInfo, GitHubPullRequestDetail } from "@diffdiff/core";
 import type { ReactNode } from "react";
-import type { ReactTestRenderer } from "react-test-renderer";
+import type { ReactTestInstance, ReactTestRenderer } from "react-test-renderer";
 import { act, create } from "react-test-renderer";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 import { BranchModal } from "../src/components/branch-modal.tsx";
@@ -585,7 +585,6 @@ test("renders empty branch columns and help copy", () => {
   expect(collectText(branchModal.toJSON())).toContain("ACTIVE");
   expect(collectText(filterModal.toJSON())).toContain("Remote branches");
   expect(collectText(helpModal.toJSON())).toContain("ctrl+p");
-  expect(collectText(helpModal.toJSON())).toContain("l / ctrl+x l / space l");
   expect(collectText(helpModal.toJSON())).toContain("ctrl+x");
   expect(collectText(helpModal.toJSON())).toContain("open comparison list");
   expect(collectText(helpModal.toJSON())).toContain("copy PR URL");
@@ -594,6 +593,21 @@ test("renders empty branch columns and help copy", () => {
   expect(collectText(helpModal.toJSON())).toContain("Tree Pane");
   expect(collectText(helpModal.toJSON())).toContain("toggle reviewed");
   expect(collectText(helpModal.toJSON())).toContain("open selected file");
+
+  const comparisonRow = helpModal.root.find(
+    (node) =>
+      String(node.type) === "box" &&
+      node.props.justifyContent === "space-between" &&
+      collectText(node).includes("open comparison list") &&
+      collectText(node).includes("ctrl+x"),
+  );
+  const comparisonColumns = comparisonRow.children.filter(
+    (child): child is ReactTestInstance => typeof child !== "string",
+  );
+
+  expect(comparisonRow.props.gap).toBe(2);
+  expect(comparisonColumns[0]?.props.flexGrow).toBe(1);
+  expect(comparisonColumns[1]?.props.flexShrink).toBe(0);
 });
 
 test("renders a compact modal picker overlay", () => {
@@ -667,6 +681,7 @@ test("groups suggested commands under a dedicated heading in the palette", () =>
 });
 
 test("renders palette command descriptions on an indented second line", () => {
+  const title = "Open comparison list with a deliberately verbose title that needs to wrap cleanly";
   const description =
     "Browse the working tree, branches, pull requests, and commits from one list.";
   const palette = render(
@@ -677,7 +692,7 @@ test("renders palette command descriptions on an indented second line", () => {
           category: "Suggested",
           description,
           suggested: true,
-          title: "Open comparison list",
+          title,
           value: "comparison.list",
         },
       ]}
@@ -688,12 +703,29 @@ test("renders palette command descriptions on an indented second line", () => {
   );
 
   const descriptionNode = palette.root.find(
+    (node) => String(node.type) === "text" && collectText(node).trim() === description,
+  );
+  const titleNode = palette.root.find(
+    (node) => String(node.type) === "text" && collectText(node).includes(title),
+  );
+  const commandRow = palette.root.find(
     (node) =>
-      String(node.type) === "text" && collectText(node.props.children).trim() === description,
+      String(node.type) === "box" &&
+      node.props.justifyContent === "space-between" &&
+      collectText(node).includes(title) &&
+      collectText(node).includes("ctrl+p"),
+  );
+  const commandColumns = commandRow.children.filter(
+    (child): child is ReactTestInstance => typeof child !== "string",
   );
 
   expect(descriptionNode.props.wrapMode).toBe("word");
   expect(descriptionNode.parent?.props.paddingLeft).toBe(2);
+  expect(titleNode.props.wrapMode).toBe("word");
+  expect(commandRow.props.gap).toBe(2);
+  expect(commandColumns[0]?.props.flexGrow).toBe(1);
+  expect(commandColumns[1]?.props.flexShrink).toBe(0);
+  expect(collectText(palette.toJSON())).toContain("fuzzy filter");
 });
 
 test("uses the native diff renderer when Pierre segments are unavailable", () => {

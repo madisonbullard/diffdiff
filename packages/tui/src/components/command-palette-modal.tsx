@@ -1,5 +1,6 @@
 import type { CommandDefinition } from "../commands.ts";
 import type { UiTheme } from "../theme.ts";
+import { CommandBindingLabel, CommandListRow } from "./command-list.tsx";
 import { KeyCap, ModalFrame, SPLIT_BORDER, selectItem } from "./shared.tsx";
 
 export function CommandPaletteModal({
@@ -24,7 +25,7 @@ export function CommandPaletteModal({
       title="Commands"
       subtitle={
         normalizedQuery === ""
-          ? "Search or browse available diffdiff actions."
+          ? "Fuzzy filter or browse available diffdiff actions."
           : `Filtering commands for "${normalizedQuery}".`
       }
       theme={theme}
@@ -53,10 +54,10 @@ export function CommandPaletteModal({
           gap={0}
         >
           <text fg={theme.textMuted} wrapMode="none">
-            <span fg={theme.text}>query</span>
+            <span fg={theme.text}>fuzzy filter</span>
             <span>{": "}</span>
             <span fg={normalizedQuery === "" ? theme.textMuted : theme.text}>
-              {normalizedQuery === "" ? "type to filter commands" : normalizedQuery}
+              {normalizedQuery === "" ? "type to fuzzy filter commands" : normalizedQuery}
             </span>
           </text>
         </box>
@@ -86,13 +87,9 @@ export function CommandPaletteModal({
               activeCategory = categoryLabel;
               const isSelected = index === selectedIndex;
               const isEnabled = command.enabled !== false;
-              const backgroundColor = isSelected ? theme.accent : theme.surface;
-              const foreground = isSelected
-                ? theme.appBackground
-                : isEnabled
-                  ? theme.text
-                  : theme.textMuted;
-              const detail = isSelected ? theme.appBackground : theme.textMuted;
+              const backgroundColor = isSelected ? theme.surfaceMuted : theme.surface;
+              const foreground = isEnabled ? theme.text : theme.textMuted;
+              const detail = isEnabled ? theme.textMuted : theme.border;
               const detailText =
                 command.enabled === false && command.disabledReason != null
                   ? command.disabledReason
@@ -110,27 +107,35 @@ export function CommandPaletteModal({
                     backgroundColor={backgroundColor}
                     paddingLeft={1}
                     paddingRight={1}
-                    minHeight={detailText == null ? 1 : 2}
-                    flexDirection="row"
-                    justifyContent="space-between"
-                    gap={1}
+                    paddingTop={1}
+                    paddingBottom={1}
                   >
-                    <box flexDirection="column" flexGrow={1} gap={0}>
-                      <text fg={foreground} wrapMode="none">
-                        <span>{isSelected ? "› " : "  "}</span>
-                        <span>{command.title}</span>
-                      </text>
-                      {detailText != null ? (
-                        <box width="100%" paddingLeft={2}>
-                          <text fg={detail} wrapMode="word">
-                            {detailText}
+                    <CommandListRow
+                      left={
+                        <>
+                          <text fg={foreground} wrapMode="word">
+                            <span fg={isSelected ? theme.accent : theme.textMuted}>
+                              {isSelected ? "› " : "  "}
+                            </span>
+                            <span>{command.title}</span>
                           </text>
-                        </box>
-                      ) : null}
-                    </box>
-                    <text fg={detail} wrapMode="none">
-                      {commandBindingLabels.get(command.value) ?? ""}
-                    </text>
+                          {detailText != null ? (
+                            <box width="100%" paddingLeft={2}>
+                              <text fg={detail} wrapMode="word">
+                                {detailText}
+                              </text>
+                            </box>
+                          ) : null}
+                        </>
+                      }
+                      right={
+                        <CommandBindingLabel
+                          label={commandBindingLabels.get(command.value)}
+                          theme={theme}
+                          dimmed={!isEnabled}
+                        />
+                      }
+                    />
                   </box>
                 </box>
               );
