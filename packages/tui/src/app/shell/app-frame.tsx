@@ -239,49 +239,113 @@ export function DiffdiffAppView({
         theme={theme}
       />
 
-      <box width="100%" flexGrow={1} flexDirection="row">
-        <AppSidebar
-          activeOverlay={activeOverlay}
-          activePane={activePane}
-          collapsedDirectories={collapsedDirectories}
-          collapsedPaths={collapsedPaths}
-          handleFileTreeMouseUp={handleFileTreeMouseUp}
-          reviewedPaths={reviewedPaths}
-          selectedFileIndex={selectedFileIndex}
-          selectedTreePath={selectedTreePath}
-          session={session}
-          sidebarWidth={sidebarWidth}
-          theme={theme}
-          treeRowRefCallbacks={treeRowRefCallbacks}
-          treeScrollRef={treeScrollRef}
-          treeSummaryLabels={treeSummaryLabels}
-          visibleTreeNodes={visibleTreeNodes}
-        />
+      <box width="100%" flexGrow={1}>
+        <box width="100%" height="100%" flexDirection="row">
+          <AppSidebar
+            activeOverlay={activeOverlay}
+            activePane={activePane}
+            collapsedDirectories={collapsedDirectories}
+            collapsedPaths={collapsedPaths}
+            handleFileTreeMouseUp={handleFileTreeMouseUp}
+            reviewedPaths={reviewedPaths}
+            selectedFileIndex={selectedFileIndex}
+            selectedTreePath={selectedTreePath}
+            session={session}
+            sidebarWidth={sidebarWidth}
+            theme={theme}
+            treeRowRefCallbacks={treeRowRefCallbacks}
+            treeScrollRef={treeScrollRef}
+            treeSummaryLabels={treeSummaryLabels}
+            visibleTreeNodes={visibleTreeNodes}
+          />
 
-        <AppDiffPane
-          activeFileIndex={activeFileIndex}
-          activeOverlay={activeOverlay}
+          <AppDiffPane
+            activeFileIndex={activeFileIndex}
+            activeOverlay={activeOverlay}
+            activePane={activePane}
+            collapsedCommentStates={collapsedCommentStates}
+            collapsedPaths={collapsedPaths}
+            diffPaneWidth={diffPaneWidth}
+            diffView={diffView}
+            estimatedFileCardBodyHeights={estimatedFileCardBodyHeights}
+            fileCardBodyVisibility={fileCardBodyVisibility}
+            fileCardPreviewViewports={fileCardPreviewViewports}
+            fileCardRootRefs={fileCardRootRefs}
+            reviewThreadsByPath={reviewThreadsByPath}
+            reviewedPaths={reviewedPaths}
+            scrollRef={scrollRef}
+            selectedFileIndex={selectedFileIndex}
+            selectedReviewAnchor={selectedReviewAnchor}
+            selectedReviewComment={selectedReviewComment}
+            selectedReviewThread={selectedReviewThread}
+            session={session}
+            stickyFile={stickyFile}
+            syntaxStyle={syntaxStyle}
+            theme={theme}
+            toggleReviewThreadCollapsed={toggleReviewThreadCollapsed}
+          />
+        </box>
+
+        {activePrefixMenu?.pickerTitle != null ? (
+          <PrefixPickerOverlay
+            commands={activePrefixMenuCommands}
+            prefixMenu={activePrefixMenu}
+            theme={theme}
+          />
+        ) : null}
+
+        <DiffdiffAppDialogs
+          activeDialog={activeOverlay}
+          activeListView={activeListView}
           activePane={activePane}
-          collapsedCommentStates={collapsedCommentStates}
-          collapsedPaths={collapsedPaths}
-          diffPaneWidth={diffPaneWidth}
-          diffView={diffView}
-          estimatedFileCardBodyHeights={estimatedFileCardBodyHeights}
-          fileCardBodyVisibility={fileCardBodyVisibility}
-          fileCardPreviewViewports={fileCardPreviewViewports}
-          fileCardRootRefs={fileCardRootRefs}
-          reviewThreadsByPath={reviewThreadsByPath}
-          reviewedPaths={reviewedPaths}
-          scrollRef={scrollRef}
-          selectedFileIndex={selectedFileIndex}
-          selectedReviewAnchor={selectedReviewAnchor}
-          selectedReviewComment={selectedReviewComment}
-          selectedReviewThread={selectedReviewThread}
+          branchItems={branchItems}
+          branchListFilters={branchListFilters}
+          branchListIndex={branchListIndex}
+          canApplyCleanup={canApplyCleanup}
+          cleanupCandidateIndex={cleanupCandidateIndex}
+          cleanupCandidates={cleanupCandidates}
+          cleanupSelection={cleanupSelection}
+          commandBindingLabels={commandBindingLabels}
+          commandIndex={commandIndex}
+          commandQuery={commandQuery}
+          commitListIndex={commitListIndex}
+          commitSearchActive={commitSearchActive}
+          commitSearchQuery={commitSearchQuery}
+          diagnosticErrorMessage={diagnosticErrorMessage}
+          diagnosticEventIndex={diagnosticEventIndex}
+          diagnosticEvents={diagnosticEvents}
+          diagnosticLogFilePath={diagnosticLogFilePath}
+          draftPrCount={draftPrCount}
+          filteredCommands={filteredCommands}
+          helpCommands={helpCommands}
+          filteredCommitItems={filteredCommitItems}
+          filterIndex={filterIndex}
+          isDiagnosticsLoading={isDiagnosticsLoading}
+          isSubmittingReviewAction={isSubmittingReviewAction}
+          localBranchCount={localBranchCount}
+          mergeBodyScrollRef={mergeBodyScrollRef}
+          mergeCommitMessage={mergeCommitMessage}
+          mergeCommitTitle={mergeCommitTitle}
+          mergeConfirmOpen={showMergeConfirmModal}
+          mergeMethod={mergeMethod}
+          mergeModalField={mergeModalField}
+          openPrCount={openPrCount}
+          pullRequestListIndex={pullRequestListIndex}
+          pullRequestSearchActive={pullRequestSearchActive}
+          pullRequestSearchQuery={pullRequestSearchQuery}
+          reviewRequestedPrCount={reviewRequestedPrCount}
+          filteredPullRequests={filteredPullRequests}
+          isPullRequestListLoading={isPullRequestListLoading}
+          remoteBranchCount={remoteBranchCount}
+          reviewComposerBody={reviewComposerBody}
+          reviewComposerContext={reviewComposerContext}
+          reviewedCount={reviewedCount}
+          reviewSubmissionBody={reviewSubmissionBody}
+          reviewSubmissionEventIndex={reviewSubmissionEventIndex}
+          selectedPullRequestConversationItemId={pullRequestConversationItemId}
           session={session}
-          stickyFile={stickyFile}
-          syntaxStyle={syntaxStyle}
+          terminalWidth={terminalWidth}
           theme={theme}
-          toggleReviewThreadCollapsed={toggleReviewThreadCollapsed}
         />
       </box>
 
@@ -291,68 +355,6 @@ export function DiffdiffAppView({
         footerModeBadge={footerModeBadge}
         helpLabel={helpLabel}
         showLoadingIndicator={showFooterLoadingIndicator}
-        theme={theme}
-      />
-
-      {activePrefixMenu?.pickerTitle != null ? (
-        <PrefixPickerOverlay
-          commands={activePrefixMenuCommands}
-          prefixMenu={activePrefixMenu}
-          theme={theme}
-        />
-      ) : null}
-
-      <DiffdiffAppDialogs
-        activeDialog={activeOverlay}
-        activeListView={activeListView}
-        activePane={activePane}
-        branchItems={branchItems}
-        branchListFilters={branchListFilters}
-        branchListIndex={branchListIndex}
-        canApplyCleanup={canApplyCleanup}
-        cleanupCandidateIndex={cleanupCandidateIndex}
-        cleanupCandidates={cleanupCandidates}
-        cleanupSelection={cleanupSelection}
-        commandBindingLabels={commandBindingLabels}
-        commandIndex={commandIndex}
-        commandQuery={commandQuery}
-        commitListIndex={commitListIndex}
-        commitSearchActive={commitSearchActive}
-        commitSearchQuery={commitSearchQuery}
-        diagnosticErrorMessage={diagnosticErrorMessage}
-        diagnosticEventIndex={diagnosticEventIndex}
-        diagnosticEvents={diagnosticEvents}
-        diagnosticLogFilePath={diagnosticLogFilePath}
-        draftPrCount={draftPrCount}
-        filteredCommands={filteredCommands}
-        helpCommands={helpCommands}
-        filteredCommitItems={filteredCommitItems}
-        filterIndex={filterIndex}
-        isDiagnosticsLoading={isDiagnosticsLoading}
-        isSubmittingReviewAction={isSubmittingReviewAction}
-        localBranchCount={localBranchCount}
-        mergeBodyScrollRef={mergeBodyScrollRef}
-        mergeCommitMessage={mergeCommitMessage}
-        mergeCommitTitle={mergeCommitTitle}
-        mergeConfirmOpen={showMergeConfirmModal}
-        mergeMethod={mergeMethod}
-        mergeModalField={mergeModalField}
-        openPrCount={openPrCount}
-        pullRequestListIndex={pullRequestListIndex}
-        pullRequestSearchActive={pullRequestSearchActive}
-        pullRequestSearchQuery={pullRequestSearchQuery}
-        reviewRequestedPrCount={reviewRequestedPrCount}
-        filteredPullRequests={filteredPullRequests}
-        isPullRequestListLoading={isPullRequestListLoading}
-        remoteBranchCount={remoteBranchCount}
-        reviewComposerBody={reviewComposerBody}
-        reviewComposerContext={reviewComposerContext}
-        reviewedCount={reviewedCount}
-        reviewSubmissionBody={reviewSubmissionBody}
-        reviewSubmissionEventIndex={reviewSubmissionEventIndex}
-        selectedPullRequestConversationItemId={pullRequestConversationItemId}
-        session={session}
-        terminalWidth={terminalWidth}
         theme={theme}
       />
     </box>
