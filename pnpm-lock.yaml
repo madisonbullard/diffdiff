@@ -61,7 +61,7 @@ importers:
 
   packages/tui:
     dependencies:
-      '@diffdiff/core':
+      '@madisonbullard/diffdiff-core':
         specifier: workspace:*
         version: link:../core
       '@opentui/core':

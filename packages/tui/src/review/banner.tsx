@@ -1,4 +1,4 @@
-import type { GitHubPullRequestDetail } from "@diffdiff/core";
+import type { GitHubPullRequestDetail } from "@madisonbullard/diffdiff-core";
 import type { UiTheme } from "../theme.ts";
 import {
   formatChecksSummary,

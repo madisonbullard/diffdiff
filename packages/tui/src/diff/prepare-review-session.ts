@@ -1,11 +1,11 @@
 import type { FileDiffMetadata } from "@pierre/diffs";
-import type { ReviewSession, StartupOptions } from "@diffdiff/core";
+import type { ReviewSession, StartupOptions } from "@madisonbullard/diffdiff-core";
 import {
   loadReviewSession,
   logDiffdiffError,
   logDiffdiffInfo,
   logDiffdiffWarn,
-} from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
 import { createPierreSegmentColorResolver } from "../pierre-colors.ts";
 import { resolvePierreLanguage } from "../language.ts";
 import { getSyntaxPalette, type SyntaxPalette } from "../syntax-palette.ts";

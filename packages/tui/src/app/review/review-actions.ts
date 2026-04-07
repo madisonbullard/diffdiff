@@ -417,7 +417,7 @@ export function createReviewActions({
   }
 
   function toggleReviewThreadCollapsed(
-    thread: import("@diffdiff/core").GitHubPullRequestReviewThread,
+    thread: import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread,
   ): void {
     const collapseKey = getReviewThreadCollapseKey(thread);
     const defaultCollapsed = getReviewThreadDefaultCollapsed(thread);

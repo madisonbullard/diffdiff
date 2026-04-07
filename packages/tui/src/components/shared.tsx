@@ -1,4 +1,4 @@
-import type { BranchInfo } from "@diffdiff/core";
+import type { BranchInfo } from "@madisonbullard/diffdiff-core";
 import type { ColorInput } from "@opentui/core";
 import type { ReactNode } from "react";
 import type { UiTheme } from "../theme.ts";

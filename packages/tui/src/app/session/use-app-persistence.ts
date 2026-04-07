@@ -6,7 +6,7 @@ import {
   saveDiffdiffPreferences,
   saveReviewCache,
   updateDiffdiffSessionActivity,
-} from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
 import { useCallback, useMemo } from "react";
 import type { DiffdiffAppProps, DiffdiffAppPersistenceApi } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
@@ -120,7 +120,7 @@ export function useDiffdiffAppPersistence(
   );
 
   const persistDiffdiffPreferences = useCallback(
-    async (nextPreferences: import("@diffdiff/core").DiffdiffPreferences) => {
+    async (nextPreferences: import("@madisonbullard/diffdiff-core").DiffdiffPreferences) => {
       try {
         await saveDiffdiffPreferences(nextPreferences);
       } catch (error) {
@@ -134,7 +134,7 @@ export function useDiffdiffAppPersistence(
   );
 
   const persistGitHubPreferences = useCallback(
-    async (nextPreferences: import("@diffdiff/core").GitHubUserPreferences) => {
+    async (nextPreferences: import("@madisonbullard/diffdiff-core").GitHubUserPreferences) => {
       state.setGitHubPreferences(nextPreferences);
       state.gitHubPreferencesRef.current = nextPreferences;
       await persistDiffdiffPreferences({ github: nextPreferences });

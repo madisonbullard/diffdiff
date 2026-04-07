@@ -2,7 +2,7 @@ import type {
   GitHubMergeMethod,
   GitHubPullRequestDetail,
   GitHubReviewSubmissionEvent,
-} from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
 import type { UiTheme } from "../theme.ts";
 
 const REVIEW_SUBMISSION_EVENTS: readonly GitHubReviewSubmissionEvent[] = [

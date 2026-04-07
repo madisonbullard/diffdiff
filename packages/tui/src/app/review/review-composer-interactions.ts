@@ -1,4 +1,4 @@
-import type { ReviewComposerHistoryOutcome } from "@diffdiff/core";
+import type { ReviewComposerHistoryOutcome } from "@madisonbullard/diffdiff-core";
 import {
   appendReviewComposerHistoryEntry,
   clearReviewComposer,

@@ -1,5 +1,5 @@
-import type { ReviewComposerHistoryEntry } from "@diffdiff/core";
-import { MAX_REVIEW_COMPOSER_HISTORY_ENTRIES } from "@diffdiff/core";
+import type { ReviewComposerHistoryEntry } from "@madisonbullard/diffdiff-core";
+import { MAX_REVIEW_COMPOSER_HISTORY_ENTRIES } from "@madisonbullard/diffdiff-core";
 import { clampIndex } from "../../view-model.ts";
 import {
   createTextInputState,

@@ -1,4 +1,4 @@
-import type { BranchInfo } from "@diffdiff/core";
+import type { BranchInfo } from "@madisonbullard/diffdiff-core";
 import { expect, test } from "vite-plus/test";
 import {
   buildFileTreeNodes,

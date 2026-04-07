@@ -15,10 +15,19 @@
 
 ```bash
 diffdiff
+dfdf
 diffdiff --repo packages/tui --base origin/main --head HEAD
 diffdiff auth login --token-stdin
 diffdiff session list --json
 ```
+
+## Install
+
+```bash
+npm install -g @madisonbullard/diffdiff-tui
+```
+
+This installs both `diffdiff` and the shorter `dfdf` alias.
 
 ## Development
 

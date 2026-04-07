@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import { probeReviewSessionFreshness } from "@diffdiff/core";
+import { probeReviewSessionFreshness } from "@madisonbullard/diffdiff-core";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
@@ -16,7 +16,7 @@ interface UseRefreshOptions {
       nextSession: import("../../types.ts").PreparedReviewSession,
       options?: {
         resetReviewState?: boolean;
-        reviewCacheState?: import("@diffdiff/core").ReviewCacheState;
+        reviewCacheState?: import("@madisonbullard/diffdiff-core").ReviewCacheState;
       },
     ) => void;
     beginSessionLoad: () => number;

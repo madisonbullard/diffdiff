@@ -11,7 +11,7 @@ import {
   runCommand,
   type ForgeRepository,
   type StartupOptions,
-} from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
 import type { LaunchOptions } from "./types.ts";
 
 interface GitHubRemoteMatch {

@@ -1,5 +1,5 @@
-import { getReviewedPathsFromGitHubViewedState } from "@diffdiff/core";
-import type { ReviewCacheState } from "@diffdiff/core";
+import { getReviewedPathsFromGitHubViewedState } from "@madisonbullard/diffdiff-core";
+import type { ReviewCacheState } from "@madisonbullard/diffdiff-core";
 import { useCallback } from "react";
 import {
   applyOptimisticViewedStateToChangedFiles,

@@ -1,4 +1,4 @@
-import type { GitHubReviewSession } from "@diffdiff/core";
+import type { GitHubReviewSession } from "@madisonbullard/diffdiff-core";
 import { describe, expect, test, vi } from "vite-plus/test";
 import {
   formatCommandBindings,

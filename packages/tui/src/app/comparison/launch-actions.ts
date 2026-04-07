@@ -1,4 +1,4 @@
-import { loadReviewCache, type BranchInfo } from "@diffdiff/core";
+import { loadReviewCache, type BranchInfo } from "@madisonbullard/diffdiff-core";
 import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
@@ -9,7 +9,7 @@ interface CreateLaunchActionsOptions {
       nextSession: import("../../types.ts").PreparedReviewSession,
       options?: {
         resetReviewState?: boolean;
-        reviewCacheState?: import("@diffdiff/core").ReviewCacheState;
+        reviewCacheState?: import("@madisonbullard/diffdiff-core").ReviewCacheState;
       },
     ) => void;
     beginSessionLoad: () => number;
@@ -36,7 +36,7 @@ export function createLaunchActions({
 
   async function loadSessionReviewCache(
     nextSession: import("../../types.ts").PreparedReviewSession,
-  ): Promise<import("@diffdiff/core").ReviewCacheState | undefined> {
+  ): Promise<import("@madisonbullard/diffdiff-core").ReviewCacheState | undefined> {
     return loadReviewCache({
       repositoryRootPath: nextSession.repository.rootPath,
       base: nextSession.comparison.base,
@@ -147,7 +147,7 @@ export function createLaunchActions({
   }
 
   async function applyDashboardPullRequestSelection(
-    pullRequest: import("@diffdiff/core").GitHubDashboardPullRequest,
+    pullRequest: import("@madisonbullard/diffdiff-core").GitHubDashboardPullRequest,
   ): Promise<void> {
     if (props.resolveLaunchTarget == null) {
       persistence.persistenceApi.handleAppFailure("Unable to open the selected pull request.", {

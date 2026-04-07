@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { GitHubDashboardPullRequest } from "@diffdiff/core";
+import type { GitHubDashboardPullRequest } from "@madisonbullard/diffdiff-core";
 import type { UiTheme } from "../theme.ts";
 import { AsciiLoadingLabel } from "./ascii-loading-pane.tsx";
 import { KeyCap, ModalFrame, SPLIT_BORDER, selectItem, tintHex } from "./shared.tsx";

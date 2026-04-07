@@ -28,6 +28,7 @@ Read these in order before making non-trivial changes:
 Then load the smallest task-specific source of truth:
 
 - GitHub PR workflow direction: `docs/plans/gh-integration.md`
+- release and distribution direction: `docs/plans/release-architecture.md`
 - focused implementation slices and backlog: `docs/todos/`
 - agent context and maintenance guidance: `docs/agents/`
 

@@ -1,10 +1,10 @@
-import { getDefaultGitHubPreferences } from "@diffdiff/core";
+import { getDefaultGitHubPreferences } from "@madisonbullard/diffdiff-core";
 import type {
   GitHubDashboardPullRequest,
   GitHubMergeMethod,
   GitHubRefCleanupCandidate,
   GitHubUserPreferences,
-} from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
 import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core";
 import { useRenderer, useTerminalDimensions } from "@opentui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -218,8 +218,8 @@ export function useDiffdiffAppState({
   const pendingSelectedDiffAnchorKeyRef = useRef<string | null>(null);
   const pendingInteractionRef = useRef<import("./app-props.ts").PendingInteraction | null>(null);
   const pendingReviewCacheRef = useRef<{
-    key: import("@diffdiff/core").ReviewCacheKey;
-    state: import("@diffdiff/core").ReviewCacheState;
+    key: import("@madisonbullard/diffdiff-core").ReviewCacheKey;
+    state: import("@madisonbullard/diffdiff-core").ReviewCacheState;
   } | null>(null);
   const pendingSessionActivityRef = useRef<SessionActivityUpdate | null>(null);
   const pendingSyntaxHydrationPathsRef = useRef<Set<string>>(new Set());

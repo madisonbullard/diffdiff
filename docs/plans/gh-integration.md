@@ -359,7 +359,7 @@ Inspecting the repo layout first so we can ground the integration plan in the ex
 <path>/Users/madisonbullard/Documents/Projects/diffdiff/packages/core/package.json</path>
 <type>file</type>
 <content>1: {
-2:   "name": "@diffdiff/core",
+2:   "name": "@madisonbullard/diffdiff-core",
 3:   "version": "0.0.0",
 4:   "description": "Core repository, git, and forge abstractions for diffdiff.",
 5:   "license": "MIT",
@@ -407,7 +407,7 @@ Inspecting the repo layout first so we can ground the integration plan in the ex
 <path>/Users/madisonbullard/Documents/Projects/diffdiff/packages/tui/package.json</path>
 <type>file</type>
 <content>1: {
-2:   "name": "@diffdiff/tui",
+2:   "name": "@madisonbullard/diffdiff-tui",
 3:   "version": "0.0.0",
 4:   "description": "Terminal UI for reviewing git-based code diffs.",
 5:   "license": "MIT",
@@ -431,7 +431,7 @@ Inspecting the repo layout first so we can ground the integration plan in the ex
 23:     "prepublishOnly": "vp run build"
 24:   },
 25:   "dependencies": {
-26:     "@diffdiff/core": "workspace:*",
+26:     "@madisonbullard/diffdiff-core": "workspace:*",
 27:     "@opentui/core": "^0.1.92",
 28:     "@opentui/react": "^0.1.92",
 29:     "@pierre/diffs": "^1.1.7",
@@ -1496,7 +1496,7 @@ Inspecting the existing `core` forge layer and the TUI branch/PR views first so 
 4:   ChangedFile,
 5:   ComparisonCommit,
 6:   ComparisonInfo,
-7: } from "@diffdiff/core";
+7: } from "@madisonbullard/diffdiff-core";
 8: import type {
 9:   BranchListFilters,
 10:   BranchListItem,
@@ -2666,7 +2666,7 @@ Found 75 matches
 ```
 <path>/Users/madisonbullard/Documents/Projects/diffdiff/packages/tui/src/app.tsx</path>
 <type>file</type>
-<content>1: import type { BranchInfo, StartupOptions } from "@diffdiff/core";
+<content>1: import type { BranchInfo, StartupOptions } from "@madisonbullard/diffdiff-core";
 2: import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
 3: import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react";
 4: import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -3114,7 +3114,7 @@ Found 75 matches
 4:   ChangedFile,
 5:   ComparisonCommit,
 6:   ReviewSession,
-7: } from "@diffdiff/core";
+7: } from "@madisonbullard/diffdiff-core";
 8: import type { FileDiffMetadata } from "@pierre/diffs";
 9:
 10: export type PierreThemeName = "pierre-dark" | "pierre-light";
@@ -3799,8 +3799,8 @@ I inspected the current seam. `packages/core/src/github.ts` already shells out t
 2:
 3: import { createCliRenderer } from "@opentui/core";
 4: import { createRoot } from "@opentui/react";
-5: import { formatHelpText, parseStartupOptions } from "@diffdiff/core";
-6: import type { StartupOptions } from "@diffdiff/core";
+5: import { formatHelpText, parseStartupOptions } from "@madisonbullard/diffdiff-core";
+6: import type { StartupOptions } from "@madisonbullard/diffdiff-core";
 7: import packageJson from "../package.json";
 8:
 9: // This tiny shell gives users immediate feedback while the heavier repository and diff prep runs.

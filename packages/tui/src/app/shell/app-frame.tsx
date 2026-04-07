@@ -5,7 +5,7 @@ import type {
   GitHubPullRequestComment,
   GitHubRefCleanupCandidate,
   ReviewComposerHistoryEntry,
-} from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
 import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
 import type { MutableRefObject } from "react";
 import type { FileCardPreviewViewport } from "../../components/file-card.tsx";
@@ -116,7 +116,7 @@ interface DiffdiffAppViewProps {
   reviewSubmissionEventIndex: number;
   reviewThreadsByPath: ReadonlyMap<
     string,
-    readonly import("@diffdiff/core").GitHubPullRequestReviewThread[]
+    readonly import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread[]
   >;
   scrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   selectedFileIndex: number;
@@ -124,7 +124,7 @@ interface DiffdiffAppViewProps {
   showSelectedReviewAnchor: boolean;
   selectedReviewAnchor?: import("../../review-anchors.ts").SelectedReviewAnchor;
   selectedReviewComment?: GitHubPullRequestComment;
-  selectedReviewThread?: import("@diffdiff/core").GitHubPullRequestReviewThread;
+  selectedReviewThread?: import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread;
   selectedTreePath: string;
   session: PreparedReviewSession;
   showFooterLoadingIndicator: boolean;
@@ -135,7 +135,7 @@ interface DiffdiffAppViewProps {
   terminalWidth: number;
   theme: UiTheme;
   toggleReviewThreadCollapsed: (
-    thread: import("@diffdiff/core").GitHubPullRequestReviewThread,
+    thread: import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread,
   ) => void;
   treeRowRefCallbacks: readonly ((node: BoxRenderable | null) => void)[];
   treeScrollRef: MutableRefObject<ScrollBoxRenderable | null>;

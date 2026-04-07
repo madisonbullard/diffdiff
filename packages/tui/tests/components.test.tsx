@@ -1,4 +1,4 @@
-import type { BranchInfo, GitHubPullRequestDetail } from "@diffdiff/core";
+import type { BranchInfo, GitHubPullRequestDetail } from "@madisonbullard/diffdiff-core";
 import type { ReactNode } from "react";
 import type { ReactTestInstance, ReactTestRenderer } from "react-test-renderer";
 import { act, create } from "react-test-renderer";

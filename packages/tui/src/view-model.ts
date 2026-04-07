@@ -5,7 +5,7 @@ import type {
   ComparisonCommit,
   ComparisonInfo,
   GitHubDashboardPullRequest,
-} from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
 import type {
   BranchListFilters,
   BranchListItem,

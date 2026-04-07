@@ -1,5 +1,5 @@
-import type { GitHubPullRequestReviewThread } from "@diffdiff/core";
-import { logDiffdiffWarn } from "@diffdiff/core";
+import type { GitHubPullRequestReviewThread } from "@madisonbullard/diffdiff-core";
+import { logDiffdiffWarn } from "@madisonbullard/diffdiff-core";
 import type { BoxRenderable, ColorInput, SyntaxStyle } from "@opentui/core";
 import { memo, useEffect, useRef } from "react";
 import type { Ref } from "react";

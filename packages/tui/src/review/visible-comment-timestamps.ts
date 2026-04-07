@@ -1,4 +1,7 @@
-import type { GitHubPullRequestDetail, GitHubPullRequestReviewThread } from "@diffdiff/core";
+import type {
+  GitHubPullRequestDetail,
+  GitHubPullRequestReviewThread,
+} from "@madisonbullard/diffdiff-core";
 import { getReviewThreadCollapseKey, getReviewThreadDefaultCollapsed } from "./collapse-state.ts";
 
 export interface VisibleCommentTimestamps {

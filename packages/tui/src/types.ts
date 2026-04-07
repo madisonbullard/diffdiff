@@ -5,7 +5,7 @@ import type {
   ComparisonCommit,
   ReviewSession,
   StartupOptions,
-} from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
 import type { FileDiffMetadata } from "@pierre/diffs";
 
 export type PierreThemeName = "pierre-dark" | "pierre-light";

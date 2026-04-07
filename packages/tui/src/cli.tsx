@@ -26,7 +26,7 @@ import {
   storeGitHubToken,
   syncGitRemotes,
   GitRepositoryProvider,
-} from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
 import { Command } from "commander";
 import packageJson from "../package.json";
 import {

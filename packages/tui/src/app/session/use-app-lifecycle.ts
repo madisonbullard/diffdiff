@@ -3,7 +3,7 @@ import {
   logDiffdiffVerbose,
   logDiffdiffWarn,
   updateDiffdiffSessionActivity,
-} from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
 import { useEffect } from "react";
 import { getStartupTraceNow, summarizeStartupInstrumentation } from "../../startup-tracing.ts";
 import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";

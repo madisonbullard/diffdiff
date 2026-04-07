@@ -1,6 +1,6 @@
 import { copySelection } from "../../selection-copy.ts";
 import { useCallback, useEffect, useMemo } from "react";
-import { logDiffdiffError, syncGitRemotes } from "@diffdiff/core";
+import { logDiffdiffError, syncGitRemotes } from "@madisonbullard/diffdiff-core";
 import { buildAppCommands, getPaletteCommands, type AppCommand } from "../commands/registry.ts";
 import { getPrefixMenuCommands, getPrefixMenuConfig } from "../commands/prefix-menus.ts";
 import { filterCommands } from "../../commands.ts";

@@ -19,7 +19,7 @@ export function VisibleCommentRelativeTimeProvider({
   fileCardBodyVisibility: readonly boolean[];
   reviewThreadsByPath: ReadonlyMap<
     string,
-    readonly import("@diffdiff/core").GitHubPullRequestReviewThread[]
+    readonly import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread[]
   >;
   session: PreparedReviewSession;
 }) {
@@ -46,7 +46,7 @@ function useVisibleCommentRelativeTime({
   fileCardBodyVisibility: readonly boolean[];
   reviewThreadsByPath: ReadonlyMap<
     string,
-    readonly import("@diffdiff/core").GitHubPullRequestReviewThread[]
+    readonly import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread[]
   >;
   session: PreparedReviewSession;
 }) {

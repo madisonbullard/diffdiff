@@ -1,4 +1,4 @@
-import type { GitHubMergeMethod } from "@diffdiff/core";
+import type { GitHubMergeMethod } from "@madisonbullard/diffdiff-core";
 import { ModalFrame, SPLIT_BORDER } from "../components/shared.tsx";
 import type { UiTheme } from "../theme.ts";
 

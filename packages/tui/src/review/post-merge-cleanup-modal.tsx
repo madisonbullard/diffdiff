@@ -1,4 +1,7 @@
-import type { GitHubCleanupPreferences, GitHubRefCleanupCandidate } from "@diffdiff/core";
+import type {
+  GitHubCleanupPreferences,
+  GitHubRefCleanupCandidate,
+} from "@madisonbullard/diffdiff-core";
 import type { UiTheme } from "../theme.ts";
 import { MODAL_OVERLAY, REVIEW_BORDER } from "./shared.tsx";
 

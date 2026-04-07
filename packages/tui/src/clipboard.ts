@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import clipboardy from "clipboardy";
-import { logDiffdiffError, logDiffdiffInfo, logDiffdiffWarn } from "@diffdiff/core";
+import { logDiffdiffError, logDiffdiffInfo, logDiffdiffWarn } from "@madisonbullard/diffdiff-core";
 
 interface ClipboardCommand {
   command: string;

@@ -1,4 +1,4 @@
-import type { ReviewComposerHistoryEntry } from "@diffdiff/core";
+import type { ReviewComposerHistoryEntry } from "@madisonbullard/diffdiff-core";
 import type { ReviewComposerHistoryScope } from "../app/review/review-composer.ts";
 
 export function findLatestDismissedReviewComposerDraft(

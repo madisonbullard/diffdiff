@@ -198,7 +198,7 @@ export function buildGitHubCommands({
 }
 
 function getGitHubDisabledReason(
-  sessionGitHub: import("@diffdiff/core").GitHubReviewSession | undefined,
+  sessionGitHub: import("@madisonbullard/diffdiff-core").GitHubReviewSession | undefined,
   isGitHubAuthenticated: boolean,
   requiresAuth = false,
 ): string | undefined {

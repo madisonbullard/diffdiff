@@ -1,5 +1,8 @@
 import { formatThreadAnchor } from "../../review/threads.tsx";
-import type { GitHubPullRequestComment, GitHubPullRequestConversationItem } from "@diffdiff/core";
+import type {
+  GitHubPullRequestComment,
+  GitHubPullRequestConversationItem,
+} from "@madisonbullard/diffdiff-core";
 import type { PreparedReviewSession } from "../../types.ts";
 
 export type ReviewComposerTarget =
@@ -16,7 +19,7 @@ export type ReviewComposerTarget =
       comment: GitHubPullRequestComment;
       kind: "review-thread-reply";
       rootCommentId: number;
-      thread: import("@diffdiff/core").GitHubPullRequestReviewThread;
+      thread: import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread;
     };
 
 export interface ReviewComposerHistoryScope {

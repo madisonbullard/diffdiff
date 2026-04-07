@@ -25,7 +25,7 @@ interface CreateGitHubMutationActionsOptions {
       nextSession: import("../../types.ts").PreparedReviewSession,
       options?: {
         resetReviewState?: boolean;
-        reviewCacheState?: import("@diffdiff/core").ReviewCacheState;
+        reviewCacheState?: import("@madisonbullard/diffdiff-core").ReviewCacheState;
       },
     ) => void;
     beginSessionLoad: () => number;

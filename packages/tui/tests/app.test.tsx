@@ -3,8 +3,8 @@ import {
   buildReviewSessionFingerprint,
   type GitHubDashboardPullRequest,
   type GitHubUserPreferences,
-} from "@diffdiff/core";
-import * as diffdiffCore from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
+import * as diffdiffCore from "@madisonbullard/diffdiff-core";
 import type { ComponentProps, ReactNode } from "react";
 import type {
   ReactTestInstance,

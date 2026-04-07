@@ -1,6 +1,6 @@
 import type { FileDiffMetadata } from "@pierre/diffs";
-import { logDiffdiffError, logDiffdiffWarn } from "@diffdiff/core";
-import type { ChangedFile } from "@diffdiff/core";
+import { logDiffdiffError, logDiffdiffWarn } from "@madisonbullard/diffdiff-core";
+import type { ChangedFile } from "@madisonbullard/diffdiff-core";
 import type { PreparedReviewFile } from "../types.ts";
 import type { PierreDiffsModule } from "./pierre-internals.ts";
 

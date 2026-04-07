@@ -31,6 +31,8 @@ smallest relevant source of truth.
 
 - `plans/gh-integration.md`
   - Current durable plan snapshot for GitHub PR interaction in the TUI.
+- `plans/release-architecture.md`
+  - Release and distribution plan adapted from the neighboring OpenCode repo.
 - `todos/`
   - Versioned implementation slices for follow-on TUI, command, rendering, and
     automation work.

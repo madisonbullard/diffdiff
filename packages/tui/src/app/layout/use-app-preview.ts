@@ -1,4 +1,4 @@
-import { logDiffdiffError } from "@diffdiff/core";
+import { logDiffdiffError } from "@madisonbullard/diffdiff-core";
 import { useEffect, useMemo } from "react";
 import { hydratePreparedReviewFiles } from "../../diff/prepare-review-session.ts";
 import {
@@ -31,7 +31,10 @@ interface DiffdiffAppPreview {
 interface UsePreviewOptions {
   diffPaneWidth: number;
   diffView: "unified" | "split";
-  reviewThreadsByPath: Map<string, import("@diffdiff/core").GitHubPullRequestReviewThread[]>;
+  reviewThreadsByPath: Map<
+    string,
+    import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread[]
+  >;
   selectedFileHasReviewAnchors: boolean;
   state: DiffdiffAppState;
   theme: UiTheme;

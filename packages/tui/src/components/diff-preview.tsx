@@ -1,4 +1,4 @@
-import type { GitHubPullRequestReviewThread } from "@diffdiff/core";
+import type { GitHubPullRequestReviewThread } from "@madisonbullard/diffdiff-core";
 import type { BoxRenderable, ColorInput } from "@opentui/core";
 import { useMemo, type Ref } from "react";
 import { ReviewThreadList } from "../review/threads.tsx";

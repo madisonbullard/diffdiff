@@ -1,8 +1,13 @@
 {
-  "name": "@diffdiff/core",
+  "name": "@madisonbullard/diffdiff-core",
   "version": "0.0.0",
   "description": "Core repository, git, and forge abstractions for diffdiff.",
+  "homepage": "https://github.com/madisonbullard/diffdiff",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/madisonbullard/diffdiff.git"
+  },
   "files": [
     "dist"
   ],
@@ -10,6 +15,9 @@
   "exports": {
     ".": "./dist/index.mjs",
     "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "vp pack",

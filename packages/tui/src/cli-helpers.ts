@@ -1,4 +1,4 @@
-import { listDiffdiffSessions } from "@diffdiff/core";
+import { listDiffdiffSessions } from "@madisonbullard/diffdiff-core";
 
 interface AuthLoginCommandOptions {
   token?: string;

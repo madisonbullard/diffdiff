@@ -1,4 +1,4 @@
-import type { GitHubPullRequestReviewThread } from "@diffdiff/core";
+import type { GitHubPullRequestReviewThread } from "@madisonbullard/diffdiff-core";
 
 export function getReviewThreadCollapseKey(thread: GitHubPullRequestReviewThread): string {
   return `thread:${thread.id}`;

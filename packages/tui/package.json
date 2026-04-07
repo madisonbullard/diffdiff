@@ -1,9 +1,15 @@
 {
-  "name": "@diffdiff/tui",
+  "name": "@madisonbullard/diffdiff-tui",
   "version": "0.0.0",
   "description": "Terminal UI for reviewing git-based code diffs.",
+  "homepage": "https://github.com/madisonbullard/diffdiff",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/madisonbullard/diffdiff.git"
+  },
   "bin": {
+    "dfdf": "./dist/cli.mjs",
     "diffdiff": "./dist/cli.mjs"
   },
   "files": [
@@ -15,6 +21,9 @@
     "./cli": "./dist/cli.mjs",
     "./package.json": "./package.json"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "vp pack",
     "dev": "vp pack --watch",
@@ -23,7 +32,7 @@
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
-    "@diffdiff/core": "workspace:*",
+    "@madisonbullard/diffdiff-core": "workspace:*",
     "@opentui/core": "^0.1.92",
     "@opentui/react": "^0.1.92",
     "@pierre/diffs": "^1.1.7",
@@ -49,28 +58,6 @@
     "@opentui/core-win32-x64": "^0.1.92"
   },
   "inlinedDependencies": {
-    "@octokit/app": "16.1.2",
-    "@octokit/auth-app": "8.2.0",
-    "@octokit/auth-oauth-app": "9.0.3",
-    "@octokit/auth-oauth-device": "8.0.3",
-    "@octokit/auth-oauth-user": "6.0.2",
-    "@octokit/auth-token": "6.0.0",
-    "@octokit/auth-unauthenticated": "7.0.3",
-    "@octokit/core": "7.0.6",
-    "@octokit/endpoint": "11.0.3",
-    "@octokit/graphql": "9.0.3",
-    "@octokit/oauth-app": "8.0.3",
-    "@octokit/oauth-authorization-url": "8.0.0",
-    "@octokit/oauth-methods": "6.0.2",
-    "@octokit/plugin-paginate-graphql": "6.0.0",
-    "@octokit/plugin-paginate-rest": "14.0.0",
-    "@octokit/plugin-rest-endpoint-methods": "17.0.0",
-    "@octokit/plugin-retry": "8.1.0",
-    "@octokit/plugin-throttling": "11.0.3",
-    "@octokit/request": "10.0.8",
-    "@octokit/request-error": "7.1.0",
-    "@octokit/webhooks": "14.2.0",
-    "@octokit/webhooks-methods": "6.0.0",
     "@opentui/core": "0.1.92",
     "@opentui/react": "0.1.92",
     "@pierre/diffs": "1.1.7",
@@ -83,20 +70,15 @@
     "@shikijs/transformers": "3.23.0",
     "@shikijs/types": "3.23.0",
     "@shikijs/vscode-textmate": "10.0.2",
-    "before-after-hook": "4.0.0",
-    "bottleneck": "2.19.5",
     "bun-ffi-structs": "0.1.2",
     "ccount": "2.0.1",
     "character-entities-html4": "2.1.0",
     "character-entities-legacy": "3.0.0",
     "comma-separated-tokens": "2.0.3",
     "diff": "8.0.3",
-    "fast-content-type-parse": "3.0.0",
     "hast-util-to-html": "9.0.5",
     "hast-util-whitespace": "3.0.0",
     "html-void-elements": "3.0.0",
-    "json-with-bigint": "3.5.8",
-    "octokit": "5.0.5",
     "oniguruma-parser": "0.12.1",
     "oniguruma-to-es": "4.3.5",
     "property-information": "7.1.0",
@@ -109,9 +91,6 @@
     "shiki": "3.23.0",
     "space-separated-tokens": "2.0.2",
     "stringify-entities": "4.0.4",
-    "toad-cache": "3.7.0",
-    "universal-github-app-jwt": "2.2.2",
-    "universal-user-agent": "7.0.3",
     "ws": "8.20.0",
     "yoga-layout": "3.2.1",
     "zwitch": "2.0.4"

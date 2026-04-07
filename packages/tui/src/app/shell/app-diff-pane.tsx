@@ -23,7 +23,7 @@ interface AppDiffPaneProps {
   fileCardRootRefs: readonly ((node: BoxRenderable | null) => void)[];
   reviewThreadsByPath: ReadonlyMap<
     string,
-    readonly import("@diffdiff/core").GitHubPullRequestReviewThread[]
+    readonly import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread[]
   >;
   reviewedPaths: ReadonlySet<string>;
   scrollRef: MutableRefObject<ScrollBoxRenderable | null>;
@@ -31,14 +31,14 @@ interface AppDiffPaneProps {
   selectedDiffRowRef: MutableRefObject<BoxRenderable | null>;
   showSelectedReviewAnchor: boolean;
   selectedReviewAnchor?: import("../../review-anchors.ts").SelectedReviewAnchor;
-  selectedReviewComment?: import("@diffdiff/core").GitHubPullRequestComment;
-  selectedReviewThread?: import("@diffdiff/core").GitHubPullRequestReviewThread;
+  selectedReviewComment?: import("@madisonbullard/diffdiff-core").GitHubPullRequestComment;
+  selectedReviewThread?: import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread;
   session: PreparedReviewSession;
   stickyFile?: PreparedReviewSession["files"][number];
   syntaxStyle: SyntaxStyle;
   theme: UiTheme;
   toggleReviewThreadCollapsed: (
-    thread: import("@diffdiff/core").GitHubPullRequestReviewThread,
+    thread: import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread,
   ) => void;
 }
 

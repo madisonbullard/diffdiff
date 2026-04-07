@@ -1,4 +1,7 @@
-import type { GitHubPullRequestConversationItem, GitHubPullRequestDetail } from "@diffdiff/core";
+import type {
+  GitHubPullRequestConversationItem,
+  GitHubPullRequestDetail,
+} from "@madisonbullard/diffdiff-core";
 import type { UiTheme } from "../theme.ts";
 import { CommentTimestamp, ReviewMetaSeparator } from "./comment-metadata.tsx";
 import { MODAL_OVERLAY } from "./shared.tsx";

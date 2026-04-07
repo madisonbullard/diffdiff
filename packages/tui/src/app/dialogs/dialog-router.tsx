@@ -4,7 +4,7 @@ import type {
   GitHubMergeMethod,
   GitHubRefCleanupCandidate,
   ReviewComposerHistoryEntry,
-} from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
 import type { ScrollBoxRenderable } from "@opentui/core";
 import { BranchModal } from "../../components/branch-modal.tsx";
 import { CommandPaletteModal } from "../../components/command-palette-modal.tsx";

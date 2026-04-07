@@ -1,4 +1,4 @@
-import type { GitHubReviewLineAnchor } from "@diffdiff/core";
+import type { GitHubReviewLineAnchor } from "@madisonbullard/diffdiff-core";
 import type { DiffView, PreparedReviewFile, SideBySideDiffRow, UnifiedDiffLine } from "./types.ts";
 
 export interface SelectedReviewAnchor extends GitHubReviewLineAnchor {

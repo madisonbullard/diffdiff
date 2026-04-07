@@ -1,4 +1,4 @@
-import type { ComparisonInfo } from "@diffdiff/core";
+import type { ComparisonInfo } from "@madisonbullard/diffdiff-core";
 import { copyTextToClipboard } from "./clipboard.ts";
 
 export interface SessionReopenCommandInput {

@@ -1,4 +1,4 @@
-import { logDiffdiffError } from "@diffdiff/core";
+import { logDiffdiffError } from "@madisonbullard/diffdiff-core";
 import { useCallback, useRef, useState } from "react";
 import { closeDialog as closeAppDialog, openDialog as openAppDialog } from "../dialogs/stack.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";

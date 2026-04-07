@@ -4,6 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "release:resolve": "node ./tools/release/resolve-release-context.mjs",
+    "release:ensure-github-release": "node ./tools/release/ensure-github-release.mjs",
+    "release:rewrite-manifests": "node ./tools/release/rewrite-manifests.mjs",
+    "release:restore-manifests": "node ./tools/release/restore-manifests.mjs",
+    "release:pack": "node ./tools/release/pack-release.mjs",
+    "release:publish": "node ./tools/release/publish-release.mjs",
+    "release:commit-stable": "node ./tools/release/commit-stable-release.mjs",
+    "release:finalize-github-release": "node ./tools/release/finalize-github-release.mjs",
+    "release:verify": "vp check && vp run test -r && vp run build -r",
     "ready": "vp fmt && vp lint && vp run test -r && vp run build -r",
     "dev": "vp run dev -r",
     "prepare": "vp config"

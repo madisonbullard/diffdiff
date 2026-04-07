@@ -5,7 +5,7 @@ import type {
   GitHubPullRequestFileViewedState,
   GitHubPullRequestReviewThread,
   GitHubReviewSubmissionEvent,
-} from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
 import type { SelectedReviewAnchor } from "../../review-anchors.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import type { GitHubOptimisticOperation } from "./optimistic-github-overlay.ts";

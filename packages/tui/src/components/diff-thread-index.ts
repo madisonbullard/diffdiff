@@ -1,4 +1,4 @@
-import type { GitHubPullRequestReviewThread } from "@diffdiff/core";
+import type { GitHubPullRequestReviewThread } from "@madisonbullard/diffdiff-core";
 import type { SideBySideDiffRow, UnifiedDiffLine } from "../types.ts";
 
 const EMPTY_THREADS: readonly GitHubPullRequestReviewThread[] = [];

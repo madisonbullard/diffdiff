@@ -1,4 +1,4 @@
-import { updateDiffdiffSessionActivity } from "@diffdiff/core";
+import { updateDiffdiffSessionActivity } from "@madisonbullard/diffdiff-core";
 import type {
   ReviewComposerHistoryEntry,
   DiffdiffPreferences,
@@ -13,7 +13,7 @@ import type {
   ReviewCacheKey,
   ReviewCacheState,
   ReviewSessionFreshnessResult,
-} from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
 import type { SyntaxStyle } from "@opentui/core";
 import type { StartupInstrumentation } from "../../startup-tracing.ts";
 import type { UiTheme } from "../../theme.ts";
@@ -23,7 +23,7 @@ import type { SessionDiagnosticEvent } from "../diagnostics/session-events.ts";
 export interface DiffdiffAppProps {
   addReviewThread?: (
     reviewSession: GitHubReviewSession,
-    anchor: import("@diffdiff/core").GitHubReviewLineAnchor,
+    anchor: import("@madisonbullard/diffdiff-core").GitHubReviewLineAnchor,
     body: string,
   ) => Promise<void>;
   addPullRequestComment?: (reviewSession: GitHubReviewSession, body: string) => Promise<void>;

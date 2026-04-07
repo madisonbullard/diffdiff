@@ -19,7 +19,7 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "paths": {
-      "@diffdiff/core": ["../core/src/index.ts"]
+      "@madisonbullard/diffdiff-core": ["../core/src/index.ts"]
     }
   },
   "include": ["src", "tests"],

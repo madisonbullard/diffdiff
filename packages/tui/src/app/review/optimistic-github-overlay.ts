@@ -6,7 +6,7 @@ import type {
   GitHubPullRequestDetail,
   GitHubPullRequestFileViewedState,
   GitHubPullRequestReviewThread,
-} from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
 import type { PreparedReviewSession } from "../../types.ts";
 
 export type GitHubOptimisticOperation =

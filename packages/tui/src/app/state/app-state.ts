@@ -3,7 +3,7 @@ import type {
   GitHubMergeMethod,
   GitHubRefCleanupCandidate,
   GitHubUserPreferences,
-} from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
 import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core";
 import type { useRenderer, useTerminalDimensions } from "@opentui/react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
@@ -52,7 +52,7 @@ export interface DiffdiffAppState {
   branchListIndex: number;
   cleanupCandidateIndex: number;
   cleanupCandidates: GitHubRefCleanupCandidate[];
-  cleanupSelection: import("@diffdiff/core").GitHubCleanupPreferences;
+  cleanupSelection: import("@madisonbullard/diffdiff-core").GitHubCleanupPreferences;
   collapsedDirectories: Set<string>;
   collapsedPaths: Set<string>;
   commentCollapseStates: Record<string, boolean>;
@@ -92,8 +92,8 @@ export interface DiffdiffAppState {
   pendingInteractionRef: MutableRefObject<PendingInteraction | null>;
   pendingInteractionTokenRef: MutableRefObject<number>;
   pendingReviewCacheRef: MutableRefObject<{
-    key: import("@diffdiff/core").ReviewCacheKey;
-    state: import("@diffdiff/core").ReviewCacheState;
+    key: import("@madisonbullard/diffdiff-core").ReviewCacheKey;
+    state: import("@madisonbullard/diffdiff-core").ReviewCacheState;
   } | null>;
   pendingFileFocusRequestRef: MutableRefObject<PendingFileFocusRequest | null>;
   pendingSelectedDiffAnchorKeyRef: MutableRefObject<string | null>;
@@ -140,7 +140,9 @@ export interface DiffdiffAppState {
   setBranchListIndex: Dispatch<SetStateAction<number>>;
   setCleanupCandidateIndex: Dispatch<SetStateAction<number>>;
   setCleanupCandidates: Dispatch<SetStateAction<GitHubRefCleanupCandidate[]>>;
-  setCleanupSelection: Dispatch<SetStateAction<import("@diffdiff/core").GitHubCleanupPreferences>>;
+  setCleanupSelection: Dispatch<
+    SetStateAction<import("@madisonbullard/diffdiff-core").GitHubCleanupPreferences>
+  >;
   setCollapsedDirectories: Dispatch<SetStateAction<Set<string>>>;
   setCollapsedPaths: Dispatch<SetStateAction<Set<string>>>;
   setCommentCollapseStates: Dispatch<SetStateAction<Record<string, boolean>>>;

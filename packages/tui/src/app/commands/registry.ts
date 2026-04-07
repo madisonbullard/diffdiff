@@ -1,4 +1,4 @@
-import type { GitHubReviewSession } from "@diffdiff/core";
+import type { GitHubReviewSession } from "@madisonbullard/diffdiff-core";
 import type { CommandDefinition } from "../../commands.ts";
 import type { AppPane, FileTreeNode } from "../../types.ts";
 import { buildComparisonCommands } from "./command-groups/comparison.ts";

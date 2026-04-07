@@ -1,4 +1,4 @@
-import { sortDashboardPullRequests } from "@diffdiff/core";
+import { sortDashboardPullRequests } from "@madisonbullard/diffdiff-core";
 import type { BoxRenderable } from "@opentui/core";
 import { useMemo } from "react";
 import { getReviewAnchors } from "../../review-anchors.ts";
@@ -49,32 +49,35 @@ export interface DiffdiffAppDerived {
   fileTreeNodePaths: Set<string>;
   fileTreeNodes: import("../../types.ts").FileTreeNode[];
   filteredCommitItems: ReturnType<typeof filterCommitListItems>;
-  filteredPullRequests: import("@diffdiff/core").GitHubDashboardPullRequest[];
+  filteredPullRequests: import("@madisonbullard/diffdiff-core").GitHubDashboardPullRequest[];
   displaySession: import("../../types.ts").PreparedReviewSession;
   hasNextUnreviewedFile: boolean;
   hasSelectedReviewThread: boolean;
   hasThreadKeymap: boolean;
   localBranchCount: number;
   openPrCount: number;
-  pullRequestConversationItems: readonly import("@diffdiff/core").GitHubPullRequestConversationItem[];
+  pullRequestConversationItems: readonly import("@madisonbullard/diffdiff-core").GitHubPullRequestConversationItem[];
   remoteBranchCount: number;
   reviewComposerContext: ReturnType<typeof getReviewComposerContext> | null;
   reviewComposerAutocomplete: ReviewComposerAutocompleteState;
-  reviewComposerHistoryEntries: readonly import("@diffdiff/core").ReviewComposerHistoryEntry[];
+  reviewComposerHistoryEntries: readonly import("@madisonbullard/diffdiff-core").ReviewComposerHistoryEntry[];
   reviewComposerHistoryScope: ReviewComposerHistoryScope | null;
   reviewRequestedPrCount: number;
-  reviewThreadsByPath: Map<string, import("@diffdiff/core").GitHubPullRequestReviewThread[]>;
+  reviewThreadsByPath: Map<
+    string,
+    import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread[]
+  >;
   selectedBranchItem?: ReturnType<typeof buildBranchListItems>[number];
   selectedCommitItem?: ReturnType<typeof filterCommitListItems>[number];
   selectedFileHasReviewAnchors: boolean;
   selectedFilePath?: string;
-  selectedFileReviewThreads: readonly import("@diffdiff/core").GitHubPullRequestReviewThread[];
-  selectedPullRequest?: import("@diffdiff/core").GitHubDashboardPullRequest;
-  selectedPullRequestConversationItem?: import("@diffdiff/core").GitHubPullRequestConversationItem;
+  selectedFileReviewThreads: readonly import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread[];
+  selectedPullRequest?: import("@madisonbullard/diffdiff-core").GitHubDashboardPullRequest;
+  selectedPullRequestConversationItem?: import("@madisonbullard/diffdiff-core").GitHubPullRequestConversationItem;
   selectedReviewAnchor?: import("../../review-anchors.ts").SelectedReviewAnchor;
   selectedReviewAnchors: readonly import("../../review-anchors.ts").SelectedReviewAnchor[];
-  selectedReviewComment?: import("@diffdiff/core").GitHubPullRequestComment;
-  selectedReviewThread?: import("@diffdiff/core").GitHubPullRequestReviewThread;
+  selectedReviewComment?: import("@madisonbullard/diffdiff-core").GitHubPullRequestComment;
+  selectedReviewThread?: import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread;
   selectedTreeNode?: import("../../types.ts").FileTreeNode;
   sessionRenderKey: string;
   showMergeConfirmModal: boolean;
@@ -123,7 +126,7 @@ export function useDiffdiffAppDerived(
   const reviewThreadsByPath = useMemo(() => {
     const threadsByPath = new Map<
       string,
-      import("@diffdiff/core").GitHubPullRequestReviewThread[]
+      import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread[]
     >();
     for (const thread of displaySession.github?.pullRequest.reviewThreads ?? EMPTY_REVIEW_THREADS) {
       const pathThreads = threadsByPath.get(thread.path);

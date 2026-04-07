@@ -1,4 +1,4 @@
-import { buildReviewSessionFingerprint, type ReviewSession } from "@diffdiff/core";
+import { buildReviewSessionFingerprint, type ReviewSession } from "@madisonbullard/diffdiff-core";
 import type { TerminalColors } from "@opentui/core";
 import type { PierreDiffsModule, PierreHighlighter } from "../src/diff/pierre-internals.ts";
 import { afterEach, expect, test, vi } from "vite-plus/test";

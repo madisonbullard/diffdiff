@@ -33,14 +33,16 @@ export interface BuildModalActionDispatchMapOptions {
   activeKeymapMode: KeymapMode;
   applyBranchSelection: (
     target: "base" | "head",
-    branch: import("@diffdiff/core").BranchInfo,
+    branch: import("@madisonbullard/diffdiff-core").BranchInfo,
   ) => Promise<void>;
   applyCleanupSelection: () => Promise<void>;
   applyCommitSelection: (target: "base" | "head", sha: string, shortSha: string) => Promise<void>;
   applyDashboardPullRequestSelection: (
-    pullRequest: import("@diffdiff/core").GitHubDashboardPullRequest,
+    pullRequest: import("@madisonbullard/diffdiff-core").GitHubDashboardPullRequest,
   ) => Promise<void>;
-  applyPullRequestSelection: (branch: import("@diffdiff/core").BranchInfo) => Promise<void>;
+  applyPullRequestSelection: (
+    branch: import("@madisonbullard/diffdiff-core").BranchInfo,
+  ) => Promise<void>;
   applyWorkingTreeSelection: () => Promise<void>;
   clearReviewed: () => void;
   closeCommandModal: () => void;

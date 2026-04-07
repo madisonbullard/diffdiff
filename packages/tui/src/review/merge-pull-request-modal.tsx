@@ -1,4 +1,4 @@
-import type { GitHubMergeMethod, GitHubPullRequestDetail } from "@diffdiff/core";
+import type { GitHubMergeMethod, GitHubPullRequestDetail } from "@madisonbullard/diffdiff-core";
 import type { ScrollBoxRenderable } from "@opentui/core";
 import type { Ref } from "react";
 import type { UiTheme } from "../theme.ts";

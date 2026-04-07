@@ -1,4 +1,7 @@
-import type { GitHubPullRequestComment, GitHubPullRequestReviewThread } from "@diffdiff/core";
+import type {
+  GitHubPullRequestComment,
+  GitHubPullRequestReviewThread,
+} from "@madisonbullard/diffdiff-core";
 import { getCollapseToggleGlyph } from "../components/shared.tsx";
 import type { UiTheme } from "../theme.ts";
 import { CommentTimestamp, ReviewMetaSeparator } from "./comment-metadata.tsx";

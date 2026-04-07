@@ -1,8 +1,8 @@
 import {
   buildReviewedFileFingerprint,
   getReviewedPathsFromGitHubViewedState,
-} from "@diffdiff/core";
-import type { ReviewCacheState, ReviewedFileState } from "@diffdiff/core";
+} from "@madisonbullard/diffdiff-core";
+import type { ReviewCacheState, ReviewedFileState } from "@madisonbullard/diffdiff-core";
 import type { FileTreeNode, PreparedReviewSession } from "../../types.ts";
 
 export function haveSamePaths(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {

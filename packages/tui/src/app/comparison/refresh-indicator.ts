@@ -1,4 +1,4 @@
-import type { ReviewSessionFreshnessResult } from "@diffdiff/core";
+import type { ReviewSessionFreshnessResult } from "@madisonbullard/diffdiff-core";
 
 export function getRefreshIndicatorLabel(result: ReviewSessionFreshnessResult): string | null {
   if (result.hasComparisonUpdates && result.comparisonSummary != null) {

@@ -1,4 +1,4 @@
-import { logDiffdiffError } from "@diffdiff/core";
+import { logDiffdiffError } from "@madisonbullard/diffdiff-core";
 import { closeDialog as closeAppDialog, openDialog as openAppDialog } from "../dialogs/stack.ts";
 import { formatThreadAnchor } from "../../review/threads.tsx";
 import { createReviewComposerInteractions } from "./review-composer-interactions.ts";
@@ -16,7 +16,7 @@ interface CreateGitHubReviewActionsOptions {
       nextSession: import("../../types.ts").PreparedReviewSession,
       options?: {
         resetReviewState?: boolean;
-        reviewCacheState?: import("@diffdiff/core").ReviewCacheState;
+        reviewCacheState?: import("@madisonbullard/diffdiff-core").ReviewCacheState;
       },
     ) => void;
     beginSessionLoad: () => number;

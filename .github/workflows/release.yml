@@ -1,0 +1,161 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "Release channel"
+        required: true
+        type: choice
+        default: latest
+        options:
+          - latest
+          - next
+      bump:
+        description: "Stable bump type when version is omitted"
+        required: false
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+      version:
+        description: "Explicit release version override"
+        required: false
+        type: string
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.channel }}-${{ inputs.version || inputs.bump || 'auto' }}
+
+permissions:
+  contents: write
+  id-token: write
+  packages: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      channel: ${{ steps.resolve.outputs.channel }}
+      version: ${{ steps.resolve.outputs.version }}
+      tag: ${{ steps.resolve.outputs.tag }}
+      npm_tag: ${{ steps.resolve.outputs.npm_tag }}
+      is_preview: ${{ steps.resolve.outputs.is_preview }}
+      is_prerelease: ${{ steps.resolve.outputs.is_prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          cache: true
+
+      - name: Resolve release context
+        id: resolve
+        env:
+          RELEASE_CHANNEL: ${{ inputs.channel }}
+          RELEASE_BUMP: ${{ inputs.bump }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          args=(--channel "$RELEASE_CHANNEL")
+          if [ -n "$RELEASE_BUMP" ]; then
+            args+=(--bump "$RELEASE_BUMP")
+          fi
+          if [ -n "$RELEASE_VERSION" ]; then
+            args+=(--version "$RELEASE_VERSION")
+          fi
+          vp run release:resolve -- "${args[@]}"
+
+      - name: Ensure GitHub draft release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          vp run release:ensure-github-release --
+          --repo "${{ github.repository }}"
+          --tag "${{ steps.resolve.outputs.tag }}"
+          --version "${{ steps.resolve.outputs.version }}"
+          --is-prerelease "${{ steps.resolve.outputs.is_prerelease }}"
+
+  verify:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          cache: true
+
+      - name: Verify release candidate
+        run: vp run release:verify
+
+  pack:
+    needs:
+      - version
+      - verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          cache: true
+
+      - name: Pack release tarballs
+        run: >-
+          vp run release:pack --
+          --version "${{ needs.version.outputs.version }}"
+          --pack-destination ".release-artifacts"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: .release-artifacts/
+
+  publish:
+    needs:
+      - version
+      - pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          cache: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: .release-artifacts
+
+      - name: Commit and tag stable release
+        if: needs.version.outputs.is_preview != 'true'
+        run: >-
+          vp run release:commit-stable --
+          --version "${{ needs.version.outputs.version }}"
+
+      - name: Publish npm packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
+        run: >-
+          vp run release:publish --
+          --directory ".release-artifacts"
+          --tag "${{ needs.version.outputs.npm_tag }}"
+
+      - name: Finalize GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          vp run release:finalize-github-release --
+          --directory ".release-artifacts"
+          --repo "${{ github.repository }}"
+          --tag "${{ needs.version.outputs.tag }}"
+          --is-prerelease "${{ needs.version.outputs.is_prerelease }}"

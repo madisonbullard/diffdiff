@@ -1,4 +1,4 @@
-import type { StartupOptions } from "@diffdiff/core";
+import type { StartupOptions } from "@madisonbullard/diffdiff-core";
 import type { PrepareReviewSessionOptions } from "./diff/pierre-internals.ts";
 import type { SyntaxPalette } from "./syntax-palette.ts";
 import type { UiTheme } from "./theme.ts";
