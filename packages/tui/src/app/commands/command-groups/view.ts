@@ -4,6 +4,7 @@ export function buildViewCommands({
   activePane,
   canOpenFocusedFileInEditor,
   canOpenSelectedTreeFile,
+  copyCurrentSessionReopenCommand,
   hasFiles,
   openFocusedFileInEditor,
   openSelectedTreeFile,
@@ -15,6 +16,7 @@ export function buildViewCommands({
   | "activePane"
   | "canOpenFocusedFileInEditor"
   | "canOpenSelectedTreeFile"
+  | "copyCurrentSessionReopenCommand"
   | "hasFiles"
   | "openFocusedFileInEditor"
   | "openSelectedTreeFile"
@@ -38,6 +40,16 @@ export function buildViewCommands({
       title: "Toggle diff view",
       value: "view.diff-toggle",
       run: () => toggleDiffView(),
+    },
+    {
+      category: "View",
+      description: "Copy a shell command that reopens this review in a new terminal window.",
+      keywords: ["clipboard", "command", "reopen", "terminal", "diffdiff", "cli"],
+      title: "Copy diffdiff CLI command for this session",
+      value: "view.copy-reopen-command",
+      run: () => {
+        void copyCurrentSessionReopenCommand();
+      },
     },
     {
       category: "View",

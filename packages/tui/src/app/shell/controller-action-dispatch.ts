@@ -67,6 +67,7 @@ export function buildControllerActionDispatchMap({
     closeCommentComposer: githubActions.closeCommentComposer,
     closeCommandModal: commandActions.closeCommandModal,
     closeDiagnostics: diagnostics.closeDiagnostics,
+    copyCurrentSessionReopenCommand: viewActions.copyCurrentSessionReopenCommand,
     copyPullRequestUrl: viewActions.copyPullRequestUrl,
     copySelectedPullRequestConversationItemUrl:
       reviewActions.copySelectedPullRequestConversationItemUrl,

@@ -23,6 +23,7 @@ function createRegistryOptions(
     canMoveToNextUnreviewed: true,
     canOpenSelectedTreeFile: true,
     clearReviewed: vi.fn(),
+    copyCurrentSessionReopenCommand: vi.fn(async () => undefined),
     copyFocusedReviewCommentUrl: vi.fn(async () => undefined),
     copyPullRequestUrl: vi.fn(async () => undefined),
     hasFiles: true,
@@ -101,6 +102,12 @@ describe("command registry", () => {
   test("derives command labels from the resolved keymaps", () => {
     const commands = buildAppCommands(createRegistryOptions());
 
+    expect(
+      formatCommandBindings(
+        reverseKeymaps,
+        findAppCommandByValue(commands, "view.copy-reopen-command")!,
+      ),
+    ).toBe("shift+y / ctrl+x shift+y / space shift+y");
     expect(
       formatCommandBindings(
         reverseKeymaps,

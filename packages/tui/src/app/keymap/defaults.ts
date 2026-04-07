@@ -93,6 +93,7 @@ const DIFF_LEADER_BINDINGS: readonly BindingTuple[] = [
   ["shift+r", A.COMPARISON_REFRESH],
   ["l", A.COMPARISON_LIST],
   ["v", A.VIEW_DIFF_TOGGLE],
+  ["shift+y", A.VIEW_COPY_REOPEN_COMMAND],
   ["e", A.VIEW_OPEN_FILE_IN_EDITOR],
   ["y", A.GITHUB_COPY_URL],
   ["r", A.REVIEW_TOGGLE_REVIEWED],
@@ -112,6 +113,7 @@ const DIFF_LEADER_BINDINGS: readonly BindingTuple[] = [
 const DIFF_SPACE_BINDINGS: readonly BindingTuple[] = [
   ["d", A.SYSTEM_DIAGNOSTICS],
   ["h", A.SYSTEM_HELP],
+  ["shift+y", A.VIEW_COPY_REOPEN_COMMAND],
   ["p", A.GITHUB_PULL_REQUEST_LIST],
   ["t", A.GITHUB_COMMENTS],
   ["a", A.GITHUB_ADD_COMMENT],
@@ -158,6 +160,7 @@ const diffMode = buildModeWithPrefixes(
     ["alt+r", A.REVIEW_CLEAR_REVIEWED],
     ["e", A.VIEW_OPEN_FILE_IN_EDITOR],
     ["v", A.VIEW_DIFF_TOGGLE],
+    ["shift+y", A.VIEW_COPY_REOPEN_COMMAND],
 
     // Review anchors
     ["]", A.REVIEW_NEXT_ANCHOR],
@@ -238,6 +241,7 @@ const threadMode = buildModeWithPrefixes(
     ["alt+r", A.REVIEW_CLEAR_REVIEWED],
     ["e", A.VIEW_OPEN_FILE_IN_EDITOR],
     ["v", A.VIEW_DIFF_TOGGLE],
+    ["shift+y", A.VIEW_COPY_REOPEN_COMMAND],
 
     // Anchors
     ["]", A.REVIEW_NEXT_ANCHOR],
@@ -325,6 +329,7 @@ const treeMode = buildModeWithPrefixes(
     ["alt+r", A.REVIEW_CLEAR_REVIEWED],
     ["e", A.VIEW_OPEN_FILE_IN_EDITOR],
     ["v", A.VIEW_DIFF_TOGGLE],
+    ["shift+y", A.VIEW_COPY_REOPEN_COMMAND],
 
     // Comparison
     ["shift+r", A.COMPARISON_REFRESH],

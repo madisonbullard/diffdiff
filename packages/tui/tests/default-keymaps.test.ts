@@ -63,6 +63,10 @@ describe("default keymaps", () => {
       actionId: A.GITHUB_COPY_URL,
       kind: "matched",
     });
+    expect(press("diff", { name: "y", sequence: "Y", shift: true })).toMatchObject({
+      actionId: A.VIEW_COPY_REOPEN_COMMAND,
+      kind: "matched",
+    });
   });
 
   test("keeps tree-mode global shortcuts available when they do not conflict with tree nav", () => {
@@ -92,6 +96,10 @@ describe("default keymaps", () => {
     });
     expect(press("tree", { name: "y", sequence: "y" })).toMatchObject({
       actionId: A.GITHUB_COPY_URL,
+      kind: "matched",
+    });
+    expect(press("tree", { name: "y", sequence: "Y", shift: true })).toMatchObject({
+      actionId: A.VIEW_COPY_REOPEN_COMMAND,
       kind: "matched",
     });
   });
@@ -127,6 +135,10 @@ describe("default keymaps", () => {
     });
     expect(press("thread", { name: "m", sequence: "m" })).toMatchObject({
       actionId: A.GITHUB_MERGE,
+      kind: "matched",
+    });
+    expect(press("thread", { name: "y", sequence: "Y", shift: true })).toMatchObject({
+      actionId: A.VIEW_COPY_REOPEN_COMMAND,
       kind: "matched",
     });
   });

@@ -27,6 +27,7 @@ export const COMPARISON_LIST = "comparison.list";
 // ---------------------------------------------------------------------------
 export const VIEW_PANE_TOGGLE = "view.pane-toggle";
 export const VIEW_DIFF_TOGGLE = "view.diff-toggle";
+export const VIEW_COPY_REOPEN_COMMAND = "view.copy-reopen-command";
 export const VIEW_OPEN_FILE_IN_EDITOR = "view.open-file-in-editor";
 
 // ---------------------------------------------------------------------------

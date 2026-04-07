@@ -13,6 +13,7 @@ import {
 } from "./modal-action-dispatch.ts";
 
 interface BuildActionDispatchMapOptions extends BuildModalActionDispatchMapOptions {
+  copyCurrentSessionReopenCommand: () => Promise<void>;
   copyPullRequestUrl: () => Promise<void>;
   fileFocus: FileFocusController;
   openBranchModal: () => void;
@@ -35,6 +36,7 @@ interface BuildActionDispatchMapOptions extends BuildModalActionDispatchMapOptio
 
 export function buildActionDispatchMap(options: BuildActionDispatchMapOptions): ActionDispatchMap {
   const {
+    copyCurrentSessionReopenCommand,
     copyPullRequestUrl,
     fileFocus,
     openClearReviewedConfirmModal,
@@ -87,6 +89,10 @@ export function buildActionDispatchMap(options: BuildActionDispatchMapOptions): 
 
   map.set(A.VIEW_DIFF_TOGGLE, () => {
     reviewActions.toggleDiffView();
+  });
+
+  map.set(A.VIEW_COPY_REOPEN_COMMAND, () => {
+    void copyCurrentSessionReopenCommand();
   });
 
   map.set(A.VIEW_OPEN_FILE_IN_EDITOR, () => {

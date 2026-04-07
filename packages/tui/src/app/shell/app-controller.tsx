@@ -164,6 +164,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         canMoveToNextUnreviewed: derived.hasNextUnreviewedFile,
         canOpenSelectedTreeFile: derived.selectedTreeNode?.kind === "file",
         clearReviewed: openClearReviewedConfirmModal,
+        copyCurrentSessionReopenCommand: viewActions.copyCurrentSessionReopenCommand,
         copyFocusedReviewCommentUrl: reviewActions.copyFocusedReviewCommentUrl,
         copyPullRequestUrl: viewActions.copyPullRequestUrl,
         hasFiles: state.session.files.length > 0,

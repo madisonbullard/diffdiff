@@ -31,6 +31,7 @@ export interface BuildAppCommandsOptions {
   canMoveToNextUnreviewed: boolean;
   canOpenSelectedTreeFile: boolean;
   clearReviewed: () => void;
+  copyCurrentSessionReopenCommand: () => Promise<void>;
   copyFocusedReviewCommentUrl: () => Promise<void>;
   copyPullRequestUrl: () => Promise<void>;
   hasFiles: boolean;

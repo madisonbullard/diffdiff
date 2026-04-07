@@ -1,4 +1,5 @@
 import { copyTextToClipboard } from "../../clipboard.ts";
+import { copySessionReopenCommand } from "../../session-reopen-command.ts";
 import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
@@ -17,6 +18,26 @@ export function createViewActions({
   props,
   state,
 }: CreateViewActionsOptions) {
+  async function copyCurrentSessionReopenCommand(): Promise<void> {
+    try {
+      await copySessionReopenCommand({
+        comparison: state.session.comparison,
+        initialListMode: state.startupOptions.initialListMode,
+        repositoryRootPath: state.session.repository.rootPath,
+        verbose: state.startupOptions.verbose,
+      });
+      persistence.persistenceApi.showToast("Copied reopen command to clipboard");
+    } catch (error) {
+      persistence.persistenceApi.handleAppError(error, "Unable to copy the reopen command.", {
+        action: "copy-reopen-command",
+        comparison: state.session.comparison,
+        initialListMode: state.startupOptions.initialListMode,
+        repositoryRootPath: state.session.repository.rootPath,
+        verbose: state.startupOptions.verbose,
+      });
+    }
+  }
+
   async function copyPullRequestUrl(): Promise<void> {
     if (state.session.github == null) {
       state.setStatusMessage("Open a GitHub pull request first.");
@@ -72,6 +93,7 @@ export function createViewActions({
   }
 
   return {
+    copyCurrentSessionReopenCommand,
     copyPullRequestUrl,
     openFocusedFileInEditor,
   };
