@@ -6,6 +6,7 @@
 
 - Primary workflow: review the current repository's staged, unstaged, and untracked changes against `HEAD`.
 - Explicit comparison workflow: launch with `--base <ref>` and `--head <ref>`.
+  If either ref only exists on a configured remote, diffdiff fetches it before the TUI opens.
 - GitHub review actions require a stored token from `diffdiff auth login --token-stdin`.
 - Local session metadata and JSONL logs are available through `diffdiff session` commands.
 - Use `vp` for repo tasks.

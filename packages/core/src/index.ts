@@ -18,6 +18,7 @@ export {
   updateDiffdiffSessionActivity,
 } from "./logging.ts";
 export { GitRepositoryProvider } from "./repository/git-repository.ts";
+export { ensureComparisonRefsAvailable } from "./repository/git-repository.ts";
 export { syncGitRemotes } from "./repository/git-repository.ts";
 export {
   parseChangedFilePatch,

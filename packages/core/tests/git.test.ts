@@ -251,6 +251,64 @@ describe("loadReviewSession", () => {
       });
     },
   );
+
+  test(
+    "fetches a missing explicit branch ref from a configured remote before diffing",
+    { timeout: 20_000 },
+    async () => {
+      const remoteRepositoryPath = await createBareRepository();
+      const seedRepositoryPath = await createTemporaryRepository();
+
+      await runGit(seedRepositoryPath, ["checkout", "-b", "main"]);
+      await runGit(seedRepositoryPath, ["remote", "add", "origin", remoteRepositoryPath]);
+      await writeFile(join(seedRepositoryPath, "index.ts"), "export const version = 1;\n");
+      await runGit(seedRepositoryPath, ["add", "index.ts"]);
+      await commitAll(seedRepositoryPath, "Initial commit");
+      await runGit(seedRepositoryPath, ["push", "-u", "origin", "main"]);
+
+      const clientRepositoryPath = await cloneRepository(remoteRepositoryPath, "main");
+
+      await runGit(seedRepositoryPath, [
+        "checkout",
+        "-b",
+        "jakemullins/epd-3063-accept-partnercode",
+      ]);
+      await writeFile(join(seedRepositoryPath, "index.ts"), "export const version = 2;\n");
+      await runGit(seedRepositoryPath, ["add", "index.ts"]);
+      await commitAll(seedRepositoryPath, "Add partner code support");
+      await runGit(seedRepositoryPath, [
+        "push",
+        "-u",
+        "origin",
+        "jakemullins/epd-3063-accept-partnercode",
+      ]);
+
+      await expectGitRef(
+        clientRepositoryPath,
+        "origin/jakemullins/epd-3063-accept-partnercode",
+        false,
+      );
+
+      const session = await loadReviewSession({
+        base: "origin/main",
+        head: "jakemullins/epd-3063-accept-partnercode",
+        repoPath: clientRepositoryPath,
+      });
+
+      expect(session.comparison).toMatchObject({
+        base: "origin/main",
+        head: "origin/jakemullins/epd-3063-accept-partnercode",
+        mode: "range",
+      });
+      expect(session.files.map((file) => file.path)).toEqual(["index.ts"]);
+      expect(session.files[0]?.patch).toContain("+export const version = 2;");
+      await expectGitRef(
+        clientRepositoryPath,
+        "origin/jakemullins/epd-3063-accept-partnercode",
+        true,
+      );
+    },
+  );
 });
 
 async function createTemporaryRepository(): Promise<string> {
@@ -264,8 +322,43 @@ async function createTemporaryRepository(): Promise<string> {
   return repositoryPath;
 }
 
+async function createBareRepository(): Promise<string> {
+  const repositoryPath = await mkdtemp(join(tmpdir(), "diffdiff-core-remote-"));
+  temporaryDirectories.push(repositoryPath);
+  await execFileAsync("git", ["init", "--bare", repositoryPath]);
+  return repositoryPath;
+}
+
+async function cloneRepository(remoteRepositoryPath: string, branchName: string): Promise<string> {
+  const repositoryPath = await mkdtemp(join(tmpdir(), "diffdiff-core-clone-"));
+  temporaryDirectories.push(repositoryPath);
+  await execFileAsync("git", [
+    "clone",
+    "--branch",
+    branchName,
+    remoteRepositoryPath,
+    repositoryPath,
+  ]);
+  return repositoryPath;
+}
+
 async function runGit(repositoryPath: string, args: string[]): Promise<void> {
   await execFileAsync("git", args, { cwd: repositoryPath });
+}
+
+async function expectGitRef(
+  repositoryPath: string,
+  ref: string,
+  expectedToExist: boolean,
+): Promise<void> {
+  const result = await execFileAsync("git", ["rev-parse", "--verify", ref], {
+    cwd: repositoryPath,
+  }).then(
+    () => true,
+    () => false,
+  );
+
+  expect(result).toBe(expectedToExist);
 }
 
 async function commitAll(repositoryPath: string, message: string): Promise<void> {

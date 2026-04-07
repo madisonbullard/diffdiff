@@ -72,6 +72,54 @@ export async function syncGitRemotes(rootPath: string): Promise<string[]> {
   return remoteNames;
 }
 
+export async function ensureComparisonRefsAvailable(
+  rootPath: string,
+  options: StartupOptions,
+  reportProgress?: (message: string) => void,
+): Promise<StartupOptions> {
+  if (options.base == null && options.head == null) {
+    return options;
+  }
+
+  const remoteNames = prioritizeRemoteNames(await listGitRemoteNames(rootPath));
+  if (remoteNames.length === 0) {
+    return options;
+  }
+
+  const resolutionCache = new Map<string, Promise<string | undefined>>();
+  const resolveRef = async (
+    ref: string | undefined,
+    target: "base" | "head",
+  ): Promise<string | undefined> => {
+    if (ref == null || ref === "") {
+      return ref;
+    }
+
+    let resolutionPromise = resolutionCache.get(ref);
+    if (resolutionPromise == null) {
+      resolutionPromise = resolveComparisonRef(rootPath, remoteNames, ref, target, reportProgress);
+      resolutionCache.set(ref, resolutionPromise);
+    }
+
+    return resolutionPromise;
+  };
+
+  const [base, head] = await Promise.all([
+    resolveRef(options.base, "base"),
+    resolveRef(options.head, "head"),
+  ]);
+
+  if (base === options.base && head === options.head) {
+    return options;
+  }
+
+  return {
+    ...options,
+    base,
+    head,
+  };
+}
+
 class GitRepository implements RepositoryHandle {
   readonly kind = "git";
 
@@ -193,10 +241,11 @@ class GitRepository implements RepositoryHandle {
   }
 
   private async resolveComparison(options: StartupOptions): Promise<ResolvedComparison> {
+    const resolvedOptions = await ensureComparisonRefsAvailable(this.rootPath, options);
     const currentBranch = await this.getCurrentBranch();
     const defaultBranch = await this.selectDefaultBaseRef();
-    const head = options.head ?? currentBranch ?? "HEAD";
-    const base = options.base ?? defaultBranch;
+    const head = resolvedOptions.head ?? currentBranch ?? "HEAD";
+    const base = resolvedOptions.base ?? defaultBranch;
 
     if (base == null) {
       throw new DiffdiffError(
@@ -217,6 +266,10 @@ class GitRepository implements RepositoryHandle {
       this.resolveRefSha(base),
       this.resolveRefSha(head),
     ]);
+
+    if (baseSha == null || headSha == null) {
+      throw new DiffdiffError(buildMissingComparisonRefMessage(base, head, baseSha, headSha));
+    }
 
     return {
       currentBranch,
@@ -340,4 +393,155 @@ async function listGitRemoteNames(rootPath: string): Promise<string[]> {
     .split(/\r?\n/u)
     .map((line) => line.trim())
     .filter((line) => line !== "");
+}
+
+async function resolveComparisonRef(
+  rootPath: string,
+  remoteNames: readonly string[],
+  ref: string,
+  target: "base" | "head",
+  reportProgress?: (message: string) => void,
+): Promise<string> {
+  if (await hasGitRef(rootPath, ref)) {
+    return ref;
+  }
+
+  const remoteQualifiedRef = parseRemoteQualifiedRef(ref, remoteNames);
+  if (remoteQualifiedRef != null) {
+    const remoteTrackingRef = `${remoteQualifiedRef.remoteName}/${remoteQualifiedRef.branchName}`;
+    if (
+      !(await remoteHasBranch(
+        rootPath,
+        remoteQualifiedRef.remoteName,
+        remoteQualifiedRef.branchName,
+      ))
+    ) {
+      return ref;
+    }
+
+    await fetchRemoteBranch(
+      rootPath,
+      remoteQualifiedRef.remoteName,
+      remoteQualifiedRef.branchName,
+      ref,
+      target,
+      reportProgress,
+    );
+    return remoteTrackingRef;
+  }
+
+  for (const remoteName of remoteNames) {
+    if (!(await remoteHasBranch(rootPath, remoteName, ref))) {
+      continue;
+    }
+
+    const remoteTrackingRef = `${remoteName}/${ref}`;
+    await fetchRemoteBranch(rootPath, remoteName, ref, ref, target, reportProgress);
+    return remoteTrackingRef;
+  }
+
+  return ref;
+}
+
+async function fetchRemoteBranch(
+  rootPath: string,
+  remoteName: string,
+  branchName: string,
+  originalRef: string,
+  target: "base" | "head",
+  reportProgress?: (message: string) => void,
+): Promise<void> {
+  const remoteTrackingRef = `${remoteName}/${branchName}`;
+  const refspec = `+refs/heads/${branchName}:refs/remotes/${remoteTrackingRef}`;
+
+  reportProgress?.(`Fetching missing --${target} ref '${originalRef}' from ${remoteName}...`);
+  reportProgress?.(`$ git fetch --prune --progress ${remoteName} ${refspec}`);
+  await runCommand("git", ["fetch", "--prune", "--progress", remoteName, refspec], {
+    cwd: rootPath,
+  });
+  reportProgress?.(`Resolved --${target} to ${remoteTrackingRef}.`);
+  logDiffdiffInfo("session", "comparison_ref_fetched", {
+    originalRef,
+    remoteName,
+    remoteTrackingRef,
+    rootPath,
+    target,
+  });
+}
+
+async function hasGitRef(rootPath: string, ref: string): Promise<boolean> {
+  try {
+    await runCommand("git", ["rev-parse", "--verify", ref], { cwd: rootPath });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function remoteHasBranch(
+  rootPath: string,
+  remoteName: string,
+  branchName: string,
+): Promise<boolean> {
+  const stdout = await runCommand(
+    "git",
+    ["ls-remote", "--exit-code", "--heads", remoteName, `refs/heads/${branchName}`],
+    {
+      allowedExitCodes: [2],
+      cwd: rootPath,
+    },
+  );
+
+  return stdout.trim() !== "";
+}
+
+function parseRemoteQualifiedRef(
+  ref: string,
+  remoteNames: readonly string[],
+): { branchName: string; remoteName: string } | undefined {
+  for (const remoteName of remoteNames) {
+    const prefix = `${remoteName}/`;
+    if (!ref.startsWith(prefix)) {
+      continue;
+    }
+
+    return {
+      branchName: ref.slice(prefix.length),
+      remoteName,
+    };
+  }
+
+  return undefined;
+}
+
+function prioritizeRemoteNames(remoteNames: readonly string[]): string[] {
+  return [...remoteNames].sort((left, right) => {
+    if (left === right) {
+      return 0;
+    }
+
+    if (left === "origin") {
+      return -1;
+    }
+
+    if (right === "origin") {
+      return 1;
+    }
+
+    return left.localeCompare(right);
+  });
+}
+
+function buildMissingComparisonRefMessage(
+  base: string,
+  head: string,
+  baseSha: string | undefined,
+  headSha: string | undefined,
+): string {
+  const missingRefs = [
+    baseSha == null ? `base ref '${base}'` : undefined,
+    headSha == null ? `head ref '${head}'` : undefined,
+  ].filter((value) => value != null);
+
+  return `Unable to resolve ${missingRefs.join(" and ")}. Make sure each ref exists locally or on a configured remote.`;
 }

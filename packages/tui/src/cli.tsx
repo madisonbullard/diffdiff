@@ -4,8 +4,10 @@ import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 import {
   clearGitHubToken,
+  ensureComparisonRefsAvailable,
   flushDiffdiffLogs,
   GitHubPullRequestService,
+  getRepositorySearchPath,
   loadDiffdiffPreferences,
   openFileInEditor,
   loadReviewSession,
@@ -21,6 +23,7 @@ import {
   startDiffdiffLogging,
   storeGitHubToken,
   syncGitRemotes,
+  GitRepositoryProvider,
 } from "@diffdiff/core";
 import { Command } from "commander";
 import packageJson from "../package.json";
@@ -171,17 +174,40 @@ function addStartupOptions(command: Command): void {
 }
 
 async function launchTui(options: LaunchOptions): Promise<void> {
+  let launchOptions = options;
   let startupInstrumentation = createStartupInstrumentation();
   const logSession = await startDiffdiffLogging({
     command: process.argv,
     cwd: process.cwd(),
-    verbose: options.verbose,
+    verbose: launchOptions.verbose,
   });
 
   logDiffdiffInfo("cli", "tui_launch_started", {
     logFilePath: logSession?.logFilePath,
-    options,
+    options: launchOptions,
   });
+
+  const repository = await new GitRepositoryProvider().detectRepository(
+    getRepositorySearchPath(launchOptions.repoPath),
+  );
+  if (repository != null) {
+    const preparedOptions = await ensureComparisonRefsAvailable(
+      repository.rootPath,
+      launchOptions,
+      (message) => {
+        process.stdout.write(`${message}\n`);
+      },
+    );
+    if (preparedOptions !== launchOptions) {
+      process.stdout.write("\n");
+      logDiffdiffInfo("cli", "tui_launch_options_resolved_from_remote_refs", {
+        initialOptions: launchOptions,
+        logFilePath: logSession?.logFilePath,
+        resolvedOptions: preparedOptions,
+      });
+      launchOptions = preparedOptions;
+    }
+  }
 
   // Keep the initial module graph light so help/version stay instant, then overlap the
   // background-color probe with the heavier TUI/runtime imports for the real app launch.
@@ -241,7 +267,7 @@ async function launchTui(options: LaunchOptions): Promise<void> {
             startup: summarizeStartupInstrumentation(startupInstrumentation),
           });
         }}
-        path={options.repoPath ?? process.cwd()}
+        path={launchOptions.repoPath ?? process.cwd()}
         text={theme.text}
         textMuted={theme.textMuted}
       />,
@@ -258,7 +284,7 @@ async function launchTui(options: LaunchOptions): Promise<void> {
       );
     const gitHubPullRequestService = new GitHubPullRequestService();
     const isGitHubAuthenticated = (await resolveGitHubAuth({ host: "github.com" })) != null;
-    const initialSession = await loadSession(options);
+    const initialSession = await loadSession(launchOptions);
     startupInstrumentation = logStartupPhase(startupInstrumentation, "sessionPreparedAt");
     const initialPreferences = await loadDiffdiffPreferences();
     startupInstrumentation = logStartupPhase(startupInstrumentation, "preferencesLoadedAt");
@@ -285,7 +311,7 @@ async function launchTui(options: LaunchOptions): Promise<void> {
         initialUserKeymapConfig={initialPreferences.keys}
         isGitHubAuthenticated={isGitHubAuthenticated}
         initialReviewCache={initialReviewCache}
-        initialOptions={options}
+        initialOptions={launchOptions}
         initialSession={initialSession}
         listGitHubPullRequests={() => gitHubPullRequestService.listDashboardPullRequests()}
         loadComparisonBrowserData={async (nextOptions) => {
@@ -355,7 +381,7 @@ async function launchTui(options: LaunchOptions): Promise<void> {
   } catch (error) {
     logDiffdiffError("cli", "tui_launch_failed", error, {
       logFilePath: logSession?.logFilePath,
-      options,
+      options: launchOptions,
     });
     await markDiffdiffSessionEnded("diffdiff exited after a launch error.");
     await flushDiffdiffLogs();
