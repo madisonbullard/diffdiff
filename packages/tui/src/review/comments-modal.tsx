@@ -29,6 +29,7 @@ export function PullRequestCommentsModal({
       <box
         width="92%"
         maxWidth={118}
+        height="92%"
         backgroundColor={theme.modalBg}
         padding={1}
         flexDirection="column"
@@ -61,7 +62,7 @@ export function PullRequestCommentsModal({
         </box>
         <scrollbox
           width="100%"
-          height="70%"
+          flexGrow={1}
           focused={true}
           viewportOptions={{ backgroundColor: theme.modalBg }}
           contentOptions={{ backgroundColor: theme.modalBg }}

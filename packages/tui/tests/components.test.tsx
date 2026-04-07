@@ -1,4 +1,4 @@
-import type { BranchInfo } from "@diffdiff/core";
+import type { BranchInfo, GitHubPullRequestDetail } from "@diffdiff/core";
 import type { ReactNode } from "react";
 import type { ReactTestRenderer } from "react-test-renderer";
 import { act, create } from "react-test-renderer";
@@ -11,6 +11,7 @@ import { HelpModal } from "../src/components/help-modal.tsx";
 import { ListFilterModal } from "../src/components/list-filter-modal.tsx";
 import { PrefixPickerOverlay } from "../src/components/prefix-picker-overlay.tsx";
 import { PullRequestListModal } from "../src/components/pull-request-list-modal.tsx";
+import { PullRequestCommentsModal } from "../src/review/comments-modal.tsx";
 import type { PrefixMenuCommand, PrefixMenuConfig } from "../src/app/commands/prefix-menus.ts";
 import { getPrefixMenuConfig } from "../src/app/commands/prefix-menus.ts";
 import { getUiTheme } from "../src/theme.ts";
@@ -336,6 +337,25 @@ test("shows more pull requests at once in the pull request list modal", () => {
   const text = collectText(tree.toJSON());
   expect(text).toContain("Visible PR 10");
   expect(text).not.toContain("Visible PR 11");
+});
+
+test("stretches the PR comments modal to the available height", () => {
+  const tree = render(
+    <PullRequestCommentsModal
+      pullRequest={createPullRequestDetail()}
+      selectedItemId="review:700"
+      theme={theme}
+    />,
+  );
+
+  const modalFrame = tree.root.find(
+    (node) => String(node.type) === "box" && node.props.maxWidth === 118,
+  );
+  const scrollbox = tree.root.find((node) => String(node.type) === "scrollbox");
+
+  expect(modalFrame.props.height ?? modalFrame.props.maxHeight).toBe("92%");
+  expect(scrollbox.props.flexGrow).toBe(1);
+  expect(scrollbox.props.height).toBeUndefined();
 });
 
 test("shows binary, reviewed, and collapsed states clearly", () => {
@@ -922,6 +942,53 @@ function createPreparedFile(overrides: Partial<PreparedReviewFile> = {}): Prepar
       },
     ],
     ...overrides,
+  };
+}
+
+function createPullRequestDetail(): GitHubPullRequestDetail {
+  return {
+    author: { login: "octocat", url: "https://github.com/octocat" },
+    baseRefName: "main",
+    body: "Body",
+    checks: {
+      failed: 0,
+      pending: 0,
+      state: "success",
+      successful: 1,
+      total: 1,
+    },
+    changedFiles: {},
+    conversationItems: [
+      {
+        author: { login: "octocat", url: "https://github.com/octocat" },
+        body: "Looks ready to merge.",
+        createdAt: "2026-04-01T12:00:00Z",
+        id: "review:700",
+        kind: "review",
+        reviewId: 700,
+        reviewNodeId: "PRR_700",
+        reviewState: "APPROVED",
+        updatedAt: "2026-04-01T12:00:00Z",
+        url: "https://github.com/diffdiff/diffdiff/pull/42#pullrequestreview-700",
+      },
+    ],
+    headRefName: "feature/comments-modal",
+    headSha: "abc123",
+    isDraft: false,
+    isMerged: false,
+    merge: {
+      canMerge: true,
+      isDraft: false,
+      isMerged: false,
+    },
+    nodeId: "PR_node_42",
+    number: 42,
+    reviewGroups: [],
+    reviewThreads: [],
+    state: "open",
+    title: "Fix comments modal height",
+    updatedAt: "2026-04-01T12:00:00Z",
+    url: "https://github.com/diffdiff/diffdiff/pull/42",
   };
 }
 
