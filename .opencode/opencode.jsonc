@@ -8,6 +8,16 @@
     },
   },
   "permission": {
+    "external_directory": {
+      "/Users/madisonbullard/.diffdiff/**": "allow",
+      "/Users/madisonbullard/Documents/Projects/opencode/**": "allow",
+      "/Users/madisonbullard/Documents/Projects/helix/**": "allow",
+    },
+    "edit": {
+      "/Users/madisonbullard/.diffdiff/**": "deny",
+      "/Users/madisonbullard/Documents/Projects/opencode/**": "deny",
+      "/Users/madisonbullard/Documents/Projects/helix/**": "deny",
+    },
     "read": {
       "/Users/madisonbullard/.diffdiff/**": "allow",
       "/Users/madisonbullard/Documents/Projects/opencode/**": "allow",
