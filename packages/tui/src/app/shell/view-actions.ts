@@ -51,6 +51,8 @@ export function createViewActions({
       return;
     }
 
+    state.renderer.suspend();
+
     try {
       await props.openFileInEditor(state.session.repository.rootPath, focusedFilePath);
       state.setStatusMessage(`Opened ${focusedFilePath} in the editor.`);
@@ -64,6 +66,8 @@ export function createViewActions({
           repositoryRootPath: state.session.repository.rootPath,
         },
       );
+    } finally {
+      state.renderer.resume();
     }
   }
 

@@ -46,6 +46,8 @@ type MockRenderer = {
   off: (event: string, handler: (...args: unknown[]) => void) => MockRenderer;
   emit: (event: string, ...args: unknown[]) => boolean;
   removeAllListeners: () => MockRenderer;
+  resume: ReturnType<typeof vi.fn<() => void>>;
+  suspend: ReturnType<typeof vi.fn<() => void>>;
 };
 
 const rendererState = vi.hoisted(() => {
@@ -74,6 +76,8 @@ const rendererState = vi.hoisted(() => {
       listeners.clear();
       return renderer;
     },
+    resume: vi.fn(),
+    suspend: vi.fn(),
   };
 
   return { renderer };
