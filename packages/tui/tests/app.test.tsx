@@ -382,6 +382,10 @@ test("jumps to a diff line with a count through the in-file prefix one-third dow
   emitKey({ name: "1", sequence: "1" });
   emitKey({ name: "1", sequence: "1" });
   emitKey({ name: "s", sequence: "s" });
+
+  expect(getAppText(tree)).toContain("In File mode active. Awaiting next key.");
+  expect(getAppText(tree)).toContain("Press a key to jump within the selected file.");
+
   emitKey({ name: "s", sequence: "s" });
 
   expect(getAppText(tree)).toContain("Jumped to src/app.ts:11.");
@@ -439,6 +443,20 @@ test("opens the modal picker with space and launches a modal with one key", () =
   expect(getAppText(tree)).toContain("Opened list modal.");
   expect(getAppText(tree)).toContain("Working tree");
   expect(getAppText(tree)).not.toContain("Press a key to open a modal.");
+});
+
+test("opens the goto picker with g and launches a jump with one key", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+
+  emitKey({ name: "g", sequence: "g" });
+
+  expect(getAppText(tree)).toContain("Goto mode active. Awaiting next key.");
+  expect(getAppText(tree)).toContain("Press a key to jump around the comparison.");
+
+  emitKey({ name: "e", sequence: "e" });
+
+  expect(getAppText(tree)).toContain("Jumped to the last file.");
+  expect(getAppText(tree)).not.toContain("Press a key to jump around the comparison.");
 });
 
 test("opens the GitHub PR list on launch when requested", async () => {

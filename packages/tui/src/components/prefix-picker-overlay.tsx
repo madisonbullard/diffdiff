@@ -11,7 +11,7 @@ export function PrefixPickerOverlay({
   prefixMenu: PrefixMenuConfig;
   theme: UiTheme;
 }) {
-  if (prefixMenu.pickerTitle == null || prefixMenu.pickerDescription == null) {
+  if (prefixMenu.picker == null) {
     return null;
   }
 
@@ -31,18 +31,17 @@ export function PrefixPickerOverlay({
       gap={0}
     >
       <text fg={theme.accent} wrapMode="none">
-        {prefixMenu.pickerTitle}
+        {prefixMenu.picker.title}
       </text>
       <text fg={theme.textMuted} wrapMode="none">
-        {prefixMenu.pickerDescription}
+        {prefixMenu.picker.description}
       </text>
-      {commands.map(({ command, label }) => {
-        const enabled = command.enabled !== false;
+      {commands.map(({ actionId, enabled, label, title }) => {
         const textColor = enabled ? theme.text : theme.textMuted;
         return (
-          <text key={command.value} fg={textColor} wrapMode="none">
+          <text key={actionId} fg={textColor} wrapMode="none">
             <KeyCap label={label} theme={theme} />
-            <span>{` ${command.title}`}</span>
+            <span>{` ${title}`}</span>
           </text>
         );
       })}

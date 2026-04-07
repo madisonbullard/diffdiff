@@ -299,7 +299,7 @@ export function DiffdiffAppView({
           />
         </box>
 
-        {activePrefixMenu?.pickerTitle != null ? (
+        {activePrefixMenu?.picker != null ? (
           <PrefixPickerOverlay
             commands={activePrefixMenuCommands}
             prefixMenu={activePrefixMenu}

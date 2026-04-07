@@ -600,23 +600,16 @@ test("renders a compact modal picker overlay", () => {
   const prefixMenu: PrefixMenuConfig = getPrefixMenuConfig("space")!;
   const commands: PrefixMenuCommand[] = [
     {
-      command: {
-        category: "Comparison",
-        run: () => undefined,
-        title: "Open comparison list",
-        value: "comparison.list",
-      },
+      actionId: "comparison.list",
+      enabled: true,
       label: "l",
+      title: "Open comparison list",
     },
     {
-      command: {
-        category: "System",
-        enabled: false,
-        run: () => undefined,
-        title: "Open diagnostics",
-        value: "system.diagnostics",
-      },
+      actionId: "system.diagnostics",
+      enabled: false,
       label: "d",
+      title: "Open diagnostics",
     },
   ];
 
