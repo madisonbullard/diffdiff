@@ -27,6 +27,7 @@ const LANGUAGE_EXTENSIONS: Record<string, string> = {
   ".dart": "dart",
   ".diff": "diff",
   ".dockerfile": "dockerfile",
+  dockerfile: "dockerfile",
   ".edn": "clojure",
   ".erb": "erb",
   ".erl": "erlang",
@@ -203,8 +204,12 @@ function getPathLanguage(input?: string): string | undefined {
 
   const normalizedPath = input.toLowerCase();
   const extension = path.extname(normalizedPath);
+  const basename = path.basename(normalizedPath);
+  const basenameStem = basename.split(".", 1)[0];
   const language =
-    LANGUAGE_EXTENSIONS[extension] ?? LANGUAGE_EXTENSIONS[path.basename(normalizedPath)];
+    LANGUAGE_EXTENSIONS[extension] ??
+    LANGUAGE_EXTENSIONS[basename] ??
+    LANGUAGE_EXTENSIONS[basenameStem];
 
   if (language == null) {
     return undefined;

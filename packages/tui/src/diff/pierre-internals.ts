@@ -24,12 +24,17 @@ export interface PrepareReviewSessionOptions {
   initialDiffView?: "unified" | "split" | "both";
 }
 
+export interface PierreHighlighter {
+  getLoadedLanguages(): string[];
+  loadLanguage(language: string): Promise<void>;
+}
+
 export interface PierreDiffsModule {
-  getSharedHighlighter(options: { themes: string[]; langs: string[] }): Promise<unknown>;
+  getSharedHighlighter(options: { themes: string[]; langs: string[] }): Promise<PierreHighlighter>;
   parsePatchFiles(patch: string): Array<{ files?: FileDiffMetadata[] }>;
   renderDiffWithHighlighter(
     diff: FileDiffMetadata,
-    highlighter: unknown,
+    highlighter: PierreHighlighter,
     options: {
       theme: string;
       tokenizeMaxLineLength: number;

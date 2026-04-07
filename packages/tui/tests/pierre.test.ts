@@ -1,6 +1,6 @@
 import { buildReviewSessionFingerprint, type ReviewSession } from "@diffdiff/core";
 import type { TerminalColors } from "@opentui/core";
-import type { PierreDiffsModule } from "../src/diff/pierre-internals.ts";
+import type { PierreDiffsModule, PierreHighlighter } from "../src/diff/pierre-internals.ts";
 import { afterEach, expect, test, vi } from "vite-plus/test";
 import { createPierreSegmentColorResolver } from "../src/pierre-colors.ts";
 import {
@@ -166,7 +166,7 @@ test("deferred startup rendering skips eager highlighting work", async () => {
     typeof import("../src/diff/pierre-internals.ts")
   >("../src/diff/pierre-internals.ts");
   const actualPierreDiffs = await actualPierreInternals.loadPierreDiffs();
-  const getSharedHighlighter = vi.fn(async () => ({ mocked: true }));
+  const getSharedHighlighter = vi.fn(async () => createMockHighlighter());
   const renderDiffWithHighlighter = vi.fn(
     (diff: Parameters<PierreDiffsModule["renderDiffWithHighlighter"]>[0]) => ({
       themeStyles: "--mock-token: #48bcca;",
@@ -226,7 +226,7 @@ test("uses the shared shell language resolver for Pierre highlighter preloading"
     typeof import("../src/diff/pierre-internals.ts")
   >("../src/diff/pierre-internals.ts");
   const actualPierreDiffs = await actualPierreInternals.loadPierreDiffs();
-  const getSharedHighlighter = vi.fn(async () => ({ mocked: true }));
+  const getSharedHighlighter = vi.fn(async () => createMockHighlighter());
   const renderDiffWithHighlighter = vi.fn(
     (diff: Parameters<PierreDiffsModule["renderDiffWithHighlighter"]>[0]) => ({
       themeStyles: "--mock-token: #48bcca;",
@@ -296,7 +296,7 @@ test("preloads TOML when only the file path identifies the language", async () =
     typeof import("../src/diff/pierre-internals.ts")
   >("../src/diff/pierre-internals.ts");
   const actualPierreDiffs = await actualPierreInternals.loadPierreDiffs();
-  const getSharedHighlighter = vi.fn(async () => ({ mocked: true }));
+  const getSharedHighlighter = vi.fn(async () => createMockHighlighter());
   const renderDiffWithHighlighter = vi.fn(
     (diff: Parameters<PierreDiffsModule["renderDiffWithHighlighter"]>[0]) => ({
       themeStyles: "--mock-token: #48bcca;",
@@ -344,12 +344,65 @@ test("preloads TOML when only the file path identifies the language", async () =
   });
 });
 
+test("preloads Dockerfile when only the basename identifies the language", async () => {
+  const actualPierreInternals = await vi.importActual<
+    typeof import("../src/diff/pierre-internals.ts")
+  >("../src/diff/pierre-internals.ts");
+  const actualPierreDiffs = await actualPierreInternals.loadPierreDiffs();
+  const getSharedHighlighter = vi.fn(async () => createMockHighlighter());
+  const renderDiffWithHighlighter = vi.fn(
+    (diff: Parameters<PierreDiffsModule["renderDiffWithHighlighter"]>[0]) => ({
+      themeStyles: "--mock-token: #48bcca;",
+      code: {
+        deletionLines: diff.deletionLines.map((line) => ({ type: "text", value: line })),
+        additionLines: diff.additionLines.map((line) => ({ type: "text", value: line })),
+      },
+    }),
+  );
+
+  pierreInternalsState.loadPierreDiffsOverride = async () => ({
+    ...actualPierreDiffs,
+    getSharedHighlighter,
+    renderDiffWithHighlighter,
+  });
+
+  await prepareReviewSession(
+    createReviewSession({
+      files: [
+        {
+          path: "Dockerfile",
+          status: "modified",
+          additions: 1,
+          deletions: 1,
+          isBinary: false,
+          patch: [
+            "diff --git a/Dockerfile b/Dockerfile",
+            "index 1111111..2222222 100644",
+            "--- a/Dockerfile",
+            "+++ b/Dockerfile",
+            "@@ -1 +1 @@",
+            "-FROM node:20",
+            "+FROM node:22",
+          ].join("\n"),
+        },
+      ],
+    }),
+    "pierre-dark",
+  );
+
+  expect(getSharedHighlighter).toHaveBeenCalledTimes(1);
+  expect(getSharedHighlighter).toHaveBeenCalledWith({
+    themes: ["pierre-dark"],
+    langs: ["dockerfile"],
+  });
+});
+
 test("preloads Pierre-compatible aliases for TSX, JSX, TFVARS, JSONC, and JSONL", async () => {
   const actualPierreInternals = await vi.importActual<
     typeof import("../src/diff/pierre-internals.ts")
   >("../src/diff/pierre-internals.ts");
   const actualPierreDiffs = await actualPierreInternals.loadPierreDiffs();
-  const getSharedHighlighter = vi.fn(async () => ({ mocked: true }));
+  const getSharedHighlighter = vi.fn(async () => createMockHighlighter());
   const renderDiffWithHighlighter = vi.fn(
     (diff: Parameters<PierreDiffsModule["renderDiffWithHighlighter"]>[0]) => ({
       themeStyles: "--mock-token: #48bcca;",
@@ -479,7 +532,7 @@ test("hydrates deferred files into syntax-highlighted previews", async () => {
     typeof import("../src/diff/pierre-internals.ts")
   >("../src/diff/pierre-internals.ts");
   const actualPierreDiffs = await actualPierreInternals.loadPierreDiffs();
-  const getSharedHighlighter = vi.fn(async () => ({ mocked: true }));
+  const getSharedHighlighter = vi.fn(async () => createMockHighlighter());
   const renderDiffWithHighlighter = vi.fn(() => ({
     themeStyles: "--keyword: #c678dd; --number: #e5c07b;",
     code: {
@@ -584,12 +637,130 @@ test("hydrates deferred files into syntax-highlighted previews", async () => {
   expect(hydratedFiles[0]?.sideBySideRows).not.toEqual([]);
 });
 
+test("loads a missing language on demand before failing the file render", async () => {
+  const actualPierreInternals = await vi.importActual<
+    typeof import("../src/diff/pierre-internals.ts")
+  >("../src/diff/pierre-internals.ts");
+  const actualPierreDiffs = await actualPierreInternals.loadPierreDiffs();
+  const highlighter = {
+    getLoadedLanguages: vi.fn(() => []),
+    loadLanguage: vi.fn(async () => undefined),
+  };
+  const getSharedHighlighter = vi.fn(async () => highlighter);
+  const renderDiffWithHighlighter = vi
+    .fn(
+      (
+        diff: Parameters<PierreDiffsModule["renderDiffWithHighlighter"]>[0],
+      ): ReturnType<PierreDiffsModule["renderDiffWithHighlighter"]> => ({
+        themeStyles: "--mock-token: #48bcca;",
+        code: {
+          deletionLines: diff.deletionLines.map((line) => ({ type: "text", value: line })),
+          additionLines: diff.additionLines.map((line) => ({ type: "text", value: line })),
+        },
+      }),
+    )
+    .mockImplementationOnce(() => {
+      throw new Error("Language `dockerfile` not found, you may need to load it first");
+    });
+
+  pierreInternalsState.loadPierreDiffsOverride = async () => ({
+    ...actualPierreDiffs,
+    getSharedHighlighter,
+    renderDiffWithHighlighter,
+  });
+
+  const prepared = await prepareReviewSession(
+    createReviewSession({
+      files: [
+        {
+          path: "Dockerfile",
+          status: "modified",
+          additions: 1,
+          deletions: 1,
+          isBinary: false,
+          patch: [
+            "diff --git a/Dockerfile b/Dockerfile",
+            "index 1111111..2222222 100644",
+            "--- a/Dockerfile",
+            "+++ b/Dockerfile",
+            "@@ -1 +1 @@",
+            "-FROM node:20",
+            "+FROM node:22",
+          ].join("\n"),
+        },
+      ],
+    }),
+    "pierre-dark",
+  );
+
+  expect(highlighter.loadLanguage).toHaveBeenCalledWith("dockerfile");
+  expect(renderDiffWithHighlighter).toHaveBeenCalledTimes(2);
+  expect(prepared.files[0]?.renderError).toBeUndefined();
+  expect(prepared.files[0]?.unifiedLines).not.toHaveLength(0);
+});
+
+test("falls back to plain text rows when loading the missing language still fails", async () => {
+  const actualPierreInternals = await vi.importActual<
+    typeof import("../src/diff/pierre-internals.ts")
+  >("../src/diff/pierre-internals.ts");
+  const actualPierreDiffs = await actualPierreInternals.loadPierreDiffs();
+  const highlighter = {
+    getLoadedLanguages: vi.fn(() => []),
+    loadLanguage: vi.fn(async () => {
+      throw new Error("load failed");
+    }),
+  };
+  const getSharedHighlighter = vi.fn(async () => highlighter);
+  const renderDiffWithHighlighter = vi.fn(() => {
+    throw new Error("Language `dockerfile` not found, you may need to load it first");
+  });
+
+  pierreInternalsState.loadPierreDiffsOverride = async () => ({
+    ...actualPierreDiffs,
+    getSharedHighlighter,
+    renderDiffWithHighlighter,
+  });
+
+  const prepared = await prepareReviewSession(
+    createReviewSession({
+      files: [
+        {
+          path: "Dockerfile",
+          status: "modified",
+          additions: 1,
+          deletions: 1,
+          isBinary: false,
+          patch: [
+            "diff --git a/Dockerfile b/Dockerfile",
+            "index 1111111..2222222 100644",
+            "--- a/Dockerfile",
+            "+++ b/Dockerfile",
+            "@@ -1,2 +1,2 @@",
+            "-FROM node:20",
+            "+FROM node:22",
+            " RUN npm ci",
+          ].join("\n"),
+        },
+      ],
+    }),
+    "pierre-dark",
+  );
+
+  expect(highlighter.loadLanguage).toHaveBeenCalledWith("dockerfile");
+  expect(prepared.files[0]?.renderError).toBeUndefined();
+  expect(
+    prepared.files[0]?.unifiedLines.map((line) =>
+      line.segments.map((segment) => segment.text).join(""),
+    ),
+  ).toEqual(["FROM node:20", "FROM node:22", "RUN npm ci"]);
+});
+
 test("keeps the first hunk header when the first change is not at the top of the file", async () => {
   const actualPierreInternals = await vi.importActual<
     typeof import("../src/diff/pierre-internals.ts")
   >("../src/diff/pierre-internals.ts");
   const actualPierreDiffs = await actualPierreInternals.loadPierreDiffs();
-  const getSharedHighlighter = vi.fn(async () => ({ mocked: true }));
+  const getSharedHighlighter = vi.fn(async () => createMockHighlighter());
   const renderDiffWithHighlighter = vi.fn(
     (diff: Parameters<PierreDiffsModule["renderDiffWithHighlighter"]>[0]) => ({
       themeStyles: "--mock-token: #48bcca;",
@@ -692,6 +863,19 @@ test("startup session loading defers syntax rendering until viewport hydration",
     },
   );
 });
+
+function createMockHighlighter(loadedLanguages: string[] = []): PierreHighlighter {
+  const languages = [...loadedLanguages];
+
+  return {
+    getLoadedLanguages: () => [...languages],
+    async loadLanguage(language: string) {
+      if (!languages.includes(language)) {
+        languages.push(language);
+      }
+    },
+  };
+}
 
 function createDarkPalette(): TerminalColors {
   return {

@@ -36,6 +36,16 @@ describe("shell syntax language resolution", () => {
     expect(getDiffFiletype("Cargo.toml")).toBe("toml");
   });
 
+  test("resolves Dockerfile names through the basename fallback", () => {
+    expect(resolveSyntaxLanguage({ path: "Dockerfile" })).toBe("dockerfile");
+    expect(resolvePierreLanguage({ path: "Dockerfile" })).toBe("dockerfile");
+    expect(getDiffFiletype("Dockerfile")).toBe("dockerfile");
+
+    expect(resolveSyntaxLanguage({ path: "docker/Dockerfile.prod" })).toBe("dockerfile");
+    expect(resolvePierreLanguage({ path: "docker/Dockerfile.prod" })).toBe("dockerfile");
+    expect(getDiffFiletype("docker/Dockerfile.prod")).toBe("dockerfile");
+  });
+
   test("uses Pierre-compatible aliases for high-risk formats", () => {
     expect(resolveSyntaxLanguage({ path: "src/app.tsx" })).toBe("typescriptreact");
     expect(resolvePierreLanguage({ path: "src/app.tsx" })).toBe("tsx");

@@ -1,6 +1,11 @@
 import type { FileDiffMetadata } from "@pierre/diffs";
 import type { ReviewSession, StartupOptions } from "@diffdiff/core";
-import { loadReviewSession, logDiffdiffError, logDiffdiffInfo } from "@diffdiff/core";
+import {
+  loadReviewSession,
+  logDiffdiffError,
+  logDiffdiffInfo,
+  logDiffdiffWarn,
+} from "@diffdiff/core";
 import { createPierreSegmentColorResolver } from "../pierre-colors.ts";
 import { resolvePierreLanguage } from "../language.ts";
 import { getSyntaxPalette, type SyntaxPalette } from "../syntax-palette.ts";
@@ -12,8 +17,17 @@ import {
   getLineNumberWidth,
   parseReviewFile,
 } from "./plain-preview.ts";
-import { loadPierreDiffs, type PrepareReviewSessionOptions } from "./pierre-internals.ts";
+import {
+  loadPierreDiffs,
+  type HastTextNode,
+  type PierreDiffsModule,
+  type PierreHighlighter,
+  type PrepareReviewSessionOptions,
+} from "./pierre-internals.ts";
 import { buildSideBySideRows, buildUnifiedLines, parseThemeVariables } from "./rich-preview.ts";
+
+const MISSING_LANGUAGE_ERROR_PATTERN =
+  /Language `([^`]+)` not found, you may need to load it first/u;
 
 function getMonotonicNow(): number {
   const now = globalThis.performance?.now?.();
@@ -97,14 +111,16 @@ export async function prepareReviewSession(
   const resolveSegmentColor = createPierreSegmentColorResolver(themeName, theme, syntaxPalette);
 
   const renderFilesStartedAt = getMonotonicNow();
-  const files = parsedFiles.map((file) =>
-    renderPreparedFile(
-      file,
-      pierreDiffs,
-      highlighter,
-      themeName,
-      resolveSegmentColor,
-      prepareOptions.initialDiffView ?? "both",
+  const files = await Promise.all(
+    parsedFiles.map((file) =>
+      renderPreparedFile(
+        file,
+        pierreDiffs,
+        highlighter,
+        themeName,
+        resolveSegmentColor,
+        prepareOptions.initialDiffView ?? "both",
+      ),
     ),
   );
   const renderedFilesAt = getMonotonicNow();
@@ -150,17 +166,19 @@ export async function hydratePreparedReviewFiles(
   });
   const resolveSegmentColor = createPierreSegmentColorResolver(themeName, theme, syntaxPalette);
 
-  return files.map((file) =>
-    shouldHydratePreparedFile(file)
-      ? renderPreparedFile(
-          file,
-          pierreDiffs,
-          highlighter,
-          themeName,
-          resolveSegmentColor,
-          prepareOptions.initialDiffView ?? "both",
-        )
-      : file,
+  return Promise.all(
+    files.map((file) =>
+      shouldHydratePreparedFile(file)
+        ? renderPreparedFile(
+            file,
+            pierreDiffs,
+            highlighter,
+            themeName,
+            resolveSegmentColor,
+            prepareOptions.initialDiffView ?? "both",
+          )
+        : file,
+    ),
   );
 }
 
@@ -236,57 +254,53 @@ function collectLanguages(
   return languages;
 }
 
-function renderPreparedFile(
+async function renderPreparedFile(
   file: PreparedReviewFile,
-  pierreDiffs: Awaited<ReturnType<typeof loadPierreDiffs>>,
-  highlighter: unknown,
+  pierreDiffs: PierreDiffsModule,
+  highlighter: PierreHighlighter,
   themeName: PierreThemeName,
   resolveSegmentColor: ReturnType<typeof createPierreSegmentColorResolver>,
   initialDiffView: PrepareReviewSessionOptions["initialDiffView"],
-): PreparedReviewFile {
+): Promise<PreparedReviewFile> {
   if (file.diff == null || file.isBinary) {
     return file;
   }
 
   try {
-    const rendered = pierreDiffs.renderDiffWithHighlighter(file.diff, highlighter, {
-      theme: themeName,
-      tokenizeMaxLineLength: 500,
-      lineDiffType: "word",
-    });
-
-    const themeVariables = parseThemeVariables(rendered.themeStyles);
-    // Startup spends most of its time building diff rows. When the app opens in unified mode,
-    // skipping split-row materialization cuts a large chunk of that work without losing the raw
-    // patch data needed to render the alternate view later.
-    const unifiedLines =
-      initialDiffView === "unified" || initialDiffView === "both"
-        ? buildUnifiedLines(
-            file.diff,
-            rendered.code.deletionLines as never[],
-            rendered.code.additionLines as never[],
-            themeVariables,
-            resolveSegmentColor,
-          )
-        : [];
-    const sideBySideRows =
-      initialDiffView === "split" || initialDiffView === "both"
-        ? buildSideBySideRows(
-            file.diff,
-            rendered.code.deletionLines as never[],
-            rendered.code.additionLines as never[],
-            themeVariables,
-            resolveSegmentColor,
-          )
-        : [];
-
-    return {
-      ...file,
-      sideBySideRows,
-      unifiedLines,
-      lineNumberWidth: getLineNumberWidth(file.diff),
-    };
+    return buildPreparedFileFromRenderedDiff(
+      file,
+      pierreDiffs.renderDiffWithHighlighter(file.diff, highlighter, {
+        theme: themeName,
+        tokenizeMaxLineLength: 500,
+        lineDiffType: "word",
+      }),
+      resolveSegmentColor,
+      initialDiffView,
+    );
   } catch (error) {
+    const missingLanguage = getMissingLanguage(error);
+    if (missingLanguage != null) {
+      const recovered = await tryRenderPreparedFileWithLoadedLanguage(
+        file,
+        pierreDiffs,
+        highlighter,
+        themeName,
+        resolveSegmentColor,
+        initialDiffView,
+        missingLanguage,
+      );
+      if (recovered != null) {
+        return recovered;
+      }
+
+      logDiffdiffWarn("render", "diff_render_plain_text_fallback", {
+        missingLanguage,
+        path: file.path,
+        themeName,
+      });
+      return buildPlainTextPreparedFile(file, resolveSegmentColor, initialDiffView);
+    }
+
     logDiffdiffError("render", "diff_render_failed", error, {
       path: file.path,
       themeName,
@@ -296,6 +310,139 @@ function renderPreparedFile(
       renderError: error instanceof Error ? error.message : "Unable to render diff.",
     };
   }
+}
+
+function buildPreparedFileFromRenderedDiff(
+  file: PreparedReviewFile,
+  rendered: ReturnType<PierreDiffsModule["renderDiffWithHighlighter"]>,
+  resolveSegmentColor: ReturnType<typeof createPierreSegmentColorResolver>,
+  initialDiffView: PrepareReviewSessionOptions["initialDiffView"],
+): PreparedReviewFile {
+  const diff = file.diff;
+  if (diff == null) {
+    return file;
+  }
+
+  const themeVariables = parseThemeVariables(rendered.themeStyles);
+  // Startup spends most of its time building diff rows. When the app opens in unified mode,
+  // skipping split-row materialization cuts a large chunk of that work without losing the raw
+  // patch data needed to render the alternate view later.
+  const unifiedLines =
+    initialDiffView === "unified" || initialDiffView === "both"
+      ? buildUnifiedLines(
+          diff,
+          rendered.code.deletionLines as never[],
+          rendered.code.additionLines as never[],
+          themeVariables,
+          resolveSegmentColor,
+        )
+      : [];
+  const sideBySideRows =
+    initialDiffView === "split" || initialDiffView === "both"
+      ? buildSideBySideRows(
+          diff,
+          rendered.code.deletionLines as never[],
+          rendered.code.additionLines as never[],
+          themeVariables,
+          resolveSegmentColor,
+        )
+      : [];
+
+  return {
+    ...file,
+    renderError: undefined,
+    sideBySideRows,
+    unifiedLines,
+    lineNumberWidth: getLineNumberWidth(diff),
+  };
+}
+
+async function tryRenderPreparedFileWithLoadedLanguage(
+  file: PreparedReviewFile,
+  pierreDiffs: PierreDiffsModule,
+  highlighter: PierreHighlighter,
+  themeName: PierreThemeName,
+  resolveSegmentColor: ReturnType<typeof createPierreSegmentColorResolver>,
+  initialDiffView: PrepareReviewSessionOptions["initialDiffView"],
+  missingLanguage: string,
+): Promise<PreparedReviewFile | undefined> {
+  try {
+    if (!highlighter.getLoadedLanguages().includes(missingLanguage)) {
+      await highlighter.loadLanguage(missingLanguage);
+      logDiffdiffWarn("render", "diff_render_language_loaded_on_demand", {
+        missingLanguage,
+        path: file.path,
+        themeName,
+      });
+    }
+
+    return buildPreparedFileFromRenderedDiff(
+      file,
+      pierreDiffs.renderDiffWithHighlighter(file.diff!, highlighter, {
+        theme: themeName,
+        tokenizeMaxLineLength: 500,
+        lineDiffType: "word",
+      }),
+      resolveSegmentColor,
+      initialDiffView,
+    );
+  } catch (retryError) {
+    logDiffdiffWarn("render", "diff_render_retry_failed_after_language_load", {
+      error: retryError,
+      missingLanguage,
+      path: file.path,
+      themeName,
+    });
+    return undefined;
+  }
+}
+
+function buildPlainTextPreparedFile(
+  file: PreparedReviewFile,
+  resolveSegmentColor: ReturnType<typeof createPierreSegmentColorResolver>,
+  initialDiffView: PrepareReviewSessionOptions["initialDiffView"],
+): PreparedReviewFile {
+  const diff = file.diff;
+  if (diff == null) {
+    return file;
+  }
+
+  const deletionLines = createPlainTextNodes(diff.deletionLines);
+  const additionLines = createPlainTextNodes(diff.additionLines);
+  const themeVariables = new Map<string, string>();
+
+  return {
+    ...file,
+    renderError: undefined,
+    sideBySideRows:
+      initialDiffView === "split" || initialDiffView === "both"
+        ? buildSideBySideRows(
+            diff,
+            deletionLines,
+            additionLines,
+            themeVariables,
+            resolveSegmentColor,
+          )
+        : [],
+    unifiedLines:
+      initialDiffView === "unified" || initialDiffView === "both"
+        ? buildUnifiedLines(diff, deletionLines, additionLines, themeVariables, resolveSegmentColor)
+        : [],
+    lineNumberWidth: getLineNumberWidth(diff),
+  };
+}
+
+function createPlainTextNodes(lines: readonly string[]): HastTextNode[] {
+  return lines.map((line) => ({ type: "text", value: line }));
+}
+
+function getMissingLanguage(error: unknown): string | undefined {
+  const message = error instanceof Error ? error.message : undefined;
+  if (message == null) {
+    return undefined;
+  }
+
+  return MISSING_LANGUAGE_ERROR_PATTERN.exec(message)?.[1];
 }
 
 function summarizePreparedFiles(files: readonly PreparedReviewFile[]): {
