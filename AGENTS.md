@@ -164,3 +164,7 @@ When you need to visually inspect the TUI, use `ht-mcp` to spawn a bash session,
 build, and launch the TUI. The terminal output includes raw ANSI escape
 sequences, so parse cursor position codes (`[row;colH`) and color codes
 (`\x1b[48;2;r;g;bm`) to determine element positions and boundaries.
+
+For bug reports, use this default flow: reproduce with `ht-mcp`, add a failing
+test that captures the bug, implement the fix, then verify the fix again with
+`ht-mcp` before finishing.
