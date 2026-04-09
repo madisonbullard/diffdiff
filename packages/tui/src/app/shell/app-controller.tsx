@@ -370,6 +370,8 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     persistence,
     prefetchComparisonBrowserData,
     refreshGitHubPullRequestList: githubActions.refreshGitHubPullRequestList,
+    shouldRefreshGitHubPullRequests:
+      (props.isGitHubAuthenticated ?? false) && props.listGitHubPullRequests != null,
     state,
     startupInstrumentation: props.startupInstrumentation,
   });

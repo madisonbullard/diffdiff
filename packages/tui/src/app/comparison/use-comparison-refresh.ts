@@ -9,6 +9,7 @@ import {
   TERMINAL_FOCUS_EVENT,
 } from "../shared/constants.ts";
 import { getRefreshIndicatorLabel } from "./refresh-indicator.ts";
+import { useStableInterval } from "../shared/use-stable-interval.ts";
 
 interface UseRefreshOptions {
   actions: {
@@ -160,23 +161,22 @@ export function useDiffdiffAppRefresh({ actions, persistence, props, state }: Us
       void syncGitStateOnFocus();
     };
 
-    const intervalId = setInterval(() => {
-      if (!state.terminalFocusedRef.current) {
-        return;
-      }
-
-      void checkForUpdates();
-    }, LIVE_REFRESH_INTERVAL_MS);
-
     state.renderer.on(TERMINAL_BLUR_EVENT, handleBlur);
     state.renderer.on(TERMINAL_FOCUS_EVENT, handleFocus);
 
     return () => {
-      clearInterval(intervalId);
       state.renderer.off(TERMINAL_BLUR_EVENT, handleBlur);
       state.renderer.off(TERMINAL_FOCUS_EVENT, handleFocus);
     };
   }, [checkForUpdates, state.renderer, state.terminalFocusedRef, syncGitStateOnFocus]);
+
+  useStableInterval(() => {
+    if (!state.terminalFocusedRef.current) {
+      return;
+    }
+
+    void checkForUpdates();
+  }, LIVE_REFRESH_INTERVAL_MS);
 
   return {
     checkForUpdates,
