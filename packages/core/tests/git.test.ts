@@ -309,6 +309,61 @@ describe("loadReviewSession", () => {
       );
     },
   );
+
+  test(
+    "explains when a remote-tracking head ref disappears after a branch is deleted",
+    { timeout: 20_000 },
+    async () => {
+      const remoteRepositoryPath = await createBareRepository();
+      const seedRepositoryPath = await createTemporaryRepository();
+
+      await runGit(seedRepositoryPath, ["checkout", "-b", "main"]);
+      await runGit(seedRepositoryPath, ["remote", "add", "origin", remoteRepositoryPath]);
+      await writeFile(join(seedRepositoryPath, "index.ts"), "export const version = 1;\n");
+      await runGit(seedRepositoryPath, ["add", "index.ts"]);
+      await commitAll(seedRepositoryPath, "Initial commit");
+      await runGit(seedRepositoryPath, ["push", "-u", "origin", "main"]);
+
+      const clientRepositoryPath = await cloneRepository(remoteRepositoryPath, "main");
+
+      await runGit(seedRepositoryPath, ["checkout", "-b", "andrewha/epd-3435-upgrade-e2e-gen2"]);
+      await writeFile(join(seedRepositoryPath, "index.ts"), "export const version = 2;\n");
+      await runGit(seedRepositoryPath, ["add", "index.ts"]);
+      await commitAll(seedRepositoryPath, "Add feature branch");
+      await runGit(seedRepositoryPath, [
+        "push",
+        "-u",
+        "origin",
+        "andrewha/epd-3435-upgrade-e2e-gen2",
+      ]);
+
+      const initialSession = await loadReviewSession({
+        base: "origin/main",
+        head: "andrewha/epd-3435-upgrade-e2e-gen2",
+        repoPath: clientRepositoryPath,
+      });
+
+      expect(initialSession.comparison.head).toBe("origin/andrewha/epd-3435-upgrade-e2e-gen2");
+
+      await runGit(seedRepositoryPath, [
+        "push",
+        "origin",
+        "--delete",
+        "andrewha/epd-3435-upgrade-e2e-gen2",
+      ]);
+      await runGit(clientRepositoryPath, ["fetch", "--prune", "origin"]);
+
+      await expect(
+        loadReviewSession({
+          base: "origin/main",
+          head: "origin/andrewha/epd-3435-upgrade-e2e-gen2",
+          repoPath: clientRepositoryPath,
+        }),
+      ).rejects.toThrow(
+        "Unable to resolve head ref 'origin/andrewha/epd-3435-upgrade-e2e-gen2'. Remote branch 'origin/andrewha/epd-3435-upgrade-e2e-gen2' is no longer available locally or on remote 'origin'. If this comparison came from a pull request, the branch may have been deleted after the pull request was merged or closed.",
+      );
+    },
+  );
 });
 
 async function createTemporaryRepository(): Promise<string> {

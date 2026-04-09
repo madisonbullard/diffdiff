@@ -242,8 +242,11 @@ class GitRepository implements RepositoryHandle {
 
   private async resolveComparison(options: StartupOptions): Promise<ResolvedComparison> {
     const resolvedOptions = await ensureComparisonRefsAvailable(this.rootPath, options);
-    const currentBranch = await this.getCurrentBranch();
-    const defaultBranch = await this.selectDefaultBaseRef();
+    const [currentBranch, defaultBranch, remoteNames] = await Promise.all([
+      this.getCurrentBranch(),
+      this.selectDefaultBaseRef(),
+      listGitRemoteNames(this.rootPath),
+    ]);
     const head = resolvedOptions.head ?? currentBranch ?? "HEAD";
     const base = resolvedOptions.base ?? defaultBranch;
 
@@ -268,7 +271,9 @@ class GitRepository implements RepositoryHandle {
     ]);
 
     if (baseSha == null || headSha == null) {
-      throw new DiffdiffError(buildMissingComparisonRefMessage(base, head, baseSha, headSha));
+      throw new DiffdiffError(
+        buildMissingComparisonRefMessage(base, head, baseSha, headSha, remoteNames),
+      );
     }
 
     return {
@@ -537,11 +542,28 @@ function buildMissingComparisonRefMessage(
   head: string,
   baseSha: string | undefined,
   headSha: string | undefined,
+  remoteNames: readonly string[],
 ): string {
   const missingRefs = [
-    baseSha == null ? `base ref '${base}'` : undefined,
-    headSha == null ? `head ref '${head}'` : undefined,
+    baseSha == null ? { label: `base ref '${base}'`, ref: base } : undefined,
+    headSha == null ? { label: `head ref '${head}'`, ref: head } : undefined,
   ].filter((value) => value != null);
 
-  return `Unable to resolve ${missingRefs.join(" and ")}. Make sure each ref exists locally or on a configured remote.`;
+  const missingRemoteTrackingRefs = missingRefs
+    .map((missingRef) => ({
+      ...missingRef,
+      remoteTrackingRef: parseRemoteQualifiedRef(missingRef.ref, remoteNames),
+    }))
+    .filter((missingRef) => missingRef.remoteTrackingRef != null);
+
+  if (missingRefs.length === 1 && missingRemoteTrackingRefs.length === 1) {
+    const missingRef = missingRemoteTrackingRefs[0]!;
+    return `Unable to resolve ${missingRef.label}. Remote branch '${missingRef.ref}' is no longer available locally or on remote '${missingRef.remoteTrackingRef!.remoteName}'. If this comparison came from a pull request, the branch may have been deleted after the pull request was merged or closed.`;
+  }
+
+  if (missingRemoteTrackingRefs.length > 0) {
+    return `Unable to resolve ${missingRefs.map((missingRef) => missingRef.label).join(" and ")}. One or more remote branches are no longer available locally or on their configured remotes. If this comparison came from a pull request, a branch may have been deleted after the pull request was merged or closed.`;
+  }
+
+  return `Unable to resolve ${missingRefs.map((missingRef) => missingRef.label).join(" and ")}. Make sure each ref exists locally or on a configured remote.`;
 }
