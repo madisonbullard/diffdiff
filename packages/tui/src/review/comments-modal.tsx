@@ -1,6 +1,8 @@
 import type {
+  GitHubPullRequestComment,
   GitHubPullRequestConversationItem,
   GitHubPullRequestDetail,
+  GitHubPullRequestReviewGroup,
 } from "@madisonbullard/diffdiff-core";
 import type { UiTheme } from "../theme.ts";
 import { CommentTimestamp, ReviewMetaSeparator } from "./comment-metadata.tsx";
@@ -104,6 +106,15 @@ export function PullRequestCommentsModal({
                 key={item.id}
                 isSelected={item.id === selectedItemId}
                 item={item}
+                reviewGroup={
+                  item.kind !== "review"
+                    ? undefined
+                    : pullRequest.reviewGroups.find(
+                        (candidate) =>
+                          candidate.reviewId === item.reviewId ||
+                          candidate.reviewNodeId === item.reviewNodeId,
+                      )
+                }
                 theme={theme}
               />
             ))}
@@ -117,16 +128,20 @@ export function PullRequestCommentsModal({
 function ConversationItemCard({
   isSelected,
   item,
+  reviewGroup,
   theme,
 }: {
   isSelected: boolean;
   item: GitHubPullRequestConversationItem;
+  reviewGroup?: GitHubPullRequestReviewGroup;
   theme: UiTheme;
 }) {
   const accentColor =
     item.kind === "review" && item.reviewState != null
       ? getReviewStateColor(item.reviewState, theme)
       : theme.accent;
+  const body = item.body.trim();
+  const reviewComments = reviewGroup?.comments ?? [];
 
   return (
     <box
@@ -148,12 +163,68 @@ function ConversationItemCard({
         <span fg={accentColor}>
           {item.kind === "review" ? (item.reviewState ?? "review").toLowerCase() : "pr comment"}
         </span>
+        {reviewComments.length > 0 ? (
+          <>
+            <ReviewMetaSeparator theme={theme} />
+            <span>{formatCommentCount(reviewComments.length)}</span>
+          </>
+        ) : null}
         <ReviewMetaSeparator theme={theme} />
         <CommentTimestamp theme={theme} value={item.createdAt || item.updatedAt} />
       </text>
-      <text fg={theme.text} wrapMode="word">
-        {item.body}
-      </text>
+      {body !== "" ? (
+        <text fg={theme.text} wrapMode="word">
+          {body}
+        </text>
+      ) : null}
+      {reviewComments.length > 0 ? (
+        <ReviewCommentList comments={reviewComments} theme={theme} />
+      ) : null}
     </box>
   );
+}
+
+function ReviewCommentList({
+  comments,
+  theme,
+}: {
+  comments: readonly GitHubPullRequestComment[];
+  theme: UiTheme;
+}) {
+  return (
+    <box width="100%" flexDirection="column" gap={1}>
+      {comments.map((comment) => (
+        <box key={comment.id} width="100%" flexDirection="column">
+          <text fg={theme.textMuted} wrapMode="none">
+            <span fg={theme.accent}>{comment.author.login}</span>
+            <ReviewMetaSeparator theme={theme} />
+            <span fg={theme.text}>{formatCommentAnchor(comment)}</span>
+            <ReviewMetaSeparator theme={theme} />
+            <CommentTimestamp theme={theme} value={comment.createdAt} />
+          </text>
+          <text fg={theme.text} wrapMode="word">
+            {comment.body}
+            {comment.isOutdated ? <span fg={theme.warning}>{"  [outdated]"}</span> : null}
+          </text>
+        </box>
+      ))}
+    </box>
+  );
+}
+
+function formatCommentAnchor(comment: GitHubPullRequestComment): string {
+  const anchorLine = comment.line ?? comment.originalLine;
+  if (anchorLine == null) {
+    return comment.path;
+  }
+
+  if (comment.startLine != null && comment.startLine !== anchorLine) {
+    return `${comment.path}:${comment.startLine}-${anchorLine}`;
+  }
+
+  return `${comment.path}:${anchorLine}`;
+}
+
+function formatCommentCount(commentCount: number): string {
+  return `${commentCount} comment${commentCount === 1 ? "" : "s"}`;
 }

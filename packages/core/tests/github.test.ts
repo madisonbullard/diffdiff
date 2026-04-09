@@ -11,6 +11,7 @@ import {
 } from "../src/github/index.ts";
 import { resolveGitHubAuth, storeGitHubToken } from "../src/github/auth.ts";
 import { getGitHubAuthConfigPaths } from "../src/github/config.ts";
+import { buildConversationItems } from "../src/github/pull-request-mappers.ts";
 import { GitHubPullRequestService } from "../src/github/pull-request-service.ts";
 import {
   buildPullRequestFingerprint,
@@ -495,6 +496,50 @@ describe("GitHubPullRequestService", () => {
     expect(session.github?.pullRequest.reviewThreads[0]?.comments).toHaveLength(2);
     expect(session.github?.pullRequest.pendingReview).toMatchObject({ id: 9010 });
     expect(session.warnings).toEqual([]);
+  });
+
+  test("includes submitted reviews without review bodies when they contain inline comments", () => {
+    const items = buildConversationItems(
+      [
+        {
+          body: "",
+          html_url: "https://github.com/diffdiff/diffdiff/pull/42#pullrequestreview-9002",
+          id: 9002,
+          node_id: "PRR_9002",
+          state: "COMMENTED",
+          submitted_at: "2026-04-01T12:00:00Z",
+          user: { html_url: "https://github.com/madison", login: "madison" },
+        },
+      ],
+      [
+        {
+          author: { login: "madison", url: "https://github.com/madison" },
+          body: "Inline review context.",
+          createdAt: "2026-04-01T12:01:00Z",
+          id: 101,
+          isOutdated: false,
+          line: 4,
+          nodeId: "PRRC_101",
+          path: "src/app.ts",
+          reviewId: 9002,
+          side: "RIGHT",
+          updatedAt: "2026-04-01T12:01:00Z",
+          url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r101",
+        },
+      ],
+      [],
+    );
+
+    expect(items).toEqual([
+      expect.objectContaining({
+        author: { login: "madison", url: "https://github.com/madison" },
+        body: "",
+        id: "review:9002",
+        kind: "review",
+        reviewId: 9002,
+        reviewState: "COMMENTED",
+      }),
+    ]);
   });
 
   test("probes PR freshness with the same checks state as a loaded session", async () => {

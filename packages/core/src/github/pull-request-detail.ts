@@ -70,6 +70,7 @@ export async function loadPullRequestDetail(
     .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
   const conversationItems = buildConversationItems(
     reviewsResponse,
+    comments,
     issueCommentsResponse.map(mapIssueComment),
   );
   const reviewGroups = buildReviewGroups(reviewsResponse, comments);

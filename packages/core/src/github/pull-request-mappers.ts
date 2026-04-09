@@ -93,14 +93,27 @@ export function buildReviewGroups(
 
 export function buildConversationItems(
   reviews: readonly GitHubReviewResponse[],
+  comments: readonly GitHubPullRequestComment[],
   issueComments: readonly GitHubPullRequestConversationItem[],
 ): GitHubPullRequestConversationItem[] {
+  const reviewCommentCounts = new Map<number, number>();
+  for (const comment of comments) {
+    if (comment.reviewId == null) {
+      continue;
+    }
+
+    reviewCommentCounts.set(comment.reviewId, (reviewCommentCounts.get(comment.reviewId) ?? 0) + 1);
+  }
+
   const reviewItems = reviews
     .filter((review) => review.state !== "PENDING")
-    .filter((review) => review.body != null && review.body.trim() !== "")
+    .filter((review) => {
+      const body = review.body?.trim() ?? "";
+      return body !== "" || (reviewCommentCounts.get(review.id) ?? 0) > 0;
+    })
     .map((review) => ({
       author: mapActor(review.user),
-      body: review.body!.trim(),
+      body: review.body?.trim() ?? "",
       createdAt: review.submitted_at ?? "",
       id: `review:${review.id}`,
       kind: "review" as const,

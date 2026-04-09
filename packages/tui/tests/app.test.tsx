@@ -2862,6 +2862,8 @@ test("shows a red closed PR tag", () => {
 
 test("opens the PR comments modal from review mode", () => {
   const pendingComment = "This pending review note should stay hidden.";
+  const inlineReviewComment =
+    "Configured tracing before importing FastAPI because ddtrace patches framework integrations at import time.";
   const tree = render(
     <DiffdiffApp
       {...createAppProps({
@@ -2869,6 +2871,24 @@ test("opens the PR comments modal from review mode", () => {
           github: createGitHubReviewSession({
             pullRequest: {
               ...createGitHubReviewSession()!.pullRequest,
+              conversationItems: [
+                ...createGitHubReviewSession()!.pullRequest.conversationItems,
+                {
+                  author: {
+                    login: "madisonbullard",
+                    url: "https://github.com/madisonbullard",
+                  },
+                  body: "",
+                  createdAt: "2026-04-01T12:02:00Z",
+                  id: "review:9011",
+                  kind: "review",
+                  reviewId: 9011,
+                  reviewNodeId: "PRR_9011",
+                  reviewState: "COMMENTED",
+                  updatedAt: "2026-04-01T12:02:00Z",
+                  url: "https://github.com/diffdiff/diffdiff/pull/42#pullrequestreview-9011",
+                },
+              ],
               pendingReview: {
                 body: pendingComment,
                 comments: [
@@ -2894,6 +2914,36 @@ test("opens the PR comments modal from review mode", () => {
               },
               reviewGroups: [
                 ...createGitHubReviewSession()!.pullRequest.reviewGroups,
+                {
+                  author: {
+                    login: "madisonbullard",
+                    url: "https://github.com/madisonbullard",
+                  },
+                  body: inlineReviewComment,
+                  comments: [
+                    {
+                      author: {
+                        login: "madisonbullard",
+                        url: "https://github.com/madisonbullard",
+                      },
+                      body: inlineReviewComment,
+                      createdAt: "2026-04-01T12:02:00Z",
+                      id: 104,
+                      isOutdated: false,
+                      line: 11,
+                      nodeId: "PRRC_104",
+                      path: "src/app.ts",
+                      reviewId: 9011,
+                      side: "RIGHT",
+                      updatedAt: "2026-04-01T12:02:00Z",
+                      url: "https://github.com/diffdiff/diffdiff/pull/42#discussion_r104",
+                    },
+                  ],
+                  reviewId: 9011,
+                  reviewNodeId: "PRR_9011",
+                  state: "COMMENTED",
+                  submittedAt: "2026-04-01T12:02:00Z",
+                },
                 {
                   author: {
                     login: "madisonbullard",
@@ -2937,6 +2987,7 @@ test("opens the PR comments modal from review mode", () => {
   expect(getAppText(tree)).toContain("PR Conversation");
   expect(getAppText(tree)).toContain("Looks ready to merge.");
   expect(getAppText(tree)).toContain("Can we tighten the rollout copy?");
+  expect(getAppText(tree)).toContain(inlineReviewComment);
   expect(getAppText(tree)).not.toContain(pendingComment);
   expect(getAppText(tree)).not.toContain("pending");
 });
