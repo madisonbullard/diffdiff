@@ -4,7 +4,6 @@ export const TERMINAL_FOCUS_EVENT = "focus";
 export const TERMINAL_BLUR_EVENT = "blur";
 export const ALIGN_SELECTED_FILE_SCROLL_OFFSET = 6;
 export const LIVE_REFRESH_INTERVAL_MS = 5_000;
-export const GITHUB_PULL_REQUEST_LIST_REFRESH_INTERVAL_MS = 60_000;
 export const INITIAL_FILE_BODY_RENDER_COUNT = 8;
 export const FILE_PREVIEW_HYDRATION_DISTANCE = 24;
 export const GITHUB_DIALOGS = new Set<import("../dialogs/stack.ts").AppDialog>([

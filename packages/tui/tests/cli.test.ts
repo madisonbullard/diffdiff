@@ -34,11 +34,9 @@ describe("diffdiff CLI help", () => {
   });
 
   test("supports -h on the auth command and its subcommands", async () => {
-    const [authHelp, loginHelp, logoutHelp] = await Promise.all([
-      runCli(["auth", "-h"]),
-      runCli(["auth", "login", "-h"]),
-      runCli(["auth", "logout", "-h"]),
-    ]);
+    const authHelp = await runCli(["auth", "-h"]);
+    const loginHelp = await runCli(["auth", "login", "-h"]);
+    const logoutHelp = await runCli(["auth", "logout", "-h"]);
 
     expect(authHelp.stdout).toContain("Usage: diffdiff auth");
     expect(authHelp.stdout).toContain("login");
@@ -49,7 +47,7 @@ describe("diffdiff CLI help", () => {
     expect(loginHelp.stdout).toContain("--token-stdin");
 
     expect(logoutHelp.stdout).toContain("Usage: diffdiff auth logout");
-  }, 15_000);
+  });
 
   test("supports -h on the session command and its subcommands", async () => {
     const [sessionHelp, removeHelp, removeAllHelp] = await Promise.all([
@@ -68,7 +66,7 @@ describe("diffdiff CLI help", () => {
     expect(removeHelp.stdout).toContain("<session-id>");
 
     expect(removeAllHelp.stdout).toContain("Usage: diffdiff session remove-all");
-  }, 15_000);
+  });
 
   test("outputs JSON for the session list subcommand", async () => {
     const homeDirectory = await mkdtemp(join(tmpdir(), "diffdiff-cli-home-"));
@@ -127,7 +125,7 @@ describe("diffdiff CLI help", () => {
     } finally {
       await rm(homeDirectory, { force: true, recursive: true });
     }
-  }, 15_000);
+  });
 });
 
 async function runCli(args: readonly string[], envOverrides: NodeJS.ProcessEnv = {}) {

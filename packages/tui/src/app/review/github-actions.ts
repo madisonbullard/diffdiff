@@ -40,8 +40,6 @@ interface CreateGitHubReviewActionsOptions {
   state: DiffdiffAppState;
 }
 
-type PullRequestListRefreshSource = "manual" | "startup" | "background";
-
 function ensureAuthenticated(state: DiffdiffAppState): string | null {
   if (state.session.github == null) {
     return "Open a GitHub pull request first.";
@@ -85,19 +83,12 @@ export function createGitHubReviewActions({
     return loadId === state.pullRequestListLoadIdRef.current;
   }
 
-  async function refreshGitHubPullRequestList(
-    options: {
-      announce?: boolean;
-      source?: PullRequestListRefreshSource;
-    } = {},
-  ): Promise<void> {
+  async function refreshGitHubPullRequestList(options: { announce?: boolean } = {}): Promise<void> {
     const announce = options.announce ?? true;
-    const source = options.source ?? (announce ? "manual" : "background");
     if (props.listGitHubPullRequests == null) {
       if (announce) {
         persistence.persistenceApi.handleAppFailure("Unable to load GitHub pull requests.", {
           action: "refresh-github-pull-request-list",
-          source,
           reason: "missing-list-handler",
         });
       }
@@ -133,12 +124,10 @@ export function createGitHubReviewActions({
         if (announce) {
           persistence.persistenceApi.handleAppError(error, "Unable to load GitHub pull requests.", {
             action: "refresh-github-pull-request-list",
-            source,
           });
         } else {
-          logDiffdiffError("app", "github_pull_request_list_refresh_failed", error, {
-            action: "refresh-github-pull-request-list",
-            source,
+          logDiffdiffError("app", "startup_pull_request_prefetch_failed", error, {
+            action: "startup-prefetch-github-pull-request-list",
           });
         }
       }

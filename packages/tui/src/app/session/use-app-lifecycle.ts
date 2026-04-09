@@ -10,24 +10,16 @@ import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
 import { buildSessionReviewCacheState } from "../shared/collections.ts";
 import type { DiffdiffAppPersistence } from "./use-app-persistence.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
-import {
-  GITHUB_DIALOGS,
-  GITHUB_PULL_REQUEST_LIST_REFRESH_INTERVAL_MS,
-} from "../shared/constants.ts";
+import { GITHUB_DIALOGS } from "../shared/constants.ts";
 import { EMPTY_REVIEW_THREADS } from "../review/review-constants.ts";
 import { clearReviewComposer } from "../review/review-composer-state.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
-import { useStableInterval } from "../shared/use-stable-interval.ts";
 
 interface UseLifecycleOptions {
   derived: DiffdiffAppDerived;
   persistence: DiffdiffAppPersistence;
   prefetchComparisonBrowserData: () => Promise<void>;
-  refreshGitHubPullRequestList: (options?: {
-    announce?: boolean;
-    source?: "manual" | "startup" | "background";
-  }) => Promise<void>;
-  shouldRefreshGitHubPullRequests: boolean;
+  refreshGitHubPullRequestList: (options?: { announce?: boolean }) => Promise<void>;
   state: DiffdiffAppState;
   startupInstrumentation?: DiffdiffAppProps["startupInstrumentation"];
 }
@@ -37,25 +29,15 @@ export function useDiffdiffAppLifecycle({
   persistence,
   prefetchComparisonBrowserData,
   refreshGitHubPullRequestList,
-  shouldRefreshGitHubPullRequests,
   startupInstrumentation,
   state,
 }: UseLifecycleOptions) {
   useEffect(() => {
     void prefetchComparisonBrowserData();
-    if (shouldRefreshGitHubPullRequests) {
-      void refreshGitHubPullRequestList({ announce: false, source: "startup" });
-    }
+    void refreshGitHubPullRequestList({ announce: false });
     // Startup prefetch should only run once for the initial session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useStableInterval(
-    () => {
-      void refreshGitHubPullRequestList({ announce: false, source: "background" });
-    },
-    shouldRefreshGitHubPullRequests ? GITHUB_PULL_REQUEST_LIST_REFRESH_INTERVAL_MS : null,
-  );
 
   useEffect(() => {
     return () => {
