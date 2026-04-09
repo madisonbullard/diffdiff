@@ -3,6 +3,8 @@ import type {
   PullRequestUpdateReasonCode,
   ReviewSessionFreshnessResult,
 } from "@madisonbullard/diffdiff-core";
+import type { ReverseKeymaps } from "../keymap/index.ts";
+import { withRefreshComparisonHint } from "./refresh-keybind.ts";
 
 interface RefreshIndicatorPresentation {
   label: string | null;
@@ -126,6 +128,7 @@ const PULL_REQUEST_REASON_DESCRIPTORS: Record<
 
 export function getRefreshIndicatorPresentation(
   result: ReviewSessionFreshnessResult,
+  reverseKeymaps?: ReverseKeymaps,
 ): RefreshIndicatorPresentation {
   const changedLabel =
     result.comparisonSummary == null
@@ -138,15 +141,16 @@ export function getRefreshIndicatorPresentation(
     if (result.hasGitHubUpdates) {
       return {
         label: `${changedLabel} + PR`,
-        statusMessage: withRefreshHint(
+        statusMessage: withRefreshComparisonHint(
           `${changedLabel}. ${pullRequestStatusDetail ?? "PR activity changed."}`,
+          reverseKeymaps,
         ),
       };
     }
 
     return {
       label: changedLabel,
-      statusMessage: withRefreshHint(`${changedLabel}.`),
+      statusMessage: withRefreshComparisonHint(`${changedLabel}.`, reverseKeymaps),
     };
   }
 
@@ -154,22 +158,26 @@ export function getRefreshIndicatorPresentation(
     if (result.hasGitHubUpdates) {
       return {
         label: "updates + PR",
-        statusMessage: withRefreshHint(
+        statusMessage: withRefreshComparisonHint(
           `Comparison updates are available. ${pullRequestStatusDetail ?? "PR activity changed."}`,
+          reverseKeymaps,
         ),
       };
     }
 
     return {
       label: "updates available",
-      statusMessage: withRefreshHint("Comparison updates are available."),
+      statusMessage: withRefreshComparisonHint("Comparison updates are available.", reverseKeymaps),
     };
   }
 
   if (result.hasGitHubUpdates) {
     return {
       label: pullRequestBadgeLabel,
-      statusMessage: withRefreshHint(pullRequestStatusDetail ?? "PR activity changed."),
+      statusMessage: withRefreshComparisonHint(
+        pullRequestStatusDetail ?? "PR activity changed.",
+        reverseKeymaps,
+      ),
     };
   }
 
@@ -251,8 +259,4 @@ function formatList(items: readonly string[]): string {
 
 function joinSentences(sentences: readonly string[]): string {
   return sentences.map((sentence) => sentence.trim()).join(" ");
-}
-
-function withRefreshHint(message: string): string {
-  return `${message} Press Shift+R to refresh.`;
 }

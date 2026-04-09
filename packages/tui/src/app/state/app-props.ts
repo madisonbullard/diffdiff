@@ -124,6 +124,7 @@ export interface DiffdiffAppPersistenceApi {
     error: unknown,
     fallbackMessage: string,
     context: Record<string, unknown>,
+    options?: { displayMessage?: string },
   ) => void;
   handleAppFailure: (message: string, context: Record<string, unknown>) => void;
   persistDiffdiffPreferences: (nextPreferences: DiffdiffPreferences) => Promise<void>;

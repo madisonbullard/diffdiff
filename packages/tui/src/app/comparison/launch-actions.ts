@@ -2,6 +2,7 @@ import { loadReviewCache, type BranchInfo } from "@madisonbullard/diffdiff-core"
 import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
+import { withRefreshComparisonHint } from "./refresh-keybind.ts";
 
 interface CreateLaunchActionsOptions {
   actions: {
@@ -26,6 +27,14 @@ export function createLaunchActions({
   props,
   state,
 }: CreateLaunchActionsOptions) {
+  function getComparisonRefreshErrorDisplayMessage(error: unknown): string | undefined {
+    if (!(error instanceof Error) || !/Unable to resolve (base|head) ref /u.test(error.message)) {
+      return undefined;
+    }
+
+    return withRefreshComparisonHint(error.message, state.reverseKeymaps, { retry: true });
+  }
+
   function toggleBranchFilter(key: keyof import("../../types.ts").BranchListFilters): void {
     state.setBranchListFilters((currentFilters) => {
       const nextFilters = { ...currentFilters, [key]: !currentFilters[key] };
@@ -69,11 +78,18 @@ export function createLaunchActions({
       state.setStatusMessage(`Updated ${target} to ${branch.name}.`);
     } catch (error) {
       if (actions.isLatestSessionLoad(sessionLoadId)) {
-        persistence.persistenceApi.handleAppError(error, `Unable to update ${target}.`, {
-          action: "apply-branch-selection",
-          branch: branch.name,
-          target,
-        });
+        persistence.persistenceApi.handleAppError(
+          error,
+          `Unable to update ${target}.`,
+          {
+            action: "apply-branch-selection",
+            branch: branch.name,
+            target,
+          },
+          {
+            displayMessage: getComparisonRefreshErrorDisplayMessage(error),
+          },
+        );
       }
     } finally {
       if (shouldShowEventLogLoading) {
@@ -233,6 +249,9 @@ export function createLaunchActions({
           {
             action: "apply-pull-request-selection",
             pullRequestNumber: branch.pullRequest.number,
+          },
+          {
+            displayMessage: getComparisonRefreshErrorDisplayMessage(error),
           },
         );
       }

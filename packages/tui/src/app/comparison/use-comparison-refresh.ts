@@ -108,7 +108,7 @@ export function useDiffdiffAppRefresh({ actions, persistence, props, state }: Us
         return;
       }
 
-      const nextRefreshIndicator = getRefreshIndicatorPresentation(freshness);
+      const nextRefreshIndicator = getRefreshIndicatorPresentation(freshness, state.reverseKeymaps);
       state.setRefreshIndicatorLabel(nextRefreshIndicator.label);
       state.setRefreshIndicatorStatusMessage(nextRefreshIndicator.statusMessage);
       if (

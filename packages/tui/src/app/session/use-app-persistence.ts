@@ -84,20 +84,27 @@ export function useDiffdiffAppPersistence(
   );
 
   const handleAppError = useCallback(
-    (error: unknown, fallbackMessage: string, context: Record<string, unknown>) => {
+    (
+      error: unknown,
+      fallbackMessage: string,
+      context: Record<string, unknown>,
+      options?: { displayMessage?: string },
+    ) => {
       const message = error instanceof Error ? error.message : fallbackMessage;
+      const displayMessage = options?.displayMessage ?? message;
       logDiffdiffError("app", "ui_action_failed", error, {
         ...context,
+        displayMessage,
         fallbackMessage,
         logFilePath: resolvedLogFilePath,
         message,
       });
       void updateDiffdiffSessionActivity({
         lastErrorMessage: message,
-        statusMessage: message,
+        statusMessage: displayMessage,
       });
-      state.setStatusMessage(message);
-      showErrorToast(message);
+      state.setStatusMessage(displayMessage);
+      showErrorToast(displayMessage);
     },
     [resolvedLogFilePath, showErrorToast, state.setStatusMessage],
   );

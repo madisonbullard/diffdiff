@@ -2034,6 +2034,41 @@ test("shows specific PR approval refresh messaging", async () => {
   expect(getAppText(tree)).toContain("Approved by octocat. Press Shift+R to refresh.");
 });
 
+test("derives refresh status messaging from the resolved live keymap", async () => {
+  vi.useFakeTimers();
+  const probeFreshness = vi.fn(
+    async (): Promise<ReviewSessionFreshnessResult> => ({
+      comparisonSummary: undefined,
+      githubUpdateReasons: [{ actors: ["octocat"], code: "review-approved" }],
+      hasComparisonUpdates: false,
+      hasGitHubUpdates: true,
+      nextBaseSha: "fedcba0",
+      nextHeadSha: "1234567",
+    }),
+  );
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        initialUserKeymapConfig: {
+          diff: {
+            "shift+r": "no_op",
+            z: "comparison.refresh",
+          },
+        },
+        probeFreshness,
+      })}
+    />,
+  );
+
+  await act(async () => {
+    vi.advanceTimersByTime(5_000);
+    await Promise.resolve();
+  });
+
+  expect(getAppText(tree)).toContain("Approved by octocat. Press Z to refresh.");
+});
+
 test("combines diff and PR refresh details in the status message", async () => {
   vi.useFakeTimers();
   const probeFreshness = vi.fn(
@@ -2067,6 +2102,34 @@ test("combines diff and PR refresh details in the status message", async () => {
   expect(tree.root.findAll((node) => node.props.label === "1 file changed + PR")).toHaveLength(1);
   expect(getAppText(tree)).toContain(
     "1 file changed. Checks changed from pending to success. Press Shift+R to refresh.",
+  );
+});
+
+test("adds the refresh hint when an out-of-date branch selection cannot be opened", async () => {
+  const loadSession = vi.fn(async (options: LaunchOptions) => {
+    if (options.head === "origin/feature/tui") {
+      throw new Error(
+        "Unable to resolve head ref 'origin/feature/tui'. Remote branch 'origin/feature/tui' is no longer available locally or on remote 'origin'. If this comparison came from a pull request, the branch may have been deleted after the pull request was merged or closed.",
+      );
+    }
+
+    return createPreparedSession();
+  });
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession(),
+        loadSession,
+      })}
+    />,
+  );
+
+  emitKey({ name: "l" });
+  emitKey({ name: "k" });
+  await emitAsyncKey({ name: "return" });
+
+  expect(getAppText(tree)).toContain(
+    "Unable to resolve head ref 'origin/feature/tui'. Press Shift+R to refresh and try again.",
   );
 });
 
