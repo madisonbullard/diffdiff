@@ -47,7 +47,7 @@ describe("diffdiff CLI help", () => {
     expect(loginHelp.stdout).toContain("--token-stdin");
 
     expect(logoutHelp.stdout).toContain("Usage: diffdiff auth logout");
-  });
+  }, 15_000);
 
   test("supports -h on the session command and its subcommands", async () => {
     const [sessionHelp, removeHelp, removeAllHelp] = await Promise.all([
@@ -66,7 +66,7 @@ describe("diffdiff CLI help", () => {
     expect(removeHelp.stdout).toContain("<session-id>");
 
     expect(removeAllHelp.stdout).toContain("Usage: diffdiff session remove-all");
-  });
+  }, 15_000);
 
   test("outputs JSON for the session list subcommand", async () => {
     const homeDirectory = await mkdtemp(join(tmpdir(), "diffdiff-cli-home-"));

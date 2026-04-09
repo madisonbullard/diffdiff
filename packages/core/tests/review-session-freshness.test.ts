@@ -66,6 +66,7 @@ describe("probeReviewSessionFreshness", () => {
 
     expect(freshness).toEqual({
       comparisonSummary: undefined,
+      githubUpdateReasons: [],
       hasComparisonUpdates: false,
       hasGitHubUpdates: false,
       nextBaseSha: session.renderFingerprint.baseSha,

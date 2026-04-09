@@ -1070,7 +1070,9 @@ function createPullRequestDetail(): GitHubPullRequestDetail {
       successful: 1,
       total: 1,
     },
+    changedFileCount: 0,
     changedFiles: {},
+    commitCount: 1,
     conversationItems: [
       {
         author: { login: "octocat", url: "https://github.com/octocat" },
@@ -1089,6 +1091,8 @@ function createPullRequestDetail(): GitHubPullRequestDetail {
     headSha: "abc123",
     isDraft: false,
     isMerged: false,
+    issueCommentCount: 0,
+    latestOpinionatedReviews: [],
     merge: {
       canMerge: true,
       isDraft: false,
@@ -1096,7 +1100,10 @@ function createPullRequestDetail(): GitHubPullRequestDetail {
     },
     nodeId: "PR_node_42",
     number: 42,
+    reviewCommentCount: 0,
+    reviewDecision: undefined,
     reviewGroups: [],
+    reviewRequests: [],
     reviewThreads: [],
     state: "open",
     title: "Fix comments modal height",

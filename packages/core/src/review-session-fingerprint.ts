@@ -2,7 +2,10 @@ import { createHash } from "node:crypto";
 import type { GitHubPullRequestDetail } from "./types/github.ts";
 import type {
   ChangedFile,
+  PullRequestOpinionatedReview,
+  PullRequestCoarseFingerprint,
   PullRequestFingerprint,
+  PullRequestRequestedReviewer,
   ReviewSession,
   ReviewSessionFingerprint,
 } from "./types/session.ts";
@@ -26,14 +29,56 @@ export function buildReviewSessionFingerprint(
 export function buildPullRequestFingerprint(
   pullRequest: GitHubPullRequestDetail,
 ): PullRequestFingerprint {
+  const latestOpinionatedReviews = pullRequest.latestOpinionatedReviews.map((review) => ({
+    author: review.author.login,
+    state: review.state,
+    updatedAt: review.updatedAt,
+  }));
+  const reviewRequests = pullRequest.reviewRequests.map((reviewer) => ({
+    kind: reviewer.kind,
+    label: reviewer.label,
+  }));
+
   return {
-    number: pullRequest.number,
-    headSha: pullRequest.headSha,
+    ...buildPullRequestCoarseFingerprint(pullRequest),
+    latestOpinionatedReviewDigest:
+      buildPullRequestOpinionatedReviewDigest(latestOpinionatedReviews),
+    latestOpinionatedReviews,
+    reviewDecision: pullRequest.reviewDecision,
+    reviewRequestDigest: buildPullRequestRequestedReviewerDigest(reviewRequests),
+    reviewRequests,
+  };
+}
+
+export function buildPullRequestCoarseFingerprint(
+  pullRequest: Pick<
+    GitHubPullRequestDetail,
+    | "changedFileCount"
+    | "checks"
+    | "commitCount"
+    | "headSha"
+    | "isDraft"
+    | "isMerged"
+    | "issueCommentCount"
+    | "merge"
+    | "number"
+    | "reviewCommentCount"
+    | "state"
+    | "updatedAt"
+  >,
+): PullRequestCoarseFingerprint {
+  return {
+    changedFileCount: pullRequest.changedFileCount,
     checksState: pullRequest.checks.state,
-    state: pullRequest.state,
+    commitCount: pullRequest.commitCount,
+    headSha: pullRequest.headSha,
     isDraft: pullRequest.isDraft,
     isMerged: pullRequest.isMerged,
+    issueCommentCount: pullRequest.issueCommentCount,
     mergeableState: pullRequest.merge.mergeableState,
+    number: pullRequest.number,
+    reviewCommentCount: pullRequest.reviewCommentCount,
+    state: pullRequest.state,
     updatedAt: pullRequest.updatedAt,
   };
 }
@@ -63,9 +108,29 @@ export function arePullRequestFingerprintsEqual(
   }
 
   return (
+    arePullRequestCoarseFingerprintsEqual(left, right) &&
+    left.reviewDecision === right.reviewDecision &&
+    left.reviewRequestDigest === right.reviewRequestDigest &&
+    left.latestOpinionatedReviewDigest === right.latestOpinionatedReviewDigest
+  );
+}
+
+export function arePullRequestCoarseFingerprintsEqual(
+  left: PullRequestCoarseFingerprint | undefined,
+  right: PullRequestCoarseFingerprint | undefined,
+): boolean {
+  if (left == null || right == null) {
+    return left === right;
+  }
+
+  return (
     left.number === right.number &&
     left.headSha === right.headSha &&
     left.checksState === right.checksState &&
+    left.commitCount === right.commitCount &&
+    left.changedFileCount === right.changedFileCount &&
+    left.issueCommentCount === right.issueCommentCount &&
+    left.reviewCommentCount === right.reviewCommentCount &&
     left.state === right.state &&
     left.isDraft === right.isDraft &&
     left.isMerged === right.isMerged &&
@@ -74,23 +139,43 @@ export function arePullRequestFingerprintsEqual(
   );
 }
 
+export function buildPullRequestRequestedReviewerDigest(
+  reviewRequests: readonly PullRequestRequestedReviewer[],
+): string {
+  return buildCollectionDigest(
+    reviewRequests.map((reviewer) => `${reviewer.kind}:${reviewer.label}`).sort(),
+  );
+}
+
+export function buildPullRequestOpinionatedReviewDigest(
+  reviews: readonly PullRequestOpinionatedReview[],
+): string {
+  return buildCollectionDigest(
+    reviews.map((review) => `${review.author}:${review.state}:${review.updatedAt}`).sort(),
+  );
+}
+
 export function buildChangedFilesDigest(files: readonly ChangedFile[]): string {
+  return buildCollectionDigest(
+    files.map((file) =>
+      [
+        file.path,
+        file.previousPath ?? "",
+        file.status,
+        String(file.additions),
+        String(file.deletions),
+        file.isBinary ? "1" : "0",
+        file.patch,
+      ].join("\0"),
+    ),
+  );
+}
+
+function buildCollectionDigest(entries: readonly string[]): string {
   const hash = createHash("sha256");
 
-  for (const file of files) {
-    hash.update(file.path);
-    hash.update("\0");
-    hash.update(file.previousPath ?? "");
-    hash.update("\0");
-    hash.update(file.status);
-    hash.update("\0");
-    hash.update(String(file.additions));
-    hash.update("\0");
-    hash.update(String(file.deletions));
-    hash.update("\0");
-    hash.update(file.isBinary ? "1" : "0");
-    hash.update("\0");
-    hash.update(file.patch);
+  for (const entry of entries) {
+    hash.update(entry);
     hash.update("\0\0");
   }
 

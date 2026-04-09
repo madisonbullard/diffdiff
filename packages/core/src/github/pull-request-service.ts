@@ -1,6 +1,11 @@
 import { runCommand } from "../command.ts";
 import { DiffdiffError } from "../errors.ts";
 import { logDiffdiffError, logDiffdiffInfo, logDiffdiffWarn } from "../logging.ts";
+import {
+  arePullRequestCoarseFingerprintsEqual,
+  buildPullRequestCoarseFingerprint,
+  buildPullRequestFingerprint,
+} from "../review-session-fingerprint.ts";
 import type { PullRequestFingerprint } from "../types/session.ts";
 import type {
   ForgeRepository,
@@ -18,7 +23,11 @@ import type {
 import type { GitHubApiClient, GitHubClientFactory } from "../types/providers.ts";
 import type { ReviewSession } from "../types/session.ts";
 import { OctokitGitHubClientFactory } from "./client.ts";
-import { loadPullRequestDetail, loadPullRequestFingerprint } from "./pull-request-detail.ts";
+import {
+  loadPullRequestCoarseFingerprint,
+  loadPullRequestDetail,
+  loadPullRequestFingerprint,
+} from "./pull-request-detail.ts";
 import {
   dedupeWarnings,
   findActivePullRequestCandidate,
@@ -459,6 +468,22 @@ export class GitHubPullRequestService {
     }
 
     try {
+      const currentFingerprint = buildPullRequestFingerprint(reviewSession.pullRequest);
+      const nextCoarseFingerprint = await loadPullRequestCoarseFingerprint(
+        client,
+        reviewSession.repository,
+        reviewSession.pullRequest.number,
+      );
+
+      if (
+        arePullRequestCoarseFingerprintsEqual(
+          buildPullRequestCoarseFingerprint(reviewSession.pullRequest),
+          nextCoarseFingerprint,
+        )
+      ) {
+        return currentFingerprint;
+      }
+
       return await loadPullRequestFingerprint(
         client,
         reviewSession.repository,

@@ -106,6 +106,7 @@ export interface DiffdiffAppState {
   pullRequestSearchActive: boolean;
   pullRequestSearchInput: TextInputState;
   refreshIndicatorLabel: string | null;
+  refreshIndicatorStatusMessage: string | null;
   renderer: ReturnType<typeof useRenderer>;
   reviewCacheTimeoutRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
   reviewedPaths: Set<string>;
@@ -177,6 +178,7 @@ export interface DiffdiffAppState {
   setPullRequestSearchActive: Dispatch<SetStateAction<boolean>>;
   setPullRequestSearchInput: Dispatch<SetStateAction<TextInputState>>;
   setRefreshIndicatorLabel: Dispatch<SetStateAction<string | null>>;
+  setRefreshIndicatorStatusMessage: Dispatch<SetStateAction<string | null>>;
   setReviewedPaths: Dispatch<SetStateAction<Set<string>>>;
   setReviewComposer: Dispatch<SetStateAction<ReviewComposerUiState>>;
   setReviewSubmissionInput: Dispatch<SetStateAction<TextInputState>>;

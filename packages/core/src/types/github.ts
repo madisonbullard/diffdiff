@@ -147,6 +147,26 @@ export interface GitHubPullRequestChecksSummary {
   pending: number;
 }
 
+export type GitHubPullRequestReviewDecision = "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED";
+
+export type GitHubPullRequestReviewState =
+  | "APPROVED"
+  | "CHANGES_REQUESTED"
+  | "COMMENTED"
+  | "DISMISSED";
+
+export interface GitHubPullRequestRequestedReviewer {
+  kind: "team" | "user";
+  label: string;
+  url?: string;
+}
+
+export interface GitHubPullRequestLatestOpinionatedReview {
+  author: GitHubActor;
+  state: GitHubPullRequestReviewState;
+  updatedAt: string;
+}
+
 export type GitHubPullRequestFileViewedState = "VIEWED" | "UNVIEWED" | "DISMISSED";
 
 export interface GitHubPullRequestChangedFile {
@@ -189,15 +209,22 @@ export interface GitHubPullRequestDetail extends PullRequestInfo {
   author: GitHubActor;
   body?: string;
   checks: GitHubPullRequestChecksSummary;
+  changedFileCount: number;
   changedFiles: GitHubPullRequestChangedFilesByPath;
+  commitCount: number;
   conversationItems: GitHubPullRequestConversationItem[];
   headSha: string;
   isDraft: boolean;
   isMerged: boolean;
+  issueCommentCount: number;
+  latestOpinionatedReviews: GitHubPullRequestLatestOpinionatedReview[];
   merge: GitHubPullRequestMergeState;
   nodeId: string;
   pendingReview?: GitHubPendingReview;
+  reviewCommentCount: number;
+  reviewDecision?: GitHubPullRequestReviewDecision;
   reviewGroups: GitHubPullRequestReviewGroup[];
+  reviewRequests: GitHubPullRequestRequestedReviewer[];
   reviewThreads: GitHubPullRequestReviewThread[];
   state: "open" | "closed";
   updatedAt: string;

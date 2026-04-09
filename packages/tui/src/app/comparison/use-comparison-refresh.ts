@@ -8,7 +8,7 @@ import {
   TERMINAL_BLUR_EVENT,
   TERMINAL_FOCUS_EVENT,
 } from "../shared/constants.ts";
-import { getRefreshIndicatorLabel } from "./refresh-indicator.ts";
+import { getRefreshIndicatorPresentation } from "./refresh-indicator.ts";
 
 interface UseRefreshOptions {
   actions: {
@@ -38,6 +38,7 @@ export function useDiffdiffAppRefresh({ actions, persistence, props, state }: Us
 
     state.setIsReloading(true);
     state.setRefreshIndicatorLabel(null);
+    state.setRefreshIndicatorStatusMessage(null);
     state.setStatusMessage("Refreshing branches and GitHub data...");
     const sessionLoadId = actions.beginSessionLoad();
 
@@ -77,6 +78,7 @@ export function useDiffdiffAppRefresh({ actions, persistence, props, state }: Us
       ) {
         state.setIsReloading(true);
         state.setRefreshIndicatorLabel(null);
+        state.setRefreshIndicatorStatusMessage(null);
         state.setStatusMessage("Updating working tree view...");
         const sessionLoadId = actions.beginSessionLoad();
 
@@ -106,14 +108,16 @@ export function useDiffdiffAppRefresh({ actions, persistence, props, state }: Us
         return;
       }
 
-      const nextRefreshIndicatorLabel = getRefreshIndicatorLabel(freshness);
-      state.setRefreshIndicatorLabel(nextRefreshIndicatorLabel);
+      const nextRefreshIndicator = getRefreshIndicatorPresentation(freshness);
+      state.setRefreshIndicatorLabel(nextRefreshIndicator.label);
+      state.setRefreshIndicatorStatusMessage(nextRefreshIndicator.statusMessage);
       if (
-        nextRefreshIndicatorLabel != null &&
-        nextRefreshIndicatorLabel !== state.refreshIndicatorLabel
+        nextRefreshIndicator.statusMessage != null &&
+        (nextRefreshIndicator.label !== state.refreshIndicatorLabel ||
+          nextRefreshIndicator.statusMessage !== state.refreshIndicatorStatusMessage)
       ) {
-        state.setStatusMessage(`${nextRefreshIndicatorLabel}. Press Shift+R to refresh.`);
-      } else if (state.refreshIndicatorLabel != null) {
+        state.setStatusMessage(nextRefreshIndicator.statusMessage);
+      } else if (nextRefreshIndicator.label == null && state.refreshIndicatorLabel != null) {
         state.setStatusMessage("Current comparison is up to date.");
       }
     } catch (error) {

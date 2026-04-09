@@ -1,4 +1,8 @@
-import type { GitHubPullRequestFileViewedState } from "../types/github.ts";
+import type {
+  GitHubPullRequestFileViewedState,
+  GitHubPullRequestReviewDecision,
+  GitHubPullRequestReviewState,
+} from "../types/github.ts";
 
 export interface GitHubUserResponse {
   login?: string;
@@ -27,6 +31,9 @@ export interface GitHubSearchIssuePullRequestResponse {
 
 export interface GitHubPullRequestDetailResponse extends GitHubPullRequestListResponse {
   body: string | null;
+  comments: number;
+  commits: number;
+  changed_files: number;
   state: "open" | "closed";
   updated_at: string;
   draft: boolean;
@@ -35,6 +42,7 @@ export interface GitHubPullRequestDetailResponse extends GitHubPullRequestListRe
   mergeable: boolean | null;
   mergeable_state: string | null;
   node_id: string;
+  review_comments: number;
   user: GitHubUserResponse | null;
   head: {
     ref: string;
@@ -144,6 +152,56 @@ export interface GitHubGraphqlUnmarkFileAsViewedResponse {
   unmarkFileAsViewed?: {
     clientMutationId?: string | null;
   };
+}
+
+export interface GitHubGraphqlPullRequestReviewSignalsResponse {
+  repository?: {
+    pullRequest?: {
+      reviewDecision?: GitHubPullRequestReviewDecision | null;
+      reviewRequests?: {
+        nodes?: Array<{
+          requestedReviewer?:
+            | {
+                __typename?: "Team";
+                slug?: string | null;
+                url?: string | null;
+                organization?: { login?: string | null } | null;
+              }
+            | {
+                __typename?: "User";
+                login?: string | null;
+                url?: string | null;
+              }
+            | null;
+        } | null>;
+        pageInfo?: {
+          endCursor?: string | null;
+          hasNextPage: boolean;
+        } | null;
+      } | null;
+    } | null;
+  } | null;
+}
+
+export interface GitHubGraphqlPullRequestLatestOpinionatedReviewsResponse {
+  repository?: {
+    pullRequest?: {
+      latestOpinionatedReviews?: {
+        nodes?: Array<{
+          state?: GitHubPullRequestReviewState | null;
+          updatedAt?: string | null;
+          author?: {
+            login?: string | null;
+            url?: string | null;
+          } | null;
+        } | null>;
+        pageInfo?: {
+          endCursor?: string | null;
+          hasNextPage: boolean;
+        } | null;
+      } | null;
+    } | null;
+  } | null;
 }
 
 export interface DeletedRemoteRef {

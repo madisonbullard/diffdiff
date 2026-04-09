@@ -567,6 +567,83 @@ describe("GitHubPullRequestService", () => {
 
     expect(freshness.hasGitHubUpdates).toBe(false);
     expect(freshness.nextPullRequestFingerprint).toEqual(session.renderFingerprint.pullRequest);
+    expect(freshness.githubUpdateReasons).toEqual([]);
+  });
+
+  test("classifies new commits and checks changes during PR freshness probes", async () => {
+    mockRemoteTrackingRefs("refs/remotes/origin/main", "refs/remotes/origin/feature/ui");
+    const initialService = new GitHubPullRequestService({
+      create: vi.fn(async () => createGitHubApiClient()),
+    });
+    const nextService = new GitHubPullRequestService({
+      create: vi.fn(async () =>
+        createGitHubApiClient({
+          combinedStatusState: "pending",
+          pullRequestResponse: {
+            commits: 2,
+            head: { ref: "feature/ui", sha: "nextsha" },
+            updated_at: "2026-04-01T12:05:00Z",
+          },
+        }),
+      ),
+    });
+    const attachedSession = await initialService.attachReviewSession(createReviewSession());
+    const session = {
+      ...attachedSession,
+      renderFingerprint: buildReviewSessionFingerprint(attachedSession),
+    };
+
+    const freshness = await probeReviewSessionFreshness(session, nextService);
+
+    expect(freshness.hasGitHubUpdates).toBe(true);
+    expect(freshness.githubUpdateReasons).toEqual([
+      { code: "new-commits", count: 1 },
+      { code: "checks-changed", from: "success", to: "pending" },
+    ]);
+  });
+
+  test("classifies approvals and review requests during PR freshness probes", async () => {
+    mockRemoteTrackingRefs("refs/remotes/origin/main", "refs/remotes/origin/feature/ui");
+    const initialService = new GitHubPullRequestService({
+      create: vi.fn(async () => createGitHubApiClient()),
+    });
+    const nextService = new GitHubPullRequestService({
+      create: vi.fn(async () =>
+        createGitHubApiClient({
+          latestOpinionatedReviews: [
+            {
+              author: { login: "octocat", url: "https://github.com/octocat" },
+              state: "APPROVED",
+              updatedAt: "2026-04-01T12:06:00Z",
+            },
+          ],
+          pullRequestResponse: {
+            updated_at: "2026-04-01T12:06:00Z",
+          },
+          reviewDecision: "APPROVED",
+          reviewRequests: [
+            {
+              kind: "team",
+              label: "diffdiff/platform",
+              url: "https://github.com/orgs/diffdiff/teams/platform",
+            },
+          ],
+        }),
+      ),
+    });
+    const attachedSession = await initialService.attachReviewSession(createReviewSession());
+    const session = {
+      ...attachedSession,
+      renderFingerprint: buildReviewSessionFingerprint(attachedSession),
+    };
+
+    const freshness = await probeReviewSessionFreshness(session, nextService);
+
+    expect(freshness.hasGitHubUpdates).toBe(true);
+    expect(freshness.githubUpdateReasons).toEqual([
+      { actors: ["octocat"], code: "review-approved" },
+      { code: "review-requested", reviewers: ["diffdiff/platform"] },
+    ]);
   });
 
   test("warns when the PR head remote-tracking ref is not available locally", async () => {
@@ -884,12 +961,38 @@ function createGitHubApiClient(
     checkRuns?: Array<{ conclusion: string | null; status: string }>;
     combinedStatusState?: string;
     commentPath?: string;
+    latestOpinionatedReviews?: Array<{
+      author: { login: string; url?: string };
+      state: "APPROVED" | "CHANGES_REQUESTED" | "COMMENTED" | "DISMISSED";
+      updatedAt: string;
+    }>;
     pullRequestFilePages?: Array<
       Array<{
         path: string;
         viewedState: "VIEWED" | "UNVIEWED" | "DISMISSED";
       }>
     >;
+    pullRequestResponse?: Partial<{
+      changed_files: number;
+      comments: number;
+      commits: number;
+      created_at: string;
+      draft: boolean;
+      head: { ref: string; sha: string };
+      html_url: string;
+      mergeable: boolean | null;
+      mergeable_state: string | null;
+      merged: boolean;
+      merged_at: string | null;
+      node_id: string;
+      number: number;
+      review_comments: number;
+      state: "open" | "closed";
+      title: string;
+      updated_at: string;
+    }>;
+    reviewDecision?: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED";
+    reviewRequests?: Array<{ kind: "user" | "team"; label: string; url?: string }>;
     searchPullRequests?: {
       authored?: Array<{
         draft?: boolean;
@@ -921,9 +1024,34 @@ function createGitHubApiClient(
   const checkRuns = options.checkRuns ?? [{ conclusion: "success", status: "completed" }];
   const combinedStatusState = options.combinedStatusState ?? "success";
   const commentPath = options.commentPath ?? "src/app.ts";
+  const latestOpinionatedReviews = options.latestOpinionatedReviews ?? [];
   const pullRequestFilePages = options.pullRequestFilePages ?? [
     [{ path: commentPath, viewedState: "UNVIEWED" }],
   ];
+  const pullRequestResponse = {
+    base: { ref: "main" },
+    body: "Adds the review UI.",
+    changed_files: 1,
+    comments: 1,
+    commits: 1,
+    created_at: "2026-04-01T11:55:00Z",
+    draft: false,
+    head: { ref: "feature/ui", sha: "headsha" },
+    html_url: "https://github.com/diffdiff/diffdiff/pull/42",
+    mergeable: true,
+    mergeable_state: "clean",
+    merged: false,
+    merged_at: null,
+    node_id: "PR_node_42",
+    number: 42,
+    review_comments: 2,
+    state: "open" as const,
+    title: "UI polish",
+    updated_at: "2026-04-01T12:03:00Z",
+    user: { html_url: "https://github.com/madison", login: "madison" },
+    ...options.pullRequestResponse,
+  };
+  const reviewRequests = options.reviewRequests ?? [];
   const searchPullRequests = options.searchPullRequests ?? {};
   const graphql = vi.fn(async (query: unknown, parameters: Record<string, unknown>) => {
     const queryText = String(query);
@@ -963,26 +1091,77 @@ function createGitHubApiClient(
       return { unmarkFileAsViewed: { clientMutationId: null } };
     }
 
+    if (queryText.includes("query PullRequestReviewSignals")) {
+      const pageIndex = parameters.after == null ? 0 : Number(parameters.after);
+      const page = reviewRequests.slice(pageIndex * 100, (pageIndex + 1) * 100);
+
+      return {
+        repository: {
+          pullRequest: {
+            reviewDecision: options.reviewDecision ?? null,
+            reviewRequests: {
+              nodes: page.map((reviewer) => ({
+                requestedReviewer:
+                  reviewer.kind === "user"
+                    ? {
+                        __typename: "User",
+                        login: reviewer.label,
+                        url: reviewer.url ?? null,
+                      }
+                    : {
+                        __typename: "Team",
+                        organization: { login: reviewer.label.split("/")[0] ?? null },
+                        slug: reviewer.label.split("/")[1] ?? reviewer.label,
+                        url: reviewer.url ?? null,
+                      },
+              })),
+              pageInfo: {
+                endCursor:
+                  pageIndex < Math.ceil(reviewRequests.length / 100) - 1
+                    ? String(pageIndex + 1)
+                    : null,
+                hasNextPage: pageIndex < Math.ceil(reviewRequests.length / 100) - 1,
+              },
+            },
+          },
+        },
+      };
+    }
+
+    if (queryText.includes("query PullRequestLatestOpinionatedReviews")) {
+      const pageIndex = parameters.after == null ? 0 : Number(parameters.after);
+      const page = latestOpinionatedReviews.slice(pageIndex * 100, (pageIndex + 1) * 100);
+
+      return {
+        repository: {
+          pullRequest: {
+            latestOpinionatedReviews: {
+              nodes: page.map((review) => ({
+                author: {
+                  login: review.author.login,
+                  url: review.author.url ?? null,
+                },
+                state: review.state,
+                updatedAt: review.updatedAt,
+              })),
+              pageInfo: {
+                endCursor:
+                  pageIndex < Math.ceil(latestOpinionatedReviews.length / 100) - 1
+                    ? String(pageIndex + 1)
+                    : null,
+                hasNextPage: pageIndex < Math.ceil(latestOpinionatedReviews.length / 100) - 1,
+              },
+            },
+          },
+        },
+      };
+    }
+
     return {};
   });
   const request = vi.fn(async (route) => {
     if (route === "GET /repos/{owner}/{repo}/pulls/{pull_number}") {
-      return {
-        base: { ref: "main" },
-        body: "Adds the review UI.",
-        draft: false,
-        head: { ref: "feature/ui", sha: "headsha" },
-        html_url: "https://github.com/diffdiff/diffdiff/pull/42",
-        mergeable: true,
-        mergeable_state: "clean",
-        merged: false,
-        merged_at: null,
-        node_id: "PR_node_42",
-        number: 42,
-        state: "open",
-        title: "UI polish",
-        user: { html_url: "https://github.com/madison", login: "madison" },
-      };
+      return pullRequestResponse;
     }
 
     if (route === "GET /repos/{owner}/{repo}/commits/{ref}/check-runs") {

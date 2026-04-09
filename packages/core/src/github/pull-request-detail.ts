@@ -1,5 +1,9 @@
 import { logDiffdiffError } from "../logging.ts";
-import type { PullRequestFingerprint } from "../types/session.ts";
+import {
+  buildPullRequestOpinionatedReviewDigest,
+  buildPullRequestRequestedReviewerDigest,
+} from "../review-session-fingerprint.ts";
+import type { PullRequestCoarseFingerprint, PullRequestFingerprint } from "../types/session.ts";
 import type {
   ForgeRepository,
   GitHubPullRequestChangedFilesByPath,
@@ -16,6 +20,10 @@ import {
   mapIssueComment,
   mapPullRequestComment,
 } from "./pull-request-mappers.ts";
+import {
+  loadPullRequestReviewSignals,
+  type PullRequestReviewSignals,
+} from "./pull-request-review-signals.ts";
 import type {
   GitHubCheckRunsResponse,
   GitHubCommitStatusResponse,
@@ -38,12 +46,14 @@ export async function loadPullRequestDetail(
 ): Promise<GitHubPullRequestDetail> {
   const [
     { checksSummary, pullRequestResponse },
+    reviewSignals,
     reviewsResponse,
     commentsResponse,
     changedFiles,
     issueCommentsResponse,
   ] = await Promise.all([
     loadPullRequestSnapshot(client, repository, pullRequestNumber),
+    loadPullRequestReviewSignals(client, repository, pullRequestNumber),
     client.paginate("GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews", {
       owner: repository.owner,
       repo: repository.repo,
@@ -83,13 +93,17 @@ export async function loadPullRequestDetail(
     baseRefName: pullRequestResponse.base.ref,
     body: pullRequestResponse.body ?? undefined,
     checks: checksSummary,
+    changedFileCount: pullRequestResponse.changed_files,
     changedFiles,
+    commitCount: pullRequestResponse.commits,
     conversationItems,
     createdAt: pullRequestResponse.created_at,
     headRefName: pullRequestResponse.head.ref,
     headSha: pullRequestResponse.head.sha,
     isDraft: pullRequestResponse.draft,
     isMerged: pullRequestResponse.merged,
+    issueCommentCount: pullRequestResponse.comments,
+    latestOpinionatedReviews: reviewSignals.latestOpinionatedReviews,
     merge,
     nodeId: pullRequestResponse.node_id,
     number: pullRequestResponse.number,
@@ -102,7 +116,10 @@ export async function loadPullRequestDetail(
             id: pendingReviewGroup.reviewId ?? pullRequestResponse.number,
             nodeId: pendingReviewGroup.reviewNodeId ?? pullRequestResponse.node_id,
           },
+    reviewCommentCount: pullRequestResponse.review_comments,
+    reviewDecision: reviewSignals.reviewDecision,
     reviewGroups,
+    reviewRequests: reviewSignals.reviewRequests,
     reviewThreads,
     state: pullRequestResponse.state,
     title: pullRequestResponse.title,
@@ -116,7 +133,19 @@ export async function loadPullRequestFingerprint(
   repository: ForgeRepository,
   pullRequestNumber: number,
 ): Promise<PullRequestFingerprint> {
+  const snapshot = await loadPullRequestSnapshot(client, repository, pullRequestNumber);
   return buildPullRequestFingerprintFromSnapshot(
+    snapshot,
+    await loadPullRequestReviewSignals(client, repository, pullRequestNumber),
+  );
+}
+
+export async function loadPullRequestCoarseFingerprint(
+  client: GitHubApiClient,
+  repository: ForgeRepository,
+  pullRequestNumber: number,
+): Promise<PullRequestCoarseFingerprint> {
+  return buildPullRequestCoarseFingerprintFromSnapshot(
     await loadPullRequestSnapshot(client, repository, pullRequestNumber),
   );
 }
@@ -132,14 +161,15 @@ async function loadPullRequestSnapshot(
       repo: repository.repo,
       pull_number: pullRequestNumber,
     })) as GitHubPullRequestDetailResponse;
+    const checksSummary = await loadChecksSummaryForHeadSha(
+      client,
+      repository,
+      pullRequest.head.sha,
+      pullRequestNumber,
+    );
 
     return {
-      checksSummary: await loadChecksSummaryForHeadSha(
-        client,
-        repository,
-        pullRequest.head.sha,
-        pullRequestNumber,
-      ),
+      checksSummary,
       pullRequestResponse: pullRequest,
     };
   } catch (error) {
@@ -151,18 +181,47 @@ async function loadPullRequestSnapshot(
   }
 }
 
-function buildPullRequestFingerprintFromSnapshot({
+function buildPullRequestFingerprintFromSnapshot(
+  { checksSummary, pullRequestResponse }: PullRequestSnapshot,
+  reviewSignals: PullRequestReviewSignals,
+): PullRequestFingerprint {
+  const latestOpinionatedReviews = reviewSignals.latestOpinionatedReviews.map((review) => ({
+    author: review.author.login,
+    state: review.state,
+    updatedAt: review.updatedAt,
+  }));
+  const reviewRequests = reviewSignals.reviewRequests.map((reviewer) => ({
+    kind: reviewer.kind,
+    label: reviewer.label,
+  }));
+
+  return {
+    ...buildPullRequestCoarseFingerprintFromSnapshot({ checksSummary, pullRequestResponse }),
+    latestOpinionatedReviewDigest:
+      buildPullRequestOpinionatedReviewDigest(latestOpinionatedReviews),
+    latestOpinionatedReviews,
+    reviewDecision: reviewSignals.reviewDecision,
+    reviewRequestDigest: buildPullRequestRequestedReviewerDigest(reviewRequests),
+    reviewRequests,
+  };
+}
+
+function buildPullRequestCoarseFingerprintFromSnapshot({
   checksSummary,
   pullRequestResponse,
-}: PullRequestSnapshot): PullRequestFingerprint {
+}: PullRequestSnapshot): PullRequestCoarseFingerprint {
   return {
-    number: pullRequestResponse.number,
-    headSha: pullRequestResponse.head.sha,
+    changedFileCount: pullRequestResponse.changed_files,
     checksState: checksSummary.state,
-    state: pullRequestResponse.state,
+    commitCount: pullRequestResponse.commits,
+    headSha: pullRequestResponse.head.sha,
     isDraft: pullRequestResponse.draft,
     isMerged: pullRequestResponse.merged,
+    issueCommentCount: pullRequestResponse.comments,
     mergeableState: pullRequestResponse.mergeable_state ?? undefined,
+    number: pullRequestResponse.number,
+    reviewCommentCount: pullRequestResponse.review_comments,
+    state: pullRequestResponse.state,
     updatedAt: pullRequestResponse.updated_at,
   };
 }

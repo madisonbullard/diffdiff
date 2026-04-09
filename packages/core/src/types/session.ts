@@ -86,15 +86,69 @@ export interface ComparisonCommit {
   author: string;
 }
 
-export interface PullRequestFingerprint {
+export type PullRequestReviewDecision = "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED";
+
+export type PullRequestReviewState = "APPROVED" | "CHANGES_REQUESTED" | "COMMENTED" | "DISMISSED";
+
+export interface PullRequestRequestedReviewer {
+  kind: "team" | "user";
+  label: string;
+}
+
+export interface PullRequestOpinionatedReview {
+  author: string;
+  state: PullRequestReviewState;
+  updatedAt: string;
+}
+
+export type PullRequestUpdateReasonCode =
+  | "merged"
+  | "closed"
+  | "reopened"
+  | "new-commits"
+  | "checks-changed"
+  | "review-approved"
+  | "changes-requested"
+  | "review-requested"
+  | "review-request-removed"
+  | "ready-for-review"
+  | "converted-to-draft"
+  | "comments-added"
+  | "review-threads-updated"
+  | "mergeability-changed"
+  | "file-list-changed"
+  | "activity";
+
+export interface PullRequestUpdateReason {
+  code: PullRequestUpdateReasonCode;
+  count?: number;
+  from?: string;
+  to?: string;
+  actors?: string[];
+  reviewers?: string[];
+}
+
+export interface PullRequestCoarseFingerprint {
   number: number;
   headSha: string;
   checksState: string;
+  commitCount: number;
+  changedFileCount: number;
+  issueCommentCount: number;
+  reviewCommentCount: number;
   state: "open" | "closed";
   isDraft: boolean;
   isMerged: boolean;
   mergeableState?: string;
   updatedAt: string;
+}
+
+export interface PullRequestFingerprint extends PullRequestCoarseFingerprint {
+  reviewDecision?: PullRequestReviewDecision;
+  reviewRequests: PullRequestRequestedReviewer[];
+  reviewRequestDigest: string;
+  latestOpinionatedReviews: PullRequestOpinionatedReview[];
+  latestOpinionatedReviewDigest: string;
 }
 
 export interface ReviewSessionFingerprint {
@@ -112,6 +166,7 @@ export interface ReviewSessionFreshnessResult {
   hasComparisonUpdates: boolean;
   hasGitHubUpdates: boolean;
   comparisonSummary?: ChangeSummary;
+  githubUpdateReasons?: PullRequestUpdateReason[];
   nextBaseSha?: string;
   nextHeadSha?: string;
   nextPullRequestFingerprint?: PullRequestFingerprint;

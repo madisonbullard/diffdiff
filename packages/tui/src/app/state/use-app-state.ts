@@ -167,6 +167,9 @@ export function useDiffdiffAppState({
   const [lastAccessedFileIndex, setLastAccessedFileIndex] = useState<number | null>(null);
   const [activePrefix, setActivePrefix] = useState<KeymapPrefixId | null>(null);
   const [refreshIndicatorLabel, setRefreshIndicatorLabel] = useState<string | null>(null);
+  const [refreshIndicatorStatusMessage, setRefreshIndicatorStatusMessage] = useState<string | null>(
+    null,
+  );
   const [diffViewPreference, setDiffViewPreference] = useState<DiffViewPreference>("unified");
   const [mergeCommitMessageInput, setMergeCommitMessageInput] = useState(() =>
     createTextInputState(),
@@ -344,6 +347,7 @@ export function useDiffdiffAppState({
     pullRequestSearchActive,
     pullRequestSearchInput,
     refreshIndicatorLabel,
+    refreshIndicatorStatusMessage,
     renderer,
     reviewCacheTimeoutRef,
     reviewedPaths,
@@ -403,6 +407,7 @@ export function useDiffdiffAppState({
     setPullRequestSearchActive,
     setPullRequestSearchInput,
     setRefreshIndicatorLabel,
+    setRefreshIndicatorStatusMessage,
     setReviewedPaths,
     setReviewComposer,
     setReviewSubmissionInput,

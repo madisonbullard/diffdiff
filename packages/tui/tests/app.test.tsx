@@ -3,6 +3,7 @@ import {
   buildReviewSessionFingerprint,
   type GitHubDashboardPullRequest,
   type GitHubUserPreferences,
+  type ReviewSessionFreshnessResult,
 } from "@madisonbullard/diffdiff-core";
 import * as diffdiffCore from "@madisonbullard/diffdiff-core";
 import type { ComponentProps, ReactNode } from "react";
@@ -1972,13 +1973,16 @@ test("shows a files changed header indicator until refresh reloads the session",
 
 test("keeps the PR refresh badge visible after an auto-refresh probe until the session changes", async () => {
   vi.useFakeTimers();
-  const probeFreshness = vi.fn(async () => ({
-    comparisonSummary: undefined,
-    hasComparisonUpdates: true,
-    hasGitHubUpdates: true,
-    nextBaseSha: "fedcba9",
-    nextHeadSha: "7654321",
-  }));
+  const probeFreshness = vi.fn(
+    async (): Promise<ReviewSessionFreshnessResult> => ({
+      comparisonSummary: undefined,
+      githubUpdateReasons: [{ code: "new-commits", count: 1 }],
+      hasComparisonUpdates: true,
+      hasGitHubUpdates: true,
+      nextBaseSha: "fedcba9",
+      nextHeadSha: "7654321",
+    }),
+  );
   const tree = render(
     <DiffdiffApp
       {...createAppProps({
@@ -1998,6 +2002,72 @@ test("keeps the PR refresh badge visible after an auto-refresh probe until the s
 
   expect(probeFreshness).toHaveBeenCalledTimes(1);
   expect(tree.root.findAll((node) => node.props.label === "updates + PR")).toHaveLength(1);
+});
+
+test("shows specific PR approval refresh messaging", async () => {
+  vi.useFakeTimers();
+  const probeFreshness = vi.fn(
+    async (): Promise<ReviewSessionFreshnessResult> => ({
+      comparisonSummary: undefined,
+      githubUpdateReasons: [{ actors: ["octocat"], code: "review-approved" }],
+      hasComparisonUpdates: false,
+      hasGitHubUpdates: true,
+      nextBaseSha: "fedcba0",
+      nextHeadSha: "1234567",
+    }),
+  );
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        probeFreshness,
+      })}
+    />,
+  );
+
+  await act(async () => {
+    vi.advanceTimersByTime(5_000);
+    await Promise.resolve();
+  });
+
+  expect(tree.root.findAll((node) => node.props.label === "approved")).toHaveLength(1);
+  expect(getAppText(tree)).toContain("Approved by octocat. Press Shift+R to refresh.");
+});
+
+test("combines diff and PR refresh details in the status message", async () => {
+  vi.useFakeTimers();
+  const probeFreshness = vi.fn(
+    async (): Promise<ReviewSessionFreshnessResult> => ({
+      comparisonSummary: {
+        additions: 3,
+        deletions: 1,
+        filesChanged: 1,
+      },
+      githubUpdateReasons: [{ code: "checks-changed", from: "pending", to: "success" }],
+      hasComparisonUpdates: true,
+      hasGitHubUpdates: true,
+      nextBaseSha: "fedcba9",
+      nextHeadSha: "1234567",
+    }),
+  );
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        probeFreshness,
+      })}
+    />,
+  );
+
+  await act(async () => {
+    vi.advanceTimersByTime(5_000);
+    await Promise.resolve();
+  });
+
+  expect(tree.root.findAll((node) => node.props.label === "1 file changed + PR")).toHaveLength(1);
+  expect(getAppText(tree)).toContain(
+    "1 file changed. Checks changed from pending to success. Press Shift+R to refresh.",
+  );
 });
 
 test("preserves the selected file scroll position when refreshing", async () => {
@@ -3843,10 +3913,12 @@ function createGitHubReviewSession(
         successful: 1,
         total: 1,
       },
+      changedFileCount: 2,
       changedFiles: createGitHubChangedFilesByPath({
         "src/app.ts": "UNVIEWED",
         "src/utils.ts": "UNVIEWED",
       }),
+      commitCount: 1,
       conversationItems: [
         {
           author: {
@@ -3880,6 +3952,17 @@ function createGitHubReviewSession(
       headSha: "headsha",
       isDraft: false,
       isMerged: false,
+      issueCommentCount: 1,
+      latestOpinionatedReviews: [
+        {
+          author: {
+            login: "octocat",
+            url: "https://github.com/octocat",
+          },
+          state: "APPROVED",
+          updatedAt: "2026-04-01T12:00:00Z",
+        },
+      ],
       merge: {
         canMerge: true,
         isDraft: false,
@@ -3895,6 +3978,8 @@ function createGitHubReviewSession(
         id: 9010,
         nodeId: "PRR_pending_9010",
       },
+      reviewCommentCount: 2,
+      reviewDecision: "APPROVED",
       reviewGroups: [
         {
           author: {
@@ -3927,6 +4012,7 @@ function createGitHubReviewSession(
           submittedAt: "2026-04-01T12:00:00Z",
         },
       ],
+      reviewRequests: [],
       reviewThreads: [
         {
           comments: [

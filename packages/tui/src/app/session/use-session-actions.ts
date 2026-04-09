@@ -156,6 +156,7 @@ export function useSessionActions({
         workingTreeSummary: nextSession.workingTreeSummary,
       });
       state.setRefreshIndicatorLabel(null);
+      state.setRefreshIndicatorStatusMessage(null);
       state.setSession(nextSession);
     },
     [fileFocus, getFileTopOffsets, state],
