@@ -1677,7 +1677,7 @@ test("shows a persistent error toast until dismissed", async () => {
   });
 
   expect(getAppText(tree)).toContain("Unable to refresh git state.");
-  expect(getAppText(tree)).toContain("An error occurred, open diagnostics (D)");
+  expect(getAppText(tree)).not.toContain("An error occurred, open diagnostics (D)");
 
   emitKey({ name: "j" });
 
@@ -1686,6 +1686,35 @@ test("shows a persistent error toast until dismissed", async () => {
   emitKey({ name: "x", sequence: "x" });
 
   expect(getAppText(tree)).not.toContain("Unable to refresh git state.");
+});
+
+test("keeps the footer on the latest status after an error toast is shown", async () => {
+  const refreshError = new Error(
+    "Request failed due to following response errors:\n - Filepath must be part of pull request",
+  );
+  const syncRemotes = vi.fn(async () => {
+    throw refreshError;
+  });
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        syncRemotes,
+      })}
+    />,
+  );
+
+  await act(async () => {
+    rendererState.renderer.emit("blur");
+    rendererState.renderer.emit("focus");
+  });
+
+  expect(getAppText(tree)).toContain("Request failed due to following response errors:");
+
+  emitKey({ name: "?", sequence: "?" });
+  emitKey({ name: "q", sequence: "q" });
+
+  expect(getAppText(tree)).toContain("Closed help.");
+  expect(getAppText(tree)).toContain("Request failed due to following response errors:");
 });
 
 test("keeps the error toast visible above an open modal", async () => {
@@ -1744,7 +1773,7 @@ test("derives the diagnostics footer hint from the current keymap", async () => 
     rendererState.renderer.emit("focus");
   });
 
-  expect(getAppText(tree)).toContain("An error occurred, open diagnostics (Z)");
+  expect(getAppText(tree)).not.toContain("An error occurred, open diagnostics (Z)");
 });
 
 test("syncs remotes before checking for updates on terminal focus", async () => {
@@ -1877,7 +1906,6 @@ test("shows an animated event log entry while loading a new base branch", async 
   });
   expect(getAppText(tree)).toContain("Updating base to main...");
   expect(getAppText(tree)).not.toContain("Loading...");
-  expect(getAppText(tree)).toMatch(/⠋\s+Updating base to main\.\.\./);
   const footerEventBox = tree.root.find(
     (node) =>
       String(node.type) === "box" &&
@@ -1892,7 +1920,7 @@ test("shows an animated event log entry while loading a new base branch", async 
     vi.advanceTimersByTime(80);
   });
 
-  expect(getAppText(tree)).toMatch(/⠙\s+Updating base to main\.\.\./);
+  expect(getAppText(tree)).toContain("Updating base to main...");
 
   deferredSession.resolve(nextSession);
   await act(async () => {

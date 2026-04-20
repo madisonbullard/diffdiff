@@ -29,20 +29,16 @@ export function getFooterEventPresentation({
 }): FooterEventPresentation {
   return {
     color:
-      errorToastMessage != null
-        ? theme.danger
-        : toastMessage != null
-          ? theme.success
-          : baseBranchLoadingMessage != null || isReloading || activePrefix != null
-            ? theme.accent
-            : theme.textMuted,
+      toastMessage != null
+        ? theme.success
+        : baseBranchLoadingMessage != null || isReloading || activePrefix != null
+          ? theme.accent
+          : theme.textMuted,
     message:
-      errorToastMessage != null
-        ? `An error occurred, open diagnostics (${diagnosticsFooterHint})`
-        : toastMessage != null
-          ? `✓ ${toastMessage}`
-          : baseBranchLoadingMessage != null
-            ? `${LOADING_INDICATOR_FRAMES[loadingIndicatorFrame]} ${baseBranchLoadingMessage}`
-            : statusMessage,
+      toastMessage != null
+        ? `✓ ${toastMessage}`
+        : baseBranchLoadingMessage != null
+          ? `${LOADING_INDICATOR_FRAMES[loadingIndicatorFrame]} ${baseBranchLoadingMessage}`
+          : statusMessage,
   };
 }
