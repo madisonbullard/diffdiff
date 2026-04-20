@@ -9,8 +9,6 @@ export interface FooterEventPresentation {
 export function getFooterEventPresentation({
   activePrefix,
   baseBranchLoadingMessage,
-  diagnosticsFooterHint,
-  errorToastMessage,
   isReloading,
   loadingIndicatorFrame,
   statusMessage,
@@ -19,8 +17,6 @@ export function getFooterEventPresentation({
 }: {
   activePrefix: string | null;
   baseBranchLoadingMessage: string | null;
-  diagnosticsFooterHint: string;
-  errorToastMessage: string | null;
   isReloading: boolean;
   loadingIndicatorFrame: number;
   statusMessage: string;

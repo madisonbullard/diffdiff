@@ -330,7 +330,7 @@ export function buildModalActionDispatchMap({
         }
         return;
       case "pull-request-search":
-        state.setPullRequestSearchActive(false);
+        textInputControllers.pullRequestSearch.deactivate();
         return;
       case "compare-branches":
         if (
@@ -341,7 +341,7 @@ export function buildModalActionDispatchMap({
         }
         return;
       case "commit-search":
-        state.setCommitSearchActive(false);
+        textInputControllers.commitSearch.deactivate();
         return;
       case "comment":
         acceptReviewComposerSelection();
