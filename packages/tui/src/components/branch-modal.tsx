@@ -10,6 +10,7 @@ import {
   ListViewTab,
 } from "./branch-list-view.tsx";
 import { KeyCap, ModalFrame, SPLIT_BORDER, selectItem } from "./shared.tsx";
+import { SINGLE_LINE_TEXT_INPUT_HINT } from "./text-input-hints.ts";
 
 export function BranchModal({
   activeView,
@@ -239,6 +240,9 @@ export function BranchModal({
               <span>{" search  "}</span>
               <KeyCap label="left / right / tab" theme={theme} />
               <span>{" switch view"}</span>
+            </text>
+            <text fg={theme.textMuted} wrapMode="word">
+              {SINGLE_LINE_TEXT_INPUT_HINT}
             </text>
           </>
         ) : (

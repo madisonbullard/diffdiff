@@ -1,5 +1,6 @@
 import type { UiTheme } from "../theme.ts";
 import { AsciiLoadingLabel } from "../components/ascii-loading-pane.tsx";
+import { MULTILINE_TEXT_INPUT_WITH_EDITOR_HINT } from "../components/text-input-hints.ts";
 import { TextInputContent } from "../components/text-input-content.tsx";
 import { formatReviewEvent, getReviewSubmissionEvent } from "./formatting.ts";
 import { MODAL_OVERLAY, REVIEW_BORDER } from "./shared.tsx";
@@ -59,6 +60,10 @@ export function SubmitReviewModal({
             <span>{" move while typing  "}</span>
             <span fg={theme.accent} bg={theme.surfaceMuted}>
               {" ctrl+e "}
+            </span>
+            <span>{" line end  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" leader+e "}
             </span>
             <span>{" editor  "}</span>
             <span fg={theme.accent} bg={theme.surfaceMuted}>
@@ -125,9 +130,8 @@ export function SubmitReviewModal({
         {isSubmitting ? (
           <AsciiLoadingLabel color={theme.accent} message="Submitting review..." theme={theme} />
         ) : (
-          <text fg={theme.textMuted} wrapMode="none">
-            Optional review summary. Use shift+enter for a newline or ctrl+e for the external
-            editor.
+          <text fg={theme.textMuted} wrapMode="word">
+            {`Optional review summary. ${MULTILINE_TEXT_INPUT_WITH_EDITOR_HINT}`}
           </text>
         )}
       </box>

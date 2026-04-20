@@ -1,5 +1,6 @@
 import type { UiTheme } from "../theme.ts";
 import { AsciiLoadingLabel } from "../components/ascii-loading-pane.tsx";
+import { MULTILINE_TEXT_INPUT_WITH_EDITOR_HINT } from "../components/text-input-hints.ts";
 import { TextInputContent } from "../components/text-input-content.tsx";
 import { MODAL_OVERLAY, REVIEW_BORDER } from "./shared.tsx";
 
@@ -59,6 +60,10 @@ export function ReviewComposerModal({
             <span fg={theme.accent} bg={theme.surfaceMuted}>
               {" ctrl+e "}
             </span>
+            <span>{" line end  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" leader+e "}
+            </span>
             <span>{" editor  "}</span>
             <span fg={theme.accent} bg={theme.surfaceMuted}>
               {" up/down "}
@@ -74,6 +79,10 @@ export function ReviewComposerModal({
             <span>{" submit  "}</span>
             <span fg={theme.accent} bg={theme.surfaceMuted}>
               {" shift+enter "}
+            </span>
+            <span>{" newline  "}</span>
+            <span fg={theme.accent} bg={theme.surfaceMuted}>
+              {" ctrl+j "}
             </span>
             <span>{" newline  "}</span>
             <span fg={theme.accent} bg={theme.surfaceMuted}>
@@ -160,8 +169,8 @@ export function ReviewComposerModal({
         ) : (
           <text fg={theme.textMuted} wrapMode="word">
             {historyEntryCount > 0
-              ? `Type your comment body. ${historyEntryCount} saved draft${historyEntryCount === 1 ? "" : "s"} available for browsing.`
-              : "Type your comment body. Use up/down for recent drafts and @ to reference changed files."}
+              ? `Type your comment body. ${historyEntryCount} saved draft${historyEntryCount === 1 ? "" : "s"} available for browsing. ${MULTILINE_TEXT_INPUT_WITH_EDITOR_HINT}`
+              : `Type your comment body. Use up/down for recent drafts and @ to reference changed files. ${MULTILINE_TEXT_INPUT_WITH_EDITOR_HINT}`}
           </text>
         )}
       </box>

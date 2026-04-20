@@ -3,6 +3,7 @@ import type { GitHubDashboardPullRequest } from "@madisonbullard/diffdiff-core";
 import type { UiTheme } from "../theme.ts";
 import { AsciiLoadingLabel } from "./ascii-loading-pane.tsx";
 import { KeyCap, ModalFrame, SPLIT_BORDER, selectItem, tintHex } from "./shared.tsx";
+import { SINGLE_LINE_TEXT_INPUT_HINT } from "./text-input-hints.ts";
 import { TextInputContent } from "./text-input-content.tsx";
 
 const PULL_REQUEST_LIST_MAX_VISIBLE = 10;
@@ -195,6 +196,9 @@ export function PullRequestListModal({
               <span>{" search  "}</span>
               <KeyCap label="j / k / home / end" theme={theme} />
               <span>{" move"}</span>
+            </text>
+            <text fg={theme.textMuted} wrapMode="word">
+              {SINGLE_LINE_TEXT_INPUT_HINT}
             </text>
           </>
         ) : (

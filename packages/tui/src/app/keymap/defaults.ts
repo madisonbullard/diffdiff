@@ -84,6 +84,14 @@ const TEXT_INPUT_LEADER_NAVIGATION: readonly BindingTuple[] = [
   ["k", A.LIST_MOVE_UP],
 ];
 
+const TEXT_INPUT_LEADER_EDITOR: readonly BindingTuple[] = [["e", A.TEXT_OPEN_EXTERNAL_EDITOR]];
+
+const TEXT_INPUT_LEADER_NAVIGATION_AND_EDITOR: readonly BindingTuple[] = [
+  ["j", A.LIST_MOVE_DOWN],
+  ["k", A.LIST_MOVE_UP],
+  ["e", A.TEXT_OPEN_EXTERNAL_EDITOR],
+];
+
 // ---------------------------------------------------------------------------
 // Diff pane (default/main)
 // ---------------------------------------------------------------------------
@@ -507,16 +515,24 @@ const filtersMode = buildMode([
 // Comment composer
 // ---------------------------------------------------------------------------
 
-const commentMode = buildMode([
-  ["escape", A.MODAL_DISMISS],
-  ["backspace", A.TEXT_BACKSPACE],
-  ["ctrl+e", A.TEXT_OPEN_EXTERNAL_EDITOR],
-  ["down", A.LIST_MOVE_DOWN],
-  ["up", A.LIST_MOVE_UP],
-  ["shift+return", A.TEXT_NEWLINE],
-  ["tab", A.LIST_ACCEPT],
-  ["return", A.LIST_ACCEPT],
-]);
+const commentMode = buildModeWithPrefixes(
+  [
+    ["escape", A.MODAL_DISMISS],
+    ["backspace", A.TEXT_BACKSPACE],
+    ["down", A.LIST_MOVE_DOWN],
+    ["up", A.LIST_MOVE_UP],
+    ["shift+return", A.TEXT_NEWLINE],
+    ["tab", A.LIST_ACCEPT],
+    ["return", A.LIST_ACCEPT],
+  ],
+  [
+    {
+      trigger: LEADER_PREFIX.triggerKeybind,
+      label: LEADER_PREFIX.nodeLabel,
+      bindings: TEXT_INPUT_LEADER_NAVIGATION_AND_EDITOR,
+    },
+  ],
+);
 
 // ---------------------------------------------------------------------------
 // Conversation
@@ -540,7 +556,6 @@ const submitReviewMode = buildModeWithPrefixes(
     ["down", A.LIST_MOVE_DOWN],
     ["up", A.LIST_MOVE_UP],
     ["backspace", A.TEXT_BACKSPACE],
-    ["ctrl+e", A.TEXT_OPEN_EXTERNAL_EDITOR],
     ["shift+return", A.TEXT_NEWLINE],
     ["return", A.SUBMIT_REVIEW_SUBMIT],
   ],
@@ -548,7 +563,7 @@ const submitReviewMode = buildModeWithPrefixes(
     {
       trigger: LEADER_PREFIX.triggerKeybind,
       label: LEADER_PREFIX.nodeLabel,
-      bindings: TEXT_INPUT_LEADER_NAVIGATION,
+      bindings: TEXT_INPUT_LEADER_NAVIGATION_AND_EDITOR,
     },
   ],
 );
@@ -567,22 +582,38 @@ const mergeMethodMode = buildMode([
   ["return", A.MERGE_CONFIRM],
 ]);
 
-const mergeTitleMode = buildMode([
-  ["escape", A.MODAL_DISMISS],
-  ["tab", A.MERGE_NEXT_FIELD],
-  ["backspace", A.TEXT_BACKSPACE],
-  ["ctrl+e", A.TEXT_OPEN_EXTERNAL_EDITOR],
-  ["return", A.MERGE_CONFIRM],
-]);
+const mergeTitleMode = buildModeWithPrefixes(
+  [
+    ["escape", A.MODAL_DISMISS],
+    ["tab", A.MERGE_NEXT_FIELD],
+    ["backspace", A.TEXT_BACKSPACE],
+    ["return", A.MERGE_CONFIRM],
+  ],
+  [
+    {
+      trigger: LEADER_PREFIX.triggerKeybind,
+      label: LEADER_PREFIX.nodeLabel,
+      bindings: TEXT_INPUT_LEADER_EDITOR,
+    },
+  ],
+);
 
-const mergeBodyMode = buildMode([
-  ["escape", A.MODAL_DISMISS],
-  ["tab", A.MERGE_NEXT_FIELD],
-  ["backspace", A.TEXT_BACKSPACE],
-  ["ctrl+e", A.TEXT_OPEN_EXTERNAL_EDITOR],
-  ["shift+return", A.TEXT_NEWLINE],
-  ["return", A.MERGE_CONFIRM],
-]);
+const mergeBodyMode = buildModeWithPrefixes(
+  [
+    ["escape", A.MODAL_DISMISS],
+    ["tab", A.MERGE_NEXT_FIELD],
+    ["backspace", A.TEXT_BACKSPACE],
+    ["shift+return", A.TEXT_NEWLINE],
+    ["return", A.MERGE_CONFIRM],
+  ],
+  [
+    {
+      trigger: LEADER_PREFIX.triggerKeybind,
+      label: LEADER_PREFIX.nodeLabel,
+      bindings: TEXT_INPUT_LEADER_EDITOR,
+    },
+  ],
+);
 
 // ---------------------------------------------------------------------------
 // Confirm merge

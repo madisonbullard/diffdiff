@@ -340,6 +340,9 @@ export function applyTextInputKey(
   if (key.name === "end" && !hasModifier(key)) {
     return { handled: true, nextState: moveTextInputCursorBufferEnd(state) };
   }
+  if (key.name === "delete" && key.shift === true && key.ctrl !== true && key.meta !== true) {
+    return { handled: true, nextState: deleteTextInput(state) };
+  }
   if (key.name === "delete" && !hasModifier(key)) {
     return { handled: true, nextState: deleteTextInput(state) };
   }

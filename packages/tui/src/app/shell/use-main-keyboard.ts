@@ -93,6 +93,7 @@ export function useMainKeyboard({
         let handled = false;
         state.setReviewComposer((currentReviewComposer) => {
           const result = applyTextInputKey(currentReviewComposer.input, key, {
+            allowCtrlELineEnd: true,
             multiline: true,
           });
           handled = result.handled;
@@ -105,7 +106,10 @@ export function useMainKeyboard({
       case "submit-review": {
         let handled = false;
         state.setReviewSubmissionInput((currentInput) => {
-          const result = applyTextInputKey(currentInput, key, { multiline: true });
+          const result = applyTextInputKey(currentInput, key, {
+            allowCtrlELineEnd: true,
+            multiline: true,
+          });
           handled = result.handled;
           return result.nextState;
         });
@@ -114,7 +118,7 @@ export function useMainKeyboard({
       case "merge-title": {
         let handled = false;
         state.setMergeCommitTitleInput((currentInput) => {
-          const result = applyTextInputKey(currentInput, key, { allowCtrlELineEnd: false });
+          const result = applyTextInputKey(currentInput, key, { allowCtrlELineEnd: true });
           handled = result.handled;
           return result.nextState;
         });
@@ -123,7 +127,10 @@ export function useMainKeyboard({
       case "merge-body": {
         let handled = false;
         state.setMergeCommitMessageInput((currentInput) => {
-          const result = applyTextInputKey(currentInput, key, { multiline: true });
+          const result = applyTextInputKey(currentInput, key, {
+            allowCtrlELineEnd: true,
+            multiline: true,
+          });
           handled = result.handled;
           return result.nextState;
         });

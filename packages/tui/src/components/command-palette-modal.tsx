@@ -1,5 +1,6 @@
 import type { CommandDefinition } from "../commands.ts";
 import type { UiTheme } from "../theme.ts";
+import { SINGLE_LINE_TEXT_INPUT_HINT } from "./text-input-hints.ts";
 import { CommandBindingLabel, CommandListItem, CommandListRow } from "./command-list.tsx";
 import { KeyCap, ModalFrame, SPLIT_BORDER, selectItem } from "./shared.tsx";
 import { TextInputContent } from "./text-input-content.tsx";
@@ -159,22 +160,24 @@ export function CommandPaletteModal({
           paddingRight={2}
           paddingTop={1}
           paddingBottom={1}
-          flexDirection="row"
-          justifyContent="space-between"
-          gap={2}
+          flexDirection="column"
+          gap={1}
         >
-          <text fg={theme.textMuted} wrapMode="none">
-            <KeyCap label="up / down" theme={theme} />
-            <span>{" move  "}</span>
-            <KeyCap label="enter" theme={theme} />
-            <span>{" run  "}</span>
-            <KeyCap label="leader+j/k" theme={theme} />
-            <span>{" move while typing  "}</span>
-            <KeyCap label="backspace" theme={theme} />
-            <span>{" edit query"}</span>
-          </text>
-          <text fg={theme.textMuted} wrapMode="none">
-            {selectedCommand != null ? selectedCommand.value : ""}
+          <box width="100%" flexDirection="row" justifyContent="space-between" gap={2}>
+            <text fg={theme.textMuted} wrapMode="none">
+              <KeyCap label="up / down" theme={theme} />
+              <span>{" move  "}</span>
+              <KeyCap label="enter" theme={theme} />
+              <span>{" run  "}</span>
+              <KeyCap label="leader+j/k" theme={theme} />
+              <span>{" move while typing"}</span>
+            </text>
+            <text fg={theme.textMuted} wrapMode="none">
+              {selectedCommand != null ? selectedCommand.value : ""}
+            </text>
+          </box>
+          <text fg={theme.textMuted} wrapMode="word">
+            {SINGLE_LINE_TEXT_INPUT_HINT}
           </text>
         </box>
       </box>

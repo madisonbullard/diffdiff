@@ -3427,7 +3427,8 @@ test("opens the external editor for comment composition", async () => {
   );
 
   emitKey({ name: "a" });
-  emitKey({ ctrl: true, name: "e" });
+  emitKey({ ctrl: true, name: "x" });
+  emitKey({ name: "e", sequence: "e" });
   await act(async () => {
     await Promise.resolve();
   });
@@ -3437,6 +3438,28 @@ test("opens the external editor for comment composition", async () => {
     tempFileName: "REVIEW_COMMENT.md",
   });
   expect(getAppText(tree)).toContain("Edited in vim");
+});
+
+test("uses ctrl+e for line-end editing in the comment composer", () => {
+  const openExternalEditor = vi.fn(async () => "Edited in vim");
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        openExternalEditor,
+      })}
+    />,
+  );
+
+  emitKey({ name: "a" });
+  emitText("alpha");
+  emitKey({ ctrl: true, name: "a" });
+  emitText("z");
+  emitKey({ ctrl: true, name: "e" });
+  emitText("!");
+
+  expect(openExternalEditor).not.toHaveBeenCalled();
+  expect(getAppText(tree)).toContain("zalpha!");
 });
 
 test("opens the submit review modal and submits the pending review", async () => {
@@ -3482,7 +3505,8 @@ test("opens the external editor for submit review", async () => {
   );
 
   emitKey({ name: "a", sequence: "A", shift: true });
-  emitKey({ ctrl: true, name: "e" });
+  emitKey({ ctrl: true, name: "x" });
+  emitKey({ name: "e", sequence: "e" });
   await act(async () => {
     await Promise.resolve();
   });
@@ -3492,6 +3516,28 @@ test("opens the external editor for submit review", async () => {
     tempFileName: "SUBMIT_REVIEW.md",
   });
   expect(getAppText(tree)).toContain("Summary from editor");
+});
+
+test("uses ctrl+e for line-end editing in submit review", () => {
+  const openExternalEditor = vi.fn(async () => "Summary from editor");
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        openExternalEditor,
+      })}
+    />,
+  );
+
+  emitKey({ name: "a", sequence: "A", shift: true });
+  emitText("ship");
+  emitKey({ ctrl: true, name: "a" });
+  emitText("Please ");
+  emitKey({ ctrl: true, name: "e" });
+  emitText(" now");
+
+  expect(openExternalEditor).not.toHaveBeenCalled();
+  expect(getAppText(tree)).toContain("Please ship now");
 });
 
 test("shows an optimistic submitted review while the session reload is pending", async () => {
@@ -3611,7 +3657,8 @@ test("opens the external editor for merge composition", async () => {
   );
 
   emitKey({ name: "m" });
-  emitKey({ ctrl: true, name: "e" });
+  emitKey({ ctrl: true, name: "x" });
+  emitKey({ name: "e", sequence: "e" });
   await act(async () => {
     await Promise.resolve();
   });
@@ -3626,6 +3673,28 @@ test("opens the external editor for merge composition", async () => {
   );
   expect(getAppText(tree)).toContain("Edited title");
   expect(getAppText(tree)).toContain("Edited body");
+});
+
+test("uses ctrl+e for line-end editing in merge title", () => {
+  const openExternalEditor = vi.fn(async () => "Edited title\n\nEdited body");
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialGitHubPreferences: createGitHubPreferences({ defaultMergeMethod: "merge" }),
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        openExternalEditor,
+      })}
+    />,
+  );
+
+  emitKey({ name: "m" });
+  emitKey({ ctrl: true, name: "a" });
+  emitText("New ");
+  emitKey({ ctrl: true, name: "e" });
+  emitText("!");
+
+  expect(openExternalEditor).not.toHaveBeenCalled();
+  expect(getAppText(tree)).toContain("New Build TUI reviewer!");
 });
 
 test("shows an optimistic merged state while the session reload is pending", async () => {

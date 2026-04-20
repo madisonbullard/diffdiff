@@ -47,7 +47,7 @@ OpenCode's prompt input is much more advanced than diffdiff's current comment an
 
 ## Proposed UX
 
-- `ctrl+e` on any composition surface opens `$VISUAL` or `$EDITOR` with the current text.
+- `ctrl+e` keeps OpenCode's end-of-line motion on composition surfaces, while `leader+e` opens `$VISUAL` or `$EDITOR` with the current text.
 - Comment composer and submit review open a body-only editor buffer.
 - Merge opens a single buffer with the title on the first line, a blank line, then the body so the whole merge message can be edited coherently.
 - Typing `@` in the comment composer opens a compact file-reference picker scoped to the current review session's changed files.
@@ -89,11 +89,11 @@ OpenCode's prompt input is much more advanced than diffdiff's current comment an
 
 - Reuse the same external-editor helper for `submit-review` and `merge`.
 - Do not add history browsing or file-reference assistance to merge fields in the first pass.
-- Keep the current submission semantics unchanged: `enter` still submits, `shift+enter` still inserts a newline, and `esc` still dismisses.
+- Keep the current submission semantics unchanged: `enter` still submits, `shift+enter`/`ctrl+j` still insert newlines, and `esc` still dismisses.
 
 6. Verify and polish.
 
-- Update the modal footers and status copy to advertise the new shortcuts and restore behavior.
+- Update the modal footers and status copy to advertise the richer OpenCode-style text editing shortcuts and restore behavior.
 - Add focused tests for editor launch, merge message splitting, autocomplete insertion, history restore, and composer-local key routing while autocomplete is open.
 - If autocomplete needs stronger key isolation, implement that locally for the composer now and leave the generalized solution to `11-keybind-suspension-infrastructure.md`.
 
@@ -110,7 +110,7 @@ OpenCode's prompt input is much more advanced than diffdiff's current comment an
 
 ## Acceptance Criteria
 
-- `ctrl+e` works in comment composition, submit review, and merge composition.
+- `leader+e` works in comment composition, submit review, and merge composition, while `ctrl+e` still moves to line end.
 - Comment composition can insert changed-file references with optional line ranges.
 - Closing and reopening the same comment target restores the latest local draft.
 - Comment draft history stays bounded and corruption-tolerant.
