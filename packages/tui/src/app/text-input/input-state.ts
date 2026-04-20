@@ -1,4 +1,4 @@
-import type { KeyboardInput } from "../../keyboard-input.ts";
+import { getKeyboardInputName, type KeyboardInput } from "../../keyboard-input.ts";
 
 export interface TextInputSnapshot {
   cursorOffset: number;
@@ -212,138 +212,139 @@ export function applyTextInputKey(
   options: ApplyTextInputKeyOptions = {},
 ): ApplyTextInputKeyResult {
   const multiline = options.multiline === true;
+  const keyName = getKeyboardInputName(key);
 
   if (isEditablePrintableKey(key)) {
     return { handled: true, nextState: insertTextInputText(state, key.sequence!) };
   }
 
   if (key.super === true) {
-    if (key.name === "left" && !key.shift) {
+    if (keyName === "left" && !key.shift) {
       return { handled: true, nextState: moveTextInputCursorLineStart(state) };
     }
-    if (key.name === "right" && !key.shift) {
+    if (keyName === "right" && !key.shift) {
       return { handled: true, nextState: moveTextInputCursorLineEnd(state) };
     }
-    if (key.name === "up" && !key.shift) {
+    if (keyName === "up" && !key.shift) {
       return { handled: true, nextState: moveTextInputCursorBufferStart(state) };
     }
-    if (key.name === "down" && !key.shift) {
+    if (keyName === "down" && !key.shift) {
       return { handled: true, nextState: moveTextInputCursorBufferEnd(state) };
     }
-    if (key.name === "z" && key.shift !== true) {
+    if (keyName === "z" && key.shift !== true) {
       return { handled: true, nextState: undoTextInput(state) };
     }
-    if (key.name === "z" && key.shift === true) {
+    if (keyName === "z" && key.shift === true) {
       return { handled: true, nextState: redoTextInput(state) };
     }
-    if (key.name === "backspace" && !key.shift) {
+    if (keyName === "backspace" && !key.shift) {
       return { handled: true, nextState: deleteTextInputLine(state) };
     }
   }
 
   if (key.ctrl === true) {
-    if (key.name === "a" && key.shift !== true) {
+    if (keyName === "a" && key.shift !== true) {
       return { handled: true, nextState: moveTextInputCursorLineStart(state) };
     }
-    if (key.name === "e" && key.shift !== true && options.allowCtrlELineEnd === true) {
+    if (keyName === "e" && key.shift !== true && options.allowCtrlELineEnd === true) {
       return { handled: true, nextState: moveTextInputCursorLineEnd(state) };
     }
-    if (key.name === "b" && !key.shift) {
+    if (keyName === "b" && !key.shift) {
       return { handled: true, nextState: moveTextInputCursorLeft(state) };
     }
-    if (key.name === "f" && !key.shift) {
+    if (keyName === "f" && !key.shift) {
       return { handled: true, nextState: moveTextInputCursorRight(state) };
     }
-    if (key.name === "w" && !key.shift) {
+    if (keyName === "w" && !key.shift) {
       return { handled: true, nextState: deleteTextInputWordBackward(state) };
     }
-    if (key.name === "d" && !key.shift) {
+    if (keyName === "d" && !key.shift) {
       return { handled: true, nextState: deleteTextInput(state) };
     }
-    if (key.name === "d" && key.shift === true) {
+    if (keyName === "d" && key.shift === true) {
       return { handled: true, nextState: deleteTextInputLine(state) };
     }
-    if (key.name === "k" && !key.shift) {
+    if (keyName === "k" && !key.shift) {
       return { handled: true, nextState: deleteTextInputToLineEnd(state) };
     }
-    if (key.name === "u" && !key.shift) {
+    if (keyName === "u" && !key.shift) {
       return { handled: true, nextState: deleteTextInputToLineStart(state) };
     }
-    if (key.name === "left" && !key.shift) {
+    if (keyName === "left" && !key.shift) {
       return { handled: true, nextState: moveTextInputCursorWordBackward(state) };
     }
-    if (key.name === "right" && !key.shift) {
+    if (keyName === "right" && !key.shift) {
       return { handled: true, nextState: moveTextInputCursorWordForward(state) };
     }
-    if (key.name === "delete" && !key.shift) {
+    if (keyName === "delete" && !key.shift) {
       return { handled: true, nextState: deleteTextInputWordForward(state) };
     }
-    if (key.name === "backspace" && !key.shift) {
+    if (keyName === "backspace" && !key.shift) {
       return { handled: true, nextState: deleteTextInputWordBackward(state) };
     }
-    if (key.name === "-" && !key.shift) {
+    if (keyName === "-" && !key.shift) {
       return { handled: true, nextState: undoTextInput(state) };
     }
-    if (key.name === "." && !key.shift) {
+    if (keyName === "." && !key.shift) {
       return { handled: true, nextState: redoTextInput(state) };
     }
-    if (multiline && (key.name === "j" || key.name === "return") && !key.shift) {
+    if (multiline && (keyName === "j" || keyName === "return") && !key.shift) {
       return { handled: true, nextState: insertTextInputNewline(state) };
     }
   }
 
   if (key.meta === true) {
-    if (key.name === "a" && !key.shift) {
+    if (keyName === "a" && !key.shift) {
       return { handled: true, nextState: moveTextInputCursorLineStart(state) };
     }
-    if (key.name === "e" && !key.shift) {
+    if (keyName === "e" && !key.shift) {
       return { handled: true, nextState: moveTextInputCursorLineEnd(state) };
     }
-    if ((key.name === "b" || key.name === "left") && !key.shift) {
+    if ((keyName === "b" || keyName === "left") && !key.shift) {
       return { handled: true, nextState: moveTextInputCursorWordBackward(state) };
     }
-    if ((key.name === "f" || key.name === "right") && !key.shift) {
+    if ((keyName === "f" || keyName === "right") && !key.shift) {
       return { handled: true, nextState: moveTextInputCursorWordForward(state) };
     }
-    if (key.name === "d" || key.name === "delete") {
+    if (keyName === "d" || keyName === "delete") {
       return { handled: true, nextState: deleteTextInputWordForward(state) };
     }
-    if (key.name === "backspace") {
+    if (keyName === "backspace") {
       return { handled: true, nextState: deleteTextInputWordBackward(state) };
     }
-    if (multiline && key.name === "return" && !key.shift) {
+    if (multiline && keyName === "return" && !key.shift) {
       return { handled: true, nextState: insertTextInputNewline(state) };
     }
   }
 
-  if (key.name === "left" && !hasModifier(key)) {
+  if (keyName === "left" && !hasModifier(key)) {
     return { handled: true, nextState: moveTextInputCursorLeft(state) };
   }
-  if (key.name === "right" && !hasModifier(key)) {
+  if (keyName === "right" && !hasModifier(key)) {
     return { handled: true, nextState: moveTextInputCursorRight(state) };
   }
-  if (key.name === "backspace" && key.shift === true && key.ctrl !== true && key.meta !== true) {
+  if (keyName === "backspace" && key.shift === true && key.ctrl !== true && key.meta !== true) {
     return { handled: true, nextState: backspaceTextInput(state) };
   }
-  if (key.name === "backspace" && !hasModifier(key)) {
+  if (keyName === "backspace" && !hasModifier(key)) {
     return { handled: true, nextState: backspaceTextInput(state) };
   }
-  if (key.name === "up" && !hasModifier(key) && multiline) {
+  if (keyName === "up" && !hasModifier(key) && multiline) {
     return { handled: true, nextState: moveTextInputCursorUp(state) };
   }
-  if (key.name === "down" && !hasModifier(key) && multiline) {
+  if (keyName === "down" && !hasModifier(key) && multiline) {
     return { handled: true, nextState: moveTextInputCursorDown(state) };
   }
-  if (key.name === "home" && !hasModifier(key)) {
+  if (keyName === "home" && !hasModifier(key)) {
     return { handled: true, nextState: moveTextInputCursorBufferStart(state) };
   }
-  if (key.name === "end" && !hasModifier(key)) {
+  if (keyName === "end" && !hasModifier(key)) {
     return { handled: true, nextState: moveTextInputCursorBufferEnd(state) };
   }
-  if (key.name === "delete" && key.shift === true && key.ctrl !== true && key.meta !== true) {
+  if (keyName === "delete" && key.shift === true && key.ctrl !== true && key.meta !== true) {
     return { handled: true, nextState: deleteTextInput(state) };
   }
-  if (key.name === "delete" && !hasModifier(key)) {
+  if (keyName === "delete" && !hasModifier(key)) {
     return { handled: true, nextState: deleteTextInput(state) };
   }
 
@@ -355,6 +356,7 @@ function isEditablePrintableKey(key: KeyboardInput): boolean {
     key.sequence != null &&
     key.sequence.length === 1 &&
     key.sequence >= " " &&
+    key.sequence !== "\x7f" &&
     key.ctrl !== true &&
     key.meta !== true &&
     key.super !== true

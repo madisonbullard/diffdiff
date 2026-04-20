@@ -3,7 +3,7 @@
  * `KeyEvent` used by the keymap trie.
  */
 
-import type { KeyboardInput } from "../../keyboard-input.ts";
+import { getKeyboardInputName, type KeyboardInput } from "../../keyboard-input.ts";
 import type { KeyEvent } from "./types.ts";
 
 // ---------------------------------------------------------------------------
@@ -48,7 +48,7 @@ function normalizeKeyName(raw: string): string {
 }
 
 function normalizePrintableCharacter(char: string): Pick<KeyEvent, "key" | "shift"> | null {
-  if (char.length !== 1 || char < " ") {
+  if (char.length !== 1 || char < " " || char === "\x7f") {
     return null;
   }
 
@@ -90,15 +90,8 @@ export function keyEventFromInput(input: KeyboardInput): KeyEvent {
     };
   }
 
-  const keyName =
-    input.name !== ""
-      ? input.name
-      : input.sequence != null && input.sequence.length === 1
-        ? input.sequence
-        : input.name;
-
   return {
-    key: normalizeKeyName(keyName),
+    key: normalizeKeyName(getKeyboardInputName(input)),
     ctrl: input.ctrl === true,
     meta: input.meta === true,
     shift: input.shift === true,

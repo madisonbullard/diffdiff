@@ -90,6 +90,15 @@ describe("keyEventFromInput", () => {
     });
   });
 
+  test("normalizes raw DEL input as backspace", () => {
+    expect(keyEventFromInput({ name: "", sequence: "\x7f" })).toEqual({
+      key: "backspace",
+      ctrl: false,
+      meta: false,
+      shift: false,
+    });
+  });
+
   test("carries modifier flags", () => {
     expect(keyEventFromInput({ name: "r", shift: true })).toEqual({
       key: "r",

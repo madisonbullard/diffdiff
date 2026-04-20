@@ -3490,6 +3490,23 @@ test("uses ctrl+e for line-end editing in the comment composer", () => {
   expect(getAppText(tree)).toContain("zalpha!");
 });
 
+test("treats raw DEL input as backspace in the comment composer", () => {
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+      })}
+    />,
+  );
+
+  emitKey({ name: "a" });
+  emitText("Ship it");
+  emitKey({ name: "", sequence: "\x7f" });
+
+  expect(getAppText(tree)).toContain("Ship i");
+  expect(getAppText(tree)).not.toContain("Ship it");
+});
+
 test("opens the submit review modal and submits the pending review", async () => {
   const submitPendingReview = vi.fn(async () => undefined);
   const loadSession = vi.fn(async () =>
