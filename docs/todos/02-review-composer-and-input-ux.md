@@ -40,9 +40,8 @@ OpenCode's prompt input is much more advanced than diffdiff's current comment an
 
 ## Current Diffdiff Reality
 
-- `packages/tui/src/app/DiffdiffApp.tsx` owns `reviewComposerBody`, `reviewSubmissionBody`, `mergeCommitTitle`, and `mergeCommitMessage` directly.
-- `handleCommentComposerKey`, `handleSubmitReviewModalKey`, and `handleMergeModalKey` each implement their own append, backspace, newline, and submit logic inline.
-- `packages/tui/src/review/review-composer-modal.tsx`, `submit-review-modal.tsx`, and `merge-pull-request-modal.tsx` are display-only surfaces, so any richer behavior still needs to be orchestrated from the app layer.
+- The TUI now routes review-composer, submit-review, and merge text editing through dedicated review-input controllers under `packages/tui/src/app/review/` instead of scattering mutations across keyboard and modal dispatch files.
+- `packages/tui/src/review/review-composer-modal.tsx`, `submit-review-modal.tsx`, and `merge-pull-request-modal.tsx` remain display-only surfaces, with text-editing behavior delegated through the shared keymap runtime into those controllers.
 - `packages/core/src/preferences.ts` currently persists only GitHub cleanup defaults and the default merge method, so draft recovery or history should not be stuffed into `preferences.json` by default.
 
 ## Proposed UX

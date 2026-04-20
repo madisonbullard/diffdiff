@@ -4,6 +4,7 @@ import type { ActionDispatchMap } from "../keymap/action-dispatch.ts";
 import type { FileFocusController } from "../shared/file-focus.ts";
 import type { DiffdiffAppPersistenceApi } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
+import type { AppTextInputControllers } from "../text-input/input-controllers.ts";
 import type { createReviewActions } from "../review/review-actions.ts";
 import type { createTreeActions } from "../tree/tree-actions.ts";
 import type { DiffdiffAppDerived } from "./use-app-models.ts";
@@ -30,6 +31,7 @@ interface BuildActionDispatchMapOptions extends BuildModalActionDispatchMapOptio
   openSubmitReviewModal: () => void;
   persistenceApi: DiffdiffAppPersistenceApi;
   refreshComparison: () => Promise<void> | void;
+  textInputControllers: AppTextInputControllers;
   reviewActions: ReturnType<typeof createReviewActions>;
   treeActions: ReturnType<typeof createTreeActions>;
 }

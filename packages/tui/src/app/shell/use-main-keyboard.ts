@@ -5,8 +5,8 @@ import type { KeyboardInput } from "../../keyboard-input.ts";
 import { getPrefixMenuConfig } from "../commands/prefix-menus.ts";
 import { dispatchAction, type ActionDispatchMap } from "../keymap/action-dispatch.ts";
 import { keyEventFromInput } from "../keymap/key-event.ts";
-import { updateReviewComposerInput } from "../review/review-composer-state.ts";
-import { applyTextInputKey } from "../text-input/input-state.ts";
+import type { ReviewInputControllers } from "../review/review-input-controllers.ts";
+import type { AppTextInputControllers } from "../text-input/input-controllers.ts";
 import type { KeymapMode } from "./keymap-mode.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 
@@ -17,6 +17,8 @@ interface UseMainKeyboardOptions {
     runCommandByValue: (value: string) => void;
   };
   dismissErrorToast: () => void;
+  textInputControllers: AppTextInputControllers;
+  reviewInputControllers: ReviewInputControllers;
   state: DiffdiffAppState;
 }
 
@@ -25,6 +27,8 @@ export function useMainKeyboard({
   activeKeymapMode,
   commandActions,
   dismissErrorToast,
+  textInputControllers,
+  reviewInputControllers,
   state,
 }: UseMainKeyboardOptions) {
   const keyboardHandlerRef = useRef<(key: KeyboardInput) => void>(() => undefined);
@@ -48,93 +52,25 @@ export function useMainKeyboard({
   function handleTextInputKey(key: KeyboardInput): boolean {
     switch (activeKeymapMode) {
       case "commands": {
-        let handled = false;
-        let textChanged = false;
-        state.setCommandInput((currentInput) => {
-          const result = applyTextInputKey(currentInput, key, { allowCtrlELineEnd: true });
-          handled = result.handled;
-          textChanged = result.nextState.value !== currentInput.value;
-          return result.nextState;
-        });
-        if (textChanged) {
-          state.setCommandIndex(0);
-        }
-        return handled;
+        return textInputControllers.commandPalette.applyKey(key);
       }
       case "pull-request-search": {
-        let handled = false;
-        let textChanged = false;
-        state.setPullRequestSearchInput((currentInput) => {
-          const result = applyTextInputKey(currentInput, key, { allowCtrlELineEnd: true });
-          handled = result.handled;
-          textChanged = result.nextState.value !== currentInput.value;
-          return result.nextState;
-        });
-        if (textChanged) {
-          state.setPullRequestListIndex(0);
-        }
-        return handled;
+        return textInputControllers.pullRequestSearch.applyKey(key);
       }
       case "commit-search": {
-        let handled = false;
-        let textChanged = false;
-        state.setCommitSearchInput((currentInput) => {
-          const result = applyTextInputKey(currentInput, key, { allowCtrlELineEnd: true });
-          handled = result.handled;
-          textChanged = result.nextState.value !== currentInput.value;
-          return result.nextState;
-        });
-        if (textChanged) {
-          state.setCommitListIndex(0);
-        }
-        return handled;
+        return textInputControllers.commitSearch.applyKey(key);
       }
       case "comment": {
-        let handled = false;
-        state.setReviewComposer((currentReviewComposer) => {
-          const result = applyTextInputKey(currentReviewComposer.input, key, {
-            allowCtrlELineEnd: true,
-            multiline: true,
-          });
-          handled = result.handled;
-          return handled
-            ? updateReviewComposerInput(currentReviewComposer, result.nextState)
-            : currentReviewComposer;
-        });
-        return handled;
+        return reviewInputControllers.reviewComposer.applyKey(key);
       }
       case "submit-review": {
-        let handled = false;
-        state.setReviewSubmissionInput((currentInput) => {
-          const result = applyTextInputKey(currentInput, key, {
-            allowCtrlELineEnd: true,
-            multiline: true,
-          });
-          handled = result.handled;
-          return result.nextState;
-        });
-        return handled;
+        return reviewInputControllers.reviewSubmission.applyKey(key);
       }
       case "merge-title": {
-        let handled = false;
-        state.setMergeCommitTitleInput((currentInput) => {
-          const result = applyTextInputKey(currentInput, key, { allowCtrlELineEnd: true });
-          handled = result.handled;
-          return result.nextState;
-        });
-        return handled;
+        return reviewInputControllers.mergeMessage.applyTitleKey(key);
       }
       case "merge-body": {
-        let handled = false;
-        state.setMergeCommitMessageInput((currentInput) => {
-          const result = applyTextInputKey(currentInput, key, {
-            allowCtrlELineEnd: true,
-            multiline: true,
-          });
-          handled = result.handled;
-          return result.nextState;
-        });
-        return handled;
+        return reviewInputControllers.mergeMessage.applyBodyKey(key);
       }
     }
 

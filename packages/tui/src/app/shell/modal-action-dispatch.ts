@@ -1,33 +1,18 @@
 /* eslint-disable max-lines */
 
-import { insertReviewComposerAutocomplete } from "../../review/composer-autocomplete.ts";
-import {
-  dismissReviewComposerAutocomplete,
-  moveReviewComposerAutocompleteIndex,
-  moveReviewComposerHistory as moveReviewComposerHistoryState,
-  setReviewComposerAutocompleteIndex,
-  updateReviewComposerInput,
-} from "../review/review-composer-state.ts";
 import { clampIndex } from "../../view-model.ts";
 import * as A from "../keymap/actions.ts";
 import type { ActionDispatchMap } from "../keymap/action-dispatch.ts";
 import { closeDialog as closeAppDialog, openDialog as openAppDialog } from "../dialogs/stack.ts";
 import { getMergeMethod, getMergeMethodIndex } from "../../review/formatting.ts";
+import type { ReviewInputControllers } from "../review/review-input-controllers.ts";
 import { LIST_FILTER_KEYS } from "../shared/constants.ts";
 import type { DiffdiffAppPersistenceApi } from "../state/app-props.ts";
 import type { KeymapMode } from "./keymap-mode.ts";
 import type { AppCommand } from "../commands/registry.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import type { DiffdiffAppDerived } from "./use-app-models.ts";
-import {
-  backspaceTextInput,
-  createTextInputState,
-  insertTextInputNewline,
-  isTextInputOnFirstLine,
-  isTextInputOnLastLine,
-  moveTextInputCursorDown,
-  moveTextInputCursorUp,
-} from "../text-input/input-state.ts";
+import type { AppTextInputControllers } from "../text-input/input-controllers.ts";
 
 export interface BuildModalActionDispatchMapOptions {
   activeKeymapMode: KeymapMode;
@@ -55,12 +40,11 @@ export interface BuildModalActionDispatchMapOptions {
   jumpToLastDiagnostic: () => void;
   moveDiagnosticSelection: (delta: number) => void;
   openMergeConfirmModal: () => void;
-  openMergeModalInExternalEditor: () => Promise<void>;
   openPullRequestConversationReplyComposer: () => void;
-  openReviewComposerInExternalEditor: () => Promise<void>;
-  openSubmitReviewModalInExternalEditor: () => Promise<void>;
   persistenceApi: DiffdiffAppPersistenceApi;
   refreshGitHubPullRequestList: () => Promise<void>;
+  textInputControllers: AppTextInputControllers;
+  reviewInputControllers: ReviewInputControllers;
   runCommand: (command: AppCommand) => void;
   state: DiffdiffAppState;
   submitCommentComposer: () => Promise<void>;
@@ -88,12 +72,11 @@ export function buildModalActionDispatchMap({
   jumpToLastDiagnostic,
   moveDiagnosticSelection,
   openMergeConfirmModal,
-  openMergeModalInExternalEditor,
   openPullRequestConversationReplyComposer,
-  openReviewComposerInExternalEditor,
-  openSubmitReviewModalInExternalEditor,
   persistenceApi,
   refreshGitHubPullRequestList,
+  textInputControllers,
+  reviewInputControllers,
   runCommand,
   state,
   submitCommentComposer,
@@ -103,69 +86,9 @@ export function buildModalActionDispatchMap({
 }: BuildModalActionDispatchMapOptions): ActionDispatchMap {
   const map: ActionDispatchMap = new Map();
 
-  function updateReviewComposerTextInput(
-    updater: (
-      currentInput: import("../text-input/input-state.ts").TextInputState,
-    ) => import("../text-input/input-state.ts").TextInputState,
-  ): void {
-    state.setReviewComposer((currentReviewComposer) =>
-      updateReviewComposerInput(currentReviewComposer, updater),
-    );
-  }
-
-  function moveReviewComposerHistory(delta: number): void {
-    state.setReviewComposer((currentReviewComposer) =>
-      moveReviewComposerHistoryState(
-        currentReviewComposer,
-        derived.reviewComposerHistoryEntries,
-        delta,
-      ),
-    );
-  }
-
-  function moveReviewComposerAutocomplete(delta: number): void {
-    if (!derived.reviewComposerAutocomplete.isVisible) {
-      moveReviewComposerHistory(delta);
-      return;
-    }
-
-    state.setReviewComposer((currentReviewComposer) =>
-      setReviewComposerAutocompleteIndex(
-        currentReviewComposer,
-        moveReviewComposerAutocompleteIndex(
-          currentReviewComposer.autocompleteIndex,
-          derived.reviewComposerAutocomplete.options.length,
-          delta,
-        ),
-      ),
-    );
-  }
-
   function acceptReviewComposerSelection(): void {
-    if (derived.reviewComposerAutocomplete.isVisible) {
-      const option =
-        derived.reviewComposerAutocomplete.options[
-          clampIndex(
-            state.reviewComposer.autocompleteIndex,
-            derived.reviewComposerAutocomplete.options.length,
-          )
-        ];
-      if (option != null) {
-        updateReviewComposerTextInput((currentInput) => {
-          const nextAutocomplete = insertReviewComposerAutocomplete(
-            currentInput.value,
-            currentInput.cursorOffset,
-            option,
-          );
-          return {
-            ...currentInput,
-            cursorOffset: nextAutocomplete.cursorOffset,
-            preferredColumn: null,
-            value: nextAutocomplete.body,
-          };
-        });
-        return;
-      }
+    if (reviewInputControllers.reviewComposer.acceptAutocomplete()) {
+      return;
     }
 
     void submitCommentComposer();
@@ -173,8 +96,8 @@ export function buildModalActionDispatchMap({
 
   function closeBranchModal(): void {
     state.setDialogStack((currentStack) => closeAppDialog(currentStack, "branch", "dismiss"));
-    state.setCommitSearchInput(createTextInputState());
-    state.setCommitSearchActive(false);
+    textInputControllers.commitSearch.reset();
+    textInputControllers.commitSearch.deactivate();
     state.setStatusMessage("Closed list modal.");
   }
 
@@ -182,8 +105,8 @@ export function buildModalActionDispatchMap({
     state.setDialogStack((currentStack) =>
       closeAppDialog(currentStack, "pull-request-list", "dismiss"),
     );
-    state.setPullRequestSearchActive(false);
-    state.setPullRequestSearchInput(createTextInputState());
+    textInputControllers.pullRequestSearch.reset();
+    textInputControllers.pullRequestSearch.deactivate();
     state.setStatusMessage("Closed pull request list.");
   }
 
@@ -205,12 +128,12 @@ export function buildModalActionDispatchMap({
     state.setDialogStack((currentStack) =>
       closeAppDialog(currentStack, "submit-review", "dismiss"),
     );
-    state.setReviewSubmissionInput(createTextInputState());
+    reviewInputControllers.reviewSubmission.close();
     state.setStatusMessage("Closed submit review modal.");
   }
 
   function closeMergeModal(): void {
-    state.setMergeConfirmOpen(false);
+    reviewInputControllers.mergeMessage.close();
     state.setDialogStack((currentStack) => closeAppDialog(currentStack, "merge", "dismiss"));
     state.setStatusMessage("Closed merge modal.");
   }
@@ -288,38 +211,11 @@ export function buildModalActionDispatchMap({
         );
         return;
       case "submit-review": {
-        const currentInput = state.reviewSubmissionInput;
-        if (
-          delta < 0 ? isTextInputOnFirstLine(currentInput) : isTextInputOnLastLine(currentInput)
-        ) {
-          state.setReviewSubmissionEventIndex((currentIndex) =>
-            clampIndex(currentIndex + delta, 3),
-          );
-          return;
-        }
-
-        state.setReviewSubmissionInput((input) =>
-          delta < 0 ? moveTextInputCursorUp(input) : moveTextInputCursorDown(input),
-        );
+        reviewInputControllers.reviewSubmission.move(delta);
         return;
       }
       case "comment": {
-        if (derived.reviewComposerAutocomplete.isVisible) {
-          moveReviewComposerAutocomplete(delta);
-          return;
-        }
-
-        const currentInput = state.reviewComposer.input;
-        if (
-          delta < 0 ? isTextInputOnFirstLine(currentInput) : isTextInputOnLastLine(currentInput)
-        ) {
-          moveReviewComposerHistory(delta);
-          return;
-        }
-
-        updateReviewComposerTextInput((input) =>
-          delta < 0 ? moveTextInputCursorUp(input) : moveTextInputCursorDown(input),
-        );
+        reviewInputControllers.reviewComposer.move(delta);
         return;
       }
       case "merge-method":
@@ -378,31 +274,22 @@ export function buildModalActionDispatchMap({
         closePullRequestList();
         return;
       case "pull-request-search":
-        state.setPullRequestSearchActive(false);
-        state.setPullRequestSearchInput(createTextInputState());
-        state.setPullRequestListIndex(0);
+        textInputControllers.pullRequestSearch.reset();
+        textInputControllers.pullRequestSearch.deactivate();
         return;
       case "compare-branches":
       case "compare-commits":
         closeBranchModal();
         return;
       case "commit-search":
-        state.setCommitSearchInput(createTextInputState());
-        state.setCommitSearchActive(false);
-        state.setCommitListIndex(0);
+        textInputControllers.commitSearch.reset();
+        textInputControllers.commitSearch.deactivate();
         return;
       case "filters":
         closeListFilters();
         return;
       case "comment":
-        if (derived.reviewComposerAutocomplete.isVisible) {
-          state.setReviewComposer((currentReviewComposer) =>
-            dismissReviewComposerAutocomplete(
-              currentReviewComposer,
-              derived.reviewComposerAutocomplete.tokenKey ?? null,
-            ),
-          );
-          state.setStatusMessage("Dismissed file reference suggestions.");
+        if (reviewInputControllers.reviewComposer.dismissAutocomplete()) {
           return;
         }
 
@@ -465,28 +352,25 @@ export function buildModalActionDispatchMap({
   function backspaceText(): void {
     switch (activeKeymapMode) {
       case "commands":
-        state.setCommandInput((currentInput) => backspaceTextInput(currentInput));
-        state.setCommandIndex(0);
+        textInputControllers.commandPalette.backspace();
         return;
       case "pull-request-search":
-        state.setPullRequestSearchInput((currentInput) => backspaceTextInput(currentInput));
-        state.setPullRequestListIndex(0);
+        textInputControllers.pullRequestSearch.backspace();
         return;
       case "commit-search":
-        state.setCommitSearchInput((currentInput) => backspaceTextInput(currentInput));
-        state.setCommitListIndex(0);
+        textInputControllers.commitSearch.backspace();
         return;
       case "comment":
-        updateReviewComposerTextInput((currentInput) => backspaceTextInput(currentInput));
+        reviewInputControllers.reviewComposer.backspace();
         return;
       case "submit-review":
-        state.setReviewSubmissionInput((currentInput) => backspaceTextInput(currentInput));
+        reviewInputControllers.reviewSubmission.backspace();
         return;
       case "merge-title":
-        state.setMergeCommitTitleInput((currentInput) => backspaceTextInput(currentInput));
+        reviewInputControllers.mergeMessage.backspaceTitle();
         return;
       case "merge-body":
-        state.setMergeCommitMessageInput((currentInput) => backspaceTextInput(currentInput));
+        reviewInputControllers.mergeMessage.backspaceBody();
         return;
     }
   }
@@ -494,13 +378,13 @@ export function buildModalActionDispatchMap({
   function insertNewline(): void {
     switch (activeKeymapMode) {
       case "comment":
-        updateReviewComposerTextInput((currentInput) => insertTextInputNewline(currentInput));
+        reviewInputControllers.reviewComposer.insertNewline();
         return;
       case "submit-review":
-        state.setReviewSubmissionInput((currentInput) => insertTextInputNewline(currentInput));
+        reviewInputControllers.reviewSubmission.insertNewline();
         return;
       case "merge-body":
-        state.setMergeCommitMessageInput((currentInput) => insertTextInputNewline(currentInput));
+        reviewInputControllers.mergeMessage.insertBodyNewline();
         return;
     }
   }
@@ -556,14 +440,14 @@ export function buildModalActionDispatchMap({
   map.set(A.TEXT_OPEN_EXTERNAL_EDITOR, () => {
     switch (activeKeymapMode) {
       case "comment":
-        void openReviewComposerInExternalEditor();
+        void reviewInputControllers.reviewComposer.openExternalEditor();
         return;
       case "submit-review":
-        void openSubmitReviewModalInExternalEditor();
+        void reviewInputControllers.reviewSubmission.openExternalEditor();
         return;
       case "merge-title":
       case "merge-body":
-        void openMergeModalInExternalEditor();
+        void reviewInputControllers.mergeMessage.openExternalEditor();
         return;
     }
   });
@@ -577,17 +461,17 @@ export function buildModalActionDispatchMap({
 
   map.set(A.BRANCH_SWITCH_TAB, () => {
     state.setActiveListView((currentView) => (currentView === "branch" ? "commit" : "branch"));
-    state.setCommitSearchActive(false);
+    textInputControllers.commitSearch.deactivate();
   });
 
   map.set(A.BRANCH_GO_TO_BRANCHES, () => {
     state.setActiveListView("branch");
-    state.setCommitSearchActive(false);
+    textInputControllers.commitSearch.deactivate();
   });
 
   map.set(A.BRANCH_GO_TO_COMMITS, () => {
     state.setActiveListView("commit");
-    state.setCommitSearchActive(false);
+    textInputControllers.commitSearch.deactivate();
   });
 
   map.set(A.BRANCH_OPEN_FILTERS, () => {
@@ -643,7 +527,7 @@ export function buildModalActionDispatchMap({
   });
 
   map.set(A.BRANCH_SEARCH, () => {
-    state.setCommitSearchActive(true);
+    textInputControllers.commitSearch.activate();
   });
 
   map.set(A.PR_LIST_REFRESH, () => {
@@ -651,7 +535,7 @@ export function buildModalActionDispatchMap({
   });
 
   map.set(A.PR_LIST_SEARCH, () => {
-    state.setPullRequestSearchActive(true);
+    textInputControllers.pullRequestSearch.activate();
   });
 
   map.set(A.FILTER_TOGGLE, () => {
@@ -682,16 +566,7 @@ export function buildModalActionDispatchMap({
   });
 
   map.set(A.MERGE_NEXT_FIELD, () => {
-    state.setMergeModalField((currentField) => {
-      switch (currentField) {
-        case "method":
-          return "title";
-        case "title":
-          return "body";
-        case "body":
-          return "method";
-      }
-    });
+    reviewInputControllers.mergeMessage.cycleField();
   });
 
   map.set(A.MERGE_CONFIRM, () => {

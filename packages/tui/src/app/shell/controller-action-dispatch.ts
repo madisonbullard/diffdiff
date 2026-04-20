@@ -11,7 +11,9 @@ import type { DiffdiffAppDerived } from "./use-app-models.ts";
 import type { AppCommand } from "../commands/registry.ts";
 import type { useSessionDiagnostics } from "../diagnostics/use-session-diagnostics.ts";
 import type { createGitHubReviewActions } from "../review/github-actions.ts";
+import type { ReviewInputControllers } from "../review/review-input-controllers.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
+import type { AppTextInputControllers } from "../text-input/input-controllers.ts";
 import type { KeymapMode } from "./keymap-mode.ts";
 
 interface BuildControllerActionDispatchMapOptions {
@@ -29,6 +31,8 @@ interface BuildControllerActionDispatchMapOptions {
   openMergeConfirmModal: () => void;
   persistence: DiffdiffAppPersistence;
   refresh: ReturnType<typeof useDiffdiffAppRefresh>;
+  textInputControllers: AppTextInputControllers;
+  reviewInputControllers: ReviewInputControllers;
   reviewActions: ReturnType<typeof createReviewActions>;
   state: DiffdiffAppState;
   treeActions: ReturnType<typeof createTreeActions>;
@@ -50,6 +54,8 @@ export function buildControllerActionDispatchMap({
   openMergeConfirmModal,
   persistence,
   refresh,
+  textInputControllers,
+  reviewInputControllers,
   reviewActions,
   state,
   treeActions,
@@ -88,16 +94,15 @@ export function buildControllerActionDispatchMap({
     openHelp,
     openMergeConfirmModal,
     openMergeModal: githubActions.openMergeModal,
-    openMergeModalInExternalEditor: githubActions.openMergeModalInExternalEditor,
     openPullRequestCommentsModal: githubActions.openPullRequestCommentsModal,
     openPullRequestConversationReplyComposer:
       githubActions.openPullRequestConversationReplyComposer,
-    openReviewComposerInExternalEditor: githubActions.openReviewComposerInExternalEditor,
     openSubmitReviewModal: githubActions.openSubmitReviewModal,
-    openSubmitReviewModalInExternalEditor: githubActions.openSubmitReviewModalInExternalEditor,
     persistenceApi: persistence.persistenceApi,
     refreshComparison: refresh.refreshComparison,
     refreshGitHubPullRequestList: githubActions.refreshGitHubPullRequestList,
+    textInputControllers,
+    reviewInputControllers,
     reviewActions,
     runCommand: commandActions.runCommand,
     state,

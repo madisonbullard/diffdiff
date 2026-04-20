@@ -23,17 +23,21 @@ import { useMainKeyboard } from "./use-main-keyboard.ts";
 import { useDiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import { useDiffdiffAppRefresh } from "../comparison/use-comparison-refresh.ts";
 import { createReviewActions } from "../review/review-actions.ts";
+import { createReviewInputControllers } from "../review/review-input-controllers.ts";
 import { useSessionActions } from "../session/use-session-actions.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import { useDiffdiffAppState } from "../state/use-app-state.ts";
 import { createFileFocusController } from "../shared/file-focus.ts";
 import { truncateInlineMessage } from "../shared/text.ts";
+import { createAppTextInputControllers } from "../text-input/input-controllers.ts";
 import { createTreeActions } from "../tree/tree-actions.ts";
+import { openHelpDialog, openMergeConfirmDialog } from "./controller-helpers.ts";
 import { createViewActions } from "./view-actions.ts";
 import { buildControllerActionDispatchMap } from "./controller-action-dispatch.ts";
 
 export function DiffdiffAppController(props: DiffdiffAppProps) {
   const state = useDiffdiffAppState(props);
+  const textInputControllers = createAppTextInputControllers(state);
   const fileFocus = createFileFocusController({
     getCurrentFiles: () => state.session.files,
     getCurrentIndex: () => state.selectedFileIndex,
@@ -76,14 +80,23 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     startInteraction: sessionActions.startInteraction,
     state,
   });
-  const githubActions = createGitHubReviewActions({
-    actions: sessionActions,
-    derived,
+  const reviewInputControllers = createReviewInputControllers({
+    getSelectedFilePath: () => derived.selectedFilePath,
     persistence,
     props,
     state,
   });
+  const githubActions = createGitHubReviewActions({
+    actions: sessionActions,
+    controllers: reviewInputControllers,
+    derived,
+    persistence,
+    props,
+    state,
+    textInputControllers,
+  });
   const viewActions = createViewActions({ derived, persistence, props, state });
+  const reviewComposerModels = reviewInputControllers.reviewComposer.getModels();
   const prefetchComparisonBrowserData = useCallback(async () => {
     if (props.loadComparisonBrowserData == null) {
       return;
@@ -109,15 +122,16 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     }
   }, [props.loadComparisonBrowserData, sessionActions, state.startupOptions]);
 
-  const commandActions = createCommandActions({ getCommands: () => commands, state });
+  const commandActions = createCommandActions({
+    getCommands: () => commands,
+    inputController: textInputControllers.commandPalette,
+    state,
+  });
 
-  const openHelp = () => {
-    state.setDialogStack((s) => openAppDialog(s, "help"));
-    state.setStatusMessage("Opened help.");
-  };
+  const openHelp = () => openHelpDialog(state);
   const openBranchModal = useCallback(
-    () => openBranchListModal(state, derived.branchItems),
-    [derived.branchItems, state],
+    () => openBranchListModal(state, derived.branchItems, textInputControllers.commitSearch),
+    [derived.branchItems, state, textInputControllers.commitSearch],
   );
 
   function openClearReviewedConfirmModal(): void {
@@ -136,14 +150,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   }
 
   function openMergeConfirmModal(): void {
-    if (
-      derived.displaySession.github == null ||
-      state.mergeMethod == null ||
-      !derived.displaySession.github.pullRequest.merge.canMerge
-    )
-      return;
-    state.setMergeConfirmOpen(true);
-    state.setStatusMessage(`Press enter again to confirm the ${state.mergeMethod} merge.`);
+    openMergeConfirmDialog(derived, state);
   }
 
   const commands = useMemo<AppCommand[]>(
@@ -352,6 +359,8 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     openMergeConfirmModal,
     persistence,
     refresh,
+    textInputControllers,
+    reviewInputControllers,
     reviewActions,
     state,
     treeActions,
@@ -362,6 +371,8 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     activeKeymapMode,
     commandActions,
     dismissErrorToast: persistence.persistenceApi.dismissErrorToast,
+    textInputControllers,
+    reviewInputControllers,
     state,
   });
 
@@ -465,10 +476,10 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       remoteBranchCount={derived.remoteBranchCount}
       reviewComposerBody={state.reviewComposer.input.value}
       reviewComposerCursorOffset={state.reviewComposer.input.cursorOffset}
-      reviewComposerAutocomplete={derived.reviewComposerAutocomplete}
+      reviewComposerAutocomplete={reviewComposerModels.autocomplete}
       reviewComposerAutocompleteIndex={state.reviewComposer.autocompleteIndex}
-      reviewComposerContext={derived.reviewComposerContext}
-      reviewComposerHistoryEntries={derived.reviewComposerHistoryEntries}
+      reviewComposerContext={reviewComposerModels.context}
+      reviewComposerHistoryEntries={reviewComposerModels.historyEntries}
       reviewedPaths={state.reviewedPaths}
       reviewedCount={state.reviewedPaths.size}
       reviewRequestedPrCount={derived.reviewRequestedPrCount}

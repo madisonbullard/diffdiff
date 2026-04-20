@@ -2,14 +2,19 @@ import type { AppCommand } from "./registry.ts";
 import { findAppCommandByValue } from "./registry.ts";
 import { closeDialog as closeAppDialog, openDialog as openAppDialog } from "../dialogs/stack.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
-import { createTextInputState } from "../text-input/input-state.ts";
+import type { BasicTextInputController } from "../text-input/input-controllers.ts";
 
 interface CreateCommandActionsOptions {
   getCommands: () => readonly AppCommand[];
+  inputController: BasicTextInputController;
   state: DiffdiffAppState;
 }
 
-export function createCommandActions({ getCommands, state }: CreateCommandActionsOptions) {
+export function createCommandActions({
+  getCommands,
+  inputController,
+  state,
+}: CreateCommandActionsOptions) {
   function clearPrefixMode(status?: string): void {
     state.keybindController.clearPrefixMode(status);
   }
@@ -24,8 +29,7 @@ export function createCommandActions({ getCommands, state }: CreateCommandAction
 
     clearPrefixMode();
     state.setDialogStack((currentStack) => closeAppDialog(currentStack, "command-palette"));
-    state.setCommandInput(createTextInputState());
-    state.setCommandIndex(0);
+    inputController.reset();
     command.run();
   }
 
@@ -38,8 +42,7 @@ export function createCommandActions({ getCommands, state }: CreateCommandAction
 
   function openCommandModal(): void {
     clearPrefixMode();
-    state.setCommandInput(createTextInputState());
-    state.setCommandIndex(0);
+    inputController.reset();
     state.setDialogStack((currentStack) => openAppDialog(currentStack, "command-palette"));
     state.setStatusMessage("Opened command palette.");
   }
@@ -48,8 +51,7 @@ export function createCommandActions({ getCommands, state }: CreateCommandAction
     state.setDialogStack((currentStack) =>
       closeAppDialog(currentStack, "command-palette", "dismiss"),
     );
-    state.setCommandInput(createTextInputState());
-    state.setCommandIndex(0);
+    inputController.reset();
     state.setStatusMessage("Closed command palette.");
   }
 

@@ -1,12 +1,12 @@
 import { logDiffdiffError } from "@madisonbullard/diffdiff-core";
 import { closeDialog as closeAppDialog, openDialog as openAppDialog } from "../dialogs/stack.ts";
 import { formatThreadAnchor } from "../../review/threads.tsx";
-import { createReviewComposerInteractions } from "./review-composer-interactions.ts";
+import type { ReviewInputControllers } from "./review-input-controllers.ts";
 import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
 import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
-import { createTextInputState } from "../text-input/input-state.ts";
+import type { AppTextInputControllers } from "../text-input/input-controllers.ts";
 import { createGitHubMutationActions } from "./github-mutation-actions.ts";
 import type { ReviewComposerTarget } from "./review-composer.ts";
 
@@ -22,6 +22,7 @@ interface CreateGitHubReviewActionsOptions {
     beginSessionLoad: () => number;
     isLatestSessionLoad: (loadId: number) => boolean;
   };
+  controllers: ReviewInputControllers;
   derived: DiffdiffAppDerived;
   persistence: DiffdiffAppPersistence;
   props: Pick<
@@ -38,6 +39,7 @@ interface CreateGitHubReviewActionsOptions {
     | "submitPendingReview"
   >;
   state: DiffdiffAppState;
+  textInputControllers: AppTextInputControllers;
 }
 
 function ensureAuthenticated(state: DiffdiffAppState): string | null {
@@ -54,23 +56,20 @@ function ensureAuthenticated(state: DiffdiffAppState): string | null {
 
 export function createGitHubReviewActions({
   actions,
+  controllers,
   derived,
   persistence,
   props,
   state,
+  textInputControllers,
 }: CreateGitHubReviewActionsOptions) {
-  const reviewComposerInteractions = createReviewComposerInteractions({
-    persistence,
-    props,
-    state,
-  });
   const mutationActions = createGitHubMutationActions({
     actions,
     derived,
     persistence,
     props,
     persistSubmittedComment: (body, target) =>
-      reviewComposerInteractions.persistReviewComposerHistory("submitted", body, target),
+      controllers.reviewComposer.persistHistory("submitted", body, target),
     state,
   });
 
@@ -140,8 +139,8 @@ export function createGitHubReviewActions({
 
   function openGitHubPullRequestList(): void {
     state.setPullRequestListIndex(0);
-    state.setPullRequestSearchActive(false);
-    state.setPullRequestSearchInput(createTextInputState());
+    textInputControllers.pullRequestSearch.reset();
+    textInputControllers.pullRequestSearch.deactivate();
     state.setDialogStack((currentStack) =>
       openAppDialog(currentStack, "pull-request-list", { clear: true }),
     );
@@ -228,10 +227,9 @@ export function createGitHubReviewActions({
       state.setStatusMessage(authMessage);
       return;
     }
-    state.setReviewSubmissionInput(
-      createTextInputState(derived.displaySession.github?.pullRequest.pendingReview?.body ?? ""),
+    controllers.reviewSubmission.open(
+      derived.displaySession.github?.pullRequest.pendingReview?.body ?? "",
     );
-    state.setReviewSubmissionEventIndex(0);
     state.setDialogStack((currentStack) => openAppDialog(currentStack, "submit-review"));
     state.setStatusMessage("Preparing review submission.");
   }
@@ -243,17 +241,11 @@ export function createGitHubReviewActions({
       return;
     }
 
-    state.setMergeCommitTitleInput(
-      createTextInputState(derived.displaySession.github!.pullRequest.title),
-    );
-    state.setMergeCommitMessageInput(
-      createTextInputState(derived.displaySession.github!.pullRequest.body ?? ""),
-    );
-    state.setMergeMethod(state.gitHubPreferencesRef.current.defaultMergeMethod);
-    state.setMergeConfirmOpen(false);
-    state.setMergeModalField(
-      state.gitHubPreferencesRef.current.defaultMergeMethod == null ? "method" : "title",
-    );
+    controllers.mergeMessage.open({
+      body: derived.displaySession.github!.pullRequest.body ?? "",
+      defaultMethod: state.gitHubPreferencesRef.current.defaultMergeMethod,
+      title: derived.displaySession.github!.pullRequest.title,
+    });
     state.setDialogStack((currentStack) => openAppDialog(currentStack, "merge"));
     state.setStatusMessage("Preparing merge modal.");
   }
@@ -265,43 +257,26 @@ export function createGitHubReviewActions({
     openFocusedReviewThreadReplyComposer,
     openGitHubPullRequestList,
     openMergeModal,
-    openMergeModalInExternalEditor,
     openPullRequestCommentsModal,
     openPullRequestConversationReplyComposer,
     openSubmitReviewModal,
-    openSubmitReviewModalInExternalEditor,
-    openReviewComposerInExternalEditor,
     refreshGitHubPullRequestList,
   };
 
   function openReviewComposer(target: ReviewComposerTarget, statusMessage: string): void {
-    reviewComposerInteractions.openReviewComposerForTarget(target, statusMessage);
+    controllers.reviewComposer.open(target, statusMessage);
     state.setDialogStack((currentStack) => openAppDialog(currentStack, "comment-composer"));
   }
 
   function closeCommentComposer(): void {
-    const target = state.reviewComposer.target;
-    const body = state.reviewComposer.input.value;
     state.setDialogStack((currentStack) =>
       closeAppDialog(currentStack, "comment-composer", "dismiss"),
     );
-    if (reviewComposerInteractions.closeCommentComposer(target, body)) {
+    if (controllers.reviewComposer.close()) {
       state.setStatusMessage("Closed comment composer. Draft saved.");
       return;
     }
 
     state.setStatusMessage("Closed comment composer.");
-  }
-
-  async function openReviewComposerInExternalEditor(): Promise<void> {
-    await reviewComposerInteractions.openReviewComposerInExternalEditor();
-  }
-
-  async function openSubmitReviewModalInExternalEditor(): Promise<void> {
-    await reviewComposerInteractions.openSubmitReviewModalInExternalEditor();
-  }
-
-  async function openMergeModalInExternalEditor(): Promise<void> {
-    await reviewComposerInteractions.openMergeModalInExternalEditor();
   }
 }
