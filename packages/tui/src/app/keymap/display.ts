@@ -50,6 +50,22 @@ export function getActionBindingLabels(
   return sortLabels(labels);
 }
 
+export function getActionBindingSequences(
+  reverseKeymaps: ReverseKeymaps,
+  actionId: string,
+  modes: readonly KeymapMode[],
+): (readonly KeyEvent[])[] {
+  const sequences: (readonly KeyEvent[])[] = [];
+
+  for (const mode of modes) {
+    for (const sequence of reverseKeymaps.get(mode)?.actions.get(actionId) ?? []) {
+      sequences.push(sequence);
+    }
+  }
+
+  return sortSequences(sequences);
+}
+
 export function formatActionBindings(
   reverseKeymaps: ReverseKeymaps,
   actionId: string,
@@ -96,9 +112,25 @@ export function formatPrefixedActionBindings(
   prefixNodeLabel: string,
   mode: KeymapMode,
 ): string | undefined {
+  const suffixes = getPrefixedActionBindingSuffixes(
+    reverseKeymaps,
+    actionId,
+    prefixNodeLabel,
+    mode,
+  );
+  const labels = suffixes.map((suffix) => formatDisplayKeySequence(suffix));
+  return labels.length === 0 ? undefined : labels.join(" / ");
+}
+
+export function getPrefixedActionBindingSuffixes(
+  reverseKeymaps: ReverseKeymaps,
+  actionId: string,
+  prefixNodeLabel: string,
+  mode: KeymapMode,
+): (readonly KeyEvent[])[] {
   const prefixSequences = reverseKeymaps.get(mode)?.nodes.get(prefixNodeLabel) ?? [];
   const actionSequences = reverseKeymaps.get(mode)?.actions.get(actionId) ?? [];
-  const labels: string[] = [];
+  const suffixes: (readonly KeyEvent[])[] = [];
 
   for (const actionSequence of actionSequences) {
     for (const prefixSequence of prefixSequences) {
@@ -108,11 +140,28 @@ export function formatPrefixedActionBindings(
 
       const suffix = actionSequence.slice(prefixSequence.length);
       if (suffix.length > 0) {
-        labels.push(formatDisplayKeySequence(suffix));
+        suffixes.push(suffix);
       }
     }
   }
 
-  const sorted = sortLabels(labels);
-  return sorted.length === 0 ? undefined : sorted.join(" / ");
+  return sortSequences(suffixes);
+}
+
+function sortSequences(sequences: Iterable<readonly KeyEvent[]>): (readonly KeyEvent[])[] {
+  return [
+    ...new Map(
+      [...sequences].map((sequence) => [formatDisplayKeySequence(sequence), sequence]),
+    ).entries(),
+  ]
+    .sort(([left], [right]) => {
+      const leftParts = left.split(" ").length;
+      const rightParts = right.split(" ").length;
+      if (leftParts !== rightParts) {
+        return leftParts - rightParts;
+      }
+
+      return left.localeCompare(right);
+    })
+    .map(([, sequence]) => sequence);
 }

@@ -5,9 +5,11 @@ import { buildAppCommands, getPaletteCommands, type AppCommand } from "../comman
 import { getPrefixMenuCommands, getPrefixMenuConfig } from "../commands/prefix-menus.ts";
 import { filterCommands } from "../../commands.ts";
 import { formatActionBindings, formatCommandBindings } from "../keymap/display.ts";
+import { getInstructionActionKeybindLabel } from "../keymap/instruction-keybind.ts";
+import { SYSTEM_DIAGNOSTICS } from "../keymap/actions.ts";
 import { useSessionDiagnostics } from "../diagnostics/use-session-diagnostics.ts";
+import { getFooterEventPresentation } from "./footer-event.ts";
 import { getPrefixModeBadge, getKeymapModeBadge, resolveActiveKeymapMode } from "./keymap-mode.ts";
-import { LOADING_INDICATOR_FRAMES } from "../shared/constants.ts";
 import { openDialog as openAppDialog } from "../dialogs/stack.ts";
 import { DiffdiffAppView } from "./app-frame.tsx";
 import { createCommandActions } from "../commands/command-actions.ts";
@@ -293,27 +295,25 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     formatActionBindings(state.reverseKeymaps, "system.help", ["diff", "thread", "tree"])?.split(
       " / ",
     )[0] ?? "?";
+  const diagnosticsFooterHint = useMemo(
+    () => getInstructionActionKeybindLabel(state.reverseKeymaps, SYSTEM_DIAGNOSTICS, ["diff"], "d"),
+    [state.reverseKeymaps],
+  );
   const footerEvent = useMemo(
-    () => ({
-      color:
-        state.errorToastMessage != null
-          ? props.theme.danger
-          : state.toastMessage != null
-            ? props.theme.success
-            : state.baseBranchLoadingMessage != null ||
-                state.isReloading ||
-                state.activePrefix != null
-              ? props.theme.accent
-              : props.theme.textMuted,
-      message:
-        state.errorToastMessage ??
-        (state.toastMessage != null
-          ? `✓ ${state.toastMessage}`
-          : state.baseBranchLoadingMessage != null
-            ? `${LOADING_INDICATOR_FRAMES[state.loadingIndicatorFrame]} ${state.baseBranchLoadingMessage}`
-            : state.statusMessage),
-    }),
+    () =>
+      getFooterEventPresentation({
+        activePrefix: state.activePrefix,
+        baseBranchLoadingMessage: state.baseBranchLoadingMessage,
+        diagnosticsFooterHint,
+        errorToastMessage: state.errorToastMessage,
+        isReloading: state.isReloading,
+        loadingIndicatorFrame: state.loadingIndicatorFrame,
+        statusMessage: state.statusMessage,
+        theme: props.theme,
+        toastMessage: state.toastMessage,
+      }),
     [
+      diagnosticsFooterHint,
       props.theme,
       state.activePrefix,
       state.baseBranchLoadingMessage,
@@ -412,6 +412,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       diffPaneWidth={derived.diffPaneWidth}
       diffView={derived.diffView}
       draftPrCount={derived.draftPrCount}
+      errorToastMessage={state.errorToastMessage}
       estimatedFileCardBodyHeights={derived.estimatedFileCardBodyHeights}
       fileCardBodyVisibility={derived.fileCardBodyVisibility}
       fileCardPreviewViewports={derived.fileCardPreviewViewports}

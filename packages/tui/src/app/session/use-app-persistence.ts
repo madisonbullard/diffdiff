@@ -70,10 +70,7 @@ export function useDiffdiffAppPersistence(
 
   const showErrorToast = useCallback(
     (contextMessage?: string) => {
-      const message =
-        contextMessage == null
-          ? `View error logs at ${resolvedLogFilePath}`
-          : `${contextMessage}  View error logs at ${resolvedLogFilePath}`;
+      const message = contextMessage == null ? "An error occurred." : contextMessage;
       state.setErrorToastMessage(message);
       logDiffdiffWarn("app", "error_toast_shown", {
         logFilePath: resolvedLogFilePath,

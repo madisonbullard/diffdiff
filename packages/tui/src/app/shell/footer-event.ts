@@ -1,0 +1,48 @@
+import type { UiTheme } from "../../theme.ts";
+import { LOADING_INDICATOR_FRAMES } from "../shared/constants.ts";
+
+export interface FooterEventPresentation {
+  color: string;
+  message: string;
+}
+
+export function getFooterEventPresentation({
+  activePrefix,
+  baseBranchLoadingMessage,
+  diagnosticsFooterHint,
+  errorToastMessage,
+  isReloading,
+  loadingIndicatorFrame,
+  statusMessage,
+  theme,
+  toastMessage,
+}: {
+  activePrefix: string | null;
+  baseBranchLoadingMessage: string | null;
+  diagnosticsFooterHint: string;
+  errorToastMessage: string | null;
+  isReloading: boolean;
+  loadingIndicatorFrame: number;
+  statusMessage: string;
+  theme: UiTheme;
+  toastMessage: string | null;
+}): FooterEventPresentation {
+  return {
+    color:
+      errorToastMessage != null
+        ? theme.danger
+        : toastMessage != null
+          ? theme.success
+          : baseBranchLoadingMessage != null || isReloading || activePrefix != null
+            ? theme.accent
+            : theme.textMuted,
+    message:
+      errorToastMessage != null
+        ? `An error occurred, open diagnostics (${diagnosticsFooterHint})`
+        : toastMessage != null
+          ? `✓ ${toastMessage}`
+          : baseBranchLoadingMessage != null
+            ? `${LOADING_INDICATOR_FRAMES[loadingIndicatorFrame]} ${baseBranchLoadingMessage}`
+            : statusMessage,
+  };
+}

@@ -1,19 +1,17 @@
 import type { ReverseKeymaps } from "../keymap/index.ts";
 import { COMPARISON_REFRESH } from "../keymap/actions.ts";
-import { getActionBindingLabels } from "../keymap/display.ts";
+import { getInstructionActionKeybindLabel } from "../keymap/instruction-keybind.ts";
 
 const REFRESH_KEYMAP_MODES = ["diff", "thread", "tree"] as const;
 const DEFAULT_REFRESH_KEYBIND = "shift+r";
 
 export function getRefreshComparisonKeybindLabel(reverseKeymaps?: ReverseKeymaps): string {
-  const keybind =
-    reverseKeymaps == null
-      ? undefined
-      : REFRESH_KEYMAP_MODES.map(
-          (mode) => getActionBindingLabels(reverseKeymaps, COMPARISON_REFRESH, [mode])[0],
-        ).find((label) => label != null);
-
-  return formatInstructionKeybind(keybind ?? DEFAULT_REFRESH_KEYBIND);
+  return getInstructionActionKeybindLabel(
+    reverseKeymaps,
+    COMPARISON_REFRESH,
+    REFRESH_KEYMAP_MODES,
+    DEFAULT_REFRESH_KEYBIND,
+  );
 }
 
 export function withRefreshComparisonHint(
@@ -43,35 +41,4 @@ function insertInstructionAfterFirstSentence(message: string, instruction: strin
   return remainder === ""
     ? `${firstSentence} ${instruction}`
     : `${firstSentence} ${instruction} ${remainder}`;
-}
-
-function formatInstructionKeybind(keybind: string): string {
-  return keybind
-    .split(" ")
-    .map((chord) => chord.split("+").map(formatInstructionKeyToken).join("+"))
-    .join(" ");
-}
-
-function formatInstructionKeyToken(token: string): string {
-  switch (token) {
-    case "alt":
-      return "Alt";
-    case "ctrl":
-      return "Ctrl";
-    case "delete":
-    case "del":
-      return "Del";
-    case "escape":
-      return "Esc";
-    case "return":
-      return "Enter";
-    case "shift":
-      return "Shift";
-    case "space":
-      return "Space";
-    default:
-      return token.length === 1
-        ? token.toUpperCase()
-        : `${token[0]!.toUpperCase()}${token.slice(1)}`;
-  }
 }

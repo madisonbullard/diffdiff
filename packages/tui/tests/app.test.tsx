@@ -1659,15 +1659,13 @@ test("shows a copy toast for five seconds after a successful copy", () => {
   expect(getAppText(tree)).not.toContain("Copied to clipboard");
 });
 
-test("shows a persistent error log toast until dismissed", async () => {
-  const logFilePath = "/Users/test/.diffdiff/logs/log-test.jsonl";
+test("shows a persistent error toast until dismissed", async () => {
   const probeFreshness = vi.fn(async () => {
     throw new Error("Unable to refresh git state.");
   });
   const tree = render(
     <DiffdiffApp
       {...createAppProps({
-        logFilePath,
         probeFreshness,
       })}
     />,
@@ -1679,15 +1677,74 @@ test("shows a persistent error log toast until dismissed", async () => {
   });
 
   expect(getAppText(tree)).toContain("Unable to refresh git state.");
-  expect(getAppText(tree)).toContain(`View error logs at ${logFilePath}`);
+  expect(getAppText(tree)).toContain("An error occurred, open diagnostics (D)");
 
   emitKey({ name: "j" });
 
-  expect(getAppText(tree)).toContain(`View error logs at ${logFilePath}`);
+  expect(getAppText(tree)).toContain("Unable to refresh git state.");
 
   emitKey({ name: "x", sequence: "x" });
 
-  expect(getAppText(tree)).not.toContain(`View error logs at ${logFilePath}`);
+  expect(getAppText(tree)).not.toContain("Unable to refresh git state.");
+});
+
+test("keeps the error toast visible above an open modal", async () => {
+  const probeFreshness = vi.fn(async () => {
+    throw new Error("Unable to refresh git state.");
+  });
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        probeFreshness,
+      })}
+    />,
+  );
+
+  emitKey({ name: "l", sequence: "l" });
+
+  await act(async () => {
+    rendererState.renderer.emit("blur");
+    rendererState.renderer.emit("focus");
+  });
+
+  expect(getAppText(tree)).toContain("List");
+  expect(getAppText(tree)).toContain("Unable to refresh git state.");
+
+  const errorToast = tree.root.find(
+    (node) =>
+      String(node.type) === "box" &&
+      node.props.zIndex === 60 &&
+      collectInstanceText(node).includes("Unable to refresh git state."),
+  );
+
+  expect(errorToast.props.bottom).toBe(2);
+  expect(errorToast.props.right).toBe(2);
+});
+
+test("derives the diagnostics footer hint from the current keymap", async () => {
+  const probeFreshness = vi.fn(async () => {
+    throw new Error("Unable to refresh git state.");
+  });
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialUserKeymapConfig: {
+          diff: {
+            d: "no_op",
+            z: "system.diagnostics",
+          },
+        },
+        probeFreshness,
+      })}
+    />,
+  );
+
+  await act(async () => {
+    rendererState.renderer.emit("blur");
+    rendererState.renderer.emit("focus");
+  });
+
+  expect(getAppText(tree)).toContain("An error occurred, open diagnostics (Z)");
 });
 
 test("syncs remotes before checking for updates on terminal focus", async () => {

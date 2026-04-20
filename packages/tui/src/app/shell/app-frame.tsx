@@ -8,6 +8,7 @@ import type {
 } from "@madisonbullard/diffdiff-core";
 import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
 import type { MutableRefObject } from "react";
+import { ErrorToast } from "../../components/error-toast.tsx";
 import type { FileCardPreviewViewport } from "../../components/file-card.tsx";
 import { PrefixPickerOverlay } from "../../components/prefix-picker-overlay.tsx";
 import { VisibleCommentRelativeTimeProvider } from "../review/visible-comment-relative-time.tsx";
@@ -62,6 +63,7 @@ interface DiffdiffAppViewProps {
   diffPaneWidth: number;
   diffView: "unified" | "split";
   draftPrCount: number;
+  errorToastMessage: string | null;
   estimatedFileCardBodyHeights: readonly number[];
   fileCardBodyVisibility: readonly boolean[];
   fileCardPreviewViewports: readonly (FileCardPreviewViewport | undefined)[];
@@ -179,6 +181,7 @@ export function DiffdiffAppView({
   diffPaneWidth,
   diffView,
   draftPrCount,
+  errorToastMessage,
   estimatedFileCardBodyHeights,
   fileCardBodyVisibility,
   fileCardPreviewViewports,
@@ -403,6 +406,10 @@ export function DiffdiffAppView({
         showLoadingIndicator={showFooterLoadingIndicator}
         theme={theme}
       />
+
+      {errorToastMessage != null ? (
+        <ErrorToast message={errorToastMessage} terminalWidth={terminalWidth} theme={theme} />
+      ) : null}
     </box>
   );
 }
