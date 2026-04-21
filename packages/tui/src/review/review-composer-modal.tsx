@@ -118,7 +118,11 @@ export function ReviewComposerModal({
           minHeight={8}
         >
           <text fg={theme.text} wrapMode="word">
-            <TextInputContent cursorColor={theme.accent} surface={bodySurface} />
+            <TextInputContent
+              cursorColor={theme.accent}
+              cursorTextColor={theme.inverseText}
+              surface={bodySurface}
+            />
           </text>
         </box>
         {autocomplete.isVisible ? (

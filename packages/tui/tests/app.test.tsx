@@ -125,6 +125,7 @@ vi.mock("../src/diff/prepare-review-session.ts", async (importOriginal) => {
 
 const theme = getUiTheme("pierre-dark");
 const syntaxStyle = { kind: "syntax-style" } as unknown as import("@opentui/core").SyntaxStyle;
+const BLINK_TEXT_ATTRIBUTE = 1 << 4;
 
 beforeEach(() => {
   (
@@ -1871,7 +1872,14 @@ test("uses leader+j to move through commits while commit search stays focused", 
   emitKey({ name: "j", sequence: "j" });
 
   expect(getAppText(tree)).toContain("Bottom Author");
-  expect(getAppText(tree)).toMatch(/\/\s*_+/u);
+  expect(
+    tree.root.findAll(
+      (node) =>
+        String(node.type) === "span" &&
+        node.props.bg === theme.accent &&
+        node.props.attributes === BLINK_TEXT_ATTRIBUTE,
+    ),
+  ).not.toHaveLength(0);
 });
 
 test("shows an animated event log entry while loading a new base branch", async () => {

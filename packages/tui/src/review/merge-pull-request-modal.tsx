@@ -142,6 +142,7 @@ export function MergePullRequestModal({
             <span fg={theme.textMuted}>{"Title: "}</span>
             <TextInputContent
               cursorColor={theme.accent}
+              cursorTextColor={theme.inverseText}
               showCursor={field === "title"}
               surface={titleSurface}
             />
@@ -180,6 +181,7 @@ export function MergePullRequestModal({
             <text fg={theme.text} wrapMode="word">
               <TextInputContent
                 cursorColor={theme.accent}
+                cursorTextColor={theme.inverseText}
                 showCursor={field === "body"}
                 surface={bodySurface}
               />

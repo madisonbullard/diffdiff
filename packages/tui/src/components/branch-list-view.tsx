@@ -95,6 +95,7 @@ export function CommitListView({
           <span fg={searchQuery !== "" ? theme.text : theme.textMuted}>
             <TextInputContent
               cursorColor={theme.accent}
+              cursorTextColor={theme.inverseText}
               placeholder={searchActive ? undefined : "search commits..."}
               placeholderColor={theme.textMuted}
               showCursor={searchActive}

@@ -11,6 +11,7 @@ import { HelpModal } from "../src/components/help-modal.tsx";
 import { ListFilterModal } from "../src/components/list-filter-modal.tsx";
 import { PrefixPickerOverlay } from "../src/components/prefix-picker-overlay.tsx";
 import { PullRequestListModal } from "../src/components/pull-request-list-modal.tsx";
+import { TextInputContent } from "../src/components/text-input-content.tsx";
 import { ReviewRelativeTimeProvider } from "../src/review/comment-metadata.tsx";
 import { PullRequestCommentsModal } from "../src/review/comments-modal.tsx";
 import type { PrefixMenuCommand, PrefixMenuConfig } from "../src/app/commands/prefix-menus.ts";
@@ -28,6 +29,7 @@ import {
 const theme = getUiTheme("pierre-dark");
 const syntaxStyle = { kind: "syntax-style" } as unknown as import("@opentui/core").SyntaxStyle;
 const NOW_MS = Date.parse("2026-04-07T12:01:00Z");
+const BLINK_TEXT_ATTRIBUTE = 1 << 4;
 
 beforeEach(() => {
   (
@@ -789,6 +791,53 @@ test("renders palette command descriptions on an indented second line", () => {
   expect(commandColumns[1]?.props.flexShrink).toBe(0);
   expect(commandItem.props.paddingLeft).toBeUndefined();
   expect(collectText(palette.toJSON())).toContain("fuzzy filter");
+});
+
+test("renders a blinking block cursor over the next input character", () => {
+  const tree = render(
+    <text fg={theme.text} wrapMode="none">
+      <TextInputContent
+        cursorColor={theme.accent}
+        cursorTextColor={theme.inverseText}
+        surface={createTextInputSurface({ cursorOffset: 1, value: "help" })}
+      />
+    </text>,
+  );
+
+  const cursor = tree.root.find(
+    (node) =>
+      String(node.type) === "span" &&
+      node.props.bg === theme.accent &&
+      node.props.attributes === BLINK_TEXT_ATTRIBUTE,
+  );
+
+  expect(cursor.props.fg).toBe(theme.inverseText);
+  expect(collectText(cursor)).toBe("e");
+  expect(collectText(tree.toJSON()).replace(/\s+/gu, "")).toBe("help");
+});
+
+test("renders a blank blinking block cursor for empty inputs", () => {
+  const tree = render(
+    <text fg={theme.text} wrapMode="none">
+      <TextInputContent
+        cursorColor={theme.accent}
+        cursorTextColor={theme.inverseText}
+        placeholder="search commits..."
+        placeholderColor={theme.textMuted}
+        surface={createTextInputSurface({ cursorOffset: 0, value: "" })}
+      />
+    </text>,
+  );
+
+  const cursor = tree.root.find(
+    (node) =>
+      String(node.type) === "span" &&
+      node.props.bg === theme.accent &&
+      node.props.attributes === BLINK_TEXT_ATTRIBUTE,
+  );
+
+  expect(cursor.children).toEqual([" "]);
+  expect(collectText(tree.toJSON())).toContain("search commits...");
 });
 
 test("uses the native diff renderer when Pierre segments are unavailable", () => {

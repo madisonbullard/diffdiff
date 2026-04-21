@@ -63,6 +63,7 @@ export function CommandPaletteModal({
             <span fg={query === "" ? theme.textMuted : theme.text}>
               <TextInputContent
                 cursorColor={theme.accent}
+                cursorTextColor={theme.inverseText}
                 placeholder="type to fuzzy filter commands"
                 placeholderColor={theme.textMuted}
                 surface={querySurface}
