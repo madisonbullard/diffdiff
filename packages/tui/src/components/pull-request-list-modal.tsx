@@ -197,9 +197,11 @@ export function PullRequestListModal({
               <KeyCap label="j / k / home / end" theme={theme} />
               <span>{" move"}</span>
             </text>
-            <text fg={theme.textMuted} wrapMode="word">
-              {SINGLE_LINE_TEXT_INPUT_HINT}
-            </text>
+            {SINGLE_LINE_TEXT_INPUT_HINT.length > 0 ? (
+              <text fg={theme.textMuted} wrapMode="word">
+                {SINGLE_LINE_TEXT_INPUT_HINT}
+              </text>
+            ) : null}
           </>
         ) : (
           <text fg={theme.textMuted}>

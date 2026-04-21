@@ -1038,12 +1038,6 @@ exports[`renders a commit view snapshot 1`] = `
            switch view
         </span>
       </text>
-      <text
-        fg="#8ea4b5"
-        wrapMode="word"
-      >
-        OpenCode-style editing: ctrl+a/e line, alt/ctrl+left/right word, ctrl+w/d/k/u and ctrl+shift+d edit, ctrl+- or cmd+z undo, ctrl+. or cmd+shift+z redo.
-      </text>
     </box>
   </box>
 </box>

@@ -239,9 +239,11 @@ export function BranchModal({
               <KeyCap label="left / right / tab" theme={theme} />
               <span>{" switch view"}</span>
             </text>
-            <text fg={theme.textMuted} wrapMode="word">
-              {SINGLE_LINE_TEXT_INPUT_HINT}
-            </text>
+            {SINGLE_LINE_TEXT_INPUT_HINT.length > 0 ? (
+              <text fg={theme.textMuted} wrapMode="word">
+                {SINGLE_LINE_TEXT_INPUT_HINT}
+              </text>
+            ) : null}
           </>
         ) : (
           <text fg={theme.textMuted}>Nothing to show.</text>

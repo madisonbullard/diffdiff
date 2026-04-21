@@ -176,9 +176,11 @@ export function CommandPaletteModal({
               {selectedCommand != null ? selectedCommand.value : ""}
             </text>
           </box>
-          <text fg={theme.textMuted} wrapMode="word">
-            {SINGLE_LINE_TEXT_INPUT_HINT}
-          </text>
+          {SINGLE_LINE_TEXT_INPUT_HINT.length > 0 ? (
+            <text fg={theme.textMuted} wrapMode="word">
+              {SINGLE_LINE_TEXT_INPUT_HINT}
+            </text>
+          ) : null}
         </box>
       </box>
     </ModalFrame>
