@@ -5,10 +5,9 @@ import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
 import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
-import { clearReviewComposer } from "./review-composer-state.ts";
 import { buildQuotedPullRequestReply } from "./review-composer.ts";
 import type { ReviewComposerTarget } from "./review-composer.ts";
-import { createTextInputState } from "../text-input/input-state.ts";
+import type { ReviewInputControllers } from "./review-input-controllers.ts";
 import {
   buildOptimisticMergeOperation,
   buildOptimisticPullRequestCommentOperation,
@@ -31,6 +30,7 @@ interface CreateGitHubMutationActionsOptions {
     beginSessionLoad: () => number;
     isLatestSessionLoad: (loadId: number) => boolean;
   };
+  controllers: ReviewInputControllers;
   derived: DiffdiffAppDerived;
   persistence: DiffdiffAppPersistence;
   props: Pick<
@@ -49,6 +49,7 @@ interface CreateGitHubMutationActionsOptions {
 
 export function createGitHubMutationActions({
   actions,
+  controllers,
   derived,
   persistSubmittedComment,
   persistence,
@@ -146,9 +147,7 @@ export function createGitHubMutationActions({
       state.setDialogStack((currentStack) =>
         closeAppDialog(currentStack, "comment-composer", "complete"),
       );
-      state.setReviewComposer((currentReviewComposer) =>
-        clearReviewComposer(currentReviewComposer),
-      );
+      controllers.reviewComposer.reset();
       state.setStatusMessage(
         reviewComposerTarget.kind === "review-thread"
           ? "Added review comment."
@@ -219,7 +218,7 @@ export function createGitHubMutationActions({
       state.setDialogStack((currentStack) =>
         closeAppDialog(currentStack, "submit-review", "complete"),
       );
-      state.setReviewSubmissionInput(createTextInputState());
+      controllers.reviewSubmission.reset();
       state.setStatusMessage("Submitted review.");
       sessionLoadId = actions.beginSessionLoad();
       const nextSession = await props.loadSession(state.startupOptions);

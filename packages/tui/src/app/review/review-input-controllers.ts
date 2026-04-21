@@ -53,6 +53,7 @@ export interface ReviewComposerController {
     body: string,
     target: ReviewComposerTarget,
   ): Promise<void>;
+  reset(): void;
 }
 
 export interface ReviewSubmissionController {
@@ -63,6 +64,7 @@ export interface ReviewSubmissionController {
   move(delta: number): void;
   open(body: string): void;
   openExternalEditor(): Promise<void>;
+  reset(): void;
 }
 
 export interface MergeMessageController {
@@ -79,6 +81,7 @@ export interface MergeMessageController {
     title: string;
   }): void;
   openExternalEditor(): Promise<void>;
+  reset(): void;
 }
 
 export interface ReviewInputControllers {
@@ -123,6 +126,7 @@ function createReviewComposerController({
     open,
     openExternalEditor,
     persistHistory,
+    reset,
   };
 
   function getModels(): ReviewComposerModels {
@@ -152,7 +156,7 @@ function createReviewComposerController({
     const target = state.reviewComposer.target;
     const body = state.reviewComposer.input.value;
 
-    state.setReviewComposer((currentReviewComposer) => clearReviewComposer(currentReviewComposer));
+    reset();
 
     if (target != null && body.trim() !== "") {
       void persistHistory("dismissed", body, target).catch(() => undefined);
@@ -160,6 +164,10 @@ function createReviewComposerController({
     }
 
     return false;
+  }
+
+  function reset(): void {
+    state.setReviewComposer((currentReviewComposer) => clearReviewComposer(currentReviewComposer));
   }
 
   function applyKey(key: KeyboardInput): boolean {
@@ -339,6 +347,7 @@ function createReviewSubmissionController({
     move,
     open,
     openExternalEditor,
+    reset,
   };
 
   function open(body: string): void {
@@ -347,6 +356,10 @@ function createReviewSubmissionController({
   }
 
   function close(): void {
+    reset();
+  }
+
+  function reset(): void {
     state.setReviewSubmissionInput(createTextInputState());
   }
 
@@ -420,6 +433,7 @@ function createMergeMessageController({
     insertBodyNewline,
     open,
     openExternalEditor,
+    reset,
   };
 
   function open({
@@ -440,6 +454,14 @@ function createMergeMessageController({
 
   function close(): void {
     state.setMergeConfirmOpen(false);
+  }
+
+  function reset(): void {
+    state.setMergeCommitTitleInput(createTextInputState());
+    state.setMergeCommitMessageInput(createTextInputState());
+    state.setMergeMethod(undefined);
+    state.setMergeModalField("method");
+    close();
   }
 
   function cycleField(): void {

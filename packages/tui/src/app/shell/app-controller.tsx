@@ -20,14 +20,13 @@ import { openBranchListModal } from "../dialogs/list-dialog-handlers.ts";
 import { useMainKeyboard } from "./use-main-keyboard.ts";
 import { useDiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import { useDiffdiffAppRefresh } from "../comparison/use-comparison-refresh.ts";
+import { createAppInputControllers } from "../input/app-input-controllers.ts";
 import { createReviewActions } from "../review/review-actions.ts";
-import { createReviewInputControllers } from "../review/review-input-controllers.ts";
 import { useSessionActions } from "../session/use-session-actions.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import { useDiffdiffAppState } from "../state/use-app-state.ts";
 import { createFileFocusController } from "../shared/file-focus.ts";
 import { truncateInlineMessage } from "../shared/text.ts";
-import { createAppTextInputControllers } from "../text-input/input-controllers.ts";
 import { createTreeActions } from "../tree/tree-actions.ts";
 import { openHelpDialog, openMergeConfirmDialog } from "./controller-helpers.ts";
 import { createViewActions } from "./view-actions.ts";
@@ -35,7 +34,6 @@ import { buildControllerActionDispatchMap } from "./controller-action-dispatch.t
 
 export function DiffdiffAppController(props: DiffdiffAppProps) {
   const state = useDiffdiffAppState(props);
-  const textInputControllers = createAppTextInputControllers(state);
   const fileFocus = createFileFocusController({
     getCurrentFiles: () => state.session.files,
     getCurrentIndex: () => state.selectedFileIndex,
@@ -78,7 +76,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     startInteraction: sessionActions.startInteraction,
     state,
   });
-  const reviewInputControllers = createReviewInputControllers({
+  const inputControllers = createAppInputControllers({
     getSelectedFilePath: () => derived.selectedFilePath,
     persistence,
     props,
@@ -86,15 +84,15 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   });
   const githubActions = createGitHubReviewActions({
     actions: sessionActions,
-    controllers: reviewInputControllers,
+    controllers: inputControllers.review,
     derived,
     persistence,
     props,
     state,
-    textInputControllers,
+    textInputControllers: inputControllers.text,
   });
   const viewActions = createViewActions({ derived, persistence, props, state });
-  const reviewComposerModels = reviewInputControllers.reviewComposer.getModels();
+  const reviewComposerModels = inputControllers.review.reviewComposer.getModels();
   const prefetchComparisonBrowserData = useCallback(async () => {
     if (props.loadComparisonBrowserData == null) {
       return;
@@ -122,14 +120,14 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
 
   const commandActions = createCommandActions({
     getCommands: () => commands,
-    inputController: textInputControllers.commandPalette,
+    inputController: inputControllers.text.commandPalette,
     state,
   });
 
   const openHelp = () => openHelpDialog(state);
   const openBranchModal = useCallback(
-    () => openBranchListModal(state, derived.branchItems, textInputControllers.commitSearch),
-    [derived.branchItems, state, textInputControllers.commitSearch],
+    () => openBranchListModal(state, derived.branchItems, inputControllers.text.commitSearch),
+    [derived.branchItems, inputControllers.text.commitSearch, state],
   );
 
   function openClearReviewedConfirmModal(): void {
@@ -349,8 +347,8 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     openMergeConfirmModal,
     persistence,
     refresh,
-    textInputControllers,
-    reviewInputControllers,
+    textInputControllers: inputControllers.text,
+    reviewInputControllers: inputControllers.review,
     reviewActions,
     state,
     treeActions,
@@ -361,8 +359,8 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     activeKeymapMode,
     commandActions,
     dismissErrorToast: persistence.persistenceApi.dismissErrorToast,
-    textInputControllers,
-    reviewInputControllers,
+    textInputControllers: inputControllers.text,
+    reviewInputControllers: inputControllers.review,
     state,
   });
 

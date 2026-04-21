@@ -75,6 +75,29 @@ describe("review input controllers", () => {
     harness.controllers.mergeMessage.cycleField();
     expect(harness.state.mergeModalField).toBe("method");
   });
+
+  test("resets review and merge inputs through their controllers", () => {
+    const harness = createHarness();
+
+    harness.state.reviewComposer.target = createReviewThreadTarget();
+    harness.state.reviewComposer.input = createTextInputState("Draft body");
+    harness.state.mergeCommitTitleInput = createTextInputState("Title");
+    harness.state.mergeCommitMessageInput = createTextInputState("Body");
+    harness.state.mergeMethod = "merge";
+    harness.state.mergeModalField = "body";
+    harness.state.mergeConfirmOpen = true;
+
+    harness.controllers.reviewComposer.reset();
+    harness.controllers.mergeMessage.reset();
+
+    expect(harness.state.reviewComposer.target).toBeNull();
+    expect(harness.state.reviewComposer.input.value).toBe("");
+    expect(harness.state.mergeCommitTitleInput.value).toBe("");
+    expect(harness.state.mergeCommitMessageInput.value).toBe("");
+    expect(harness.state.mergeMethod).toBeUndefined();
+    expect(harness.state.mergeModalField).toBe("method");
+    expect(harness.state.mergeConfirmOpen).toBe(false);
+  });
 });
 
 function createHarness(): {

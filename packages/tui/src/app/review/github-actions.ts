@@ -65,6 +65,7 @@ export function createGitHubReviewActions({
 }: CreateGitHubReviewActionsOptions) {
   const mutationActions = createGitHubMutationActions({
     actions,
+    controllers,
     derived,
     persistence,
     props,
