@@ -42,6 +42,8 @@ OpenCode's prompt input is much more advanced than diffdiff's current comment an
 
 - The TUI now routes review-composer, submit-review, and merge text editing through dedicated review-input controllers under `packages/tui/src/app/review/` instead of scattering mutations across keyboard and modal dispatch files.
 - `packages/tui/src/review/review-composer-modal.tsx`, `submit-review-modal.tsx`, and `merge-pull-request-modal.tsx` remain display-only surfaces, with text-editing behavior delegated through the shared keymap runtime into those controllers.
+- Modal and palette rendering now consume small `TextInputSurface` adapters instead of threading raw `value` and `cursorOffset` pairs through each shell layer, which keeps text-entry display concerns closer to an eventual prompt-surface model without importing OpenCode's full prompt-part stack.
+- Command-palette filtering/binding labels and dialog input presentation are now grouped into feature-owned view-model modules under `packages/tui/src/app/commands/` and `packages/tui/src/app/dialogs/` so `app-controller.tsx` no longer assembles those modal props field by field.
 - `packages/core/src/preferences.ts` currently persists only GitHub cleanup defaults and the default merge method, so draft recovery or history should not be stuffed into `preferences.json` by default.
 
 ## Proposed UX

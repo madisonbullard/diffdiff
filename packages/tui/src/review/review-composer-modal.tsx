@@ -1,4 +1,5 @@
 import type { UiTheme } from "../theme.ts";
+import type { TextInputSurface } from "../text-input-surface.ts";
 import { AsciiLoadingLabel } from "../components/ascii-loading-pane.tsx";
 import { MULTILINE_TEXT_INPUT_WITH_EDITOR_HINT } from "../components/text-input-hints.ts";
 import { TextInputContent } from "../components/text-input-content.tsx";
@@ -7,8 +8,7 @@ import { MODAL_OVERLAY, REVIEW_BORDER } from "./shared.tsx";
 export function ReviewComposerModal({
   autocomplete,
   autocompleteIndex,
-  body,
-  bodyCursorOffset,
+  bodySurface,
   context,
   historyEntryCount,
   isSubmitting,
@@ -16,8 +16,7 @@ export function ReviewComposerModal({
 }: {
   autocomplete: import("./composer-autocomplete.ts").ReviewComposerAutocompleteState;
   autocompleteIndex: number;
-  body: string;
-  bodyCursorOffset: number;
+  bodySurface: TextInputSurface;
   context: {
     snippet: string;
     subtitle: string;
@@ -119,11 +118,7 @@ export function ReviewComposerModal({
           minHeight={8}
         >
           <text fg={theme.text} wrapMode="word">
-            <TextInputContent
-              cursorColor={theme.accent}
-              cursorOffset={bodyCursorOffset}
-              value={body}
-            />
+            <TextInputContent cursorColor={theme.accent} surface={bodySurface} />
           </text>
         </box>
         {autocomplete.isVisible ? (

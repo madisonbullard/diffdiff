@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { TextInputSurface } from "../text-input-surface.ts";
 import {
   formatAuthorList,
   formatChangeSummary,
@@ -49,19 +50,19 @@ export function BranchListView({
 
 export function CommitListView({
   commitItems,
-  searchQuery,
-  searchCursorOffset,
+  searchSurface,
   searchActive,
   selectedIndex,
   theme,
 }: {
   commitItems: readonly CommitListItem[];
-  searchQuery: string;
-  searchCursorOffset: number;
+  searchSurface: TextInputSurface;
   searchActive: boolean;
   selectedIndex: number;
   theme: UiTheme;
 }) {
+  const searchQuery = searchSurface.value;
+
   return (
     <box width="100%" flexDirection="column" gap={0}>
       <box
@@ -94,11 +95,10 @@ export function CommitListView({
           <span fg={searchQuery !== "" ? theme.text : theme.textMuted}>
             <TextInputContent
               cursorColor={theme.accent}
-              cursorOffset={searchCursorOffset}
               placeholder={searchActive ? undefined : "search commits..."}
               placeholderColor={theme.textMuted}
               showCursor={searchActive}
-              value={searchQuery}
+              surface={searchSurface}
             />
           </span>
         </text>

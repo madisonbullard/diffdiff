@@ -1,121 +1,46 @@
-import type {
-  GitHubCleanupPreferences,
-  GitHubDashboardPullRequest,
-  GitHubMergeMethod,
-  GitHubPullRequestComment,
-  GitHubRefCleanupCandidate,
-  ReviewComposerHistoryEntry,
-} from "@madisonbullard/diffdiff-core";
+import type { GitHubPullRequestComment } from "@madisonbullard/diffdiff-core";
 import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
 import type { MutableRefObject } from "react";
 import { ErrorToast } from "../../components/error-toast.tsx";
 import type { FileCardPreviewViewport } from "../../components/file-card.tsx";
 import { PrefixPickerOverlay } from "../../components/prefix-picker-overlay.tsx";
-import { VisibleCommentRelativeTimeProvider } from "../review/visible-comment-relative-time.tsx";
-import type { SessionDiagnosticEvent } from "../diagnostics/session-events.ts";
-import type { AppCommand } from "../commands/registry.ts";
+import type { FileTreeNode, PreparedReviewSession } from "../../types.ts";
+import type { UiTheme } from "../../theme.ts";
 import type { PrefixMenuCommand, PrefixMenuConfig } from "../commands/prefix-menus.ts";
+import type { DiffdiffDialogModels } from "../dialogs/dialog-models.ts";
 import { DiffdiffAppDialogs } from "../dialogs/dialog-router.tsx";
+import { VisibleCommentRelativeTimeProvider } from "../review/visible-comment-relative-time.tsx";
 import { AppDiffPane } from "./app-diff-pane.tsx";
 import { AppFooter } from "./app-footer.tsx";
 import { AppHeader } from "./app-header.tsx";
 import { AppSidebar } from "./app-sidebar.tsx";
-import type {
-  AppPane,
-  BranchListFilters,
-  BranchListItem,
-  CommitListItem,
-  FileTreeNode,
-  ListModalView,
-  PreparedReviewSession,
-} from "../../types.ts";
-import type { UiTheme } from "../../theme.ts";
 
 interface DiffdiffAppViewProps {
   activeFileIndex: number;
-  activeListView: ListModalView;
   activeOverlay: import("../dialogs/stack.ts").AppDialog | null;
-  activePane: AppPane;
-  baseBranchLoadingMessage: string | null;
-  branchItems: readonly BranchListItem[];
-  branchListFilters: BranchListFilters;
-  branchListIndex: number;
-  canApplyCleanup: boolean;
-  cleanupCandidateIndex: number;
-  cleanupCandidates: readonly GitHubRefCleanupCandidate[];
-  cleanupSelection: GitHubCleanupPreferences;
+  activePane: import("../../types.ts").AppPane;
   collapsedCommentStates: Record<string, boolean>;
   collapsedDirectories: ReadonlySet<string>;
   collapsedPaths: ReadonlySet<string>;
-  commandBindingLabels: ReadonlyMap<string, string | undefined>;
-  commandIndex: number;
-  commandQuery: string;
-  commandQueryCursorOffset: number;
-  commitListIndex: number;
-  commitSearchActive: boolean;
-  commitSearchQuery: string;
-  commitSearchCursorOffset: number;
   currentBranchLabel: string;
-  diagnosticErrorMessage: string | null;
-  diagnosticEventIndex: number;
-  diagnosticEvents: readonly SessionDiagnosticEvent[];
-  diagnosticLogFilePath: string;
+  dialogModels: DiffdiffDialogModels;
   diffPaneWidth: number;
   diffView: "unified" | "split";
-  draftPrCount: number;
   errorToastMessage: string | null;
   estimatedFileCardBodyHeights: readonly number[];
   fileCardBodyVisibility: readonly boolean[];
   fileCardPreviewViewports: readonly (FileCardPreviewViewport | undefined)[];
   fileCardRootRefs: readonly ((node: BoxRenderable | null) => void)[];
-  filteredCommands: readonly AppCommand[];
-  filteredCommitItems: readonly CommitListItem[];
-  filteredPullRequests: readonly GitHubDashboardPullRequest[];
-  filterIndex: number;
   footerEvent: { color: string; message: string };
   footerEventMessage: string;
   footerModeBadge: { bg: string; fg: string; label: string };
   handleFileTreeMouseUp: (node: FileTreeNode) => void;
-  helpCommands: readonly AppCommand[];
   helpLabel: string;
-  isDiagnosticsLoading: boolean;
-  isPullRequestListLoading: boolean;
-  isSubmittingReviewAction: boolean;
-  localBranchCount: number;
-  mergeBodyScrollRef: MutableRefObject<ScrollBoxRenderable | null>;
-  mergeCommitMessage: string;
-  mergeCommitMessageCursorOffset: number;
-  mergeCommitTitle: string;
-  mergeCommitTitleCursorOffset: number;
-  mergeMethod: GitHubMergeMethod | undefined;
-  mergeModalField: "method" | "title" | "body";
   activePrefixMenu?: PrefixMenuConfig;
   activePrefixMenuCommands: readonly PrefixMenuCommand[];
   onMouseUp: () => void;
-  openPrCount: number;
-  pullRequestConversationItemId?: string;
-  pullRequestListIndex: number;
-  pullRequestSearchActive: boolean;
-  pullRequestSearchQuery: string;
-  pullRequestSearchCursorOffset: number;
   refreshIndicatorLabel: string | null;
-  remoteBranchCount: number;
-  reviewComposerBody: string;
-  reviewComposerCursorOffset: number;
-  reviewComposerAutocomplete: import("../../review/composer-autocomplete.ts").ReviewComposerAutocompleteState;
-  reviewComposerAutocompleteIndex: number;
-  reviewComposerContext: {
-    snippet: string;
-    subtitle: string;
-    title: string;
-  } | null;
-  reviewComposerHistoryEntries: readonly ReviewComposerHistoryEntry[];
   reviewedPaths: ReadonlySet<string>;
-  reviewedCount: number;
-  reviewRequestedPrCount: number;
-  reviewSubmissionBody: string;
-  reviewSubmissionCursorOffset: number;
-  reviewSubmissionEventIndex: number;
   reviewThreadsByPath: ReadonlyMap<
     string,
     readonly import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread[]
@@ -130,7 +55,6 @@ interface DiffdiffAppViewProps {
   selectedTreePath: string;
   session: PreparedReviewSession;
   showFooterLoadingIndicator: boolean;
-  showMergeConfirmModal: boolean;
   sidebarWidth: number;
   stickyFile?: PreparedReviewSession["files"][number];
   syntaxStyle: SyntaxStyle;
@@ -152,84 +76,30 @@ interface DiffdiffAppViewProps {
 
 export function DiffdiffAppView({
   activeFileIndex,
-  activeListView,
   activeOverlay,
   activePane,
-  branchItems,
-  branchListFilters,
-  branchListIndex,
-  canApplyCleanup,
-  cleanupCandidateIndex,
-  cleanupCandidates,
-  cleanupSelection,
   collapsedCommentStates,
   collapsedDirectories,
   collapsedPaths,
-  commandBindingLabels,
-  commandIndex,
-  commandQuery,
-  commandQueryCursorOffset,
-  commitListIndex,
-  commitSearchActive,
-  commitSearchQuery,
-  commitSearchCursorOffset,
   currentBranchLabel,
-  diagnosticErrorMessage,
-  diagnosticEventIndex,
-  diagnosticEvents,
-  diagnosticLogFilePath,
+  dialogModels,
   diffPaneWidth,
   diffView,
-  draftPrCount,
   errorToastMessage,
   estimatedFileCardBodyHeights,
   fileCardBodyVisibility,
   fileCardPreviewViewports,
   fileCardRootRefs,
-  filteredCommands,
-  filteredCommitItems,
-  filteredPullRequests,
-  filterIndex,
   footerEvent,
   footerEventMessage,
   footerModeBadge,
   handleFileTreeMouseUp,
-  helpCommands,
   helpLabel,
-  isDiagnosticsLoading,
-  isPullRequestListLoading,
-  isSubmittingReviewAction,
-  localBranchCount,
-  mergeBodyScrollRef,
-  mergeCommitMessage,
-  mergeCommitMessageCursorOffset,
-  mergeCommitTitle,
-  mergeCommitTitleCursorOffset,
-  mergeMethod,
-  mergeModalField,
   activePrefixMenu,
   activePrefixMenuCommands,
   onMouseUp,
-  openPrCount,
-  pullRequestConversationItemId,
-  pullRequestListIndex,
-  pullRequestSearchActive,
-  pullRequestSearchQuery,
-  pullRequestSearchCursorOffset,
   refreshIndicatorLabel,
-  remoteBranchCount,
-  reviewComposerBody,
-  reviewComposerCursorOffset,
-  reviewComposerAutocomplete,
-  reviewComposerAutocompleteIndex,
-  reviewComposerContext,
-  reviewComposerHistoryEntries,
   reviewedPaths,
-  reviewedCount,
-  reviewRequestedPrCount,
-  reviewSubmissionBody,
-  reviewSubmissionCursorOffset,
-  reviewSubmissionEventIndex,
   reviewThreadsByPath,
   scrollRef,
   selectedFileIndex,
@@ -241,7 +111,6 @@ export function DiffdiffAppView({
   selectedTreePath,
   session,
   showFooterLoadingIndicator,
-  showMergeConfirmModal,
   sidebarWidth,
   stickyFile,
   syntaxStyle,
@@ -334,63 +203,7 @@ export function DiffdiffAppView({
 
           <DiffdiffAppDialogs
             activeDialog={activeOverlay}
-            activeListView={activeListView}
-            activePane={activePane}
-            branchItems={branchItems}
-            branchListFilters={branchListFilters}
-            branchListIndex={branchListIndex}
-            canApplyCleanup={canApplyCleanup}
-            cleanupCandidateIndex={cleanupCandidateIndex}
-            cleanupCandidates={cleanupCandidates}
-            cleanupSelection={cleanupSelection}
-            commandBindingLabels={commandBindingLabels}
-            commandIndex={commandIndex}
-            commandQuery={commandQuery}
-            commandQueryCursorOffset={commandQueryCursorOffset}
-            commitListIndex={commitListIndex}
-            commitSearchActive={commitSearchActive}
-            commitSearchQuery={commitSearchQuery}
-            commitSearchCursorOffset={commitSearchCursorOffset}
-            diagnosticErrorMessage={diagnosticErrorMessage}
-            diagnosticEventIndex={diagnosticEventIndex}
-            diagnosticEvents={diagnosticEvents}
-            diagnosticLogFilePath={diagnosticLogFilePath}
-            draftPrCount={draftPrCount}
-            filteredCommands={filteredCommands}
-            helpCommands={helpCommands}
-            filteredCommitItems={filteredCommitItems}
-            filterIndex={filterIndex}
-            isDiagnosticsLoading={isDiagnosticsLoading}
-            isSubmittingReviewAction={isSubmittingReviewAction}
-            localBranchCount={localBranchCount}
-            mergeBodyScrollRef={mergeBodyScrollRef}
-            mergeCommitMessage={mergeCommitMessage}
-            mergeCommitMessageCursorOffset={mergeCommitMessageCursorOffset}
-            mergeCommitTitle={mergeCommitTitle}
-            mergeCommitTitleCursorOffset={mergeCommitTitleCursorOffset}
-            mergeConfirmOpen={showMergeConfirmModal}
-            mergeMethod={mergeMethod}
-            mergeModalField={mergeModalField}
-            openPrCount={openPrCount}
-            pullRequestListIndex={pullRequestListIndex}
-            pullRequestSearchActive={pullRequestSearchActive}
-            pullRequestSearchQuery={pullRequestSearchQuery}
-            pullRequestSearchCursorOffset={pullRequestSearchCursorOffset}
-            reviewRequestedPrCount={reviewRequestedPrCount}
-            filteredPullRequests={filteredPullRequests}
-            isPullRequestListLoading={isPullRequestListLoading}
-            remoteBranchCount={remoteBranchCount}
-            reviewComposerBody={reviewComposerBody}
-            reviewComposerCursorOffset={reviewComposerCursorOffset}
-            reviewComposerAutocomplete={reviewComposerAutocomplete}
-            reviewComposerAutocompleteIndex={reviewComposerAutocompleteIndex}
-            reviewComposerContext={reviewComposerContext}
-            reviewComposerHistoryEntries={reviewComposerHistoryEntries}
-            reviewedCount={reviewedCount}
-            reviewSubmissionBody={reviewSubmissionBody}
-            reviewSubmissionCursorOffset={reviewSubmissionCursorOffset}
-            reviewSubmissionEventIndex={reviewSubmissionEventIndex}
-            selectedPullRequestConversationItemId={pullRequestConversationItemId}
+            models={dialogModels}
             session={session}
             terminalWidth={terminalWidth}
             theme={theme}

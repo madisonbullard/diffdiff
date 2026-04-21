@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "vite-plus/test";
 import type { GitHubMergeMethod } from "@madisonbullard/diffdiff-core";
 import { createReviewComposerState } from "../src/app/review/review-composer-state.ts";
+import { getReviewComposerModels } from "../src/app/review/review-composer-models.ts";
 import {
   createReviewInputControllers,
   type ReviewInputControllers,
@@ -97,6 +98,24 @@ describe("review input controllers", () => {
     expect(harness.state.mergeMethod).toBeUndefined();
     expect(harness.state.mergeModalField).toBe("method");
     expect(harness.state.mergeConfirmOpen).toBe(false);
+  });
+
+  test("exposes the review composer input through the feature model surface", () => {
+    const harness = createHarness();
+
+    harness.state.reviewComposer.target = createReviewThreadTarget();
+    harness.state.reviewComposer.input = createTextInputState("Needs a follow-up note");
+
+    const models = getReviewComposerModels({
+      reviewComposer: harness.state.reviewComposer,
+      selectedPath: "src/app.ts",
+      session: harness.state.session,
+    });
+
+    expect(models.inputSurface).toEqual({
+      cursorOffset: "Needs a follow-up note".length,
+      value: "Needs a follow-up note",
+    });
   });
 });
 

@@ -4,6 +4,7 @@ import {
   type ReviewComposerAutocompleteState,
 } from "../../review/composer-autocomplete.ts";
 import { getReviewComposerHistoryEntriesForBrowsing } from "../../review/composer-history.ts";
+import { createTextInputSurface, type TextInputSurface } from "../../text-input-surface.ts";
 import type { PreparedReviewSession } from "../../types.ts";
 import {
   getReviewComposerContext,
@@ -17,6 +18,7 @@ export interface ReviewComposerModels {
   context: ReturnType<typeof getReviewComposerContext> | null;
   historyEntries: readonly ReviewComposerHistoryEntry[];
   historyScope: ReviewComposerHistoryScope | null;
+  inputSurface: TextInputSurface;
 }
 
 const EMPTY_AUTOCOMPLETE: ReviewComposerAutocompleteState = {
@@ -40,6 +42,7 @@ export function getReviewComposerModels({
       context: null,
       historyEntries: [],
       historyScope: null,
+      inputSurface: createTextInputSurface(reviewComposer.input),
     };
   }
 
@@ -59,5 +62,6 @@ export function getReviewComposerModels({
       historyScope,
     ),
     historyScope,
+    inputSurface: createTextInputSurface(reviewComposer.input),
   };
 }

@@ -17,6 +17,7 @@ import type { PrefixMenuCommand, PrefixMenuConfig } from "../src/app/commands/pr
 import { getPrefixMenuConfig } from "../src/app/commands/prefix-menus.ts";
 import { getUiTheme } from "../src/theme.ts";
 import type { CommandDefinition } from "../src/commands.ts";
+import { createTextInputSurface } from "../src/text-input-surface.ts";
 import type { BranchListFilters, PreparedReviewFile } from "../src/types.ts";
 import {
   buildBranchListItems,
@@ -134,8 +135,7 @@ test("renders a branch modal snapshot", () => {
       branchIndex={1}
       commitItems={buildCommitListItems(createComparisonCommits())}
       commitIndex={0}
-      commitSearchQuery=""
-      commitSearchCursorOffset={0}
+      commitSearchSurface={createTextInputSurface({ cursorOffset: 0, value: "" })}
       commitSearchActive={false}
       comparisonMode="range"
       filters={filters}
@@ -174,8 +174,7 @@ test("shows the PR review action when a PR entry is selected", () => {
       branchIndex={1}
       commitItems={buildCommitListItems(createComparisonCommits())}
       commitIndex={0}
-      commitSearchQuery=""
-      commitSearchCursorOffset={0}
+      commitSearchSurface={createTextInputSurface({ cursorOffset: 0, value: "" })}
       commitSearchActive={false}
       comparisonMode="range"
       filters={filters}
@@ -214,8 +213,7 @@ test("renders a commit view snapshot", () => {
       branchIndex={1}
       commitItems={buildCommitListItems(createComparisonCommits())}
       commitIndex={1}
-      commitSearchQuery=""
-      commitSearchCursorOffset={0}
+      commitSearchSurface={createTextInputSurface({ cursorOffset: 0, value: "" })}
       commitSearchActive={false}
       comparisonMode="range"
       filters={filters}
@@ -253,8 +251,7 @@ test("shows commit history in working tree commit view", () => {
       branchIndex={0}
       commitItems={buildCommitListItems(createComparisonCommits())}
       commitIndex={0}
-      commitSearchQuery=""
-      commitSearchCursorOffset={0}
+      commitSearchSurface={createTextInputSurface({ cursorOffset: 0, value: "" })}
       commitSearchActive={false}
       comparisonMode="working-tree"
       filters={filters}
@@ -299,8 +296,7 @@ test("renders a pull request list modal with truncated titles", () => {
       ]}
       reviewRequestedCount={0}
       searchActive={false}
-      searchQuery=""
-      searchCursorOffset={0}
+      searchSurface={createTextInputSurface({ cursorOffset: 0, value: "" })}
       selectedIndex={0}
       theme={theme}
     />,
@@ -335,8 +331,7 @@ test("shows more pull requests at once in the pull request list modal", () => {
       }))}
       reviewRequestedCount={0}
       searchActive={false}
-      searchQuery=""
-      searchCursorOffset={0}
+      searchSurface={createTextInputSurface({ cursorOffset: 0, value: "" })}
       selectedIndex={0}
       theme={theme}
     />,
@@ -532,8 +527,7 @@ test("renders empty branch columns and help copy", () => {
       branchIndex={0}
       commitItems={[]}
       commitIndex={0}
-      commitSearchQuery=""
-      commitSearchCursorOffset={0}
+      commitSearchSurface={createTextInputSurface({ cursorOffset: 0, value: "" })}
       commitSearchActive={false}
       comparisonMode="working-tree"
       filters={filters}
@@ -715,8 +709,7 @@ test("groups suggested commands under a dedicated heading in the palette", () =>
         ])
       }
       commands={commands}
-      query=""
-      queryCursorOffset={0}
+      querySurface={createTextInputSurface({ cursorOffset: 0, value: "" })}
       selectedIndex={0}
       theme={theme}
     />,
@@ -764,8 +757,7 @@ test("renders palette command descriptions on an indented second line", () => {
           value: "comparison.list",
         },
       ]}
-      query=""
-      queryCursorOffset={0}
+      querySurface={createTextInputSurface({ cursorOffset: 0, value: "" })}
       selectedIndex={0}
       theme={theme}
     />,

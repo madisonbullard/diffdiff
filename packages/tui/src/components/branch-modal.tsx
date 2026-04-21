@@ -1,6 +1,7 @@
 import { formatCommitListEntry } from "../view-model.ts";
 import type { BranchListFilters, BranchListItem, CommitListItem } from "../types.ts";
 import type { UiTheme } from "../theme.ts";
+import type { TextInputSurface } from "../text-input-surface.ts";
 import {
   getBranchListItemMeta,
   getBranchListItemTitle,
@@ -19,8 +20,7 @@ export function BranchModal({
   branchIndex,
   commitItems,
   commitIndex,
-  commitSearchQuery,
-  commitSearchCursorOffset,
+  commitSearchSurface,
   commitSearchActive,
   comparisonMode,
   filters,
@@ -36,8 +36,7 @@ export function BranchModal({
   branchIndex: number;
   commitItems: readonly CommitListItem[];
   commitIndex: number;
-  commitSearchQuery: string;
-  commitSearchCursorOffset: number;
+  commitSearchSurface: TextInputSurface;
   commitSearchActive: boolean;
   comparisonMode: "range" | "working-tree";
   filters: BranchListFilters;
@@ -162,8 +161,7 @@ export function BranchModal({
       ) : (
         <CommitListView
           commitItems={commitItems}
-          searchQuery={commitSearchQuery}
-          searchCursorOffset={commitSearchCursorOffset}
+          searchSurface={commitSearchSurface}
           searchActive={commitSearchActive}
           selectedIndex={commitIndex}
           theme={theme}

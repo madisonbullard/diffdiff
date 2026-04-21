@@ -2,6 +2,7 @@ import type { GitHubMergeMethod, GitHubPullRequestDetail } from "@madisonbullard
 import type { ScrollBoxRenderable } from "@opentui/core";
 import type { Ref } from "react";
 import type { UiTheme } from "../theme.ts";
+import type { TextInputSurface } from "../text-input-surface.ts";
 import { AsciiLoadingLabel } from "../components/ascii-loading-pane.tsx";
 import { MULTILINE_TEXT_INPUT_WITH_EDITOR_HINT } from "../components/text-input-hints.ts";
 import { TextInputContent } from "../components/text-input-content.tsx";
@@ -12,8 +13,7 @@ const MERGE_METHODS: readonly GitHubMergeMethod[] = ["merge", "squash"];
 const MERGE_BODY_MAX_HEIGHT = 8;
 
 export function MergePullRequestModal({
-  body,
-  bodyCursorOffset,
+  bodySurface,
   bodyScrollRef,
   canSubmit,
   field,
@@ -21,11 +21,9 @@ export function MergePullRequestModal({
   method,
   pullRequest,
   theme,
-  title,
-  titleCursorOffset,
+  titleSurface,
 }: {
-  body: string;
-  bodyCursorOffset: number;
+  bodySurface: TextInputSurface;
   bodyScrollRef?: Ref<ScrollBoxRenderable | null>;
   canSubmit: boolean;
   field: "method" | "title" | "body";
@@ -33,8 +31,7 @@ export function MergePullRequestModal({
   method?: GitHubMergeMethod;
   pullRequest: GitHubPullRequestDetail;
   theme: UiTheme;
-  title: string;
-  titleCursorOffset: number;
+  titleSurface: TextInputSurface;
 }) {
   const mergeBlockedReason = getMergeBlockedReason(pullRequest);
 
@@ -145,9 +142,8 @@ export function MergePullRequestModal({
             <span fg={theme.textMuted}>{"Title: "}</span>
             <TextInputContent
               cursorColor={theme.accent}
-              cursorOffset={titleCursorOffset}
               showCursor={field === "title"}
-              value={title}
+              surface={titleSurface}
             />
           </text>
         </box>
@@ -184,9 +180,8 @@ export function MergePullRequestModal({
             <text fg={theme.text} wrapMode="word">
               <TextInputContent
                 cursorColor={theme.accent}
-                cursorOffset={bodyCursorOffset}
                 showCursor={field === "body"}
-                value={body}
+                surface={bodySurface}
               />
             </text>
           </scrollbox>

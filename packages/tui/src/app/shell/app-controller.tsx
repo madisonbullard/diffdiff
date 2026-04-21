@@ -1,10 +1,11 @@
 import { copySelection } from "../../selection-copy.ts";
 import { useCallback, useEffect, useMemo } from "react";
 import { logDiffdiffError, syncGitRemotes } from "@madisonbullard/diffdiff-core";
-import { buildAppCommands, getPaletteCommands, type AppCommand } from "../commands/registry.ts";
+import { buildAppCommands, type AppCommand } from "../commands/registry.ts";
+import { useCommandPaletteModels } from "../commands/command-palette-models.ts";
 import { getPrefixMenuCommands, getPrefixMenuConfig } from "../commands/prefix-menus.ts";
-import { filterCommands } from "../../commands.ts";
-import { formatActionBindings, formatCommandBindings } from "../keymap/display.ts";
+import { formatActionBindings } from "../keymap/display.ts";
+import { useDiffdiffDialogModels } from "../dialogs/use-dialog-models.ts";
 import { useSessionDiagnostics } from "../diagnostics/use-session-diagnostics.ts";
 import { getFooterEventPresentation } from "./footer-event.ts";
 import { getPrefixModeBadge, getKeymapModeBadge, resolveActiveKeymapMode } from "./keymap-mode.ts";
@@ -21,6 +22,7 @@ import { useMainKeyboard } from "./use-main-keyboard.ts";
 import { useDiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import { useDiffdiffAppRefresh } from "../comparison/use-comparison-refresh.ts";
 import { createAppInputControllers } from "../input/app-input-controllers.ts";
+import { createAppInputSurfaces } from "../input/app-input-surfaces.ts";
 import { createReviewActions } from "../review/review-actions.ts";
 import { useSessionActions } from "../session/use-session-actions.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
@@ -82,6 +84,17 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     props,
     state,
   });
+  const inputSurfaces = useMemo(
+    () => createAppInputSurfaces(state),
+    [
+      state.commandInput,
+      state.commitSearchInput,
+      state.mergeCommitMessageInput,
+      state.mergeCommitTitleInput,
+      state.pullRequestSearchInput,
+      state.reviewSubmissionInput,
+    ],
+  );
   const githubActions = createGitHubReviewActions({
     actions: sessionActions,
     controllers: inputControllers.review,
@@ -221,36 +234,21 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       viewActions,
     ],
   );
+  const commandPaletteModels = useCommandPaletteModels({
+    commands,
+    inputSurface: inputSurfaces.commandPalette,
+    reverseKeymaps: state.reverseKeymaps,
+    selectedIndex: state.commandIndex,
+    setSelectedIndex: state.setCommandIndex,
+  });
   const activePrefixMenu = useMemo(
     () => (state.activePrefix == null ? undefined : getPrefixMenuConfig(state.activePrefix)),
     [state.activePrefix],
-  );
-  const commandBindingLabels = useMemo(
-    () =>
-      new Map(
-        commands.map((command) => [
-          command.value,
-          formatCommandBindings(state.reverseKeymaps, command),
-        ]),
-      ),
-    [commands, state.reverseKeymaps],
-  );
-  const filteredCommands = useMemo(
-    () => filterCommands(getPaletteCommands(commands), state.commandInput.value),
-    [commands, state.commandInput.value],
   );
 
   useEffect(() => {
     state.gitHubPreferencesRef.current = state.gitHubPreferences;
   }, [state.gitHubPreferences, state.gitHubPreferencesRef]);
-
-  useEffect(() => {
-    state.setCommandIndex((currentIndex) =>
-      currentIndex >= filteredCommands.length
-        ? Math.max(filteredCommands.length - 1, 0)
-        : currentIndex,
-    );
-  }, [filteredCommands.length, state.setCommandIndex]);
 
   const activeKeymapMode = useMemo(
     () =>
@@ -338,7 +336,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     diagnostics,
     derived,
     fileFocus,
-    filteredCommands,
+    filteredCommands: commandPaletteModels.filteredCommands,
     githubActions,
     launchActions,
     openBranchModal,
@@ -378,66 +376,40 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       state.cleanupSelection.removeLocal) ||
     (state.cleanupCandidates.some((candidate) => candidate.kind === "remote-tracking") &&
       state.cleanupSelection.removeRemote);
+  const dialogModels = useDiffdiffDialogModels({
+    canApplyCleanup,
+    commandPalette: commandPaletteModels,
+    commands,
+    derived,
+    diagnostics,
+    inputSurfaces,
+    logFilePath: persistence.resolvedLogFilePath,
+    reviewComposerModels,
+    state,
+  });
 
   return (
     <DiffdiffAppView
       activeFileIndex={state.activeFileIndex}
-      activeListView={state.activeListView}
       activeOverlay={state.activeOverlay}
       activePane={state.activePane}
-      baseBranchLoadingMessage={state.baseBranchLoadingMessage}
-      branchItems={derived.branchItems}
-      branchListFilters={state.branchListFilters}
-      branchListIndex={state.branchListIndex}
-      canApplyCleanup={canApplyCleanup}
-      cleanupCandidateIndex={state.cleanupCandidateIndex}
-      cleanupCandidates={state.cleanupCandidates}
-      cleanupSelection={state.cleanupSelection}
       collapsedCommentStates={state.commentCollapseStates}
       collapsedDirectories={state.collapsedDirectories}
       collapsedPaths={state.collapsedPaths}
-      commandIndex={state.commandIndex}
-      commandQuery={state.commandInput.value}
-      commandQueryCursorOffset={state.commandInput.cursorOffset}
-      commitListIndex={state.commitListIndex}
-      commitSearchActive={state.commitSearchActive}
-      commitSearchQuery={state.commitSearchInput.value}
-      commitSearchCursorOffset={state.commitSearchInput.cursorOffset}
       currentBranchLabel={state.session.repository.currentBranch ?? "detached"}
-      diagnosticErrorMessage={diagnostics.diagnosticErrorMessage}
-      diagnosticEventIndex={diagnostics.diagnosticEventIndex}
-      diagnosticEvents={diagnostics.diagnosticEvents}
-      diagnosticLogFilePath={persistence.resolvedLogFilePath}
+      dialogModels={dialogModels}
       diffPaneWidth={derived.diffPaneWidth}
       diffView={derived.diffView}
-      draftPrCount={derived.draftPrCount}
       errorToastMessage={state.errorToastMessage}
       estimatedFileCardBodyHeights={derived.estimatedFileCardBodyHeights}
       fileCardBodyVisibility={derived.fileCardBodyVisibility}
       fileCardPreviewViewports={derived.fileCardPreviewViewports}
       fileCardRootRefs={derived.fileCardRootRefs}
-      filteredCommands={filteredCommands}
-      commandBindingLabels={commandBindingLabels}
-      filteredCommitItems={derived.filteredCommitItems}
-      filteredPullRequests={derived.filteredPullRequests}
-      filterIndex={state.filterIndex}
       footerEvent={footerEvent}
       footerEventMessage={footerEventMessage}
       footerModeBadge={footerModeBadge}
       handleFileTreeMouseUp={treeActions.handleFileTreeMouseUp}
-      helpCommands={commands}
       helpLabel={helpLabel}
-      isDiagnosticsLoading={diagnostics.isDiagnosticsLoading}
-      isPullRequestListLoading={state.isPullRequestListLoading}
-      isSubmittingReviewAction={state.isSubmittingReviewAction}
-      localBranchCount={derived.localBranchCount}
-      mergeBodyScrollRef={state.mergeBodyScrollRef}
-      mergeCommitMessage={state.mergeCommitMessageInput.value}
-      mergeCommitMessageCursorOffset={state.mergeCommitMessageInput.cursorOffset}
-      mergeCommitTitle={state.mergeCommitTitleInput.value}
-      mergeCommitTitleCursorOffset={state.mergeCommitTitleInput.cursorOffset}
-      mergeMethod={state.mergeMethod}
-      mergeModalField={state.mergeModalField}
       activePrefixMenu={activePrefixMenu}
       activePrefixMenuCommands={activePrefixMenuCommands}
       onMouseUp={() =>
@@ -450,30 +422,8 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
             }),
         })
       }
-      openPrCount={derived.openPrCount}
-      pullRequestConversationItemId={
-        derived.selectedPullRequestConversationItem?.id == null
-          ? undefined
-          : String(derived.selectedPullRequestConversationItem.id)
-      }
-      pullRequestListIndex={state.pullRequestListIndex}
-      pullRequestSearchActive={state.pullRequestSearchActive}
-      pullRequestSearchQuery={state.pullRequestSearchInput.value}
-      pullRequestSearchCursorOffset={state.pullRequestSearchInput.cursorOffset}
       refreshIndicatorLabel={state.refreshIndicatorLabel}
-      remoteBranchCount={derived.remoteBranchCount}
-      reviewComposerBody={state.reviewComposer.input.value}
-      reviewComposerCursorOffset={state.reviewComposer.input.cursorOffset}
-      reviewComposerAutocomplete={reviewComposerModels.autocomplete}
-      reviewComposerAutocompleteIndex={state.reviewComposer.autocompleteIndex}
-      reviewComposerContext={reviewComposerModels.context}
-      reviewComposerHistoryEntries={reviewComposerModels.historyEntries}
       reviewedPaths={state.reviewedPaths}
-      reviewedCount={state.reviewedPaths.size}
-      reviewRequestedPrCount={derived.reviewRequestedPrCount}
-      reviewSubmissionBody={state.reviewSubmissionInput.value}
-      reviewSubmissionCursorOffset={state.reviewSubmissionInput.cursorOffset}
-      reviewSubmissionEventIndex={state.reviewSubmissionEventIndex}
       reviewThreadsByPath={derived.reviewThreadsByPath}
       scrollRef={state.scrollRef}
       selectedFileIndex={state.selectedFileIndex}
@@ -485,7 +435,6 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       selectedTreePath={state.selectedTreePath}
       session={derived.displaySession}
       showFooterLoadingIndicator={showFooterLoadingIndicator}
-      showMergeConfirmModal={derived.showMergeConfirmModal}
       sidebarWidth={derived.sidebarWidth}
       stickyFile={derived.stickyFile}
       syntaxStyle={props.syntaxStyle}

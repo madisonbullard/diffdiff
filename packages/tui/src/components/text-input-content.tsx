@@ -1,20 +1,21 @@
 import { Fragment } from "react";
+import type { TextInputSurface } from "../text-input-surface.ts";
 
 export function TextInputContent({
   cursorColor,
-  cursorOffset,
   placeholder,
   placeholderColor,
   showCursor = true,
-  value,
+  surface,
 }: {
   cursorColor: string;
-  cursorOffset: number;
   placeholder?: string;
   placeholderColor?: string;
   showCursor?: boolean;
-  value: string;
+  surface: TextInputSurface;
 }) {
+  const { cursorOffset, value } = surface;
+
   if (value === "") {
     if (!showCursor && placeholder != null) {
       return placeholder;

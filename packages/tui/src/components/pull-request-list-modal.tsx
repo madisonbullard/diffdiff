@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { GitHubDashboardPullRequest } from "@madisonbullard/diffdiff-core";
 import type { UiTheme } from "../theme.ts";
+import type { TextInputSurface } from "../text-input-surface.ts";
 import { AsciiLoadingLabel } from "./ascii-loading-pane.tsx";
 import { KeyCap, ModalFrame, SPLIT_BORDER, selectItem, tintHex } from "./shared.tsx";
 import { SINGLE_LINE_TEXT_INPUT_HINT } from "./text-input-hints.ts";
@@ -15,8 +16,7 @@ export function PullRequestListModal({
   pullRequests,
   reviewRequestedCount,
   searchActive,
-  searchQuery,
-  searchCursorOffset,
+  searchSurface,
   selectedIndex,
   theme,
 }: {
@@ -25,12 +25,12 @@ export function PullRequestListModal({
   pullRequests: readonly GitHubDashboardPullRequest[];
   reviewRequestedCount: number;
   searchActive: boolean;
-  searchQuery: string;
-  searchCursorOffset: number;
+  searchSurface: TextInputSurface;
   selectedIndex: number;
   theme: UiTheme;
 }) {
   const selectedPullRequest = selectItem(pullRequests, selectedIndex);
+  const searchQuery = searchSurface.value;
 
   return (
     <ModalFrame
@@ -98,11 +98,10 @@ export function PullRequestListModal({
             <span fg={searchQuery !== "" ? theme.text : theme.textMuted}>
               <TextInputContent
                 cursorColor={theme.accent}
-                cursorOffset={searchCursorOffset}
                 placeholder={searchActive ? undefined : "search pull requests..."}
                 placeholderColor={theme.textMuted}
                 showCursor={searchActive}
-                value={searchQuery}
+                surface={searchSurface}
               />
             </span>
           </text>
