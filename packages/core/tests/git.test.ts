@@ -200,6 +200,36 @@ describe("loadReviewSession", () => {
     }
   });
 
+  test("does not block startup when an unrelated local branch has no merge base", async () => {
+    const repositoryPath = await createTemporaryRepository();
+
+    await runGit(repositoryPath, ["checkout", "-b", "main"]);
+    await writeFile(join(repositoryPath, "index.ts"), "export const version = 1;\n");
+    await runGit(repositoryPath, ["add", "index.ts"]);
+    await commitAll(repositoryPath, "Initial commit");
+
+    await runGit(repositoryPath, ["checkout", "--orphan", "unrelated-feature"]);
+    await runGit(repositoryPath, ["rm", "-rf", "."]);
+    await writeFile(join(repositoryPath, "index.ts"), "export const unrelated = true;\n");
+    await runGit(repositoryPath, ["add", "index.ts"]);
+    await commitAll(repositoryPath, "Unrelated root commit");
+    await runGit(repositoryPath, ["checkout", "main"]);
+
+    const session = await loadReviewSession({ repoPath: repositoryPath });
+
+    expect(session.comparison).toMatchObject({
+      base: "HEAD",
+      head: "working tree",
+      mode: "working-tree",
+    });
+    expect(session.branches.local.find((branch) => branch.name === "unrelated-feature")).toEqual(
+      expect.objectContaining({
+        name: "unrelated-feature",
+        summary: undefined,
+      }),
+    );
+  });
+
   test("warns when unborn repositories receive explicit refs", async () => {
     const repositoryPath = await createTemporaryRepository();
 

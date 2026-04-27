@@ -218,7 +218,12 @@ async function attachBranchSummary(
   branch: BranchInfo,
   defaultBranch: string,
 ): Promise<BranchInfo> {
-  const summary = await buildBranchSummary(rootPath, branch.name, defaultBranch, branch.tipAuthor);
+  const summary = await buildBranchSummary(
+    rootPath,
+    branch.name,
+    defaultBranch,
+    branch.tipAuthor,
+  ).catch(() => undefined);
   return { ...branch, summary };
 }
 
