@@ -16,10 +16,25 @@
 ```bash
 diffdiff
 dfdf
+diffdiff https://github.com/owner/repo/pull/42
 diffdiff --repo packages/tui --base origin/main --head HEAD
 diffdiff auth login --token-stdin
 diffdiff session list --json
 ```
+
+## Opening GitHub PRs
+
+A PR URL uses the current clone when its GitHub remote matches; otherwise diffdiff searches
+repository containers below the current directory for a same-named clone with a matching
+remote. Discovery stops at Git repository boundaries rather than traversing each checkout's
+source and dependencies. It also skips generated directories such as `.rifts`, `.worktrees`,
+`.cache`, `.venv`, and `node_modules`. Multiple matching peer clones still prompt for a choice.
+
+Use `--repo <path>` for a renamed clone, a repository nested inside another checkout, or a
+worktree in a skipped directory. PR startup resolves the base/head refs with one GitHub
+request; checks, comments, and viewed-file state load during review-session preparation.
+Startup logs include launch-target resolution, before the TUI opens. Find the log path with
+`diffdiff session list --json`; `targetResolutionDurationMs` reports that phase separately.
 
 ## Install
 

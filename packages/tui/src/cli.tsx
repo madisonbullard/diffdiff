@@ -78,12 +78,7 @@ function createProgram(): Command {
   );
   program.action(
     async (target: string | undefined, _options: LaunchCommandOptions, command: Command) => {
-      await launchTui(
-        await resolveLaunchOptionsFromTarget(
-          target,
-          resolveStartupOptions(getStartupOptionValues(command)),
-        ),
-      );
+      await launchTui(resolveStartupOptions(getStartupOptionValues(command)), target);
     },
   );
 
@@ -97,12 +92,7 @@ function createProgram(): Command {
   );
   tuiCommand.action(
     async (target: string | undefined, _options: LaunchCommandOptions, command: Command) => {
-      await launchTui(
-        await resolveLaunchOptionsFromTarget(
-          target,
-          resolveStartupOptions(getStartupOptionValues(command)),
-        ),
-      );
+      await launchTui(resolveStartupOptions(getStartupOptionValues(command)), target);
     },
   );
 
@@ -173,7 +163,7 @@ function addStartupOptions(command: Command): void {
   command.option("-v, --verbose", "Preserve full command and API payloads in session logs.");
 }
 
-async function launchTui(options: LaunchOptions): Promise<void> {
+async function launchTui(options: LaunchOptions, target?: string): Promise<void> {
   let launchOptions = options;
   let startupInstrumentation = createStartupInstrumentation();
   const logSession = await startDiffdiffLogging({
@@ -185,7 +175,12 @@ async function launchTui(options: LaunchOptions): Promise<void> {
   logDiffdiffInfo("cli", "tui_launch_started", {
     logFilePath: logSession?.logFilePath,
     options: launchOptions,
+    target,
   });
+
+  launchOptions = await resolveLaunchOptionsFromTarget(target, options);
+  startupInstrumentation = logStartupPhase(startupInstrumentation, "targetResolvedAt");
+  logDiffdiffInfo("cli", "tui_launch_target_resolved", { options: launchOptions, target });
 
   const repository = await new GitRepositoryProvider().detectRepository(
     getRepositorySearchPath(launchOptions.repoPath),

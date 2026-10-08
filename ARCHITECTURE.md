@@ -96,8 +96,11 @@ instead of re-implementing those concerns locally.
 
 At a high level, the current runtime flow is:
 
-1. `packages/tui/src/cli.tsx` parses the command line and resolves the launch
-   target.
+1. `packages/tui/src/cli.tsx` parses the command line and starts logging/timing
+   before resolving the launch target. PR clone discovery searches repository
+   containers without descending into checkouts or generated workspace trees.
+   `packages/core` resolves PR base/head names with a lightweight refs lookup;
+   full review metadata is deferred to review-session preparation.
 2. `packages/core` resolves the repository, loads the review session, and
    attaches GitHub review context when available.
 3. `packages/tui` renders the session in the OpenTUI/React app and manages

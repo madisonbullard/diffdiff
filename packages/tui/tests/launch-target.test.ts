@@ -67,7 +67,7 @@ describe("resolveLaunchOptionsFromTarget", () => {
 
   test("uses the current repo when the PR target matches a current remote", async () => {
     const gitHubPullRequestService = {
-      loadPullRequest: vi.fn(async () => ({
+      loadPullRequestRefs: vi.fn(async () => ({
         baseRefName: "main",
         headRefName: "feature/ui",
       })),
@@ -100,7 +100,7 @@ describe("resolveLaunchOptionsFromTarget", () => {
       head: "origin/feature/ui",
       repoPath: undefined,
     });
-    expect(gitHubPullRequestService.loadPullRequest).toHaveBeenCalledWith(
+    expect(gitHubPullRequestService.loadPullRequestRefs).toHaveBeenCalledWith(
       {
         forge: "github",
         host: "github.com",
@@ -129,7 +129,7 @@ describe("resolveLaunchOptionsFromTarget", () => {
           return undefined;
         }),
         gitHubPullRequestService: {
-          loadPullRequest: vi.fn(async () => ({
+          loadPullRequestRefs: vi.fn(async () => ({
             baseRefName: "main",
             headRefName: "feature/other",
           })),
@@ -195,7 +195,7 @@ describe("resolveLaunchOptionsFromTarget", () => {
           return undefined;
         }),
         gitHubPullRequestService: {
-          loadPullRequest: vi.fn(async () => ({
+          loadPullRequestRefs: vi.fn(async () => ({
             baseRefName: "main",
             headRefName: "feature/other",
           })),

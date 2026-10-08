@@ -7,6 +7,7 @@ export interface StartupInstrumentation {
   reviewCacheLoadedAt?: number;
   sessionPreparedAt?: number;
   startupScreenRenderedAt?: number;
+  targetResolvedAt?: number;
   themeReadyAt?: number;
 }
 
@@ -48,6 +49,7 @@ export function summarizeStartupInstrumentation(
   reviewCacheDurationMs?: number;
   sessionPreparationDurationMs?: number;
   startupScreenDurationMs?: number;
+  targetResolutionDurationMs?: number;
   terminalThemeDurationMs?: number;
   totalDurationMs: number;
 } {
@@ -59,7 +61,7 @@ export function summarizeStartupInstrumentation(
     ),
     completedAt,
     importsDurationMs: durationBetween(
-      instrumentation.launchStartedAt,
+      instrumentation.targetResolvedAt ?? instrumentation.launchStartedAt,
       instrumentation.importsReadyAt,
     ),
     phaseElapsedMs: collectPhaseElapsedMs(instrumentation),
@@ -83,6 +85,10 @@ export function summarizeStartupInstrumentation(
       instrumentation.themeReadyAt,
       instrumentation.startupScreenRenderedAt,
     ),
+    targetResolutionDurationMs: durationBetween(
+      instrumentation.launchStartedAt,
+      instrumentation.targetResolvedAt,
+    ),
     terminalThemeDurationMs: durationBetween(
       instrumentation.rendererReadyAt,
       instrumentation.themeReadyAt,
@@ -97,6 +103,7 @@ function collectPhaseElapsedMs(instrumentation: StartupInstrumentation): Record<
   };
 
   for (const phase of [
+    "targetResolvedAt",
     "importsReadyAt",
     "rendererReadyAt",
     "themeReadyAt",

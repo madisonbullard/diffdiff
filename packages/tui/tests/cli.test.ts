@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -126,6 +126,27 @@ describe("diffdiff CLI help", () => {
       await rm(homeDirectory, { force: true, recursive: true });
     }
   });
+});
+
+test("launch-target discovery is logged even when it fails before the TUI opens", async () => {
+  const homeDirectory = await mkdtemp(join(tmpdir(), "diffdiff-cli-startup-"));
+  try {
+    await expect(
+      runCli(["https://github.com/discovery-fixture/no-local-clone/pull/1"], {
+        HOME: homeDirectory,
+      }),
+    ).rejects.toThrow("No repository path was provided");
+
+    const { stdout } = await runCli(["session", "list", "--json"], { HOME: homeDirectory });
+    const sessions = JSON.parse(stdout) as { logFilePath: string; state: string }[];
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]?.state).toBe("ended");
+    const log = await readFile(sessions[0]!.logFilePath, "utf8");
+    expect(log).toContain('"event":"tui_launch_started"');
+    expect(log).toContain('"event":"fatal_error"');
+  } finally {
+    await rm(homeDirectory, { force: true, recursive: true });
+  }
 });
 
 async function runCli(args: readonly string[], envOverrides: NodeJS.ProcessEnv = {}) {

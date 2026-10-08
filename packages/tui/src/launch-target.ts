@@ -41,7 +41,7 @@ interface ResolveLaunchTargetDependencies {
   cwd?: string;
   detectGitRepositoryRoot?: (startPath: string) => Promise<string | undefined>;
   gitHubPullRequestService?: {
-    loadPullRequest: (
+    loadPullRequestRefs: (
       repository: ForgeRepository,
       pullRequestNumber: number,
     ) => Promise<{
@@ -56,13 +56,18 @@ interface ResolveLaunchTargetDependencies {
 }
 
 const SKIPPED_DIRECTORY_NAMES = new Set([
+  ".cache",
   ".git",
   ".next",
+  ".rifts",
   ".turbo",
+  ".venv",
+  ".worktrees",
   "build",
   "coverage",
   "dist",
   "node_modules",
+  "venv",
 ]);
 
 export async function resolveLaunchOptionsFromTarget(
@@ -132,7 +137,7 @@ export async function resolveLaunchOptionsFromTarget(
     );
   }
 
-  const pullRequest = await gitHubPullRequestService.loadPullRequest(
+  const pullRequest = await gitHubPullRequestService.loadPullRequestRefs(
     repository,
     pullRequestTarget.pullRequestNumber,
   );
@@ -414,6 +419,12 @@ async function defaultSearchRepositoryRoots(cwd: string, repoName: string): Prom
     try {
       entries = await readdir(currentDirectory, { withFileTypes: true });
     } catch {
+      continue;
+    }
+
+    // Search containers of clones, not the source/dependency trees inside each clone.
+    // A .git file marks a worktree or submodule just as a .git directory marks a clone.
+    if (entries.some((entry) => entry.name === ".git")) {
       continue;
     }
 

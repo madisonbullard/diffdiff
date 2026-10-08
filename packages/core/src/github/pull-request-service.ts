@@ -49,6 +49,7 @@ import type {
   GitHubGraphqlMarkFileAsViewedResponse,
   GitHubMergeResponse,
   GitHubPullRequestListResponse,
+  GitHubPullRequestDetailResponse,
   GitHubSearchIssuePullRequestResponse,
   GitHubGraphqlUnmarkFileAsViewedResponse,
 } from "./pull-request-types.ts";
@@ -164,6 +165,26 @@ export class GitHubPullRequestService {
     }
 
     return loadPullRequestDetail(client, repository, pullRequestNumber);
+  }
+
+  /** Resolve a PR's comparison without downloading checks, comments, or viewed-file state twice. */
+  async loadPullRequestRefs(
+    repository: ForgeRepository,
+    pullRequestNumber: number,
+  ): Promise<Pick<GitHubPullRequestDetail, "baseRefName" | "headRefName">> {
+    const client = await this.clientFactory.create(repository);
+    if (client == null) {
+      throw new DiffdiffError(
+        `Unable to create a GitHub client for ${repository.owner}/${repository.repo}.`,
+      );
+    }
+
+    const pullRequest = (await client.request("GET /repos/{owner}/{repo}/pulls/{pull_number}", {
+      owner: repository.owner,
+      repo: repository.repo,
+      pull_number: pullRequestNumber,
+    })) as GitHubPullRequestDetailResponse;
+    return { baseRefName: pullRequest.base.ref, headRefName: pullRequest.head.ref };
   }
 
   async attachReviewSession(session: ReviewSession): Promise<ReviewSession> {
