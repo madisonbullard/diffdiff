@@ -56,6 +56,7 @@ export interface BuildAppCommandsOptions {
   openFocusedFileInEditor: () => Promise<void>;
   openMergeModal: () => void;
   openPullRequestCommentsModal: () => void;
+  openPullRequestChecksModal: () => void;
   openSelectedTreeFile: () => void;
   openSubmitReviewModal: () => void;
   refreshComparison: () => void;

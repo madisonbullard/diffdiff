@@ -33,6 +33,9 @@ export interface ComparisonBrowserData {
 }
 
 export interface DiffdiffAppState {
+  checksIndex: number;
+  setChecksIndex: Dispatch<SetStateAction<number>>;
+  checksDetailScrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   reviewerPicker: ReviewerPickerState;
   setReviewerPicker: Dispatch<SetStateAction<ReviewerPickerState>>;
   reviewerPickerAsyncRef: MutableRefObject<{ loadId: number; submitting: boolean }>;

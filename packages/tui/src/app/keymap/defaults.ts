@@ -13,14 +13,13 @@ import { MutableTrieNode } from "./trie.ts";
 import type { KeyTrieNode, ResolvedKeymaps } from "./types.ts";
 import * as A from "./actions.ts";
 import { reviewerPickerMode } from "./reviewer-picker.ts";
+import { checksMode } from "./checks.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function k(raw: string): string {
-  return serializeKeyEvent(parseKeyString(raw));
-}
+const k = (raw: string): string => serializeKeyEvent(parseKeyString(raw));
 
 type BindingTuple = readonly [key: string, actionId: string];
 
@@ -111,6 +110,7 @@ const DIFF_LEADER_BINDINGS: readonly BindingTuple[] = [
   ["alt+r", A.REVIEW_CLEAR_REVIEWED],
   ["p", A.GITHUB_PULL_REQUEST_LIST],
   ["t", A.GITHUB_COMMENTS],
+  ["s", A.GITHUB_CHECKS],
   ["w", A.GITHUB_REQUEST_REVIEWERS],
   ["a", A.GITHUB_ADD_COMMENT],
   ["shift+a", A.GITHUB_SUBMIT_REVIEW],
@@ -126,6 +126,7 @@ const DIFF_SPACE_BINDINGS: readonly BindingTuple[] = [
   ["shift+y", A.VIEW_COPY_REOPEN_COMMAND],
   ["p", A.GITHUB_PULL_REQUEST_LIST],
   ["t", A.GITHUB_COMMENTS],
+  ["s", A.GITHUB_CHECKS],
   ["w", A.GITHUB_REQUEST_REVIEWERS],
   ["a", A.GITHUB_ADD_COMMENT],
   ["shift+a", A.GITHUB_SUBMIT_REVIEW],
@@ -638,18 +639,6 @@ const cleanupMode = buildMode([
 ]);
 
 // ---------------------------------------------------------------------------
-// Clear reviewed
-// ---------------------------------------------------------------------------
-
-const clearReviewedMode = buildMode([...MODAL_DISMISS, ["return", A.CLEAR_REVIEWED_CONFIRM]]);
-
-// ---------------------------------------------------------------------------
-// Diagnostics — uses same dismiss/navigation bindings
-// ---------------------------------------------------------------------------
-
-const diagnosticsMode = buildMode([...MODAL_DISMISS, ...LIST_NAVIGATION]);
-
-// ---------------------------------------------------------------------------
 // Assembled default keymaps
 // ---------------------------------------------------------------------------
 
@@ -670,14 +659,15 @@ export function getDefaultKeymaps(): ResolvedKeymaps {
   map.set("filters", filtersMode);
   map.set("comment", commentMode);
   map.set("conversation", conversationMode);
+  map.set("checks", checksMode);
   map.set("submit-review", submitReviewMode);
   map.set("merge-method", mergeMethodMode);
   map.set("merge-title", mergeTitleMode);
   map.set("merge-body", mergeBodyMode);
   map.set("confirm-merge", confirmMergeMode);
   map.set("cleanup", cleanupMode);
-  map.set("clear-reviewed", clearReviewedMode);
-  map.set("diagnostics", diagnosticsMode);
+  map.set("clear-reviewed", buildMode([...MODAL_DISMISS, ["return", A.CLEAR_REVIEWED_CONFIRM]]));
+  map.set("diagnostics", buildMode([...MODAL_DISMISS, ...LIST_NAVIGATION]));
 
   return map;
 }

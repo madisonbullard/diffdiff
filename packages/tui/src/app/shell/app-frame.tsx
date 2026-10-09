@@ -36,6 +36,7 @@ interface DiffdiffAppViewProps {
   activePrefixMenu?: PrefixMenuConfig;
   activePrefixMenuCommands: readonly PrefixMenuCommand[];
   onMouseUp: () => void;
+  onOpenChecks?: () => void;
   refreshIndicatorLabel: string | null;
   reviewedPaths: ReadonlySet<string>;
   reviewThreadsByPath: ReadonlyMap<
@@ -92,6 +93,7 @@ export function DiffdiffAppView({
   activePrefixMenu,
   activePrefixMenuCommands,
   onMouseUp,
+  onOpenChecks,
   refreshIndicatorLabel,
   reviewedPaths,
   reviewThreadsByPath,
@@ -126,6 +128,7 @@ export function DiffdiffAppView({
     >
       <AppHeader
         currentBranchLabel={currentBranchLabel}
+        onOpenChecks={activeOverlay == null ? onOpenChecks : undefined}
         refreshIndicatorLabel={refreshIndicatorLabel}
         session={session}
         theme={theme}

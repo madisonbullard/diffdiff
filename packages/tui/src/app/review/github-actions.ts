@@ -225,6 +225,13 @@ export function createGitHubReviewActions({
     state.setStatusMessage("Opened PR comments.");
   }
 
+  function openPullRequestChecksModal(): void {
+    if (state.session.github == null) return;
+    state.setChecksIndex(0);
+    state.setDialogStack((stack) => openAppDialog(stack, "checks"));
+    state.setStatusMessage("Opened PR checks.");
+  }
+
   function openSubmitReviewModal(): void {
     const authMessage = ensureAuthenticated(state);
     if (authMessage != null) {
@@ -263,6 +270,7 @@ export function createGitHubReviewActions({
     openGitHubPullRequestList,
     openMergeModal,
     openPullRequestCommentsModal,
+    openPullRequestChecksModal,
     openPullRequestConversationReplyComposer,
     openSubmitReviewModal,
     refreshGitHubPullRequestList,

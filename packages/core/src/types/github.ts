@@ -149,12 +149,25 @@ export interface GitHubPullRequestReviewGroup {
   submittedAt?: string;
 }
 
+export interface GitHubPullRequestCheck {
+  id: string;
+  name: string;
+  source: "check-run" | "commit-status";
+  state: "success" | "pending" | "failure" | "unknown";
+  status: string;
+  provider?: string;
+  summary?: string;
+  url?: string;
+}
+
 export interface GitHubPullRequestChecksSummary {
   state: "success" | "pending" | "failure" | "unknown";
   total: number;
   successful: number;
   failed: number;
   pending: number;
+  items?: GitHubPullRequestCheck[];
+  unavailable?: boolean;
 }
 
 export type GitHubPullRequestReviewDecision = "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED";

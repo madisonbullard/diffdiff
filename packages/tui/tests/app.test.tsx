@@ -2931,7 +2931,8 @@ test("renders the PR banner flush with the header", () => {
   expect(prBanner.props.paddingTop).toBeUndefined();
   expect(prBanner.props.paddingBottom).toBeUndefined();
   expect(prBanner.props.backgroundColor).toBeUndefined();
-  expect(prBanner.findAll((node) => String(node.type) === "text")).toHaveLength(1);
+  expect(prBanner.props.flexDirection).toBe("row");
+  expect(prBanner.findByProps({ id: "pr-checks-badge" }).props.onMouseUp).toBeTypeOf("function");
 });
 
 test("renders header warnings after the PR banner", () => {

@@ -24,6 +24,7 @@ export interface RelativeTimestampInfo {
 }
 
 export function formatChecksSummary(pullRequest: GitHubPullRequestDetail): string {
+  if (pullRequest.checks.unavailable) return "checks unavailable";
   if (pullRequest.checks.total === 0) {
     return "no checks";
   }

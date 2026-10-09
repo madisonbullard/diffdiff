@@ -18,6 +18,7 @@ function createRegistryOptions(
 ): Parameters<typeof buildAppCommands>[0] {
   return {
     openReviewerPicker: vi.fn(),
+    openPullRequestChecksModal: vi.fn(),
     activePane: "diff",
     canClearReviewed: true,
     canOpenFocusedFileInEditor: true,
@@ -63,7 +64,11 @@ function createRegistryOptions(
       status: "modified",
     },
     sessionGitHub: {
-      pullRequest: { state: "open", isMerged: false },
+      pullRequest: {
+        state: "open",
+        isMerged: false,
+        checks: { state: "failure", total: 1, failed: 1, pending: 0, successful: 0 },
+      },
       auth: {
         isAuthenticated: true,
       },
@@ -99,6 +104,10 @@ describe("command registry", () => {
     expect(
       getPaletteCommands(commands).some((command) => command.value === "github.reply-thread"),
     ).toBe(true);
+    expect(findAppCommandByValue(commands, "github.checks")).toMatchObject({
+      enabled: false,
+      disabledReason: "Open a GitHub pull request first.",
+    });
   });
 
   test("derives command labels from the resolved keymaps", () => {

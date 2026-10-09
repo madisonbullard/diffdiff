@@ -5,6 +5,7 @@ export type AppDialog =
   | "command-palette"
   | "comment-composer"
   | "comments"
+  | "checks"
   | "diagnostics"
   | "pull-request-list"
   | "reviewer-picker"
@@ -46,6 +47,7 @@ const APP_DIALOG_EXIT_ACTIONS: Record<
   comments: {
     dismiss: "restore-parent",
   },
+  checks: { dismiss: "restore-parent" },
   diagnostics: {
     dismiss: "close-all",
   },

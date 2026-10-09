@@ -21,6 +21,7 @@ export type KeymapMode =
   | "filters"
   | "comment"
   | "conversation"
+  | "checks"
   | "submit-review"
   | "merge-method"
   | "merge-title"
@@ -80,6 +81,8 @@ export function resolveActiveKeymapMode({
       return "comment";
     case "comments":
       return "conversation";
+    case "checks":
+      return "checks";
     case "submit-review":
       return "submit-review";
     case "merge":
@@ -181,6 +184,8 @@ export function getKeymapModeBadge(mode: KeymapMode, theme: UiTheme): KeymapMode
       return searchMode("COMMENT");
     case "conversation":
       return navigationMode("CONVO");
+    case "checks":
+      return navigationMode("CHECKS");
     case "submit-review":
       return searchMode("SUBMIT");
     case "merge-method":

@@ -93,16 +93,30 @@ export interface GitHubIssueCommentResponse {
 }
 
 export interface GitHubCheckRunResponse {
+  id?: number;
+  name?: string;
+  details_url?: string | null;
+  html_url?: string | null;
+  app?: { name?: string } | null;
+  output?: { title?: string | null; summary?: string | null } | null;
   status: string;
   conclusion: string | null;
 }
 
 export interface GitHubCheckRunsResponse {
+  total_count?: number;
   check_runs?: GitHubCheckRunResponse[];
 }
 
 export interface GitHubCommitStatusResponse {
   state?: string;
+  statuses?: {
+    id: number;
+    context: string;
+    state: string;
+    description?: string | null;
+    target_url?: string | null;
+  }[];
 }
 
 export interface GitHubCreateReviewResponse {

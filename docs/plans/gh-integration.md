@@ -8,6 +8,23 @@
 
 ## Implementation Update
 
+### Pull request checks
+
+- Click the checks summary in the PR banner, choose **Open PR checks** in the
+  command palette, or use Space / Ctrl+X then `s` from the diff, thread, or tree pane.
+- The dialog lists failed checks first, then pending checks and passing checks.
+  Both GitHub check runs and legacy commit status contexts are included, with
+  pagination and only the latest status per context. Skipped and neutral checks
+  are non-failing.
+- Select a check with `j`/`k`, arrows, or the mouse; Home/End jump through the
+  list. The detail pane shows the provider, status, GitHub-provided summary,
+  and a terminal hyperlink. `y` copies that check's URL; Page Up/Down scroll
+  its details; `r` refreshes the existing PR session; Escape or `q` closes.
+- Core retains check details in the same head-commit snapshot as the banner;
+  opening the dialog needs no additional request. API failures are shown as
+  **checks unavailable**, not confused with a commit that has no checks.
+- This is read-only inspection, not a workflow rerun or full CI log viewer.
+
 ### Reviewer requests
 
 - Open **Request reviewers** from the command palette or the existing Space / Ctrl+X

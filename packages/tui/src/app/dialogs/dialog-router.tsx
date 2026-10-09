@@ -8,6 +8,7 @@ import type { UiTheme } from "../../theme.ts";
 import type { PreparedReviewSession } from "../../types.ts";
 import { ClearReviewedConfirmModal } from "../../review/clear-reviewed-confirm-modal.tsx";
 import { PullRequestCommentsModal } from "../../review/comments-modal.tsx";
+import { PullRequestChecksModal } from "../../review/checks-modal.tsx";
 import { MergeConfirmModal } from "../../review/merge-confirm-modal.tsx";
 import { MergePullRequestModal } from "../../review/merge-pull-request-modal.tsx";
 import { PostMergeCleanupModal } from "../../review/post-merge-cleanup-modal.tsx";
@@ -127,6 +128,16 @@ export function DiffdiffAppDialogs({
         pullRequest={session.github.pullRequest}
         selectedItemId={models.pullRequestComments.selectedItemId}
         theme={theme}
+      />
+    );
+  }
+
+  if (activeDialog === "checks" && session.github != null && models.checks != null) {
+    return (
+      <PullRequestChecksModal
+        pullRequest={session.github.pullRequest}
+        theme={theme}
+        {...models.checks}
       />
     );
   }

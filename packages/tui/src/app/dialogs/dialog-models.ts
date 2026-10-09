@@ -96,6 +96,11 @@ export interface DiagnosticsDialogModels {
 }
 
 export interface DiffdiffDialogModels {
+  checks?: {
+    selectedIndex: number;
+    onSelect: (index: number) => void;
+    detailScrollRef: MutableRefObject<ScrollBoxRenderable | null>;
+  };
   reviewerPicker: ReviewerPickerState;
   branch: BranchDialogModels;
   cleanup: CleanupDialogModels;
@@ -118,6 +123,7 @@ export function createDiffdiffDialogModels({
   branchListFilters,
   branchListIndex,
   canApplyCleanup,
+  checks,
   cleanupCandidateIndex,
   cleanupCandidates,
   cleanupSelection,
@@ -165,6 +171,7 @@ export function createDiffdiffDialogModels({
   branchListFilters: BranchListFilters;
   branchListIndex: number;
   canApplyCleanup: boolean;
+  checks?: DiffdiffDialogModels["checks"];
   cleanupCandidateIndex: number;
   cleanupCandidates: readonly GitHubRefCleanupCandidate[];
   cleanupSelection: GitHubCleanupPreferences;
@@ -207,6 +214,7 @@ export function createDiffdiffDialogModels({
   session: PreparedReviewSession;
 }): DiffdiffDialogModels {
   return {
+    checks,
     reviewerPicker: reviewerPicker ?? createReviewerPickerState(),
     branch: {
       activeView: activeListView,

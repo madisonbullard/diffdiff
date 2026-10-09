@@ -44,6 +44,7 @@ export interface AppHarness {
   height: number;
   /** Press keys one at a time and wait for the app to settle after each. */
   press: (...keys: KeyInput[]) => Promise<ActionReport>;
+  click: (x: number, y: number) => Promise<void>;
   /** Paint frames until the output stops changing. */
   settle: () => Promise<ActionReport>;
   resize: (width: number, height: number) => Promise<ActionReport>;
@@ -158,6 +159,12 @@ export async function launchApp(
     destroy: () => setup.renderer.destroy(),
     diffPane,
     frame: () => setup.captureCharFrame(),
+    async click(x, y) {
+      await act(async () => {
+        await setup.mockMouse.click(x, y);
+      });
+      await harness.settle();
+    },
     async press(...keys) {
       let report: ActionReport | undefined;
       for (const key of keys) {

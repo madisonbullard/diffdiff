@@ -16,6 +16,7 @@ export function buildGitHubCommands({
   openReviewerPicker,
   openMergeModal,
   openPullRequestCommentsModal,
+  openPullRequestChecksModal,
   openSubmitReviewModal,
   sessionGitHub,
   toggleFocusedReviewThreadCollapsed,
@@ -36,6 +37,7 @@ export function buildGitHubCommands({
   | "openReviewerPicker"
   | "openMergeModal"
   | "openPullRequestCommentsModal"
+  | "openPullRequestChecksModal"
   | "openSubmitReviewModal"
   | "sessionGitHub"
   | "toggleFocusedReviewThreadCollapsed"
@@ -56,6 +58,17 @@ export function buildGitHubCommands({
     gitHubWriteDisabledReason ?? "No focused review comment is available in the selected file.";
 
   return [
+    {
+      category: "GitHub",
+      description: "Review pull request checks, failures, and status details.",
+      disabledReason: gitHubDisabledReason,
+      enabled: sessionGitHub != null,
+      suggested: sessionGitHub?.pullRequest.checks.state === "failure",
+      keywords: ["ci", "status", "failure", "actions"],
+      title: "Open PR checks",
+      value: "github.checks",
+      run: () => openPullRequestChecksModal(),
+    },
     {
       category: "GitHub",
       description:

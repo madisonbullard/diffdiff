@@ -5,6 +5,7 @@ import type { UiTheme } from "../../theme.ts";
 
 interface AppHeaderProps {
   currentBranchLabel: string;
+  onOpenChecks?: () => void;
   refreshIndicatorLabel: string | null;
   session: PreparedReviewSession;
   theme: UiTheme;
@@ -12,6 +13,7 @@ interface AppHeaderProps {
 
 export function AppHeader({
   currentBranchLabel,
+  onOpenChecks,
   refreshIndicatorLabel,
   session,
   theme,
@@ -58,7 +60,11 @@ export function AppHeader({
         </text>
       </box>
       {session.github != null ? (
-        <PullRequestBanner pullRequest={session.github.pullRequest} theme={theme} />
+        <PullRequestBanner
+          pullRequest={session.github.pullRequest}
+          theme={theme}
+          onOpenChecks={onOpenChecks}
+        />
       ) : null}
       {session.warnings[0] != null ? (
         <text fg={theme.warning} wrapMode="none">

@@ -88,6 +88,8 @@ export function useDiffdiffAppState({
     workingTreeSummary: initialSession.workingTreeSummary,
   });
   const [session, setSession] = useState(initialSession);
+  const [checksIndex, setChecksIndex] = useState(0);
+  const checksDetailScrollRef = useRef<ScrollBoxRenderable | null>(null);
   const [reviewerPicker, setReviewerPicker] = useState(createReviewerPickerState);
   const reviewerPickerAsyncRef = useRef({ loadId: 0, submitting: false });
   const [startupOptions, setStartupOptions] = useState<LaunchOptions>({ ...initialOptions });
@@ -256,6 +258,11 @@ export function useDiffdiffAppState({
   const terminalDimensions = useTerminalDimensions();
 
   useEffect(() => {
+    setChecksIndex(0);
+    setDialogStack((stack) => stack.filter((entry) => entry.dialog !== "checks"));
+  }, [session.github?.pullRequest.url]);
+
+  useEffect(() => {
     reviewerPickerAsyncRef.current.loadId += 1;
     reviewerPickerAsyncRef.current.submitting = false;
     setReviewerPicker(createReviewerPickerState());
@@ -290,6 +297,9 @@ export function useDiffdiffAppState({
 
   return {
     reviewerPicker,
+    checksIndex,
+    setChecksIndex,
+    checksDetailScrollRef,
     setReviewerPicker,
     reviewerPickerAsyncRef,
     activeFileIndex,

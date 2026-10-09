@@ -1,4 +1,5 @@
 import { logDiffdiffError } from "../logging.ts";
+import { loadPullRequestChecks } from "./pull-request-checks.ts";
 import {
   buildPullRequestOpinionatedReviewDigest,
   buildPullRequestRequestedReviewerDigest,
@@ -25,8 +26,6 @@ import {
   type PullRequestReviewSignals,
 } from "./pull-request-review-signals.ts";
 import type {
-  GitHubCheckRunsResponse,
-  GitHubCommitStatusResponse,
   GitHubGraphqlPullRequestFilesResponse,
   GitHubIssueCommentResponse,
   GitHubPullRequestDetailResponse,
@@ -161,7 +160,7 @@ async function loadPullRequestSnapshot(
       repo: repository.repo,
       pull_number: pullRequestNumber,
     })) as GitHubPullRequestDetailResponse;
-    const checksSummary = await loadChecksSummaryForHeadSha(
+    const checksSummary = await loadPullRequestChecks(
       client,
       repository,
       pullRequest.head.sha,
@@ -294,78 +293,5 @@ async function loadPullRequestChangedFiles(
     }
 
     after = filesConnection.pageInfo.endCursor;
-  }
-}
-
-async function loadChecksSummaryForHeadSha(
-  client: GitHubApiClient,
-  repository: ForgeRepository,
-  headSha: string,
-  pullRequestNumber?: number,
-): Promise<GitHubPullRequestChecksSummary> {
-  try {
-    const [checkRunsResponse, combinedStatusResponse] = await Promise.all([
-      client.request("GET /repos/{owner}/{repo}/commits/{ref}/check-runs", {
-        owner: repository.owner,
-        repo: repository.repo,
-        ref: headSha,
-        per_page: 100,
-      }) as Promise<GitHubCheckRunsResponse>,
-      client.request("GET /repos/{owner}/{repo}/commits/{ref}/status", {
-        owner: repository.owner,
-        repo: repository.repo,
-        ref: headSha,
-      }) as Promise<GitHubCommitStatusResponse>,
-    ]);
-
-    const checkRuns = checkRunsResponse.check_runs ?? [];
-    let successful = 0;
-    let failed = 0;
-    let pending = 0;
-
-    for (const checkRun of checkRuns) {
-      if (checkRun.status !== "completed") {
-        pending += 1;
-        continue;
-      }
-
-      if (checkRun.conclusion === "success" || checkRun.conclusion === "neutral") {
-        successful += 1;
-        continue;
-      }
-
-      failed += 1;
-    }
-
-    const combinedState = combinedStatusResponse.state;
-    const state =
-      failed > 0 || combinedState === "failure"
-        ? "failure"
-        : pending > 0 || combinedState === "pending"
-          ? "pending"
-          : successful > 0 || combinedState === "success"
-            ? "success"
-            : "unknown";
-
-    return {
-      failed,
-      pending,
-      state,
-      successful,
-      total: checkRuns.length,
-    };
-  } catch (error) {
-    logDiffdiffError("github", "load_checks_summary_failed", error, {
-      headSha,
-      pullRequestNumber,
-      repository,
-    });
-    return {
-      failed: 0,
-      pending: 0,
-      state: "unknown",
-      successful: 0,
-      total: 0,
-    };
   }
 }

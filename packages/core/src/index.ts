@@ -90,6 +90,7 @@ export type {
   GitHubDashboardPullRequest,
   GitHubMergeMethod,
   GitHubPendingReview,
+  GitHubPullRequestCheck,
   GitHubPullRequestChecksSummary,
   GitHubPullRequestChangedFile,
   GitHubPullRequestChangedFilesByPath,

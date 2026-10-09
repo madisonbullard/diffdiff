@@ -1,6 +1,7 @@
 /* eslint-disable max-lines */
 
 import { clampIndex } from "../../view-model.ts";
+import clipboard from "clipboardy";
 import * as A from "../keymap/actions.ts";
 import type { ActionDispatchMap } from "../keymap/action-dispatch.ts";
 import { closeDialog as closeAppDialog, openDialog as openAppDialog } from "../dialogs/stack.ts";
@@ -188,6 +189,14 @@ export function buildModalActionDispatchMap({
 
   function moveListSelection(delta: number): void {
     switch (activeKeymapMode) {
+      case "checks":
+        state.setChecksIndex((index) =>
+          clampIndex(
+            index + delta,
+            derived.displaySession.github?.pullRequest.checks.items?.length ?? 0,
+          ),
+        );
+        return;
       case "reviewer-picker":
         moveReviewerSelection(delta);
         return;
@@ -245,6 +254,16 @@ export function buildModalActionDispatchMap({
 
   function jumpListSelection(edge: "first" | "last"): void {
     switch (activeKeymapMode) {
+      case "checks":
+        state.setChecksIndex(
+          edge === "first"
+            ? 0
+            : Math.max(
+                (derived.displaySession.github?.pullRequest.checks.items?.length ?? 0) - 1,
+                0,
+              ),
+        );
+        return;
       case "commands":
         state.setCommandIndex(edge === "first" ? 0 : Math.max(filteredCommands.length - 1, 0));
         return;
@@ -280,6 +299,10 @@ export function buildModalActionDispatchMap({
 
   function dismissCurrentMode(): void {
     switch (activeKeymapMode) {
+      case "checks":
+        state.setDialogStack((stack) => closeAppDialog(stack, "checks"));
+        state.setStatusMessage("Closed PR checks.");
+        return;
       case "reviewer-picker":
         closeReviewerPicker();
         return;
@@ -413,6 +436,23 @@ export function buildModalActionDispatchMap({
 
   map.set(A.LIST_MOVE_DOWN, (count) => {
     moveListSelection(count ?? 1);
+  });
+
+  map.set(A.CHECKS_COPY_URL, async () => {
+    const items = derived.displaySession.github?.pullRequest.checks.items ?? [];
+    const url = items[clampIndex(state.checksIndex, items.length)]?.url;
+    if (url == null) {
+      state.setStatusMessage("No details link is available for this check.");
+      return;
+    }
+    try {
+      await clipboard.write(url);
+      persistenceApi.showToast("Copied check URL");
+    } catch (error) {
+      persistenceApi.handleAppError(error, "Unable to copy check URL.", {
+        action: "copy-check-url",
+      });
+    }
   });
 
   map.set(A.LIST_MOVE_UP, (count) => {

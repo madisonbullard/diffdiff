@@ -78,6 +78,8 @@ export const GITHUB_TOGGLE_THREAD = "github.toggle-thread";
 export const GITHUB_COPY_COMMENT_URL = "github.copy-comment-url";
 export const GITHUB_SUBMIT_REVIEW = "github.submit-review";
 export const GITHUB_MERGE = "github.merge";
+export const GITHUB_CHECKS = "github.checks";
+export const CHECKS_COPY_URL = "checks.copy-url";
 
 // ---------------------------------------------------------------------------
 // Goto / positional navigation (g prefix menu)

@@ -218,6 +218,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         openFocusedFileInEditor: viewActions.openFocusedFileInEditor,
         openMergeModal: githubActions.openMergeModal,
         openPullRequestCommentsModal: githubActions.openPullRequestCommentsModal,
+        openPullRequestChecksModal: githubActions.openPullRequestChecksModal,
         openSelectedTreeFile: treeActions.openSelectedTreeFile,
         openSubmitReviewModal: githubActions.openSubmitReviewModal,
         refreshComparison: refresh.refreshComparison,
@@ -424,6 +425,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       helpLabel={helpLabel}
       activePrefixMenu={activePrefixMenu}
       activePrefixMenuCommands={activePrefixMenuCommands}
+      onOpenChecks={githubActions.openPullRequestChecksModal}
       onMouseUp={() =>
         copySelection(state.renderer, {
           onSuccess: () => persistence.persistenceApi.showToast("Copied to clipboard"),
