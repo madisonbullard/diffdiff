@@ -52,6 +52,7 @@ export interface BuildAppCommandsOptions {
   openFocusedReviewThreadReplyComposer: () => void;
   openGitHubPullRequestList: () => void;
   openReviewerPicker: () => void;
+  togglePullRequestDraft: () => Promise<void>;
   openHelp: () => void;
   openFocusedFileInEditor: () => Promise<void>;
   openMergeModal: () => void;

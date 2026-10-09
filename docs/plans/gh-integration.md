@@ -8,6 +8,18 @@
 
 ## Implementation Update
 
+### Draft / ready for review
+
+- Space / Ctrl+X then Shift+D toggles the current open PR between draft and ready
+  for review from the diff, thread, or tree pane. Lowercase `d` remains diagnostics.
+- The command palette names the destination: **Convert PR to draft** or **Mark PR
+  ready for review**. Authentication and an open, unmerged PR are required;
+  GitHub enforces author/repository permissions. Marking ready may notify reviewers.
+- Core exposes `setPullRequestDraft(session, isDraft)` using GitHub's GraphQL
+  mutations. The UI blocks repeat submissions and only changes the banner after
+  GitHub confirms success. Confirmed state survives a failed session refresh;
+  mutation failures leave the previous state intact and are retryable.
+
 ### Pull request checks
 
 - Click the checks summary in the PR banner, choose **Open PR checks** in the

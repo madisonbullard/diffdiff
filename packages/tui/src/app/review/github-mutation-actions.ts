@@ -39,6 +39,7 @@ interface CreateGitHubMutationActionsOptions {
     | "addReviewThread"
     | "loadSession"
     | "mergePullRequest"
+    | "setPullRequestDraft"
     | "replyToReviewComment"
     | "removeCleanupRefs"
     | "submitPendingReview"
@@ -57,6 +58,72 @@ export function createGitHubMutationActions({
   state,
 }: CreateGitHubMutationActionsOptions) {
   const optimisticOperations = createGitHubOptimisticOperationController(state);
+
+  async function togglePullRequestDraft(): Promise<void> {
+    const github = state.session.github;
+    if (github == null || !github.auth.isAuthenticated) {
+      state.setStatusMessage(
+        github == null
+          ? "Open a GitHub pull request first."
+          : "GitHub auth is required. Run `diffdiff auth login --token-stdin` first.",
+      );
+      return;
+    }
+    if (github.pullRequest.state !== "open" || github.pullRequest.isMerged) {
+      state.setStatusMessage("Draft status can only be changed for an open pull request.");
+      return;
+    }
+    if (
+      props.setPullRequestDraft == null ||
+      state.isSubmittingReviewAction ||
+      state.draftToggleInFlightRef.current
+    )
+      return;
+    const isDraft = !github.pullRequest.isDraft;
+    const destination = isDraft ? "draft" : "ready for review";
+    const loadId = actions.beginSessionLoad();
+    state.draftToggleInFlightRef.current = true;
+    state.setIsSubmittingReviewAction(true);
+    state.setStatusMessage(`Marking pull request as ${destination}...`);
+    let changed = false;
+    try {
+      await props.setPullRequestDraft(github, isDraft);
+      changed = true;
+      state.setSession((session) => {
+        const current = session.github;
+        if (current?.pullRequest.url !== github.pullRequest.url) return session;
+        return {
+          ...session,
+          github: {
+            ...current,
+            pullRequest: {
+              ...current.pullRequest,
+              isDraft,
+              merge: { ...current.pullRequest.merge, isDraft },
+            },
+          },
+        };
+      });
+      if (!actions.isLatestSessionLoad(loadId)) return;
+      state.setStatusMessage(`Marked pull request as ${destination}.`);
+      const next = await props.loadSession(state.startupOptions);
+      if (actions.isLatestSessionLoad(loadId)) actions.applyLoadedSession(next);
+    } catch (error) {
+      if (!actions.isLatestSessionLoad(loadId)) return;
+      const message = changed
+        ? `Marked pull request as ${destination}, but unable to refresh the session.`
+        : "Unable to change pull request draft status.";
+      persistence.persistenceApi.handleAppError(
+        error,
+        message,
+        { action: "toggle-pull-request-draft" },
+        { displayMessage: message },
+      );
+    } finally {
+      state.draftToggleInFlightRef.current = false;
+      state.setIsSubmittingReviewAction(false);
+    }
+  }
 
   async function submitCommentComposer(): Promise<void> {
     if (
@@ -385,6 +452,7 @@ export function createGitHubMutationActions({
   }
 
   return {
+    togglePullRequestDraft,
     applyCleanupSelection,
     submitCommentComposer,
     submitMergeFromModal,

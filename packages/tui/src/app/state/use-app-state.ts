@@ -164,6 +164,7 @@ export function useDiffdiffAppState({
   const [isReloading, setIsReloading] = useState(false);
   const [isCheckingForUpdates, setIsCheckingForUpdates] = useState(false);
   const [isSubmittingReviewAction, setIsSubmittingReviewAction] = useState(false);
+  const draftToggleInFlightRef = useRef(false);
   const [lastAccessedFileIndex, setLastAccessedFileIndex] = useState<number | null>(null);
   const [activePrefix, setActivePrefix] = useState<KeymapPrefixId | null>(null);
   const [refreshIndicatorLabel, setRefreshIndicatorLabel] = useState<string | null>(null);
@@ -337,6 +338,7 @@ export function useDiffdiffAppState({
     isPullRequestListLoading,
     isReloading,
     isSubmittingReviewAction,
+    draftToggleInFlightRef,
     keybindController,
     lastAccessedFileIndex,
     latestSessionLoadIdRef,

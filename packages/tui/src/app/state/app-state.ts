@@ -77,6 +77,7 @@ export interface DiffdiffAppState {
   isPullRequestListLoading: boolean;
   isReloading: boolean;
   isSubmittingReviewAction: boolean;
+  draftToggleInFlightRef: MutableRefObject<boolean>;
   keybindController: ReturnType<typeof createKeybindController>;
   /** The previously selected file index for alternate-file navigation (`ga`). */
   lastAccessedFileIndex: number | null;

@@ -214,6 +214,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         openFocusedReviewThreadReplyComposer: githubActions.openFocusedReviewThreadReplyComposer,
         openGitHubPullRequestList: githubActions.openGitHubPullRequestList,
         openReviewerPicker: githubActions.openReviewerPicker,
+        togglePullRequestDraft: githubActions.togglePullRequestDraft,
         openHelp,
         openFocusedFileInEditor: viewActions.openFocusedFileInEditor,
         openMergeModal: githubActions.openMergeModal,

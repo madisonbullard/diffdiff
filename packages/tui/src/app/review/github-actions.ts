@@ -34,6 +34,7 @@ interface CreateGitHubReviewActionsOptions {
     | "listGitHubPullRequests"
     | "listReviewerCandidates"
     | "requestReviewers"
+    | "setPullRequestDraft"
     | "loadSession"
     | "openExternalEditor"
     | "mergePullRequest"

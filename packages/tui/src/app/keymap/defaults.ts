@@ -96,6 +96,17 @@ const TEXT_INPUT_LEADER_NAVIGATION_AND_EDITOR: readonly BindingTuple[] = [
 // Diff pane (default/main)
 // ---------------------------------------------------------------------------
 
+const GITHUB_PR_BINDINGS: readonly BindingTuple[] = [
+  ["p", A.GITHUB_PULL_REQUEST_LIST],
+  ["t", A.GITHUB_COMMENTS],
+  ["s", A.GITHUB_CHECKS],
+  ["w", A.GITHUB_REQUEST_REVIEWERS],
+  ["shift+d", A.GITHUB_TOGGLE_DRAFT],
+  ["a", A.GITHUB_ADD_COMMENT],
+  ["shift+a", A.GITHUB_SUBMIT_REVIEW],
+  ["m", A.GITHUB_MERGE],
+];
+
 const DIFF_LEADER_BINDINGS: readonly BindingTuple[] = [
   ["d", A.SYSTEM_DIAGNOSTICS],
   ["shift+r", A.COMPARISON_REFRESH],
@@ -108,13 +119,7 @@ const DIFF_LEADER_BINDINGS: readonly BindingTuple[] = [
   ["u", A.REVIEW_NEXT_UNREVIEWED],
   ["c", A.REVIEW_TOGGLE_COLLAPSED],
   ["alt+r", A.REVIEW_CLEAR_REVIEWED],
-  ["p", A.GITHUB_PULL_REQUEST_LIST],
-  ["t", A.GITHUB_COMMENTS],
-  ["s", A.GITHUB_CHECKS],
-  ["w", A.GITHUB_REQUEST_REVIEWERS],
-  ["a", A.GITHUB_ADD_COMMENT],
-  ["shift+a", A.GITHUB_SUBMIT_REVIEW],
-  ["m", A.GITHUB_MERGE],
+  ...GITHUB_PR_BINDINGS,
   ["q", A.SYSTEM_QUIT],
   ["shift+/", A.SYSTEM_HELP],
   ["h", A.SYSTEM_HELP],
@@ -124,13 +129,7 @@ const DIFF_SPACE_BINDINGS: readonly BindingTuple[] = [
   ["d", A.SYSTEM_DIAGNOSTICS],
   ["h", A.SYSTEM_HELP],
   ["shift+y", A.VIEW_COPY_REOPEN_COMMAND],
-  ["p", A.GITHUB_PULL_REQUEST_LIST],
-  ["t", A.GITHUB_COMMENTS],
-  ["s", A.GITHUB_CHECKS],
-  ["w", A.GITHUB_REQUEST_REVIEWERS],
-  ["a", A.GITHUB_ADD_COMMENT],
-  ["shift+a", A.GITHUB_SUBMIT_REVIEW],
-  ["m", A.GITHUB_MERGE],
+  ...GITHUB_PR_BINDINGS,
   ["l", A.COMPARISON_LIST],
 ];
 

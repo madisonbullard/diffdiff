@@ -64,6 +64,7 @@ export const TREE_TOGGLE_OR_OPEN = "tree.toggle-or-open";
 // ---------------------------------------------------------------------------
 export const GITHUB_PULL_REQUEST_LIST = "github.pull-request-list";
 export const GITHUB_REQUEST_REVIEWERS = "github.request-reviewers";
+export const GITHUB_TOGGLE_DRAFT = "github.toggle-draft";
 export const REVIEWERS_SUBMIT = "reviewers.submit";
 export const REVIEWERS_REFRESH = "reviewers.refresh";
 export const GITHUB_COMMENTS = "github.comments";

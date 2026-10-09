@@ -4,6 +4,36 @@ import type { GitHubApiClient } from "../src/types/providers.ts";
 import type { GitHubReviewSession } from "../src/types/github.ts";
 
 const repository = { forge: "github", host: "github.com", owner: "owner", repo: "repo" };
+
+test.each([true, false])(
+  "sets PR draft status to %s using the corresponding GraphQL mutation",
+  async (isDraft) => {
+    const { service, session, graphql } = fixture();
+    const mutation = isDraft ? "convertPullRequestToDraft" : "markPullRequestReadyForReview";
+    graphql.mockResolvedValueOnce({ [mutation]: { pullRequest: { isDraft } } });
+    await service.setPullRequestDraft(session, isDraft);
+    expect(graphql).toHaveBeenCalledExactlyOnceWith(expect.stringContaining(mutation), {
+      pullRequestId: "PR_42",
+    });
+  },
+);
+
+test("draft changes reject closed/merged PRs, unauthenticated clients, unconfirmed responses and API failures", async () => {
+  const { service, session, client, graphql } = fixture();
+  session.pullRequest.state = "closed";
+  await expect(service.setPullRequestDraft(session, true)).rejects.toThrow("open pull request");
+  session.pullRequest.state = "open";
+  session.pullRequest.isMerged = true;
+  await expect(service.setPullRequestDraft(session, true)).rejects.toThrow("open pull request");
+  expect(graphql).not.toHaveBeenCalled();
+  session.pullRequest.isMerged = false;
+  client.auth = undefined;
+  await expect(service.setPullRequestDraft(session, true)).rejects.toThrow("authentication");
+  client.auth = { host: "github.com", token: "test-token", tokenSource: "env" };
+  await expect(service.setPullRequestDraft(session, true)).rejects.toThrow("did not confirm");
+  graphql.mockRejectedValueOnce(new Error("403 forbidden"));
+  await expect(service.setPullRequestDraft(session, true)).rejects.toThrow("403");
+});
 const user = (login: string, name: string | null = null) => ({
   login,
   name,

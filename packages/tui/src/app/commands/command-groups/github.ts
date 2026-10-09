@@ -14,6 +14,7 @@ export function buildGitHubCommands({
   openFocusedReviewThreadReplyComposer,
   openGitHubPullRequestList,
   openReviewerPicker,
+  togglePullRequestDraft,
   openMergeModal,
   openPullRequestCommentsModal,
   openPullRequestChecksModal,
@@ -35,6 +36,7 @@ export function buildGitHubCommands({
   | "openFocusedReviewThreadReplyComposer"
   | "openGitHubPullRequestList"
   | "openReviewerPicker"
+  | "togglePullRequestDraft"
   | "openMergeModal"
   | "openPullRequestCommentsModal"
   | "openPullRequestChecksModal"
@@ -58,6 +60,28 @@ export function buildGitHubCommands({
     gitHubWriteDisabledReason ?? "No focused review comment is available in the selected file.";
 
   return [
+    {
+      category: "GitHub",
+      description: "Toggle the open pull request between draft and ready for review.",
+      disabledReason:
+        gitHubWriteDisabledReason ??
+        (sessionGitHub?.pullRequest.state !== "open" || sessionGitHub?.pullRequest.isMerged
+          ? "Draft status can only be changed for an open pull request."
+          : undefined),
+      enabled:
+        sessionGitHub != null &&
+        isGitHubAuthenticated &&
+        sessionGitHub.pullRequest.state === "open" &&
+        !sessionGitHub.pullRequest.isMerged,
+      keywords: ["draft", "ready", "review"],
+      title: sessionGitHub?.pullRequest.isDraft
+        ? "Mark PR ready for review"
+        : "Convert PR to draft",
+      value: "github.toggle-draft",
+      run: () => {
+        void togglePullRequestDraft();
+      },
+    },
     {
       category: "GitHub",
       description: "Review pull request checks, failures, and status details.",

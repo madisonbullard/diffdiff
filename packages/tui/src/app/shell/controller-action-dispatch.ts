@@ -92,6 +92,7 @@ export function buildControllerActionDispatchMap({
     openFocusedReviewThreadReplyComposer: githubActions.openFocusedReviewThreadReplyComposer,
     openGitHubPullRequestList: githubActions.openGitHubPullRequestList,
     openReviewerPicker: githubActions.openReviewerPicker,
+    togglePullRequestDraft: githubActions.togglePullRequestDraft,
     closeReviewerPicker: githubActions.closeReviewerPicker,
     moveReviewerSelection: githubActions.moveReviewerSelection,
     refreshReviewerCandidates: githubActions.refreshReviewerCandidates,

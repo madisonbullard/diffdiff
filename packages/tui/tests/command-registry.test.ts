@@ -18,6 +18,7 @@ function createRegistryOptions(
 ): Parameters<typeof buildAppCommands>[0] {
   return {
     openReviewerPicker: vi.fn(),
+    togglePullRequestDraft: vi.fn(async () => undefined),
     openPullRequestChecksModal: vi.fn(),
     activePane: "diff",
     canClearReviewed: true,
@@ -83,6 +84,17 @@ function createRegistryOptions(
 }
 
 describe("command registry", () => {
+  test.each([true, false])("draft toggle names the destination for draft=%s", (isDraft) => {
+    const options = createRegistryOptions();
+    options.sessionGitHub!.pullRequest.isDraft = isDraft;
+    const command = findAppCommandByValue(buildAppCommands(options), "github.toggle-draft")!;
+    expect(command.enabled).toBe(true);
+    expect(command.title).toBe(isDraft ? "Mark PR ready for review" : "Convert PR to draft");
+    expect(formatCommandBindings(reverseKeymaps, command)).toBe("ctrl+x shift+d / space shift+d");
+    command.run();
+    expect(options.togglePullRequestDraft).toHaveBeenCalledOnce();
+  });
+
   test("keeps unavailable GitHub actions discoverable in the palette", () => {
     const commands = buildAppCommands(
       createRegistryOptions({

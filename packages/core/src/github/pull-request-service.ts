@@ -25,6 +25,7 @@ import type { ReviewSession } from "../types/session.ts";
 import { OctokitGitHubClientFactory } from "./client.ts";
 import { loadReviewerCandidates } from "./reviewer-candidates.ts";
 import { requestReviewers } from "./reviewer-requests.ts";
+import { setPullRequestDraft } from "./pull-request-draft.ts";
 import {
   loadPullRequestCoarseFingerprint,
   loadPullRequestDetail,
@@ -63,6 +64,10 @@ export class GitHubPullRequestService {
 
   async listReviewerCandidates(reviewSession: GitHubReviewSession) {
     return loadReviewerCandidates(await this.requireClient(reviewSession), reviewSession);
+  }
+
+  async setPullRequestDraft(reviewSession: GitHubReviewSession, isDraft: boolean): Promise<void> {
+    await setPullRequestDraft(await this.requireClient(reviewSession), reviewSession, isDraft);
   }
 
   async requestReviewers(

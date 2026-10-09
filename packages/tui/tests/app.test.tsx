@@ -154,6 +154,94 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+test.each([true, false])(
+  "draft keybinding switches a PR from draft=%s and updates the palette",
+  async (isDraft) => {
+    const github = createGitHubReviewSession();
+    github.pullRequest.isDraft = isDraft;
+    github.pullRequest.merge.isDraft = isDraft;
+    const setPullRequestDraft = vi.fn(async () => undefined);
+    const refreshed = createPreparedSession({
+      github: {
+        ...github,
+        pullRequest: {
+          ...github.pullRequest,
+          isDraft: !isDraft,
+          merge: { ...github.pullRequest.merge, isDraft: !isDraft },
+        },
+      },
+    });
+    const tree = render(
+      <DiffdiffApp
+        {...createAppProps({
+          initialSession: createPreparedSession({ github }),
+          setPullRequestDraft,
+          loadSession: async () => refreshed,
+        })}
+      />,
+    );
+    emitKey({ name: "space", sequence: " " });
+    await emitAsyncKey({ name: "d", shift: true });
+    expect(setPullRequestDraft).toHaveBeenCalledExactlyOnceWith(github, !isDraft);
+    expect(getAppText(tree)).toContain(
+      `Marked pull request as ${!isDraft ? "draft" : "ready for review"}.`,
+    );
+  },
+);
+
+test("draft toggle retains confirmed state after refresh failure and blocks repeat submissions", async () => {
+  const pending = createDeferred<void>();
+  const setPullRequestDraft = vi.fn(() => pending.promise);
+  const tree = render(
+    <DiffdiffApp
+      {...createReviewerAppProps({
+        setPullRequestDraft,
+        loadSession: async () => {
+          throw new Error("offline");
+        },
+      })}
+    />,
+  );
+  emitKey({ name: "x", ctrl: true });
+  emitKey({ name: "d", shift: true });
+  emitKey({ name: "space", sequence: " " });
+  emitKey({ name: "d", shift: true });
+  expect(setPullRequestDraft).toHaveBeenCalledTimes(1);
+  await act(async () => pending.resolve());
+  expect(getAppText(tree)).toContain("Marked pull request as draft, but unable to refresh");
+  emitKey({ name: "space", sequence: " " });
+  emitKey({ name: "d", shift: true });
+  expect(setPullRequestDraft).toHaveBeenLastCalledWith(expect.anything(), false);
+});
+
+test.each(["no-pr", "unauthenticated", "closed", "merged", "failure"])(
+  "draft toggle handles %s without changing state",
+  async (scenario) => {
+    const github = createGitHubReviewSession();
+    if (scenario === "unauthenticated") github.auth.isAuthenticated = false;
+    if (scenario === "closed") github.pullRequest.state = "closed";
+    if (scenario === "merged") github.pullRequest.isMerged = true;
+    const setPullRequestDraft = vi.fn(async () => {
+      throw new Error("403");
+    });
+    const tree = render(
+      <DiffdiffApp
+        {...createAppProps({
+          initialSession: createPreparedSession({
+            github: scenario === "no-pr" ? undefined : github,
+          }),
+          setPullRequestDraft,
+        })}
+      />,
+    );
+    emitKey({ name: "space", sequence: " " });
+    await emitAsyncKey({ name: "d", shift: true });
+    expect(setPullRequestDraft).toHaveBeenCalledTimes(scenario === "failure" ? 1 : 0);
+    if (scenario === "failure")
+      expect(getAppText(tree)).toContain("Unable to change pull request draft status");
+  },
+);
+
 test("reviewer picker filters display names and usernames, retains hidden selections, and explicitly submits", async () => {
   const github = createGitHubReviewSession();
   github.pullRequest.reviewRequests = [
