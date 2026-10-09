@@ -246,6 +246,7 @@ function visitNode(
   const mergedStyle = {
     ...inheritedStyle,
     ...parseStyle(node.properties?.style, themeVariables, resolveSegmentColor),
+    ...(node.properties?.["data-diff-span"] != null ? { isWordChange: true } : {}),
   };
 
   for (const child of node.children ?? []) {
@@ -281,10 +282,9 @@ function parseStyle(
     }
   }
 
-  return {
-    fg: resolveSegmentColor(resolveCssValue(css.color, themeVariables)),
-    bg: resolveCssValue(css["background-color"], themeVariables),
-  };
+  const fg = resolveSegmentColor(resolveCssValue(css.color, themeVariables));
+  const bg = resolveCssValue(css["background-color"], themeVariables);
+  return { ...(fg == null ? {} : { fg }), ...(bg == null ? {} : { bg }) };
 }
 
 function resolveCssValue(
@@ -308,7 +308,12 @@ function compactSegments(segments: readonly TextSegment[]): TextSegment[] {
 
   for (const segment of segments) {
     const previous = compacted.at(-1);
-    if (previous != null && previous.fg === segment.fg && previous.bg === segment.bg) {
+    if (
+      previous != null &&
+      previous.fg === segment.fg &&
+      previous.bg === segment.bg &&
+      previous.isWordChange === segment.isWordChange
+    ) {
       previous.text += segment.text;
       continue;
     }

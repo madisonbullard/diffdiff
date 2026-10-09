@@ -26,6 +26,10 @@ export const COMPARISON_LIST = "comparison.list";
 // View / pane
 // ---------------------------------------------------------------------------
 export const VIEW_PANE_TOGGLE = "view.pane-toggle";
+export const SCROLL_PAGE_DOWN = "scroll.page-down";
+export const SCROLL_PAGE_UP = "scroll.page-up";
+export const SCROLL_HALF_PAGE_DOWN = "scroll.half-page-down";
+export const SCROLL_HALF_PAGE_UP = "scroll.half-page-up";
 export const VIEW_DIFF_TOGGLE = "view.diff-toggle";
 export const VIEW_COPY_REOPEN_COMMAND = "view.copy-reopen-command";
 export const VIEW_OPEN_FILE_IN_EDITOR = "view.open-file-in-editor";

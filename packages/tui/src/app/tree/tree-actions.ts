@@ -96,7 +96,6 @@ export function createTreeActions({
     expandFileTreeAncestors(node.path);
     fileFocus.focusFile({
       activatePane: options?.openDiff ? "diff" : "preserve",
-      reveal: "align-under-sticky-header",
       target: { path: node.path },
     });
     state.setStatusMessage(options?.openDiff ? `Opened ${node.path}.` : `Selected ${node.path}.`);

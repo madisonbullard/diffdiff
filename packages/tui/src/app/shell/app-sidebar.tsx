@@ -1,4 +1,4 @@
-import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core";
+import type { ScrollBoxRenderable } from "@opentui/core";
 import type { MutableRefObject } from "react";
 import { FileTreeSidebar } from "../../components/file-tree-sidebar.tsx";
 import type { AppPane, FileTreeNode, PreparedReviewSession } from "../../types.ts";
@@ -16,7 +16,6 @@ interface AppSidebarProps {
   session: PreparedReviewSession;
   sidebarWidth: number;
   theme: UiTheme;
-  treeRowRefCallbacks: readonly ((node: BoxRenderable | null) => void)[];
   treeScrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   treeSummaryLabels: {
     diffAdditions: string;
@@ -39,7 +38,6 @@ export function AppSidebar({
   session,
   sidebarWidth,
   theme,
-  treeRowRefCallbacks,
   treeScrollRef,
   treeSummaryLabels,
   visibleTreeNodes,
@@ -93,22 +91,17 @@ export function AppSidebar({
         contentOptions={{ backgroundColor: theme.surface }}
         verticalScrollbarOptions={{ trackOptions: { backgroundColor: theme.border } }}
       >
-        <box width="100%" flexDirection="column">
-          <FileTreeSidebar
-            activePane={activePane}
-            collapsedDirectories={collapsedDirectories}
-            collapsedPaths={collapsedPaths}
-            nodes={visibleTreeNodes}
-            onNodeMouseUp={handleFileTreeMouseUp}
-            onRowRef={(index, node) => {
-              treeRowRefCallbacks[index]?.(node);
-            }}
-            reviewedPaths={reviewedPaths}
-            selectedFilePath={session.files[selectedFileIndex]?.path}
-            selectedPath={selectedTreePath}
-            theme={theme}
-          />
-        </box>
+        <FileTreeSidebar
+          activePane={activePane}
+          collapsedDirectories={collapsedDirectories}
+          collapsedPaths={collapsedPaths}
+          nodes={visibleTreeNodes}
+          onNodeMouseUp={handleFileTreeMouseUp}
+          reviewedPaths={reviewedPaths}
+          selectedFilePath={session.files[selectedFileIndex]?.path}
+          selectedPath={selectedTreePath}
+          theme={theme}
+        />
       </scrollbox>
     </box>
   );

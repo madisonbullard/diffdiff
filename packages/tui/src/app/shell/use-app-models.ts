@@ -1,5 +1,4 @@
 import { sortDashboardPullRequests } from "@madisonbullard/diffdiff-core";
-import type { BoxRenderable } from "@opentui/core";
 import { useMemo } from "react";
 import { getReviewAnchors } from "../../review-anchors.ts";
 import {
@@ -16,6 +15,7 @@ import {
 } from "../../view-model.ts";
 import { getTreeSummaryLabels } from "../tree/tree-summary.ts";
 import { useDiffdiffAppPreview } from "../layout/use-app-preview.ts";
+import { getRenderFingerprintKey } from "../layout/preview-helpers.ts";
 import { EMPTY_CONVERSATION_ITEMS, EMPTY_REVIEW_THREADS } from "../review/review-constants.ts";
 import { applyOptimisticGitHubSession } from "../review/optimistic-github-overlay.ts";
 import type { RenderSurfaceMetrics } from "../state/app-props.ts";
@@ -28,13 +28,6 @@ export interface DiffdiffAppDerived {
   diffRenderSurface: RenderSurfaceMetrics;
   draftPrCount: number;
   diffView: "unified" | "split";
-  estimatedFileCardBodyHeights: number[];
-  fileCardBodyVisibility: boolean[];
-  fileCardPreviewViewports: readonly (
-    | import("../../components/file-card.tsx").FileCardPreviewViewport
-    | undefined
-  )[];
-  fileCardRootRefs: readonly ((node: BoxRenderable | null) => void)[];
   fileTreeNodeByPath: Map<string, import("../../types.ts").FileTreeNode>;
   fileTreeNodePaths: Set<string>;
   fileTreeNodes: import("../../types.ts").FileTreeNode[];
@@ -70,7 +63,6 @@ export interface DiffdiffAppDerived {
   showMergeModal: boolean;
   sidebarWidth: number;
   stickyFile?: import("../../types.ts").PreparedReviewSession["files"][number];
-  treeRowRefCallbacks: readonly ((node: BoxRenderable | null) => void)[];
   treeSummaryLabels: ReturnType<typeof getTreeSummaryLabels>;
   visibleTreeNodeIndexByPath: Map<string, number>;
   visibleTreeNodes: import("../../types.ts").FileTreeNode[];
@@ -94,7 +86,9 @@ export function useDiffdiffAppDerived(
   );
   const fileTreeNodes = useMemo(
     () => buildFileTreeNodes(displaySession.files),
-    [displaySession.files],
+    // Hydration changes buffers, not tree metadata. Don't rebuild every row
+    // (and defeat row memoization) when a single file gains syntax colors.
+    [getRenderFingerprintKey(displaySession.renderFingerprint)],
   );
   const fileTreeNodeByPath = useMemo(
     () => new Map(fileTreeNodes.map((node) => [node.path, node])),
@@ -126,20 +120,6 @@ export function useDiffdiffAppDerived(
   }, [displaySession.github?.pullRequest.reviewThreads]);
   const pullRequestConversationItems =
     displaySession.github?.pullRequest.conversationItems ?? EMPTY_CONVERSATION_ITEMS;
-  const fileCardRootRefs = useMemo(
-    () =>
-      displaySession.files.map((_, index) => (node: BoxRenderable | null) => {
-        state.fileCardRefs.current[index] = node;
-      }),
-    [displaySession.files, state.fileCardRefs],
-  );
-  const treeRowRefCallbacks = useMemo(
-    () =>
-      visibleTreeNodes.map((_, index) => (node: BoxRenderable | null) => {
-        state.treeRowRefs.current[index] = node;
-      }),
-    [state.treeRowRefs, visibleTreeNodes],
-  );
   const treeSummaryLabels = useMemo(
     () =>
       getTreeSummaryLabels({
@@ -155,15 +135,9 @@ export function useDiffdiffAppDerived(
     () => resolveDiffView(state.diffViewPreference, diffPaneWidth),
     [diffPaneWidth, state.diffViewPreference],
   );
-  const selectedFileHasReviewAnchors = useMemo(
-    () => getReviewAnchors(displaySession.files[state.selectedFileIndex], diffView).length > 0,
-    [diffView, displaySession.files, state.selectedFileIndex],
-  );
   const preview = useDiffdiffAppPreview({
-    diffPaneWidth,
     diffView,
     reviewThreadsByPath,
-    selectedFileHasReviewAnchors,
     state,
     theme,
   });
@@ -275,10 +249,6 @@ export function useDiffdiffAppDerived(
     diffRenderSurface: preview.diffRenderSurface,
     diffView,
     draftPrCount,
-    estimatedFileCardBodyHeights: preview.estimatedFileCardBodyHeights,
-    fileCardBodyVisibility: preview.fileCardBodyVisibility,
-    fileCardPreviewViewports: preview.fileCardPreviewViewports,
-    fileCardRootRefs,
     fileTreeNodeByPath,
     fileTreeNodePaths,
     fileTreeNodes,
@@ -295,7 +265,7 @@ export function useDiffdiffAppDerived(
     reviewThreadsByPath,
     selectedBranchItem,
     selectedCommitItem,
-    selectedFileHasReviewAnchors,
+    selectedFileHasReviewAnchors: selectedReviewAnchors.length > 0,
     selectedFilePath,
     selectedFileReviewThreads,
     selectedPullRequest,
@@ -310,7 +280,6 @@ export function useDiffdiffAppDerived(
     showMergeModal,
     sidebarWidth,
     stickyFile,
-    treeRowRefCallbacks,
     treeSummaryLabels,
     visibleTreeNodeIndexByPath,
     visibleTreeNodes,

@@ -28,6 +28,8 @@ Read these in order before making non-trivial changes:
 Then load the smallest task-specific source of truth:
 
 - GitHub PR workflow direction: `docs/plans/gh-integration.md`
+- diff pane scrolling, navigation, and rendering performance:
+  `docs/plans/diff-viewport-navigation.md`
 - release and distribution direction: `docs/plans/release-architecture.md`
 - focused implementation slices and backlog: `docs/todos/`
 - agent context and maintenance guidance: `docs/agents/`
@@ -160,6 +162,8 @@ For GitHub Actions, consider using [`voidzero-dev/setup-vp`](https://github.com/
 - Run tests: `vp run test -r`
 - Run the repo readiness suite: `vp run ready`
 - Launch the TUI after building: `bun packages/tui/dist/cli.mjs tui`
+- Run the headless real-layout visual suite (Bun): `vp run test:visual` in
+  `packages/tui`; benchmark navigation with `vp run bench:visual`
 
 When you need to visually inspect the TUI, use `ht-mcp` to spawn a bash session,
 build, and launch the TUI. The terminal output includes raw ANSI escape

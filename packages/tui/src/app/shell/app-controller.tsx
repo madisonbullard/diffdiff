@@ -1,5 +1,5 @@
 import { copySelection } from "../../selection-copy.ts";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { logDiffdiffError, syncGitRemotes } from "@madisonbullard/diffdiff-core";
 import { buildAppCommands, type AppCommand } from "../commands/registry.ts";
 import { useCommandPaletteModels } from "../commands/command-palette-models.ts";
@@ -39,15 +39,18 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
   const fileFocus = createFileFocusController({
     getCurrentFiles: () => state.session.files,
     getCurrentIndex: () => state.selectedFileIndex,
-    pendingFileFocusRequestRef: state.pendingFileFocusRequestRef,
+    revealFile: (path, offset) => state.diffScroll.revealFile(path, offset),
     setActivePane: state.setActivePane,
-    setSelectedFileIndex: state.setSelectedFileIndex,
+    setSelectedFileIndex: (index) => {
+      state.setShowSelectedReviewAnchor(false);
+      state.setSelectedFileIndex(index);
+    },
   });
   const derived = useDiffdiffAppDerived(state, props.theme);
-  const layout = useDiffdiffAppLayoutEffects(state, derived);
+  state.diffScroll.setFiles(derived.displaySession.files);
+  useDiffdiffAppLayoutEffects(state, derived);
   const sessionActions = useSessionActions({
     fileFocus,
-    getFileTopOffsets: layout.getFileTopOffsets,
     state,
     syncRemotes: props.syncRemotes ?? syncGitRemotes,
   });
@@ -78,6 +81,17 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     startInteraction: sessionActions.startInteraction,
     state,
   });
+  const paneActions = useRef({ treeActions, reviewActions });
+  paneActions.current = { treeActions, reviewActions };
+  const handleFileTreeMouseUp = useCallback((node: import("../../types.ts").FileTreeNode) => {
+    paneActions.current.treeActions.handleFileTreeMouseUp(node);
+  }, []);
+  const toggleReviewThreadCollapsed = useCallback(
+    (thread: import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread) => {
+      paneActions.current.reviewActions.toggleReviewThreadCollapsed(thread);
+    },
+    [],
+  );
   const inputControllers = createAppInputControllers({
     getSelectedFilePath: () => derived.selectedFilePath,
     persistence,
@@ -402,14 +416,11 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       diffPaneWidth={derived.diffPaneWidth}
       diffView={derived.diffView}
       errorToastMessage={state.errorToastMessage}
-      estimatedFileCardBodyHeights={derived.estimatedFileCardBodyHeights}
-      fileCardBodyVisibility={derived.fileCardBodyVisibility}
-      fileCardPreviewViewports={derived.fileCardPreviewViewports}
-      fileCardRootRefs={derived.fileCardRootRefs}
+      diffScroll={state.diffScroll}
       footerEvent={footerEvent}
       footerEventMessage={footerEventMessage}
       footerModeBadge={footerModeBadge}
-      handleFileTreeMouseUp={treeActions.handleFileTreeMouseUp}
+      handleFileTreeMouseUp={handleFileTreeMouseUp}
       helpLabel={helpLabel}
       activePrefixMenu={activePrefixMenu}
       activePrefixMenuCommands={activePrefixMenuCommands}
@@ -440,9 +451,9 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       stickyFile={derived.stickyFile}
       syntaxStyle={props.syntaxStyle}
       terminalWidth={state.terminalDimensions.width}
+      terminalHeight={state.terminalDimensions.height}
       theme={props.theme}
-      toggleReviewThreadCollapsed={reviewActions.toggleReviewThreadCollapsed}
-      treeRowRefCallbacks={derived.treeRowRefCallbacks}
+      toggleReviewThreadCollapsed={toggleReviewThreadCollapsed}
       treeScrollRef={state.treeScrollRef}
       treeSummaryLabels={derived.treeSummaryLabels}
       visibleTreeNodes={derived.visibleTreeNodes}

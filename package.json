@@ -12,8 +12,8 @@
     "release:publish": "node ./tools/release/publish-release.mjs",
     "release:commit-stable": "node ./tools/release/commit-stable-release.mjs",
     "release:finalize-github-release": "node ./tools/release/finalize-github-release.mjs",
-    "release:verify": "vp check && vp run test -r && vp run build -r",
-    "ready": "vp fmt && vp lint && vp run test -r && vp run build -r",
+    "release:verify": "vp run ready",
+    "ready": "vp check && vp run test -r && vp run build -r && vp run @madisonbullard/diffdiff-tui#test:visual && vp run @madisonbullard/diffdiff-tui#test:worker-build",
     "dev": "vp run dev -r",
     "prepare": "vp config"
   },

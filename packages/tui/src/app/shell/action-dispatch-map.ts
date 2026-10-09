@@ -1,4 +1,9 @@
 import { clampIndex } from "../../view-model.ts";
+import {
+  getHunkReviewAnchors,
+  getReviewAnchors,
+  type SelectedReviewAnchor,
+} from "../../review-anchors.ts";
 import * as A from "../keymap/actions.ts";
 import type { ActionDispatchMap } from "../keymap/action-dispatch.ts";
 import type { FileFocusController } from "../shared/file-focus.ts";
@@ -90,6 +95,17 @@ export function buildActionDispatchMap(options: BuildActionDispatchMapOptions): 
     treeActions.toggleActivePane();
   });
 
+  for (const [action, fraction] of [
+    [A.SCROLL_PAGE_DOWN, 1],
+    [A.SCROLL_PAGE_UP, -1],
+    [A.SCROLL_HALF_PAGE_DOWN, 0.5],
+    [A.SCROLL_HALF_PAGE_UP, -0.5],
+  ] as const) {
+    map.set(action, (count) => {
+      state.diffScroll.scrollBy(fraction * (count ?? 1), true);
+    });
+  }
+
   map.set(A.VIEW_DIFF_TOGGLE, () => {
     reviewActions.toggleDiffView();
   });
@@ -115,7 +131,6 @@ export function buildActionDispatchMap(options: BuildActionDispatchMapOptions): 
     const targetPath = state.session.files[targetIndex]?.path;
     fileFocus.focusFile({
       activatePane: "preserve",
-      reveal: "default",
       target: { index: targetIndex },
     });
     state.setStatusMessage(
@@ -130,7 +145,6 @@ export function buildActionDispatchMap(options: BuildActionDispatchMapOptions): 
   map.set(A.REVIEW_LAST_FILE, () => {
     fileFocus.focusFile({
       activatePane: "preserve",
-      reveal: "default",
       target: { index: Math.max(state.session.files.length - 1, 0) },
     });
     state.setStatusMessage("Jumped to the last file.");
@@ -222,22 +236,18 @@ export function buildActionDispatchMap(options: BuildActionDispatchMapOptions): 
   });
 
   map.set(A.GOTO_WINDOW_TOP, () => {
-    const topIndex = clampIndex(state.activeFileIndex, state.session.files.length);
+    const topIndex = state.diffScroll.fileAtViewport(0);
     const topPath = state.session.files[topIndex]?.path;
-    fileFocus.focusFile({ activatePane: "preserve", reveal: "none", target: { index: topIndex } });
+    fileFocus.focusFile({ activatePane: "preserve", reveal: false, target: { index: topIndex } });
     state.setStatusMessage(topPath != null ? `Jumped to top: ${topPath}.` : "Jumped to top.");
   });
 
   map.set(A.GOTO_WINDOW_CENTER, () => {
-    const estimatedVisibleFiles = Math.max(Math.floor(state.diffViewportMetrics.height / 20), 1);
-    const centerIndex = clampIndex(
-      state.activeFileIndex + Math.floor(estimatedVisibleFiles / 2),
-      state.session.files.length,
-    );
+    const centerIndex = state.diffScroll.fileAtViewport(0.5);
     const centerPath = state.session.files[centerIndex]?.path;
     fileFocus.focusFile({
       activatePane: "preserve",
-      reveal: "none",
+      reveal: false,
       target: { index: centerIndex },
     });
     state.setStatusMessage(
@@ -246,15 +256,11 @@ export function buildActionDispatchMap(options: BuildActionDispatchMapOptions): 
   });
 
   map.set(A.GOTO_WINDOW_BOTTOM, () => {
-    const estimatedVisibleFiles = Math.max(Math.floor(state.diffViewportMetrics.height / 20), 1);
-    const bottomIndex = clampIndex(
-      state.activeFileIndex + estimatedVisibleFiles - 1,
-      state.session.files.length,
-    );
+    const bottomIndex = state.diffScroll.fileAtViewport(1);
     const bottomPath = state.session.files[bottomIndex]?.path;
     fileFocus.focusFile({
       activatePane: "preserve",
-      reveal: "none",
+      reveal: false,
       target: { index: bottomIndex },
     });
     state.setStatusMessage(
@@ -280,7 +286,6 @@ export function buildActionDispatchMap(options: BuildActionDispatchMapOptions): 
     const lastPath = state.session.files[lastIndex]?.path;
     fileFocus.focusFile({
       activatePane: "preserve",
-      reveal: "default",
       target: { index: lastIndex },
     });
     state.setStatusMessage(
@@ -337,88 +342,50 @@ function moveToHunk(
   }
 
   let fileIndex = state.selectedFileIndex;
-  let remaining = count;
-
-  function getHunkIndices(fIdx: number): number[] {
-    const file = files[fIdx];
-    if (file == null) {
-      return [];
-    }
-
-    return file.unifiedLines.reduce<number[]>((acc, line, idx) => {
-      if (line.kind === "hunk") {
-        acc.push(idx);
-      }
-      return acc;
-    }, []);
-  }
-
-  let hunkIndices = getHunkIndices(fileIndex);
   let anchorIndex = state.selectedReviewAnchorIndex;
-
-  while (remaining > 0) {
-    if (hunkIndices.length === 0) {
-      const nextFileIndex = fileIndex + direction;
-      if (nextFileIndex < 0 || nextFileIndex >= files.length) {
-        break;
-      }
-      fileIndex = nextFileIndex;
-      hunkIndices = getHunkIndices(fileIndex);
-      anchorIndex = direction > 0 ? -1 : hunkIndices.length;
-      continue;
-    }
-
-    if (direction > 0) {
-      const nextHunk = hunkIndices.find((idx) => idx > anchorIndex);
-      if (nextHunk != null) {
-        anchorIndex = nextHunk;
-        remaining -= 1;
-      } else {
-        const nextFileIndex = fileIndex + 1;
-        if (nextFileIndex >= files.length) {
-          break;
-        }
-        fileIndex = nextFileIndex;
-        hunkIndices = getHunkIndices(fileIndex);
-        anchorIndex = -1;
-      }
+  let target: { fileIndex: number; anchorIndex: number; anchor: SelectedReviewAnchor } | undefined;
+  for (let remaining = count; remaining > 0 && fileIndex >= 0 && fileIndex < files.length; ) {
+    const file = files[fileIndex]!;
+    const anchors = getReviewAnchors(file, derived.diffView);
+    const indexes = new Map(anchors.map((anchor, index) => [anchor.key, index]));
+    const hunks = getHunkReviewAnchors(file, derived.diffView).map((anchor) => ({
+      fileIndex,
+      anchor,
+      anchorIndex: indexes.get(anchor.key)!,
+    }));
+    const next =
+      direction > 0
+        ? hunks.find((hunk) => hunk.anchorIndex > anchorIndex)
+        : hunks.findLast((hunk) => hunk.anchorIndex < anchorIndex);
+    if (next != null) {
+      target = next;
+      anchorIndex = next.anchorIndex;
+      remaining -= 1;
     } else {
-      const prevHunks = hunkIndices.filter((idx) => idx < anchorIndex);
-      const prevHunk = prevHunks.length > 0 ? prevHunks[prevHunks.length - 1] : undefined;
-      if (prevHunk != null) {
-        anchorIndex = prevHunk;
-        remaining -= 1;
-      } else {
-        const prevFileIndex = fileIndex - 1;
-        if (prevFileIndex < 0) {
-          break;
-        }
-        fileIndex = prevFileIndex;
-        hunkIndices = getHunkIndices(fileIndex);
-        anchorIndex = hunkIndices.length > 0 ? hunkIndices[hunkIndices.length - 1]! + 1 : 0;
-      }
+      fileIndex += direction;
+      anchorIndex = direction > 0 ? -1 : Infinity;
     }
   }
-
-  if (fileIndex !== state.selectedFileIndex) {
-    const targetPath = files[fileIndex]?.path;
-    fileFocus.focusFile({
-      activatePane: "preserve",
-      reveal: "align-under-sticky-header",
-      target: { index: fileIndex },
-    });
-    state.setStatusMessage(
-      targetPath != null ? `Jumped to hunk in ${targetPath}.` : "Jumped to hunk.",
-    );
+  if (target == null) {
+    state.setStatusMessage("No further hunks in this direction.");
     return;
   }
-
+  if (target.fileIndex !== state.selectedFileIndex) {
+    fileFocus.focusFile({
+      activatePane: "preserve",
+      reveal: false,
+      target: { index: target.fileIndex },
+    });
+  }
+  state.setCollapsedPaths((paths) => {
+    if (!paths.has(target.anchor.path)) return paths;
+    const next = new Set(paths);
+    next.delete(target.anchor.path);
+    return next;
+  });
+  state.setSelectedReviewAnchorIndex(target.anchorIndex);
   state.setShowSelectedReviewAnchor(true);
-  state.setSelectedReviewAnchorIndex(clampIndex(anchorIndex, derived.selectedReviewAnchors.length));
-  const anchor = derived.selectedReviewAnchors[anchorIndex];
-  state.setStatusMessage(
-    anchor != null ? `Jumped to hunk at ${anchor.path}:${anchor.line}.` : "Jumped to hunk.",
-  );
+  state.setStatusMessage(`Jumped to hunk at ${target.anchor.path}:${target.anchor.line}.`);
 }
 
 function jumpToSelectedFileLine(
@@ -453,9 +420,16 @@ function jumpToSelectedFileLine(
     });
   }
 
-  state.pendingSelectedDiffAnchorKeyRef.current = targetAnchor.key;
   state.setShowSelectedReviewAnchor(true);
   state.setSelectedReviewAnchorIndex(targetIndex);
+  // State may be unchanged when this repeats a jump after manual scrolling.
+  if (
+    state.showSelectedReviewAnchor &&
+    derived.selectedReviewAnchor?.key === targetAnchor.key &&
+    state.selectedDiffRowRef.current != null
+  ) {
+    state.diffScroll.revealLine(state.selectedDiffRowRef.current);
+  }
   state.setStatusMessage(
     count == null
       ? `Jumped to first diff line: ${targetAnchor.path}:${targetAnchor.line}.`

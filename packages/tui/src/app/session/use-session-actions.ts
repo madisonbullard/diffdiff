@@ -13,7 +13,7 @@ import {
   reconcileCollapsedPaths,
   restoreCollapsedPaths,
 } from "../shared/collections.ts";
-import type { FileFocusController, FileFocusRevealMode } from "../shared/file-focus.ts";
+import type { FileFocusController } from "../shared/file-focus.ts";
 import type { PendingInteraction } from "../state/app-props.ts";
 import type { PreparedReviewSession } from "../../types.ts";
 
@@ -24,17 +24,11 @@ interface ApplyLoadedSessionOptions {
 
 interface UseSessionActionsOptions {
   fileFocus: FileFocusController;
-  getFileTopOffsets: () => number[];
   state: DiffdiffAppState;
   syncRemotes: (repositoryRootPath: string) => Promise<unknown>;
 }
 
-export function useSessionActions({
-  fileFocus,
-  getFileTopOffsets,
-  state,
-  syncRemotes,
-}: UseSessionActionsOptions) {
+export function useSessionActions({ fileFocus, state, syncRemotes }: UseSessionActionsOptions) {
   const startInteraction = useCallback(
     (kind: string, options: Omit<PendingInteraction, "kind" | "startedAt" | "token"> = {}) => {
       state.pendingInteractionTokenRef.current += 1;
@@ -67,15 +61,15 @@ export function useSessionActions({
     (nextSession: PreparedReviewSession, options: ApplyLoadedSessionOptions = {}) => {
       const scrollBox = state.scrollRef.current;
       const currentSelectedFilePath = state.session.files[state.selectedFileIndex]?.path;
-      const currentSelectedFileOffset = getFileTopOffsets()[state.selectedFileIndex];
+      const currentSelectedFileOffset = state.diffScroll.getFileTop(state.selectedFileIndex);
       const preservedRelativeOffset =
         scrollBox != null &&
         currentSelectedFilePath != null &&
+        currentSelectedFileOffset != null &&
         Number.isFinite(currentSelectedFileOffset)
           ? scrollBox.scrollTop - currentSelectedFileOffset
           : undefined;
       let nextFocusTarget: { index: number } | { path: string } = { index: 0 };
-      let nextFocusReveal: FileFocusRevealMode = "default";
       let nextFocusRelativeOffset: number | undefined;
       const nextOptimisticGitHubOperations = options.resetReviewState
         ? []
@@ -99,7 +93,6 @@ export function useSessionActions({
               (file) => file.path === options.reviewCacheState?.selectedFilePath,
             )
           ) {
-            nextFocusReveal = "preserve-relative-offset";
             nextFocusRelativeOffset = preservedRelativeOffset;
           }
         }
@@ -136,18 +129,20 @@ export function useSessionActions({
             preservedRelativeOffset != null &&
             nextSession.files.some((file) => file.path === currentSelectedFilePath)
           ) {
-            nextFocusReveal = "preserve-relative-offset";
             nextFocusRelativeOffset = preservedRelativeOffset;
           }
         }
       }
 
+      state.diffScroll.setFiles(nextSession.files);
       fileFocus.focusFile({
         activatePane: "preserve",
         fallback: "first-file",
         files: nextSession.files,
+        reveal:
+          options.resetReviewState === true ||
+          !nextSession.files.some((file) => file.path === currentSelectedFilePath),
         relativeOffset: nextFocusRelativeOffset,
-        reveal: nextFocusReveal,
         target: nextFocusTarget,
       });
       state.setComparisonBrowserData({
@@ -159,7 +154,7 @@ export function useSessionActions({
       state.setRefreshIndicatorStatusMessage(null);
       state.setSession(nextSession);
     },
-    [fileFocus, getFileTopOffsets, state],
+    [fileFocus, state],
   );
 
   const applyComparisonBrowserData = useCallback(

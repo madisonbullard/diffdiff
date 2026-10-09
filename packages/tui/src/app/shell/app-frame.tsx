@@ -1,8 +1,8 @@
 import type { GitHubPullRequestComment } from "@madisonbullard/diffdiff-core";
-import type { BoxRenderable, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
+import type { ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
 import type { MutableRefObject } from "react";
 import { ErrorToast } from "../../components/error-toast.tsx";
-import type { FileCardPreviewViewport } from "../../components/file-card.tsx";
+import type { DiffLineTarget, DiffScrollController } from "../layout/diff-scroll.ts";
 import { PrefixPickerOverlay } from "../../components/prefix-picker-overlay.tsx";
 import type { FileTreeNode, PreparedReviewSession } from "../../types.ts";
 import type { UiTheme } from "../../theme.ts";
@@ -27,10 +27,7 @@ interface DiffdiffAppViewProps {
   diffPaneWidth: number;
   diffView: "unified" | "split";
   errorToastMessage: string | null;
-  estimatedFileCardBodyHeights: readonly number[];
-  fileCardBodyVisibility: readonly boolean[];
-  fileCardPreviewViewports: readonly (FileCardPreviewViewport | undefined)[];
-  fileCardRootRefs: readonly ((node: BoxRenderable | null) => void)[];
+  diffScroll: DiffScrollController;
   footerEvent: { color: string; message: string };
   footerEventMessage: string;
   footerModeBadge: { bg: string; fg: string; label: string };
@@ -47,7 +44,7 @@ interface DiffdiffAppViewProps {
   >;
   scrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   selectedFileIndex: number;
-  selectedDiffRowRef: MutableRefObject<BoxRenderable | null>;
+  selectedDiffRowRef: MutableRefObject<DiffLineTarget | null>;
   showSelectedReviewAnchor: boolean;
   selectedReviewAnchor?: import("../../review-anchors.ts").SelectedReviewAnchor;
   selectedReviewComment?: GitHubPullRequestComment;
@@ -59,11 +56,11 @@ interface DiffdiffAppViewProps {
   stickyFile?: PreparedReviewSession["files"][number];
   syntaxStyle: SyntaxStyle;
   terminalWidth: number;
+  terminalHeight: number;
   theme: UiTheme;
   toggleReviewThreadCollapsed: (
     thread: import("@madisonbullard/diffdiff-core").GitHubPullRequestReviewThread,
   ) => void;
-  treeRowRefCallbacks: readonly ((node: BoxRenderable | null) => void)[];
   treeScrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   treeSummaryLabels: {
     diffAdditions: string;
@@ -86,10 +83,7 @@ export function DiffdiffAppView({
   diffPaneWidth,
   diffView,
   errorToastMessage,
-  estimatedFileCardBodyHeights,
-  fileCardBodyVisibility,
-  fileCardPreviewViewports,
-  fileCardRootRefs,
+  diffScroll,
   footerEvent,
   footerEventMessage,
   footerModeBadge,
@@ -115,9 +109,9 @@ export function DiffdiffAppView({
   stickyFile,
   syntaxStyle,
   terminalWidth,
+  terminalHeight,
   theme,
   toggleReviewThreadCollapsed,
-  treeRowRefCallbacks,
   treeScrollRef,
   treeSummaryLabels,
   visibleTreeNodes,
@@ -140,7 +134,7 @@ export function DiffdiffAppView({
       <VisibleCommentRelativeTimeProvider
         activeOverlay={activeOverlay}
         collapsedCommentStates={collapsedCommentStates}
-        fileCardBodyVisibility={fileCardBodyVisibility}
+        fileCardBodyVisibility={session.files.map((file) => !collapsedPaths.has(file.path))}
         reviewThreadsByPath={reviewThreadsByPath}
         session={session}
       >
@@ -158,7 +152,6 @@ export function DiffdiffAppView({
               session={session}
               sidebarWidth={sidebarWidth}
               theme={theme}
-              treeRowRefCallbacks={treeRowRefCallbacks}
               treeScrollRef={treeScrollRef}
               treeSummaryLabels={treeSummaryLabels}
               visibleTreeNodes={visibleTreeNodes}
@@ -171,11 +164,9 @@ export function DiffdiffAppView({
               collapsedCommentStates={collapsedCommentStates}
               collapsedPaths={collapsedPaths}
               diffPaneWidth={diffPaneWidth}
+              terminalHeight={terminalHeight}
               diffView={diffView}
-              estimatedFileCardBodyHeights={estimatedFileCardBodyHeights}
-              fileCardBodyVisibility={fileCardBodyVisibility}
-              fileCardPreviewViewports={fileCardPreviewViewports}
-              fileCardRootRefs={fileCardRootRefs}
+              diffScroll={diffScroll}
               reviewThreadsByPath={reviewThreadsByPath}
               reviewedPaths={reviewedPaths}
               scrollRef={scrollRef}

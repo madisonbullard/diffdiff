@@ -1300,7 +1300,11 @@ function collectText(node: unknown): string {
 
   if (typeof node === "object" && "children" in node) {
     const children = (node as { children?: unknown[] }).children;
-    return children?.map((child) => collectText(child)).join(" ") ?? "";
+    const content = (node as { props?: { content?: unknown } }).props?.content;
+    return (
+      (typeof content === "string" ? content : "") +
+      (children?.map((child) => collectText(child)).join(" ") ?? "")
+    );
   }
 
   return "";

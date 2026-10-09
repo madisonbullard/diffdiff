@@ -17,6 +17,7 @@ export type HastNode = HastTextNode | HastElementNode;
 export interface SegmentStyle {
   fg?: string;
   bg?: string;
+  isWordChange?: boolean;
 }
 
 export interface PrepareReviewSessionOptions {

@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useRef } from "react";
-import { clampIndex, getTopIntersectingFileIndex } from "../../view-model.ts";
+import { useEffect, useLayoutEffect } from "react";
+import { clampIndex } from "../../view-model.ts";
 import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
-import { getFileFocusScrollOffset } from "../shared/file-focus.ts";
 import {
   getAncestorDirectoryPaths,
   haveSamePaths,
@@ -12,91 +11,72 @@ import {
 import { LOADING_INDICATOR_FRAMES } from "../shared/constants.ts";
 
 export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: DiffdiffAppDerived) {
-  const lastScrolledSelectedFileIndexRef = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const scroll = state.scrollRef.current;
+    if (scroll == null) return;
+    return state.diffScroll.connect(scroll, state.renderer.root, state.setActiveFileIndex);
+  }, [state.diffScroll, state.renderer, state.scrollRef, state.setActiveFileIndex]);
 
-  useEffect(() => {
-    state.fileCardRefs.current.length = state.session.files.length;
-  }, [state.fileCardRefs, state.session.files.length]);
+  useLayoutEffect(() => {
+    if (state.showSelectedReviewAnchor && state.selectedDiffRowRef.current != null) {
+      state.diffScroll.revealLine(state.selectedDiffRowRef.current);
+    }
+  }, [
+    derived.selectedReviewAnchor?.key,
+    state.collapsedPaths.has(derived.selectedFilePath ?? ""),
+    state.showSelectedReviewAnchor,
+    state.diffScroll,
+    state.selectedDiffRowRef,
+  ]);
 
-  useEffect(() => {
-    state.treeRowRefs.current.length = derived.visibleTreeNodes.length;
-  }, [derived.visibleTreeNodes.length, state.treeRowRefs]);
+  useLayoutEffect(() => {
+    const index = derived.visibleTreeNodeIndexByPath.get(state.selectedTreePath);
+    if (index != null) state.treeScrollRef.current?.scrollTo(Math.max(index - 2, 0));
+  }, [derived.visibleTreeNodeIndexByPath, state.selectedTreePath, state.treeScrollRef]);
 
   useEffect(() => {
     if (state.baseBranchLoadingMessage == null) {
       state.setLoadingIndicatorFrame(0);
       return;
     }
-
-    const intervalId = setInterval(() => {
-      state.setLoadingIndicatorFrame(
-        (currentFrame) => (currentFrame + 1) % LOADING_INDICATOR_FRAMES.length,
-      );
-    }, 80);
-
-    return () => {
-      clearInterval(intervalId);
-    };
+    const id = setInterval(
+      () =>
+        state.setLoadingIndicatorFrame((frame) => (frame + 1) % LOADING_INDICATOR_FRAMES.length),
+      80,
+    );
+    return () => clearInterval(id);
   }, [state.baseBranchLoadingMessage, state.setLoadingIndicatorFrame]);
 
   useEffect(() => {
-    state.setCollapsedPaths((currentPaths) => {
-      const nextPaths = reconcileCollapsedPaths(currentPaths, state.session.files);
-      return haveSamePaths(currentPaths, nextPaths) ? currentPaths : nextPaths;
+    state.setCollapsedPaths((paths) => {
+      const next = reconcileCollapsedPaths(paths, state.session.files);
+      return haveSamePaths(paths, next) ? paths : next;
     });
   }, [state.session.files, state.setCollapsedPaths]);
 
   useEffect(() => {
-    state.setCollapsedDirectories((currentPaths) => {
-      const nextPaths = reconcileCollapsedDirectories(currentPaths, derived.fileTreeNodes);
-      return haveSamePaths(currentPaths, nextPaths) ? currentPaths : nextPaths;
+    state.setCollapsedDirectories((paths) => {
+      const next = reconcileCollapsedDirectories(paths, derived.fileTreeNodes);
+      return haveSamePaths(paths, next) ? paths : next;
     });
   }, [derived.fileTreeNodes, state.setCollapsedDirectories]);
 
   useEffect(() => {
-    if (derived.fileTreeNodes.length === 0) {
-      state.setSelectedTreePath("");
-      return;
-    }
-
     const selectedFilePath = state.session.files[state.selectedFileIndex]?.path;
-    state.setSelectedTreePath((currentPath) => {
-      if (currentPath !== "" && derived.fileTreeNodePaths.has(currentPath)) {
-        return currentPath;
-      }
-
-      if (selectedFilePath != null && derived.fileTreeNodePaths.has(selectedFilePath)) {
-        return selectedFilePath;
-      }
-
-      return derived.fileTreeNodes[0]?.path ?? "";
+    state.setSelectedTreePath((path) => {
+      if (path !== "" && derived.fileTreeNodePaths.has(path)) return path;
+      return selectedFilePath ?? derived.fileTreeNodes[0]?.path ?? "";
     });
-  }, [
-    derived.fileTreeNodePaths,
-    derived.fileTreeNodes,
-    state.selectedFileIndex,
-    state.session.files,
-    state.setSelectedTreePath,
-  ]);
-
-  useEffect(() => {
-    const selectedFilePath = state.session.files[state.selectedFileIndex]?.path;
-    if (state.activePane !== "diff" || selectedFilePath == null) {
-      return;
-    }
-
-    state.setCollapsedDirectories((currentPaths) => {
-      const nextPaths = new Set(currentPaths);
-      let changed = false;
-      for (const path of getAncestorDirectoryPaths(selectedFilePath)) {
-        if (nextPaths.delete(path)) {
-          changed = true;
-        }
-      }
-      return changed ? nextPaths : currentPaths;
+    if (state.activePane !== "diff" || selectedFilePath == null) return;
+    state.setCollapsedDirectories((paths) => {
+      const next = new Set(paths);
+      for (const path of getAncestorDirectoryPaths(selectedFilePath)) next.delete(path);
+      return haveSamePaths(paths, next) ? paths : next;
     });
     state.setSelectedTreePath(selectedFilePath);
   }, [
+    derived.fileTreeNodePaths,
+    derived.fileTreeNodes,
     state.activePane,
     state.selectedFileIndex,
     state.session.files,
@@ -104,123 +84,10 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
     state.setSelectedTreePath,
   ]);
 
-  const getFileTopOffsets = useCallback((): number[] => {
-    const scrollBox = state.scrollRef.current;
-    if (scrollBox == null) {
-      return [];
-    }
-
-    const contentTop = scrollBox.content.y;
-    return state.session.files.map((_, index) => {
-      const fileCard = state.fileCardRefs.current[index];
-      return fileCard == null ? Number.POSITIVE_INFINITY : fileCard.y - contentTop;
-    });
-  }, [state.fileCardRefs, state.scrollRef, state.session.files]);
-
-  const getTreeTopOffsets = useCallback((): number[] => {
-    const scrollBox = state.treeScrollRef.current;
-    if (scrollBox == null) {
-      return [];
-    }
-
-    const contentTop = scrollBox.content.y;
-    return derived.visibleTreeNodes.map((_, index) => {
-      const row = state.treeRowRefs.current[index];
-      return row == null ? Number.POSITIVE_INFINITY : row.y - contentTop;
-    });
-  }, [derived.visibleTreeNodes, state.treeRowRefs, state.treeScrollRef]);
-
   useEffect(() => {
-    const scrollBox = state.scrollRef.current;
-    const offset = getFileTopOffsets()[state.selectedFileIndex];
-    if (scrollBox == null || offset == null || !Number.isFinite(offset)) {
-      return;
+    if (derived.showMergeModal && state.mergeModalField === "body") {
+      state.mergeBodyScrollRef.current?.scrollTo({ x: 0, y: Number.MAX_SAFE_INTEGER });
     }
-
-    const pendingFileFocusRequest = state.pendingFileFocusRequestRef.current;
-    const matchingFocusRequest =
-      pendingFileFocusRequest?.index === state.selectedFileIndex ? pendingFileFocusRequest : null;
-    const selectedFileChanged =
-      lastScrolledSelectedFileIndexRef.current !== state.selectedFileIndex;
-    if (!selectedFileChanged && matchingFocusRequest == null) {
-      return;
-    }
-
-    state.pendingFileFocusRequestRef.current = null;
-    lastScrolledSelectedFileIndexRef.current = state.selectedFileIndex;
-    if (matchingFocusRequest?.mode === "none") {
-      return;
-    }
-
-    const revealScrollOffset = getFileFocusScrollOffset(matchingFocusRequest) ?? 0;
-    scrollBox.scrollTo({ x: 0, y: Math.max(offset + revealScrollOffset, 0) });
-    state.setActiveFileIndex(state.selectedFileIndex);
-  }, [
-    getFileTopOffsets,
-    state.pendingFileFocusRequestRef,
-    state.scrollRef,
-    state.selectedFileIndex,
-    state.setActiveFileIndex,
-  ]);
-
-  useEffect(() => {
-    const pendingAnchorKey = state.pendingSelectedDiffAnchorKeyRef.current;
-    if (pendingAnchorKey == null || derived.selectedReviewAnchor?.key !== pendingAnchorKey) {
-      return;
-    }
-
-    const scrollBox = state.scrollRef.current;
-    const selectedRow = state.selectedDiffRowRef.current;
-    if (scrollBox == null || selectedRow == null) {
-      return;
-    }
-
-    state.pendingSelectedDiffAnchorKeyRef.current = null;
-    const viewportHeight = scrollBox.viewport?.height ?? scrollBox.height ?? 0;
-    const focusOffset = Math.floor(viewportHeight / 3);
-    scrollBox.scrollTo({
-      x: 0,
-      y: Math.max(selectedRow.y - scrollBox.content.y - focusOffset, 0),
-    });
-  }, [
-    derived.selectedReviewAnchor?.key,
-    state.pendingSelectedDiffAnchorKeyRef,
-    state.scrollRef,
-    state.selectedDiffRowRef,
-    state.showSelectedReviewAnchor,
-  ]);
-
-  useEffect(() => {
-    const selectedTreeIndex = derived.visibleTreeNodeIndexByPath.get(state.selectedTreePath) ?? -1;
-    const offset = getTreeTopOffsets()[selectedTreeIndex];
-    const scrollBox = state.treeScrollRef.current;
-    if (scrollBox == null || offset == null || !Number.isFinite(offset)) {
-      return;
-    }
-
-    scrollBox.scrollTo({ x: 0, y: Math.max(offset - 2, 0) });
-  }, [
-    derived.visibleTreeNodeIndexByPath,
-    getTreeTopOffsets,
-    state.selectedTreePath,
-    state.treeScrollRef,
-  ]);
-
-  useEffect(() => {
-    state.pendingSelectedDiffAnchorKeyRef.current = null;
-    state.setShowSelectedReviewAnchor(false);
-  }, [
-    state.pendingSelectedDiffAnchorKeyRef,
-    state.selectedFileIndex,
-    state.setShowSelectedReviewAnchor,
-  ]);
-
-  useEffect(() => {
-    if (!derived.showMergeModal || state.mergeModalField !== "body") {
-      return;
-    }
-
-    state.mergeBodyScrollRef.current?.scrollTo({ x: 0, y: Number.MAX_SAFE_INTEGER });
   }, [
     derived.showMergeModal,
     state.mergeBodyScrollRef,
@@ -228,139 +95,51 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
     state.mergeModalField,
   ]);
 
-  const syncActiveFileIndex = useCallback(() => {
-    const scrollBox = state.scrollRef.current;
-    if (scrollBox == null) {
-      return;
-    }
-
-    const fileTopOffsets = getFileTopOffsets();
-    const nextIndex = getTopIntersectingFileIndex(fileTopOffsets, scrollBox.scrollTop);
-    const viewportHeight = scrollBox.viewport?.height ?? scrollBox.height ?? 0;
-
-    state.setActiveFileIndex((currentIndex) =>
-      currentIndex === nextIndex ? currentIndex : nextIndex,
-    );
-    state.setDiffViewportMetrics((currentMetrics) =>
-      currentMetrics.scrollTop === scrollBox.scrollTop && currentMetrics.height === viewportHeight
-        ? currentMetrics
-        : { height: viewportHeight, scrollTop: scrollBox.scrollTop },
-    );
-  }, [getFileTopOffsets, state.scrollRef, state.setActiveFileIndex, state.setDiffViewportMetrics]);
-
   useEffect(() => {
-    const scrollBox = state.scrollRef.current;
-    if (scrollBox == null) {
-      return;
-    }
-
-    syncActiveFileIndex();
-    scrollBox.verticalScrollBar.on("change", syncActiveFileIndex);
-
-    return () => {
-      scrollBox.verticalScrollBar.off("change", syncActiveFileIndex);
-    };
-  }, [state.scrollRef, syncActiveFileIndex]);
-
-  useEffect(() => {
-    syncActiveFileIndex();
-  }, [derived.diffView, state.session.files, syncActiveFileIndex, state.terminalDimensions.width]);
-
-  const prevCollapsedPathsRef = useRef(state.collapsedPaths);
-  useEffect(() => {
-    if (prevCollapsedPathsRef.current === state.collapsedPaths) {
-      return;
-    }
-    prevCollapsedPathsRef.current = state.collapsedPaths;
-
-    // When collapsed paths change, DOM positions for file cards below the
-    // toggled file are stale until the layout engine recalculates.  Reset
-    // viewport metrics to zero so `fileCardPreviewViewports` returns
-    // undefined for every file, which falls back to rendering the first
-    // INITIAL_FILE_BODY_RENDER_COUNT files unconditionally.  The next
-    // scroll-bar "change" event restores accurate viewport-driven visibility.
-    state.setDiffViewportMetrics({ height: 0, scrollTop: 0 });
-  }, [state.collapsedPaths, state.setDiffViewportMetrics]);
-
-  useEffect(() => {
-    state.setBranchListIndex((currentIndex) =>
-      clampIndex(currentIndex, derived.branchItems.length),
-    );
+    state.setBranchListIndex((index) => clampIndex(index, derived.branchItems.length));
   }, [derived.branchItems.length, state.setBranchListIndex]);
-
   useEffect(() => {
-    state.setCommitListIndex((currentIndex) =>
-      clampIndex(currentIndex, derived.commitItems.length),
-    );
+    state.setCommitListIndex((index) => clampIndex(index, derived.commitItems.length));
   }, [derived.commitItems.length, state.setCommitListIndex]);
-
   useEffect(() => {
-    state.setPullRequestListIndex((currentIndex) =>
-      clampIndex(currentIndex, derived.filteredPullRequests.length),
+    state.setPullRequestListIndex((index) =>
+      clampIndex(index, derived.filteredPullRequests.length),
     );
   }, [derived.filteredPullRequests.length, state.setPullRequestListIndex]);
-
   useEffect(() => {
-    state.setSelectedReviewAnchorIndex((currentIndex) =>
-      clampIndex(currentIndex, derived.selectedReviewAnchors.length),
+    state.setSelectedReviewAnchorIndex((index) =>
+      clampIndex(index, derived.selectedReviewAnchors.length),
     );
   }, [derived.selectedReviewAnchors.length, state.setSelectedReviewAnchorIndex]);
+  useEffect(() => {
+    state.setSelectedFileIndex((index) => clampIndex(index, state.session.files.length));
+    state.setActiveFileIndex((index) => clampIndex(index, state.session.files.length));
+  }, [state.session.files.length, state.setSelectedFileIndex, state.setActiveFileIndex]);
 
   useEffect(() => {
-    if (derived.selectedFilePath == null || derived.selectedFileReviewThreads.length === 0) {
-      return;
-    }
-
-    state.setSelectedReviewThreadIndexByFilePath((currentIndexes) => {
-      const currentIndex = currentIndexes[derived.selectedFilePath!];
-      if (currentIndex == null) {
-        return currentIndexes;
-      }
-
-      const nextIndex = clampIndex(currentIndex, derived.selectedFileReviewThreads.length);
-      return currentIndexes[derived.selectedFilePath!] === nextIndex
-        ? currentIndexes
-        : { ...currentIndexes, [derived.selectedFilePath!]: nextIndex };
+    if (derived.selectedFilePath == null || derived.selectedFileReviewThreads.length === 0) return;
+    state.setSelectedReviewThreadIndexByFilePath((indexes) => {
+      const index = indexes[derived.selectedFilePath!];
+      if (index == null) return indexes;
+      const next = clampIndex(index, derived.selectedFileReviewThreads.length);
+      return next === index ? indexes : { ...indexes, [derived.selectedFilePath!]: next };
     });
   }, [
     derived.selectedFilePath,
     derived.selectedFileReviewThreads.length,
     state.setSelectedReviewThreadIndexByFilePath,
   ]);
-
   useEffect(() => {
-    if (derived.selectedReviewThread == null) {
-      return;
-    }
-
-    state.setSelectedReviewCommentIndexByThreadId((currentIndexes) => {
-      const nextIndex = clampIndex(
-        currentIndexes[derived.selectedReviewThread!.id] ?? 0,
-        derived.selectedReviewThread!.comments.length,
-      );
-      return currentIndexes[derived.selectedReviewThread!.id] === nextIndex
-        ? currentIndexes
-        : { ...currentIndexes, [derived.selectedReviewThread!.id]: nextIndex };
+    if (derived.selectedReviewThread == null) return;
+    state.setSelectedReviewCommentIndexByThreadId((indexes) => {
+      const thread = derived.selectedReviewThread!;
+      const next = clampIndex(indexes[thread.id] ?? 0, thread.comments.length);
+      return indexes[thread.id] === next ? indexes : { ...indexes, [thread.id]: next };
     });
   }, [derived.selectedReviewThread, state.setSelectedReviewCommentIndexByThreadId]);
-
   useEffect(() => {
-    state.setPullRequestConversationIndex((currentIndex) =>
-      clampIndex(currentIndex, derived.pullRequestConversationItems.length),
+    state.setPullRequestConversationIndex((index) =>
+      clampIndex(index, derived.pullRequestConversationItems.length),
     );
   }, [derived.pullRequestConversationItems.length, state.setPullRequestConversationIndex]);
-
-  useEffect(() => {
-    state.setSelectedFileIndex((currentIndex) =>
-      clampIndex(currentIndex, state.session.files.length),
-    );
-  }, [state.session.files.length, state.setSelectedFileIndex]);
-
-  useEffect(() => {
-    state.setActiveFileIndex((currentIndex) =>
-      clampIndex(currentIndex, state.session.files.length),
-    );
-  }, [state.session.files.length, state.setActiveFileIndex]);
-
-  return { getFileTopOffsets };
 }

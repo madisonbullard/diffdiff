@@ -228,21 +228,14 @@ export function getTopIntersectingFileIndex(
   itemOffsets: readonly number[],
   viewportTop: number,
 ): number {
-  if (itemOffsets.length === 0) {
-    return 0;
+  let lo = 0;
+  let hi = itemOffsets.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (itemOffsets[mid]! <= viewportTop) lo = mid + 1;
+    else hi = mid;
   }
-
-  let activeIndex = 0;
-
-  for (const [index, offset] of itemOffsets.entries()) {
-    if (offset > viewportTop) {
-      break;
-    }
-
-    activeIndex = index;
-  }
-
-  return activeIndex;
+  return Math.max(0, lo - 1);
 }
 
 /**

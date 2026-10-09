@@ -135,6 +135,20 @@ This split is deliberate: data acquisition and shared review behavior live in
   reconciles the authoritative session snapshot and optimistic overlay into its
   UI models.
 
+## Native diff viewport
+
+`packages/tui/src/app/layout/diff-scroll.ts` owns diff navigation and scroll
+anchoring using committed Yoga geometry. File cards and tree rows are direct
+children of native scrollboxes. Diff hunks render as native text buffers, split
+only at hunk/gap and inline-comment boundaries; scrolling never mounts lines or
+updates React viewport metrics. Syntax hydration runs in a reusable worker and
+changes styles without changing text geometry.
+
+See `docs/plans/diff-viewport-navigation.md` for invariants, parity coverage,
+benchmarks, and the remaining extreme-file-count limitation. `vp run ready`
+includes Bun real-layout visual tests and a bundled-worker smoke test alongside
+the unit suite, type checking, and package builds.
+
 ## Extension guidance
 
 - New repository or forge integrations should start in `packages/core`.

@@ -148,6 +148,10 @@ const IN_FILE_BINDINGS: readonly BindingTuple[] = [["s", A.GOTO_SELECTED_FILE_LI
 
 const diffMode = buildModeWithPrefixes(
   [
+    ["pagedown", A.SCROLL_PAGE_DOWN],
+    ["pageup", A.SCROLL_PAGE_UP],
+    ["ctrl+d", A.SCROLL_HALF_PAGE_DOWN],
+    ["ctrl+u", A.SCROLL_HALF_PAGE_UP],
     // System
     ["ctrl+p", A.SYSTEM_COMMAND_PALETTE],
     ["shift+/", A.SYSTEM_HELP],
@@ -224,11 +228,12 @@ const diffMode = buildModeWithPrefixes(
 // Thread mode (diff pane with a focused review thread)
 // ---------------------------------------------------------------------------
 
-const THREAD_LEADER_BINDINGS = DIFF_LEADER_BINDINGS;
-const THREAD_SPACE_BINDINGS = DIFF_SPACE_BINDINGS;
-
 const threadMode = buildModeWithPrefixes(
   [
+    ["pagedown", A.SCROLL_PAGE_DOWN],
+    ["pageup", A.SCROLL_PAGE_UP],
+    ["ctrl+d", A.SCROLL_HALF_PAGE_DOWN],
+    ["ctrl+u", A.SCROLL_HALF_PAGE_UP],
     // System
     ["ctrl+p", A.SYSTEM_COMMAND_PALETTE],
     ["shift+/", A.SYSTEM_HELP],
@@ -283,12 +288,12 @@ const threadMode = buildModeWithPrefixes(
     {
       trigger: LEADER_PREFIX.triggerKeybind,
       label: LEADER_PREFIX.nodeLabel,
-      bindings: THREAD_LEADER_BINDINGS,
+      bindings: DIFF_LEADER_BINDINGS,
     },
     {
       trigger: SPACE_PREFIX.triggerKeybind,
       label: SPACE_PREFIX.nodeLabel,
-      bindings: THREAD_SPACE_BINDINGS,
+      bindings: DIFF_SPACE_BINDINGS,
     },
     {
       trigger: GOTO_PREFIX.triggerKeybind,
@@ -306,9 +311,6 @@ const threadMode = buildModeWithPrefixes(
 // ---------------------------------------------------------------------------
 // Tree pane
 // ---------------------------------------------------------------------------
-
-const TREE_LEADER_BINDINGS = DIFF_LEADER_BINDINGS;
-const TREE_SPACE_BINDINGS = DIFF_SPACE_BINDINGS;
 
 const treeMode = buildModeWithPrefixes(
   [
@@ -358,12 +360,12 @@ const treeMode = buildModeWithPrefixes(
     {
       trigger: LEADER_PREFIX.triggerKeybind,
       label: LEADER_PREFIX.nodeLabel,
-      bindings: TREE_LEADER_BINDINGS,
+      bindings: DIFF_LEADER_BINDINGS,
     },
     {
       trigger: SPACE_PREFIX.triggerKeybind,
       label: SPACE_PREFIX.nodeLabel,
-      bindings: TREE_SPACE_BINDINGS,
+      bindings: DIFF_SPACE_BINDINGS,
     },
     {
       trigger: GOTO_PREFIX.triggerKeybind,

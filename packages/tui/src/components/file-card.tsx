@@ -1,20 +1,15 @@
 import type { GitHubPullRequestReviewThread } from "@madisonbullard/diffdiff-core";
-import { logDiffdiffWarn } from "@madisonbullard/diffdiff-core";
 import type { BoxRenderable, ColorInput, SyntaxStyle } from "@opentui/core";
-import { memo, useEffect, useRef } from "react";
+import { memo } from "react";
 import type { Ref } from "react";
+import { getFilePreview } from "../diff/preview-lines.ts";
 import { getDiffFiletype } from "../language.ts";
+import type { DiffLineTarget } from "../app/layout/diff-scroll.ts";
 import type { UiTheme } from "../theme.ts";
 import type { PreparedReviewFile } from "../types.ts";
 import type { SelectedReviewAnchor } from "../review-anchors.ts";
 import { SideBySideDiffPreview, UnifiedDiffPreview } from "./diff-preview.tsx";
 import { SPLIT_BORDER, Tag, capitalize, getCollapseToggleGlyph } from "./shared.tsx";
-
-export interface FileCardPreviewViewport {
-  bottom: number;
-  overscan: number;
-  top: number;
-}
 
 interface FileCardProps {
   collapsedCommentStates?: Readonly<Record<string, boolean>>;
@@ -26,14 +21,12 @@ interface FileCardProps {
   isReviewed: boolean;
   isSelected: boolean;
   onToggleReviewThreadCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
-  placeholderHeight?: number;
-  previewViewport?: FileCardPreviewViewport;
-  selectedDiffRowRef?: Ref<BoxRenderable>;
+  bodyRef?: Ref<BoxRenderable>;
+  selectedDiffRowRef?: Ref<DiffLineTarget>;
   selectedReviewCommentId?: number;
   reviewThreads?: readonly GitHubPullRequestReviewThread[];
   selectedReviewThreadId?: string;
   rootRef?: Ref<BoxRenderable>;
-  shouldRenderBody?: boolean;
   selectedReviewAnchor?: SelectedReviewAnchor;
   syntaxStyle: SyntaxStyle;
   terminalWidth: number;
@@ -46,7 +39,7 @@ export function FileCard(props: FileCardProps) {
 
 const MemoizedFileCard = memo(function FileCard({
   collapsedCommentStates,
-  file,
+  file: rawFile,
   diffView,
   headerVariant,
   isCollapsed,
@@ -54,61 +47,27 @@ const MemoizedFileCard = memo(function FileCard({
   isReviewed,
   isSelected,
   onToggleReviewThreadCollapsed,
-  placeholderHeight,
-  previewViewport,
+  bodyRef,
   selectedDiffRowRef,
   selectedReviewCommentId,
   reviewThreads = [],
   selectedReviewThreadId,
   rootRef,
-  shouldRenderBody = true,
   selectedReviewAnchor,
   syntaxStyle,
   terminalWidth,
   theme,
 }: FileCardProps) {
+  const file = isCollapsed ? rawFile : getFilePreview(rawFile);
   const { statusColor, statusLabel } = getFileStatusChrome(file.status, theme);
   const { borderColor, fileBackground } = getFileCardChrome(isSelected, isReviewed, theme);
   const usesCompactHeader = headerVariant === "sticky-compact";
-  const showsEmptyFilePlaceholder = shouldRenderBody && isEmptyFileDiff(file);
-
-  const usesFallbackRenderer =
-    shouldRenderBody &&
-    !showsEmptyFilePlaceholder &&
-    !file.isBinary &&
-    file.renderError == null &&
-    file.patch.trim() !== "" &&
-    ((diffView === "unified" && file.unifiedLines.length === 0) ||
-      (diffView === "split" && file.sideBySideRows.length === 0));
-  const loggedFallbackRef = useRef(false);
-  const bodyViewport =
-    previewViewport == null
-      ? undefined
-      : getFileCardBodyViewport({
-          file,
-          headerVariant,
-          previewViewport,
-          removeTopPadding,
-        });
-
-  useEffect(() => {
-    if (usesFallbackRenderer && !loggedFallbackRef.current) {
-      loggedFallbackRef.current = true;
-      logDiffdiffWarn("render", "diff_fallback_renderer_used", {
-        diffView,
-        path: file.path,
-      });
-    }
-
-    if (!usesFallbackRenderer) {
-      loggedFallbackRef.current = false;
-    }
-  }, [diffView, file.path, shouldRenderBody, usesFallbackRenderer]);
 
   return (
     <box
       ref={rootRef}
       width="100%"
+      flexShrink={0}
       border={["left"]}
       customBorderChars={SPLIT_BORDER}
       borderColor={borderColor}
@@ -142,13 +101,13 @@ const MemoizedFileCard = memo(function FileCard({
         </text>
       ) : null}
 
-      {!isCollapsed && shouldRenderBody ? (
+      {!isCollapsed ? (
         <MemoizedFileCardBody
+          bodyRef={bodyRef}
           collapsedCommentStates={collapsedCommentStates}
           diffView={diffView}
           file={file}
           onToggleReviewThreadCollapsed={onToggleReviewThreadCollapsed}
-          previewViewport={bodyViewport}
           selectedDiffRowRef={selectedDiffRowRef}
           selectedReviewCommentId={selectedReviewCommentId}
           selectedReviewThreadId={selectedReviewThreadId}
@@ -158,8 +117,6 @@ const MemoizedFileCard = memo(function FileCard({
           terminalWidth={terminalWidth}
           theme={theme}
         />
-      ) : !isCollapsed && (placeholderHeight ?? 0) > 0 ? (
-        <box width="100%" height={placeholderHeight} />
       ) : null}
     </box>
   );
@@ -170,7 +127,7 @@ const MemoizedFileCardBody = memo(function FileCardBody({
   diffView,
   file,
   onToggleReviewThreadCollapsed,
-  previewViewport,
+  bodyRef,
   selectedDiffRowRef,
   selectedReviewCommentId,
   reviewThreads,
@@ -184,8 +141,8 @@ const MemoizedFileCardBody = memo(function FileCardBody({
   diffView: "unified" | "split";
   file: PreparedReviewFile;
   onToggleReviewThreadCollapsed?: (thread: GitHubPullRequestReviewThread) => void;
-  previewViewport?: FileCardPreviewViewport;
-  selectedDiffRowRef?: Ref<BoxRenderable>;
+  bodyRef?: Ref<BoxRenderable>;
+  selectedDiffRowRef?: Ref<DiffLineTarget>;
   selectedReviewCommentId?: number;
   reviewThreads: readonly GitHubPullRequestReviewThread[];
   selectedReviewThreadId?: string;
@@ -194,11 +151,10 @@ const MemoizedFileCardBody = memo(function FileCardBody({
   terminalWidth: number;
   theme: UiTheme;
 }) {
-  const filetype = getDiffFiletype(file.path, file.patch);
   const showsEmptyFilePlaceholder = isEmptyFileDiff(file);
 
   return (
-    <box width="100%" flexDirection="column">
+    <box ref={bodyRef} width="100%" flexDirection="column">
       {file.isBinary ? (
         <box paddingLeft={1}>
           <text fg={theme.textMuted}>
@@ -234,11 +190,6 @@ const MemoizedFileCardBody = memo(function FileCardBody({
               collapsedCommentStates={collapsedCommentStates}
               file={file}
               onToggleReviewThreadCollapsed={onToggleReviewThreadCollapsed}
-              previewViewport={
-                reviewThreads.length === 0 && selectedReviewAnchor == null
-                  ? previewViewport
-                  : undefined
-              }
               selectedDiffRowRef={selectedDiffRowRef}
               selectedReviewCommentId={selectedReviewCommentId}
               selectedReviewThreadId={selectedReviewThreadId}
@@ -261,27 +212,25 @@ const MemoizedFileCardBody = memo(function FileCardBody({
               theme={theme}
             />
           ) : (
-            <box width="100%" flexDirection="column" gap={1}>
-              <diff
-                diff={file.patch}
-                view={diffView}
-                filetype={filetype}
-                showLineNumbers={true}
-                syntaxStyle={syntaxStyle}
-                width="100%"
-                wrapMode="word"
-                fg={theme.text}
-                addedBg={theme.additionBg}
-                removedBg={theme.deletionBg}
-                contextBg={theme.contextBg}
-                addedSignColor={theme.success}
-                removedSignColor={theme.danger}
-                lineNumberFg={theme.textMuted}
-                lineNumberBg={theme.contextBg}
-                addedLineNumberBg={theme.additionLineNumberBg}
-                removedLineNumberBg={theme.deletionLineNumberBg}
-              />
-            </box>
+            <diff
+              diff={file.patch}
+              view={diffView}
+              filetype={getDiffFiletype(file.path, file.patch)}
+              showLineNumbers={true}
+              syntaxStyle={syntaxStyle}
+              width="100%"
+              wrapMode="word"
+              fg={theme.text}
+              addedBg={theme.additionBg}
+              removedBg={theme.deletionBg}
+              contextBg={theme.contextBg}
+              addedSignColor={theme.success}
+              removedSignColor={theme.danger}
+              lineNumberFg={theme.textMuted}
+              lineNumberBg={theme.contextBg}
+              addedLineNumberBg={theme.additionLineNumberBg}
+              removedLineNumberBg={theme.deletionLineNumberBg}
+            />
           )}
         </box>
       ) : null}
@@ -415,47 +364,20 @@ function FileCardHeaderMeta({
   theme: UiTheme;
 }) {
   return (
-    <box paddingRight={2} flexDirection="row">
-      <box paddingRight={1}>
-        <text wrapMode="none">
-          <Tag label={statusLabel.toUpperCase()} fg={theme.inverseText} bg={statusColor} />
-          {isReviewed ? (
-            <>
-              <span> </span>
-              <Tag label="REVIEWED" fg={theme.success} bg={theme.reviewedBg} />
-            </>
-          ) : null}
-        </text>
-      </box>
-      <text fg={theme.textMuted} wrapMode="none">
-        <span fg={theme.success}>{`+${additions}`}</span>
-        <span fg={theme.border}>{" / "}</span>
-        <span fg={theme.danger}>{`-${deletions}`}</span>
-      </text>
-    </box>
+    <text paddingRight={2} flexShrink={0} fg={theme.textMuted} wrapMode="none">
+      <Tag label={statusLabel.toUpperCase()} fg={theme.inverseText} bg={statusColor} />
+      {isReviewed ? (
+        <>
+          <span> </span>
+          <Tag label="REVIEWED" fg={theme.success} bg={theme.reviewedBg} />
+        </>
+      ) : null}
+      <span> </span>
+      <span fg={theme.success}>{`+${additions}`}</span>
+      <span fg={theme.border}>{" / "}</span>
+      <span fg={theme.danger}>{`-${deletions}`}</span>
+    </text>
   );
-}
-
-function getFileCardBodyViewport({
-  file,
-  headerVariant,
-  previewViewport,
-  removeTopPadding,
-}: {
-  file: PreparedReviewFile;
-  headerVariant?: "sticky-compact";
-  previewViewport: FileCardPreviewViewport;
-  removeTopPadding: boolean;
-}): FileCardPreviewViewport {
-  const headerBlockCount = headerVariant === "sticky-compact" ? 0 : 1;
-  const blocksBeforeBody = headerBlockCount + (file.previousPath != null ? 1 : 0);
-  const bodyTopOffset = (removeTopPadding ? 0 : 1) + blocksBeforeBody + blocksBeforeBody;
-
-  return {
-    bottom: previewViewport.bottom - bodyTopOffset,
-    overscan: previewViewport.overscan,
-    top: previewViewport.top - bodyTopOffset,
-  };
 }
 
 function getFileCardChrome(isSelected: boolean, isReviewed: boolean, theme: UiTheme) {

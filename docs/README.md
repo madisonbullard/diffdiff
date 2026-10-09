@@ -33,6 +33,9 @@ smallest relevant source of truth.
   - Current durable plan snapshot for GitHub PR interaction in the TUI.
 - `plans/release-architecture.md`
   - Release and distribution plan adapted from the neighboring OpenCode repo.
+- `plans/diff-viewport-navigation.md`
+  - Native diff buffers, measured navigation, and scroll anchoring, plus the
+    headless visual/perf harness in `packages/tui/visual/`.
 - `todos/`
   - Versioned implementation slices for follow-on TUI, command, rendering, and
     automation work.

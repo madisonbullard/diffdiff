@@ -104,11 +104,6 @@ export interface RenderSurfaceMetrics {
   renderedUnifiedLineCount: number;
 }
 
-export interface DiffViewportMetrics {
-  height: number;
-  scrollTop: number;
-}
-
 export interface PendingInteraction {
   details?: Record<string, unknown>;
   expectedDiffView?: "split" | "unified";

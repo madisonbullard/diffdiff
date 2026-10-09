@@ -19,6 +19,7 @@
   "exports": {
     ".": "./dist/index.mjs",
     "./cli": "./dist/cli.mjs",
+    "./syntax-worker": "./dist/syntax-worker.mjs",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -28,6 +29,9 @@
     "build": "vp pack",
     "dev": "vp pack --watch",
     "test": "vp test",
+    "test:visual": "bun test --preload ./visual/preload.ts ./visual",
+    "test:worker-build": "bun --preload ./visual/preload.ts ./visual/worker-build.smoke.ts",
+    "bench:visual": "bun --preload ./visual/preload.ts ./visual/navigation.bench.tsx",
     "check": "vp check",
     "prepublishOnly": "vp run build"
   },

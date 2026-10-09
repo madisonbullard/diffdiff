@@ -90,7 +90,6 @@ export function createReviewActions({
 
       fileFocus.focusFile({
         activatePane: "preserve",
-        reveal: "align-under-sticky-header",
         target: { path: nextFilePath },
       });
       state.setStatusMessage(
@@ -133,7 +132,6 @@ export function createReviewActions({
 
     fileFocus.focusFile({
       activatePane: "preserve",
-      reveal: "default",
       target: { path: nextFilePath },
     });
     state.setStatusMessage(`Selected ${nextFilePath ?? "file"}.`);
@@ -162,7 +160,6 @@ export function createReviewActions({
       });
       fileFocus.focusFile({
         activatePane: "diff",
-        reveal: "align-under-sticky-header",
         target: { path: candidate.path },
       });
       state.setStatusMessage(`Jumped to next unreviewed file: ${candidate.path}.`);

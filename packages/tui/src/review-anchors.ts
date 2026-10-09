@@ -1,5 +1,6 @@
 import type { GitHubReviewLineAnchor } from "@madisonbullard/diffdiff-core";
 import type { DiffView, PreparedReviewFile, SideBySideDiffRow, UnifiedDiffLine } from "./types.ts";
+import { getFilePreview } from "./diff/preview-lines.ts";
 
 export interface SelectedReviewAnchor extends GitHubReviewLineAnchor {
   key: string;
@@ -13,6 +14,7 @@ export function getReviewAnchors(
   if (file == null || file.isBinary) {
     return [];
   }
+  file = getFilePreview(file);
 
   if (file.unifiedLines.length === 0 && file.sideBySideRows.length === 0) {
     return getPatchAnchors(file.path, file.patch);
@@ -34,6 +36,34 @@ export function matchesUnifiedAnchor(
   return anchor.side === "LEFT"
     ? line.oldLineNumber === anchor.line
     : line.newLineNumber === anchor.line;
+}
+
+/** Hunk positions are structural boundaries, not indexes into flattened anchors. */
+export function getHunkReviewAnchors(
+  file: PreparedReviewFile,
+  diffView: DiffView,
+): SelectedReviewAnchor[] {
+  const anchors = getReviewAnchors(file, diffView);
+  const byLine = new Map(anchors.map((anchor) => [`${anchor.side}:${anchor.line}`, anchor]));
+  const hunks: SelectedReviewAnchor[] = [];
+  let firstLine = true;
+  for (const line of getFilePreview(file).unifiedLines) {
+    if (line.kind === "hunk") {
+      firstLine = true;
+      continue;
+    }
+    if (line.kind === "gap" || !firstLine) continue;
+    // Split context rows offer both sides; use their first anchor (LEFT).
+    const side =
+      line.kind === "deletion" || (diffView === "split" && line.kind === "context")
+        ? "LEFT"
+        : "RIGHT";
+    const number = side === "LEFT" ? line.oldLineNumber : line.newLineNumber;
+    const anchor = byLine.get(`${side}:${number}`);
+    if (anchor != null) hunks.push(anchor);
+    firstLine = false;
+  }
+  return hunks;
 }
 
 export function matchesSideBySideAnchor(

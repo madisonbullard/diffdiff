@@ -2,7 +2,10 @@
 
 ## Summary
 
-OpenCode has stronger incremental state reconciliation patterns than diffdiff. Diffdiff already has good startup and deferred-rendering instincts, but it still leans on whole-session refreshes and a large central app component. If large reviews become a pain point, this is where the biggest structural improvements likely live.
+The native viewport rewrite removed estimated-height windowing and moved syntax
+hydration into a worker. Navigation is now reliable and much faster at hundreds
+of files. Whole-session refreshes and native mount/layout cost at thousands of
+files remain opportunities for incremental reconciliation.
 
 ## Why This Is Worth Stealing
 
@@ -38,4 +41,6 @@ OpenCode has stronger incremental state reconciliation patterns than diffdiff. D
 
 - This is one of the hardest areas to change without regressions.
 - Diffdiff's sticky headers, inline review threads, and tree-to-diff ordering all make rendering changes delicate.
-- A lot of value can come from smaller incremental improvements before considering anything like virtualization.
+- Build on the invariants and 5,000-file measurements in
+  `../plans/diff-viewport-navigation.md`. Investigate incremental native layout
+  and session reconciliation without recreating estimated-height windowing.

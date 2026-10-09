@@ -47,6 +47,7 @@ export interface TextSegment {
   text: string;
   fg?: string;
   bg?: string;
+  isWordChange?: boolean;
 }
 
 export interface UnifiedDiffLine {

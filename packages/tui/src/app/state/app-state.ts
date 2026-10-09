@@ -4,7 +4,8 @@ import type {
   GitHubRefCleanupCandidate,
   GitHubUserPreferences,
 } from "@madisonbullard/diffdiff-core";
-import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core";
+import type { ScrollBoxRenderable } from "@opentui/core";
+import type { DiffLineTarget, DiffScrollController } from "../layout/diff-scroll.ts";
 import type { useRenderer, useTerminalDimensions } from "@opentui/react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { AppDialogStackEntry } from "../dialogs/stack.ts";
@@ -20,14 +21,8 @@ import type {
   ListModalView,
   PreparedReviewSession,
 } from "../../types.ts";
-import type {
-  DiffViewportMetrics,
-  MergeModalField,
-  PendingInteraction,
-  SessionActivityUpdate,
-} from "./app-props.ts";
+import type { MergeModalField, PendingInteraction, SessionActivityUpdate } from "./app-props.ts";
 import type { GitHubOptimisticOperation } from "../review/optimistic-github-overlay.ts";
-import type { PendingFileFocusRequest } from "../shared/file-focus.ts";
 import type { ReviewComposerUiState } from "../review/review-composer-state.ts";
 import type { ReviewerPickerState } from "../review/reviewer-picker-state.ts";
 
@@ -67,7 +62,7 @@ export interface DiffdiffAppState {
   commitSearchActive: boolean;
   commitSearchInput: TextInputState;
   dialogStack: readonly AppDialogStackEntry[];
-  diffViewportMetrics: DiffViewportMetrics;
+  diffScroll: DiffScrollController;
   diffViewPreference: DiffViewPreference;
   errorToastMessage: string | null;
   filterIndex: number;
@@ -99,10 +94,7 @@ export interface DiffdiffAppState {
     key: import("@madisonbullard/diffdiff-core").ReviewCacheKey;
     state: import("@madisonbullard/diffdiff-core").ReviewCacheState;
   } | null>;
-  pendingFileFocusRequestRef: MutableRefObject<PendingFileFocusRequest | null>;
-  pendingSelectedDiffAnchorKeyRef: MutableRefObject<string | null>;
   pendingSessionActivityRef: MutableRefObject<SessionActivityUpdate | null>;
-  pendingSyntaxHydrationPathsRef: MutableRefObject<Set<string>>;
   pullRequestConversationIndex: number;
   pullRequestList: GitHubDashboardPullRequest[];
   pullRequestListIndex: number;
@@ -131,12 +123,10 @@ export interface DiffdiffAppState {
   terminalFocusedRef: MutableRefObject<boolean>;
   toastMessage: string | null;
   toastTimeoutRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
-  treeRowRefs: MutableRefObject<(BoxRenderable | null)[]>;
   treeScrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   scrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   mergeBodyScrollRef: MutableRefObject<ScrollBoxRenderable | null>;
-  fileCardRefs: MutableRefObject<(BoxRenderable | null)[]>;
-  selectedDiffRowRef: MutableRefObject<BoxRenderable | null>;
+  selectedDiffRowRef: MutableRefObject<DiffLineTarget | null>;
   setActiveFileIndex: Dispatch<SetStateAction<number>>;
   setActivePane: Dispatch<SetStateAction<AppPane>>;
   setActiveListView: Dispatch<SetStateAction<ListModalView>>;
@@ -159,7 +149,6 @@ export interface DiffdiffAppState {
   setCommitSearchInput: Dispatch<SetStateAction<TextInputState>>;
   setDialogStack: Dispatch<SetStateAction<readonly AppDialogStackEntry[]>>;
   setDiffViewPreference: Dispatch<SetStateAction<DiffViewPreference>>;
-  setDiffViewportMetrics: Dispatch<SetStateAction<DiffViewportMetrics>>;
   setErrorToastMessage: Dispatch<SetStateAction<string | null>>;
   setFilterIndex: Dispatch<SetStateAction<number>>;
   setGitHubPreferences: Dispatch<SetStateAction<GitHubUserPreferences>>;

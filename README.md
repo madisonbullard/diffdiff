@@ -53,6 +53,10 @@ vp run build -r
 vp run ready
 ```
 
+`ready` requires Bun for the real-layout TUI visual tests and the bundled syntax
+worker smoke test. Run `vp run test:visual` or `vp run bench:visual` from
+`packages/tui` to check viewport behavior or measure navigation separately.
+
 ## Environment
 
 - `DIFFDIFF_REPO`: repository path to review

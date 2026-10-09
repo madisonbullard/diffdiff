@@ -5,7 +5,8 @@ import type {
   GitHubRefCleanupCandidate,
   GitHubUserPreferences,
 } from "@madisonbullard/diffdiff-core";
-import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core";
+import type { ScrollBoxRenderable } from "@opentui/core";
+import { DiffScrollController, type DiffLineTarget } from "../layout/diff-scroll.ts";
 import { useRenderer, useTerminalDimensions } from "@opentui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -23,12 +24,7 @@ import {
 } from "../dialogs/stack.ts";
 import { createKeybindController } from "../keybind-controller.ts";
 import { getSessionReviewedPaths, restoreCollapsedPaths } from "../shared/collections.ts";
-import type {
-  DiffdiffAppProps,
-  DiffViewportMetrics,
-  MergeModalField,
-  SessionActivityUpdate,
-} from "./app-props.ts";
+import type { DiffdiffAppProps, MergeModalField, SessionActivityUpdate } from "./app-props.ts";
 import type { ComparisonBrowserData, DiffdiffAppState } from "./app-state.ts";
 import {
   createReviewComposerState,
@@ -42,7 +38,6 @@ import {
   findInitialBranchListSelection,
 } from "../../view-model.ts";
 import type { GitHubOptimisticOperation } from "../review/optimistic-github-overlay.ts";
-import type { PendingFileFocusRequest } from "../shared/file-focus.ts";
 import type {
   AppPane,
   BranchListFilters,
@@ -206,29 +201,27 @@ export function useDiffdiffAppState({
   const [reviewSubmissionEventIndex, setReviewSubmissionEventIndex] = useState(0);
   const [showSelectedReviewAnchor, setShowSelectedReviewAnchor] = useState(false);
   const [selectedReviewAnchorIndex, setSelectedReviewAnchorIndex] = useState(0);
-  const [activeFileIndex, setActiveFileIndex] = useState(0);
+  const [activeFileIndex, setActiveFileIndex] = useState(selectedFileIndex);
   const [activePane, setActivePane] = useState<AppPane>("diff");
   const [collapsedDirectories, setCollapsedDirectories] = useState<Set<string>>(new Set());
-  const [diffViewportMetrics, setDiffViewportMetrics] = useState<DiffViewportMetrics>({
-    height: 0,
-    scrollTop: 0,
+  const [diffScroll] = useState(() => {
+    const scroll = new DiffScrollController();
+    scroll.setFiles(initialSession.files);
+    const path = initialSession.files[selectedFileIndex]?.path;
+    if (path != null) scroll.revealFile(path);
+    return scroll;
   });
   const [selectedTreePath, setSelectedTreePath] = useState(initialSession.files[0]?.path ?? "");
   const [loadingIndicatorFrame, setLoadingIndicatorFrame] = useState(0);
   const treeScrollRef = useRef<ScrollBoxRenderable | null>(null);
-  const treeRowRefs = useRef<(BoxRenderable | null)[]>([]);
   const mergeBodyScrollRef = useRef<ScrollBoxRenderable | null>(null);
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
-  const fileCardRefs = useRef<(BoxRenderable | null)[]>([]);
-  const pendingFileFocusRequestRef = useRef<PendingFileFocusRequest | null>(null);
-  const pendingSelectedDiffAnchorKeyRef = useRef<string | null>(null);
   const pendingInteractionRef = useRef<import("./app-props.ts").PendingInteraction | null>(null);
   const pendingReviewCacheRef = useRef<{
     key: import("@madisonbullard/diffdiff-core").ReviewCacheKey;
     state: import("@madisonbullard/diffdiff-core").ReviewCacheState;
   } | null>(null);
   const pendingSessionActivityRef = useRef<SessionActivityUpdate | null>(null);
-  const pendingSyntaxHydrationPathsRef = useRef<Set<string>>(new Set());
   const pendingInteractionTokenRef = useRef(0);
   const optimisticGitHubOperationIdRef = useRef(0);
   const optimisticGitHubOperationsRef = useRef<GitHubOptimisticOperation[]>([]);
@@ -238,7 +231,7 @@ export function useDiffdiffAppState({
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const terminalFocusedRef = useRef(true);
   const pullRequestListLoadIdRef = useRef(0);
-  const selectedDiffRowRef = useRef<BoxRenderable | null>(null);
+  const selectedDiffRowRef = useRef<DiffLineTarget | null>(null);
   const renderer = useRenderer();
   optimisticGitHubOperationsRef.current = optimisticGitHubOperations;
   const resolvedKeymaps = useMemo(
@@ -322,10 +315,9 @@ export function useDiffdiffAppState({
     commitSearchActive,
     commitSearchInput,
     dialogStack,
-    diffViewportMetrics,
+    diffScroll,
     diffViewPreference,
     errorToastMessage,
-    fileCardRefs,
     filterIndex,
     gitHubPreferences,
     gitHubPreferencesRef,
@@ -352,10 +344,7 @@ export function useDiffdiffAppState({
     pendingInteractionRef,
     pendingInteractionTokenRef,
     pendingReviewCacheRef,
-    pendingFileFocusRequestRef,
-    pendingSelectedDiffAnchorKeyRef,
     pendingSessionActivityRef,
-    pendingSyntaxHydrationPathsRef,
     pullRequestConversationIndex,
     pullRequestList,
     pullRequestListIndex,
@@ -400,7 +389,6 @@ export function useDiffdiffAppState({
     setCommitSearchInput,
     setDialogStack,
     setDiffViewPreference,
-    setDiffViewportMetrics,
     setErrorToastMessage,
     setFilterIndex,
     setGitHubPreferences,
@@ -444,7 +432,6 @@ export function useDiffdiffAppState({
     terminalFocusedRef,
     toastMessage,
     toastTimeoutRef,
-    treeRowRefs,
     treeScrollRef,
   };
 }

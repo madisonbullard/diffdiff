@@ -11,6 +11,7 @@ export default defineConfig({
     entry: {
       index: "src/index.ts",
       cli: "src/cli.tsx",
+      "syntax-worker": "src/diff/syntax-worker.ts",
     },
     exports: true,
     loader: {
@@ -41,4 +42,10 @@ export default defineConfig({
     ],
   },
   fmt: {},
+  test: {
+    setupFiles: ["tests/native-buffer-mock.ts"],
+    // Visual suites need Bun's native OpenTUI renderer; run them with
+    // `vp run test:visual`.
+    exclude: ["**/node_modules/**", "**/dist/**", "visual/**"],
+  },
 });
