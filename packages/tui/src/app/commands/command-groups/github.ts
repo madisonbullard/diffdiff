@@ -13,6 +13,7 @@ export function buildGitHubCommands({
   openCommentComposer,
   openFocusedReviewThreadReplyComposer,
   openGitHubPullRequestList,
+  openReviewerPicker,
   openMergeModal,
   openPullRequestCommentsModal,
   openSubmitReviewModal,
@@ -32,6 +33,7 @@ export function buildGitHubCommands({
   | "openCommentComposer"
   | "openFocusedReviewThreadReplyComposer"
   | "openGitHubPullRequestList"
+  | "openReviewerPicker"
   | "openMergeModal"
   | "openPullRequestCommentsModal"
   | "openSubmitReviewModal"
@@ -54,6 +56,26 @@ export function buildGitHubCommands({
     gitHubWriteDisabledReason ?? "No focused review comment is available in the selected file.";
 
   return [
+    {
+      category: "GitHub",
+      description:
+        "Filter repository users by name and request reviews, with GitHub recommendations.",
+      disabledReason:
+        gitHubWriteDisabledReason ??
+        (sessionGitHub?.pullRequest.state !== "open" || sessionGitHub?.pullRequest.isMerged
+          ? "Reviewers can only be requested for an open pull request."
+          : undefined),
+      enabled:
+        sessionGitHub != null &&
+        isGitHubAuthenticated &&
+        sessionGitHub.pullRequest.state === "open" &&
+        !sessionGitHub.pullRequest.isMerged,
+      suggested: sessionGitHub != null && isGitHubAuthenticated,
+      keywords: ["assign", "reviewers", "request review", "users"],
+      title: "Request reviewers",
+      value: "github.request-reviewers",
+      run: () => openReviewerPicker(),
+    },
     {
       category: "GitHub",
       description: "Browse your open and review-requested pull requests across repositories.",

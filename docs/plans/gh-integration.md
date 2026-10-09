@@ -8,6 +8,31 @@
 
 ## Implementation Update
 
+### Reviewer requests
+
+- Open **Request reviewers** from the command palette or the existing Space / Ctrl+X
+  menus with `w` (in the diff, thread, or tree pane).
+- The picker starts in a live filter input matching profile names and usernames,
+  case-insensitively. Arrow keys move focus; Enter toggles a person; Ctrl+S sends
+  the selected requests. Selection survives filtering. Escape cancels without writes;
+  cancellation and duplicate submissions are blocked while a request is in flight.
+- Existing requested users are marked and cannot be selected again. Requests are
+  additive: existing users and team requests are not removed. This picker requests
+  individual users; selecting or removing teams is not part of this slice.
+- `packages/core` owns paginated repository `assignableUsers` discovery and the
+  REST `requested_reviewers` mutation. The PR author is excluded; requests require
+  authentication and an open PR. GitHub still enforces repository permissions and
+  reviewer eligibility on submission.
+- GitHub's native `suggestedReviewers` appear first, with reasons based on past
+  commits and/or review comments. These are GitHub recommendations, not a local
+  recency score or a guarantee that the user edited a particular file. Only users
+  in the repository candidate list are included. Recommendation failures do not
+  block manual selection and are identified in the picker.
+- Discovery is lazy (no extra PR startup requests). Ctrl+R reloads candidates;
+  load and mutation failures are visible and retryable. Confirmed requests update
+  the session immediately before the normal authoritative refresh, so a failed
+  refresh does not lose successful requests.
+
 The next implemented slice follows the later decisions made after the original plan snapshot above.
 
 ### Newly Locked During Implementation

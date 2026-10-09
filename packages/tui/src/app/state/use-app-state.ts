@@ -35,6 +35,7 @@ import {
   loadReviewComposerHistoryEntries,
 } from "../review/review-composer-state.ts";
 import { createTextInputState } from "../text-input/input-state.ts";
+import { createReviewerPickerState } from "../review/reviewer-picker-state.ts";
 import {
   buildBranchListItems,
   DEFAULT_BRANCH_LIST_FILTERS,
@@ -92,6 +93,8 @@ export function useDiffdiffAppState({
     workingTreeSummary: initialSession.workingTreeSummary,
   });
   const [session, setSession] = useState(initialSession);
+  const [reviewerPicker, setReviewerPicker] = useState(createReviewerPickerState);
+  const reviewerPickerAsyncRef = useRef({ loadId: 0, submitting: false });
   const [startupOptions, setStartupOptions] = useState<LaunchOptions>({ ...initialOptions });
   const [selectedFileIndex, setSelectedFileIndex] = useState(() =>
     initialReviewCache?.selectedFilePath == null
@@ -260,6 +263,16 @@ export function useDiffdiffAppState({
   const terminalDimensions = useTerminalDimensions();
 
   useEffect(() => {
+    reviewerPickerAsyncRef.current.loadId += 1;
+    reviewerPickerAsyncRef.current.submitting = false;
+    setReviewerPicker(createReviewerPickerState());
+    setDialogStack((stack) => stack.filter((entry) => entry.dialog !== "reviewer-picker"));
+    return () => {
+      reviewerPickerAsyncRef.current.loadId += 1;
+    };
+  }, [session.github?.pullRequest.url]);
+
+  useEffect(() => {
     if (loadReviewComposerHistory == null) {
       return;
     }
@@ -283,6 +296,9 @@ export function useDiffdiffAppState({
   }, [loadReviewComposerHistory]);
 
   return {
+    reviewerPicker,
+    setReviewerPicker,
+    reviewerPickerAsyncRef,
     activeFileIndex,
     resolvedKeymaps,
     reverseKeymaps,

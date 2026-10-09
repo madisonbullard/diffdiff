@@ -14,6 +14,16 @@ export interface GitHubActor {
   url?: string;
 }
 
+export interface GitHubReviewerCandidate extends GitHubActor {
+  name?: string;
+  recommendation?: { basedOnCommits: boolean; basedOnReviewComments: boolean };
+}
+
+export interface GitHubReviewerCandidates {
+  users: GitHubReviewerCandidate[];
+  recommendationsUnavailable: boolean;
+}
+
 export interface GitHubDashboardPullRequest {
   author: GitHubActor;
   isAuthor: boolean;

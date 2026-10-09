@@ -29,6 +29,7 @@ import type {
 import type { GitHubOptimisticOperation } from "../review/optimistic-github-overlay.ts";
 import type { PendingFileFocusRequest } from "../shared/file-focus.ts";
 import type { ReviewComposerUiState } from "../review/review-composer-state.ts";
+import type { ReviewerPickerState } from "../review/reviewer-picker-state.ts";
 
 export interface ComparisonBrowserData {
   branches: PreparedReviewSession["branches"];
@@ -37,6 +38,9 @@ export interface ComparisonBrowserData {
 }
 
 export interface DiffdiffAppState {
+  reviewerPicker: ReviewerPickerState;
+  setReviewerPicker: Dispatch<SetStateAction<ReviewerPickerState>>;
+  reviewerPickerAsyncRef: MutableRefObject<{ loadId: number; submitting: boolean }>;
   activeFileIndex: number;
   /** The fully resolved (defaults + user overrides) keymaps. */
   resolvedKeymaps: ResolvedKeymaps;

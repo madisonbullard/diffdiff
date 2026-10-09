@@ -7,6 +7,7 @@ export type AppDialog =
   | "comments"
   | "diagnostics"
   | "pull-request-list"
+  | "reviewer-picker"
   | "help"
   | "list-filter"
   | "merge"
@@ -61,6 +62,7 @@ const APP_DIALOG_EXIT_ACTIONS: Record<
   "pull-request-list": {
     dismiss: "close-all",
   },
+  "reviewer-picker": { complete: "restore-parent", dismiss: "restore-parent" },
   "submit-review": {
     complete: "close-all",
     dismiss: "restore-parent",

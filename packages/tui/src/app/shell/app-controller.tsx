@@ -199,6 +199,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         openDiagnostics: diagnostics.openDiagnostics,
         openFocusedReviewThreadReplyComposer: githubActions.openFocusedReviewThreadReplyComposer,
         openGitHubPullRequestList: githubActions.openGitHubPullRequestList,
+        openReviewerPicker: githubActions.openReviewerPicker,
         openHelp,
         openFocusedFileInEditor: viewActions.openFocusedFileInEditor,
         openMergeModal: githubActions.openMergeModal,

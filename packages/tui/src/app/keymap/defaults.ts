@@ -12,6 +12,7 @@ import { GOTO_PREFIX, IN_FILE_PREFIX, LEADER_PREFIX, SPACE_PREFIX } from "./pref
 import { MutableTrieNode } from "./trie.ts";
 import type { KeyTrieNode, ResolvedKeymaps } from "./types.ts";
 import * as A from "./actions.ts";
+import { reviewerPickerMode } from "./reviewer-picker.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -110,6 +111,7 @@ const DIFF_LEADER_BINDINGS: readonly BindingTuple[] = [
   ["alt+r", A.REVIEW_CLEAR_REVIEWED],
   ["p", A.GITHUB_PULL_REQUEST_LIST],
   ["t", A.GITHUB_COMMENTS],
+  ["w", A.GITHUB_REQUEST_REVIEWERS],
   ["a", A.GITHUB_ADD_COMMENT],
   ["shift+a", A.GITHUB_SUBMIT_REVIEW],
   ["m", A.GITHUB_MERGE],
@@ -124,6 +126,7 @@ const DIFF_SPACE_BINDINGS: readonly BindingTuple[] = [
   ["shift+y", A.VIEW_COPY_REOPEN_COMMAND],
   ["p", A.GITHUB_PULL_REQUEST_LIST],
   ["t", A.GITHUB_COMMENTS],
+  ["w", A.GITHUB_REQUEST_REVIEWERS],
   ["a", A.GITHUB_ADD_COMMENT],
   ["shift+a", A.GITHUB_SUBMIT_REVIEW],
   ["m", A.GITHUB_MERGE],
@@ -657,6 +660,7 @@ export function getDefaultKeymaps(): ResolvedKeymaps {
   map.set("help", helpMode);
   map.set("commands", commandsMode);
   map.set("pull-request-list", pullRequestListMode);
+  map.set("reviewer-picker", reviewerPickerMode);
   map.set("pull-request-search", pullRequestSearchMode);
   map.set("compare-branches", compareBranchesMode);
   map.set("compare-commits", compareCommitsMode);

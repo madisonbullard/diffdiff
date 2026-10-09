@@ -9,6 +9,7 @@ import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import type { AppTextInputControllers } from "../text-input/input-controllers.ts";
 import { createGitHubMutationActions } from "./github-mutation-actions.ts";
 import type { ReviewComposerTarget } from "./review-composer.ts";
+import { createReviewerPickerActions } from "./reviewer-picker-actions.ts";
 
 interface CreateGitHubReviewActionsOptions {
   actions: {
@@ -31,6 +32,8 @@ interface CreateGitHubReviewActionsOptions {
     | "appendReviewComposerHistory"
     | "addReviewThread"
     | "listGitHubPullRequests"
+    | "listReviewerCandidates"
+    | "requestReviewers"
     | "loadSession"
     | "openExternalEditor"
     | "mergePullRequest"
@@ -252,6 +255,7 @@ export function createGitHubReviewActions({
   }
 
   return {
+    ...createReviewerPickerActions({ actions, props, persistence, state }),
     ...mutationActions,
     closeCommentComposer,
     openCommentComposer,

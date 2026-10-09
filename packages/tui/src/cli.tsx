@@ -309,6 +309,12 @@ async function launchTui(options: LaunchOptions, target?: string): Promise<void>
         initialOptions={launchOptions}
         initialSession={initialSession}
         listGitHubPullRequests={() => gitHubPullRequestService.listDashboardPullRequests()}
+        listReviewerCandidates={(session) =>
+          gitHubPullRequestService.listReviewerCandidates(session)
+        }
+        requestReviewers={(session, logins) =>
+          gitHubPullRequestService.requestReviewers(session, logins)
+        }
         loadReviewComposerHistory={() => loadReviewComposerHistory()}
         loadComparisonBrowserData={async (nextOptions) => {
           const session = await loadReviewSession(nextOptions);

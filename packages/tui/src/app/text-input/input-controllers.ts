@@ -17,12 +17,28 @@ export interface AppTextInputControllers {
   commandPalette: BasicTextInputController;
   commitSearch: SearchTextInputController;
   pullRequestSearch: SearchTextInputController;
+  reviewerSearch: BasicTextInputController;
 }
 
 type TextInputStateSetter = DiffdiffAppState["setCommandInput"];
 
 export function createAppTextInputControllers(state: DiffdiffAppState): AppTextInputControllers {
   return {
+    reviewerSearch: createManagedTextInputController({
+      reset: () =>
+        state.setReviewerPicker((picker) => ({
+          ...picker,
+          input: createTextInputState(),
+          index: 0,
+        })),
+      setInput: (update) =>
+        state.setReviewerPicker((picker) => ({
+          ...picker,
+          input: typeof update === "function" ? update(picker.input) : update,
+          index: 0,
+        })),
+      onTextChanged: () => undefined,
+    }),
     commandPalette: createManagedTextInputController({
       reset: () => {
         state.setCommandInput(createTextInputState());

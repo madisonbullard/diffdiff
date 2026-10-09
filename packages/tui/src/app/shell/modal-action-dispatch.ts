@@ -33,6 +33,11 @@ export interface BuildModalActionDispatchMapOptions {
   closeCommandModal: () => void;
   closeCommentComposer: () => void;
   closeDiagnostics: () => void;
+  closeReviewerPicker: () => void;
+  moveReviewerSelection: (delta: number) => void;
+  refreshReviewerCandidates: () => Promise<void>;
+  submitReviewerRequests: () => Promise<void>;
+  toggleReviewerSelection: () => void;
   copySelectedPullRequestConversationItemUrl: () => Promise<void>;
   derived: DiffdiffAppDerived;
   filteredCommands: readonly AppCommand[];
@@ -65,6 +70,11 @@ export function buildModalActionDispatchMap({
   closeCommandModal,
   closeCommentComposer: dismissCommentComposer,
   closeDiagnostics,
+  closeReviewerPicker,
+  moveReviewerSelection,
+  refreshReviewerCandidates,
+  submitReviewerRequests,
+  toggleReviewerSelection,
   copySelectedPullRequestConversationItemUrl,
   derived,
   filteredCommands,
@@ -178,6 +188,9 @@ export function buildModalActionDispatchMap({
 
   function moveListSelection(delta: number): void {
     switch (activeKeymapMode) {
+      case "reviewer-picker":
+        moveReviewerSelection(delta);
+        return;
       case "commands":
         state.setCommandIndex((currentIndex) =>
           clampIndex(currentIndex + delta, filteredCommands.length),
@@ -267,6 +280,9 @@ export function buildModalActionDispatchMap({
 
   function dismissCurrentMode(): void {
     switch (activeKeymapMode) {
+      case "reviewer-picker":
+        closeReviewerPicker();
+        return;
       case "commands":
         closeCommandModal();
         return;
@@ -324,6 +340,9 @@ export function buildModalActionDispatchMap({
 
   function acceptCurrentSelection(): void {
     switch (activeKeymapMode) {
+      case "reviewer-picker":
+        toggleReviewerSelection();
+        return;
       case "pull-request-list":
         if (derived.selectedPullRequest != null) {
           void applyDashboardPullRequestSelection(derived.selectedPullRequest);
@@ -351,6 +370,9 @@ export function buildModalActionDispatchMap({
 
   function backspaceText(): void {
     switch (activeKeymapMode) {
+      case "reviewer-picker":
+        textInputControllers.reviewerSearch.backspace();
+        return;
       case "commands":
         textInputControllers.commandPalette.backspace();
         return;
@@ -423,6 +445,12 @@ export function buildModalActionDispatchMap({
 
   map.set(A.LIST_ACCEPT, () => {
     acceptCurrentSelection();
+  });
+  map.set(A.REVIEWERS_SUBMIT, () => {
+    void submitReviewerRequests();
+  });
+  map.set(A.REVIEWERS_REFRESH, () => {
+    void refreshReviewerCandidates();
   });
 
   map.set(A.MODAL_DISMISS, () => {

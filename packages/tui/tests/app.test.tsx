@@ -15,6 +15,7 @@ import type {
 import { act, create } from "react-test-renderer";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 import { DiffdiffApp } from "../src/app/DiffdiffApp.tsx";
+import { ReviewerPickerModal } from "../src/review/reviewer-picker-modal.tsx";
 import { FileCard } from "../src/components/file-card.tsx";
 import { getUiTheme } from "../src/theme.ts";
 import type { LaunchOptions, PreparedReviewFile, PreparedReviewSession } from "../src/types.ts";
@@ -148,6 +149,226 @@ afterEach(() => {
   registeredKeyboardHandlers.clear();
   vi.useRealTimers();
   vi.restoreAllMocks();
+});
+
+test("reviewer picker filters display names and usernames, retains hidden selections, and explicitly submits", async () => {
+  const github = createGitHubReviewSession();
+  github.pullRequest.reviewRequests = [
+    { kind: "user", label: "existing" },
+    { kind: "team", label: "owners" },
+  ];
+  const requestReviewers = vi.fn(async () => undefined);
+  const refreshed = createPreparedSession({
+    github: {
+      ...github,
+      pullRequest: {
+        ...github.pullRequest,
+        reviewRequests: [
+          ...github.pullRequest.reviewRequests,
+          { kind: "user", label: "alice" },
+          { kind: "user", label: "bob" },
+        ],
+      },
+    },
+  });
+  const tree = render(
+    <DiffdiffApp
+      {...createReviewerAppProps({
+        initialSession: createPreparedSession({ github }),
+        requestReviewers,
+        loadSession: vi.fn(async () => refreshed),
+      })}
+    />,
+  );
+  emitKey({ name: "space", sequence: " " });
+  expect(getAppText(tree)).toContain("Request reviewers");
+  await emitAsyncKey({ name: "w" });
+  expect(getAppText(tree)).toContain("Suggested · past commits and past reviews");
+  emitText("ALICE");
+  expect(getAppText(tree)).toContain("1 matching users");
+  emitKey({ name: "return" });
+  expect(requestReviewers).not.toHaveBeenCalled();
+  for (let index = 0; index < 5; index++) emitKey({ name: "backspace" });
+  emitText("Robert");
+  expect(getAppText(tree)).toContain("1 matching users");
+  emitKey({ name: "return" });
+  expect(getAppText(tree)).toContain("2 selected");
+  expect(tree.root.findByType(ReviewerPickerModal).props.picker.selected).toEqual(
+    new Set(["alice", "bob"]),
+  );
+  await emitAsyncKey({ ctrl: true, name: "s" });
+  expect(requestReviewers).toHaveBeenCalledExactlyOnceWith(github, ["alice", "bob"]);
+  expect(tree.root.findAllByType(ReviewerPickerModal)).toHaveLength(0);
+  expect(getAppText(tree)).toContain("Requested reviews from alice, bob.");
+});
+
+test("reviewer picker can be opened from the command palette and canceled without writes", async () => {
+  const props = createReviewerAppProps();
+  const tree = render(<DiffdiffApp {...props} />);
+  emitKey({ ctrl: true, name: "p" });
+  emitText("request reviewers");
+  await emitAsyncKey({ name: "return" });
+  expect(tree.root.findAllByType(ReviewerPickerModal)).toHaveLength(1);
+  emitKey({ name: "return" });
+  emitKey({ name: "escape" });
+  expect(props.requestReviewers).not.toHaveBeenCalled();
+  expect(getAppText(tree)).toContain("No requests sent");
+});
+
+test("reviewer picker marks existing requests and does not select or resend them", async () => {
+  const github = createGitHubReviewSession();
+  github.pullRequest.reviewRequests = [{ kind: "user", label: "EXISTING" }];
+  const props = createReviewerAppProps({ initialSession: createPreparedSession({ github }) });
+  const tree = render(<DiffdiffApp {...props} />);
+  await openReviewerPicker();
+  emitText("existing");
+  expect(getAppText(tree)).toContain("Requested");
+  emitKey({ name: "return" });
+  await emitAsyncKey({ ctrl: true, name: "s" });
+  expect(tree.root.findByType(ReviewerPickerModal).props.picker.selected.size).toBe(0);
+  expect(props.requestReviewers).not.toHaveBeenCalled();
+});
+
+test("reviewer picker handles no matches and treats shortcut letters and digits as filter text", async () => {
+  const props = createReviewerAppProps();
+  const tree = render(<DiffdiffApp {...props} />);
+  await openReviewerPicker();
+  emitText("qjkm123");
+  expect(getAppText(tree)).toContain("No reviewers match this filter");
+  expect(tree.root.findByType(ReviewerPickerModal).props.picker.input.value).toBe("qjkm123");
+  await emitAsyncKey({ name: "return" });
+  expect(props.requestReviewers).not.toHaveBeenCalled();
+});
+
+test("reviewer picker retains selection on mutation failure and can retry", async () => {
+  const requestReviewers = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("403 forbidden"))
+    .mockResolvedValueOnce(undefined);
+  const tree = render(<DiffdiffApp {...createReviewerAppProps({ requestReviewers })} />);
+  await openReviewerPicker();
+  emitKey({ name: "return" });
+  await emitAsyncKey({ ctrl: true, name: "s" });
+  expect(getAppText(tree)).toContain("Your selection is preserved");
+  expect(tree.root.findByType(ReviewerPickerModal).props.picker.selected.size).toBe(1);
+  await emitAsyncKey({ ctrl: true, name: "s" });
+  expect(requestReviewers).toHaveBeenCalledTimes(2);
+  expect(tree.root.findAllByType(ReviewerPickerModal)).toHaveLength(0);
+});
+
+test("reviewer picker blocks duplicate submissions and cancellation while requests are in flight", async () => {
+  const pending = createDeferred<void>();
+  const requestReviewers = vi.fn(() => pending.promise);
+  const tree = render(<DiffdiffApp {...createReviewerAppProps({ requestReviewers })} />);
+  await openReviewerPicker();
+  emitKey({ name: "return" });
+  emitKey({ ctrl: true, name: "s" });
+  emitKey({ ctrl: true, name: "s" });
+  emitKey({ name: "escape" });
+  expect(requestReviewers).toHaveBeenCalledTimes(1);
+  expect(getAppText(tree)).toContain("Sending requests; please wait");
+  await act(async () => pending.resolve());
+});
+
+test("reviewer picker retries failed candidate loads and explains unavailable suggestions", async () => {
+  const listReviewerCandidates = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("403 forbidden"))
+    .mockResolvedValueOnce({ users: [{ login: "alice" }], recommendationsUnavailable: true });
+  const tree = render(<DiffdiffApp {...createReviewerAppProps({ listReviewerCandidates })} />);
+  await openReviewerPicker();
+  expect(getAppText(tree)).toContain("Press ctrl+r to retry");
+  await emitAsyncKey({ ctrl: true, name: "r" });
+  expect(getAppText(tree)).toContain("GitHub suggestions unavailable");
+  expect(getAppText(tree)).toContain("@alice");
+});
+
+test("reviewer picker ignores canceled candidate loads when reopened", async () => {
+  const pending =
+    createDeferred<import("@madisonbullard/diffdiff-core").GitHubReviewerCandidates>();
+  const listReviewerCandidates = vi
+    .fn()
+    .mockImplementationOnce(() => pending.promise)
+    .mockResolvedValueOnce({ users: [{ login: "new-user" }], recommendationsUnavailable: false });
+  const tree = render(<DiffdiffApp {...createReviewerAppProps({ listReviewerCandidates })} />);
+  await openReviewerPicker();
+  emitKey({ name: "escape" });
+  await openReviewerPicker();
+  await act(async () =>
+    pending.resolve({ users: [{ login: "old-user" }], recommendationsUnavailable: false }),
+  );
+  expect(getAppText(tree)).toContain("@new-user");
+  expect(getAppText(tree)).not.toContain("@old-user");
+});
+
+test("confirmed reviewer requests survive a failed session refresh", async () => {
+  const github = createGitHubReviewSession();
+  github.pullRequest.reviewRequests = [{ kind: "team", label: "owners" }];
+  const props = createReviewerAppProps({
+    initialSession: createPreparedSession({ github }),
+    loadSession: vi.fn(async () => {
+      throw new Error("offline");
+    }),
+  });
+  const tree = render(<DiffdiffApp {...props} />);
+  await openReviewerPicker();
+  emitKey({ name: "return" });
+  await emitAsyncKey({ ctrl: true, name: "s" });
+  expect(getAppText(tree)).toContain("Requested reviews, but unable to refresh");
+  await openReviewerPicker();
+  const modal = tree.root.findByType(ReviewerPickerModal);
+  expect(modal.props.requests).toEqual([
+    { kind: "team", label: "owners" },
+    { kind: "user", label: "alice", url: undefined },
+  ]);
+  expect(getAppText(tree)).toContain("Requested");
+});
+
+test("a comparison switch invalidates pending reviewer discovery", async () => {
+  const pending =
+    createDeferred<import("@madisonbullard/diffdiff-core").GitHubReviewerCandidates>();
+  const nextSession = createPreparedSession({
+    github: createGitHubReviewSession({
+      pullRequest: {
+        ...createGitHubReviewSession().pullRequest,
+        number: 43,
+        url: "https://github.com/diffdiff/diffdiff/pull/43",
+      },
+    }),
+  });
+  const props = createReviewerAppProps({
+    listReviewerCandidates: vi.fn(() => pending.promise),
+    loadSession: vi.fn(async () => nextSession),
+  });
+  const tree = render(<DiffdiffApp {...props} />);
+  await openReviewerPicker();
+  emitKey({ name: "escape" });
+  await emitAsyncKey({ shift: true, name: "r" });
+  await act(async () =>
+    pending.resolve({ users: [{ login: "stale-user" }], recommendationsUnavailable: false }),
+  );
+  expect(getAppText(tree)).toContain("PR #43");
+  expect(tree.root.findAllByType(ReviewerPickerModal)).toHaveLength(0);
+  expect(props.requestReviewers).not.toHaveBeenCalled();
+});
+
+test("reviewer picker is gated for non-PR, unauthenticated, and closed comparisons", async () => {
+  for (const github of [
+    undefined,
+    createGitHubReviewSession({ auth: { host: "github.com", isAuthenticated: false } }),
+    {
+      ...createGitHubReviewSession(),
+      pullRequest: { ...createGitHubReviewSession().pullRequest, state: "closed" as const },
+    },
+  ]) {
+    const props = createReviewerAppProps({ initialSession: createPreparedSession({ github }) });
+    const tree = render(<DiffdiffApp {...props} />);
+    await openReviewerPicker();
+    expect(tree.root.findAllByType(ReviewerPickerModal)).toHaveLength(0);
+    expect(props.listReviewerCandidates).not.toHaveBeenCalled();
+    act(() => tree.unmount());
+    registeredKeyboardHandlers.clear();
+  }
 });
 
 test("removes main scroll focus while a modal is open", () => {
@@ -3923,6 +4144,31 @@ test("opens cleanup automatically after merge and removes the selected refs", as
 });
 
 type DiffdiffAppProps = ComponentProps<typeof DiffdiffApp>;
+
+function createReviewerAppProps(overrides: Partial<DiffdiffAppProps> = {}): DiffdiffAppProps {
+  return createAppProps({
+    initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+    listReviewerCandidates: vi.fn(async () => ({
+      recommendationsUnavailable: false,
+      users: [
+        {
+          login: "alice",
+          name: "Alice",
+          recommendation: { basedOnCommits: true, basedOnReviewComments: true },
+        },
+        { login: "bob", name: "Robert" },
+        { login: "existing" },
+      ],
+    })),
+    requestReviewers: vi.fn(async () => undefined),
+    ...overrides,
+  });
+}
+
+async function openReviewerPicker(): Promise<void> {
+  emitKey({ name: "space", sequence: " " });
+  await emitAsyncKey({ name: "w" });
+}
 
 function createAppProps(overrides: Partial<DiffdiffAppProps> = {}): DiffdiffAppProps {
   const initialOptions =

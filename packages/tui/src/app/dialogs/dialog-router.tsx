@@ -13,6 +13,7 @@ import { MergePullRequestModal } from "../../review/merge-pull-request-modal.tsx
 import { PostMergeCleanupModal } from "../../review/post-merge-cleanup-modal.tsx";
 import { ReviewComposerModal } from "../../review/review-composer-modal.tsx";
 import { SubmitReviewModal } from "../../review/submit-review-modal.tsx";
+import { ReviewerPickerModal } from "../../review/reviewer-picker-modal.tsx";
 import type { DiffdiffDialogModels } from "./dialog-models.ts";
 import type { AppDialog } from "./stack.ts";
 
@@ -75,6 +76,16 @@ export function DiffdiffAppDialogs({
         searchActive={models.pullRequestList.pullRequestSearchActive}
         searchSurface={models.pullRequestList.searchSurface}
         selectedIndex={models.pullRequestList.pullRequestListIndex}
+        theme={theme}
+      />
+    );
+  }
+
+  if (activeDialog === "reviewer-picker" && session.github != null) {
+    return (
+      <ReviewerPickerModal
+        picker={models.reviewerPicker}
+        requests={session.github.pullRequest.reviewRequests}
         theme={theme}
       />
     );

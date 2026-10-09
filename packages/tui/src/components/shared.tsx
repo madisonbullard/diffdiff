@@ -61,7 +61,7 @@ export function ModalFrame({
         flexDirection="column"
         gap={1}
       >
-        <box width="100%" flexDirection="column">
+        <box width="100%" flexDirection="column" flexShrink={0}>
           <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
             <text fg={theme.accent} wrapMode="none">
               {title}

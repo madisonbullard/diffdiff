@@ -23,6 +23,8 @@ import type {
 import type { GitHubApiClient, GitHubClientFactory } from "../types/providers.ts";
 import type { ReviewSession } from "../types/session.ts";
 import { OctokitGitHubClientFactory } from "./client.ts";
+import { loadReviewerCandidates } from "./reviewer-candidates.ts";
+import { requestReviewers } from "./reviewer-requests.ts";
 import {
   loadPullRequestCoarseFingerprint,
   loadPullRequestDetail,
@@ -58,6 +60,17 @@ export class GitHubPullRequestService {
   constructor(
     private readonly clientFactory: GitHubClientFactory = new OctokitGitHubClientFactory(),
   ) {}
+
+  async listReviewerCandidates(reviewSession: GitHubReviewSession) {
+    return loadReviewerCandidates(await this.requireClient(reviewSession), reviewSession);
+  }
+
+  async requestReviewers(
+    reviewSession: GitHubReviewSession,
+    logins: readonly string[],
+  ): Promise<void> {
+    await requestReviewers(await this.requireClient(reviewSession), reviewSession, logins);
+  }
 
   async listOpenPullRequests(repository: ForgeRepository): Promise<PullRequestInfo[] | null> {
     const client = await this.clientFactory.create(repository);

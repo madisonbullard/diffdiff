@@ -59,6 +59,9 @@ export const TREE_TOGGLE_OR_OPEN = "tree.toggle-or-open";
 // GitHub
 // ---------------------------------------------------------------------------
 export const GITHUB_PULL_REQUEST_LIST = "github.pull-request-list";
+export const GITHUB_REQUEST_REVIEWERS = "github.request-reviewers";
+export const REVIEWERS_SUBMIT = "reviewers.submit";
+export const REVIEWERS_REFRESH = "reviewers.refresh";
 export const GITHUB_COMMENTS = "github.comments";
 export const GITHUB_COPY_URL = "github.copy-url";
 export const GITHUB_FOCUS_PREVIOUS_THREAD = "github.focus-previous-thread";

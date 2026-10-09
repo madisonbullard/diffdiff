@@ -14,6 +14,7 @@ export type KeymapMode =
   | "commands"
   | "pull-request-list"
   | "pull-request-search"
+  | "reviewer-picker"
   | "compare-branches"
   | "compare-commits"
   | "commit-search"
@@ -65,6 +66,8 @@ export function resolveActiveKeymapMode({
       return "commands";
     case "pull-request-list":
       return pullRequestSearchActive ? "pull-request-search" : "pull-request-list";
+    case "reviewer-picker":
+      return "reviewer-picker";
     case "branch":
       if (activeListView === "commit" && commitSearchActive) {
         return "commit-search";
@@ -164,6 +167,8 @@ export function getKeymapModeBadge(mode: KeymapMode, theme: UiTheme): KeymapMode
       return navigationMode("PR LIST");
     case "pull-request-search":
       return searchMode("PR SEARCH");
+    case "reviewer-picker":
+      return searchMode("REVIEWERS");
     case "compare-branches":
       return navigationMode("BRANCHES");
     case "compare-commits":

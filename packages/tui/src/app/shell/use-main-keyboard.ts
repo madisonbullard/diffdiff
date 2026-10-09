@@ -41,6 +41,7 @@ export function useMainKeyboard({
     return (
       mode === "commands" ||
       mode === "pull-request-search" ||
+      mode === "reviewer-picker" ||
       mode === "commit-search" ||
       mode === "comment" ||
       mode === "submit-review" ||
@@ -56,6 +57,9 @@ export function useMainKeyboard({
       }
       case "pull-request-search": {
         return textInputControllers.pullRequestSearch.applyKey(key);
+      }
+      case "reviewer-picker": {
+        return textInputControllers.reviewerSearch.applyKey(key);
       }
       case "commit-search": {
         return textInputControllers.commitSearch.applyKey(key);

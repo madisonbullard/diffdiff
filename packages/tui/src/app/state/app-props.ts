@@ -8,6 +8,7 @@ import type {
   GitHubPullRequestMergeResult,
   GitHubRefCleanupCandidate,
   GitHubReviewSession,
+  GitHubReviewerCandidates,
   GitHubReviewSubmissionEvent,
   GitHubUserPreferences,
   ReviewCacheKey,
@@ -35,6 +36,8 @@ export interface DiffdiffAppProps {
   initialSession: PreparedReviewSession;
   initialOptions: LaunchOptions;
   listGitHubPullRequests?: () => Promise<GitHubDashboardPullRequest[]>;
+  listReviewerCandidates?: (session: GitHubReviewSession) => Promise<GitHubReviewerCandidates>;
+  requestReviewers?: (session: GitHubReviewSession, logins: readonly string[]) => Promise<void>;
   loadComparisonBrowserData?: (options: LaunchOptions) => Promise<{
     branches: PreparedReviewSession["branches"];
     commits: PreparedReviewSession["commits"];

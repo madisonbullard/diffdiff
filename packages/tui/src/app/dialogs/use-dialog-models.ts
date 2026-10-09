@@ -86,6 +86,7 @@ export function useDiffdiffDialogModels({
         reviewRequestedPrCount: derived.reviewRequestedPrCount,
         reviewSubmissionEventIndex: state.reviewSubmissionEventIndex,
         reviewSubmissionSurface: inputSurfaces.reviewSubmission,
+        reviewerPicker: state.reviewerPicker,
         session: derived.displaySession,
       }),
     [
@@ -118,6 +119,7 @@ export function useDiffdiffDialogModels({
       state.pullRequestListIndex,
       state.pullRequestSearchActive,
       state.reviewSubmissionEventIndex,
+      state.reviewerPicker,
       state.reviewedPaths.size,
       state.reviewComposer.autocompleteIndex,
     ],

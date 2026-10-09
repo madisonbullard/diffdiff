@@ -17,6 +17,7 @@ function createRegistryOptions(
   overrides: Partial<Parameters<typeof buildAppCommands>[0]> = {},
 ): Parameters<typeof buildAppCommands>[0] {
   return {
+    openReviewerPicker: vi.fn(),
     activePane: "diff",
     canClearReviewed: true,
     canOpenFocusedFileInEditor: true,
@@ -62,6 +63,7 @@ function createRegistryOptions(
       status: "modified",
     },
     sessionGitHub: {
+      pullRequest: { state: "open", isMerged: false },
       auth: {
         isAuthenticated: true,
       },

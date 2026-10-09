@@ -25,6 +25,7 @@ interface BuildActionDispatchMapOptions extends BuildModalActionDispatchMapOptio
   openFocusedFileInEditor: () => Promise<void>;
   openFocusedReviewThreadReplyComposer: () => void;
   openGitHubPullRequestList: () => void;
+  openReviewerPicker: () => void;
   openHelp: () => void;
   openMergeModal: () => void;
   openPullRequestCommentsModal: () => void;
@@ -162,6 +163,7 @@ export function buildActionDispatchMap(options: BuildActionDispatchMapOptions): 
   map.set(A.GITHUB_PULL_REQUEST_LIST, () => {
     openGitHubPullRequestList();
   });
+  map.set(A.GITHUB_REQUEST_REVIEWERS, () => options.openReviewerPicker());
 
   map.set(A.GITHUB_COMMENTS, () => {
     openPullRequestCommentsModal();

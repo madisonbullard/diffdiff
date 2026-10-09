@@ -19,6 +19,10 @@ import type { AppCommand } from "../commands/registry.ts";
 import type { CommandPaletteModels } from "../commands/command-palette-models.ts";
 import type { SessionDiagnosticEvent } from "../diagnostics/session-events.ts";
 import type { ReviewComposerModels } from "../review/review-composer-models.ts";
+import {
+  createReviewerPickerState,
+  type ReviewerPickerState,
+} from "../review/reviewer-picker-state.ts";
 
 export interface BranchDialogModels {
   activeView: ListModalView;
@@ -92,6 +96,7 @@ export interface DiagnosticsDialogModels {
 }
 
 export interface DiffdiffDialogModels {
+  reviewerPicker: ReviewerPickerState;
   branch: BranchDialogModels;
   cleanup: CleanupDialogModels;
   clearReviewed: { reviewedCount: number };
@@ -151,6 +156,7 @@ export function createDiffdiffDialogModels({
   reviewRequestedPrCount,
   reviewSubmissionEventIndex,
   reviewSubmissionSurface,
+  reviewerPicker,
   session,
 }: {
   activeListView: ListModalView;
@@ -197,9 +203,11 @@ export function createDiffdiffDialogModels({
   reviewRequestedPrCount: number;
   reviewSubmissionEventIndex: number;
   reviewSubmissionSurface: TextInputSurface;
+  reviewerPicker?: ReviewerPickerState;
   session: PreparedReviewSession;
 }): DiffdiffDialogModels {
   return {
+    reviewerPicker: reviewerPicker ?? createReviewerPickerState(),
     branch: {
       activeView: activeListView,
       base: session.comparison.base,
