@@ -3,8 +3,10 @@ import type { MutableRefObject } from "react";
 import { FileTreeSidebar } from "../../components/file-tree-sidebar.tsx";
 import type { AppPane, FileTreeNode, PreparedReviewSession } from "../../types.ts";
 import type { UiTheme } from "../../theme.ts";
+import { getOverviewStateKeys, PR_OVERVIEW_PATH } from "../review/pull-request-overview.ts";
 
 interface AppSidebarProps {
+  collapsedCommentStates?: Record<string, boolean>;
   activeOverlay: import("../dialogs/stack.ts").AppDialog | null;
   activePane: AppPane;
   collapsedDirectories: ReadonlySet<string>;
@@ -27,6 +29,7 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({
+  collapsedCommentStates = {},
   activeOverlay,
   activePane,
   collapsedDirectories,
@@ -42,6 +45,13 @@ export function AppSidebar({
   treeSummaryLabels,
   visibleTreeNodes,
 }: AppSidebarProps) {
+  const treeReviewedPaths = new Set(reviewedPaths);
+  const treeCollapsedPaths = new Set(collapsedPaths);
+  if (session.github != null) {
+    const keys = getOverviewStateKeys(session.github.pullRequest);
+    if (collapsedCommentStates[keys.reviewed]) treeReviewedPaths.add(PR_OVERVIEW_PATH);
+    if (collapsedCommentStates[keys.collapsed]) treeCollapsedPaths.add(PR_OVERVIEW_PATH);
+  }
   return (
     <box
       flexShrink={0}
@@ -94,11 +104,13 @@ export function AppSidebar({
         <FileTreeSidebar
           activePane={activePane}
           collapsedDirectories={collapsedDirectories}
-          collapsedPaths={collapsedPaths}
+          collapsedPaths={treeCollapsedPaths}
           nodes={visibleTreeNodes}
           onNodeMouseUp={handleFileTreeMouseUp}
-          reviewedPaths={reviewedPaths}
-          selectedFilePath={session.files[selectedFileIndex]?.path}
+          reviewedPaths={treeReviewedPaths}
+          selectedFilePath={
+            selectedFileIndex === -1 ? PR_OVERVIEW_PATH : session.files[selectedFileIndex]?.path
+          }
           selectedPath={selectedTreePath}
           theme={theme}
         />

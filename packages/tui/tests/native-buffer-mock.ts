@@ -1,5 +1,9 @@
 import { vi } from "vite-plus/test";
 
+vi.mock("../src/review/markdown-runtime.ts", () => ({
+  useMarkdownClient: () => null,
+}));
+
 // Vitest runs in Node, not Bun's native OpenTUI runtime. The visual suite
 // verifies real StyledText colors, wrapping, selection and hydration.
 vi.mock("../src/diff/styled-text.ts", () => ({

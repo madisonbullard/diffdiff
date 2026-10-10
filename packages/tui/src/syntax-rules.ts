@@ -3,6 +3,15 @@ import type { UiTheme } from "./theme.ts";
 
 export function getSyntaxRules(theme: UiTheme, palette: SyntaxPalette) {
   return [
+    { scope: ["markup.heading"], style: { foreground: theme.accent, bold: true } },
+    { scope: ["markup.strong"], style: { foreground: theme.text, bold: true } },
+    { scope: ["markup.italic"], style: { foreground: theme.text, italic: true } },
+    {
+      scope: ["markup.link", "markup.link.url"],
+      style: { foreground: theme.accent, underline: true },
+    },
+    { scope: ["markup.raw"], style: { foreground: palette.string } },
+    { scope: ["markup.list", "markup.quote"], style: { foreground: theme.textMuted } },
     {
       scope: ["default"],
       style: {

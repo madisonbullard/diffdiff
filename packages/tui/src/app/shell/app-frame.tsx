@@ -16,6 +16,9 @@ import { AppHeader } from "./app-header.tsx";
 import { AppSidebar } from "./app-sidebar.tsx";
 
 interface DiffdiffAppViewProps {
+  onSelectOverview?: () => void;
+  onToggleOverviewReviewed?: () => void;
+  onToggleOverviewCollapsed?: () => void;
   activeFileIndex: number;
   activeOverlay: import("../dialogs/stack.ts").AppDialog | null;
   activePane: import("../../types.ts").AppPane;
@@ -73,6 +76,9 @@ interface DiffdiffAppViewProps {
 }
 
 export function DiffdiffAppView({
+  onSelectOverview,
+  onToggleOverviewReviewed,
+  onToggleOverviewCollapsed,
   activeFileIndex,
   activeOverlay,
   activePane,
@@ -144,6 +150,7 @@ export function DiffdiffAppView({
         <box width="100%" flexGrow={1}>
           <box width="100%" height="100%" flexDirection="row">
             <AppSidebar
+              collapsedCommentStates={collapsedCommentStates}
               activeOverlay={activeOverlay}
               activePane={activePane}
               collapsedDirectories={collapsedDirectories}
@@ -161,6 +168,9 @@ export function DiffdiffAppView({
             />
 
             <AppDiffPane
+              onSelectOverview={onSelectOverview}
+              onToggleOverviewReviewed={onToggleOverviewReviewed}
+              onToggleOverviewCollapsed={onToggleOverviewCollapsed}
               activeFileIndex={activeFileIndex}
               activeOverlay={activeOverlay}
               activePane={activePane}

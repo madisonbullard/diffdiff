@@ -20,6 +20,7 @@ import { EMPTY_CONVERSATION_ITEMS, EMPTY_REVIEW_THREADS } from "../review/review
 import { applyOptimisticGitHubSession } from "../review/optimistic-github-overlay.ts";
 import type { RenderSurfaceMetrics } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
+import { PR_OVERVIEW_TREE_NODE } from "../review/pull-request-overview.ts";
 
 export interface DiffdiffAppDerived {
   branchItems: ReturnType<typeof buildBranchListItems>;
@@ -85,10 +86,13 @@ export function useDiffdiffAppDerived(
     [sidebarWidth, state.terminalDimensions.width],
   );
   const fileTreeNodes = useMemo(
-    () => buildFileTreeNodes(displaySession.files),
+    () =>
+      displaySession.github == null
+        ? buildFileTreeNodes(displaySession.files)
+        : [PR_OVERVIEW_TREE_NODE, ...buildFileTreeNodes(displaySession.files)],
     // Hydration changes buffers, not tree metadata. Don't rebuild every row
     // (and defeat row memoization) when a single file gains syntax colors.
-    [getRenderFingerprintKey(displaySession.renderFingerprint)],
+    [getRenderFingerprintKey(displaySession.renderFingerprint), displaySession.github != null],
   );
   const fileTreeNodeByPath = useMemo(
     () => new Map(fileTreeNodes.map((node) => [node.path, node])),

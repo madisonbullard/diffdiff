@@ -16,6 +16,7 @@ import {
 import type { FileFocusController } from "../shared/file-focus.ts";
 import type { PendingInteraction } from "../state/app-props.ts";
 import type { PreparedReviewSession } from "../../types.ts";
+import { PR_OVERVIEW_PATH } from "../review/pull-request-overview.ts";
 
 interface ApplyLoadedSessionOptions {
   resetReviewState?: boolean;
@@ -60,7 +61,14 @@ export function useSessionActions({ fileFocus, state, syncRemotes }: UseSessionA
   const applyLoadedSession = useCallback(
     (nextSession: PreparedReviewSession, options: ApplyLoadedSessionOptions = {}) => {
       const scrollBox = state.scrollRef.current;
-      const currentSelectedFilePath = state.session.files[state.selectedFileIndex]?.path;
+      const currentSelectedFilePath =
+        state.selectedFileIndex === -1 && state.session.github != null
+          ? PR_OVERVIEW_PATH
+          : state.session.files[state.selectedFileIndex]?.path;
+      const selectedItemSurvives =
+        currentSelectedFilePath === PR_OVERVIEW_PATH
+          ? nextSession.github != null
+          : nextSession.files.some((file) => file.path === currentSelectedFilePath);
       const currentSelectedFileOffset = state.diffScroll.getFileTop(state.selectedFileIndex);
       const preservedRelativeOffset =
         scrollBox != null &&
@@ -69,7 +77,9 @@ export function useSessionActions({ fileFocus, state, syncRemotes }: UseSessionA
         Number.isFinite(currentSelectedFileOffset)
           ? scrollBox.scrollTop - currentSelectedFileOffset
           : undefined;
-      let nextFocusTarget: { index: number } | { path: string } = { index: 0 };
+      let nextFocusTarget: { index: number } | { path: string } = {
+        index: nextSession.github == null ? 0 : -1,
+      };
       let nextFocusRelativeOffset: number | undefined;
       const nextOptimisticGitHubOperations = options.resetReviewState
         ? []
@@ -89,9 +99,7 @@ export function useSessionActions({ fileFocus, state, syncRemotes }: UseSessionA
           if (
             options.reviewCacheState.selectedFilePath === currentSelectedFilePath &&
             preservedRelativeOffset != null &&
-            nextSession.files.some(
-              (file) => file.path === options.reviewCacheState?.selectedFilePath,
-            )
+            selectedItemSurvives
           ) {
             nextFocusRelativeOffset = preservedRelativeOffset;
           }
@@ -125,23 +133,19 @@ export function useSessionActions({ fileFocus, state, syncRemotes }: UseSessionA
 
         if (currentSelectedFilePath != null) {
           nextFocusTarget = { path: currentSelectedFilePath };
-          if (
-            preservedRelativeOffset != null &&
-            nextSession.files.some((file) => file.path === currentSelectedFilePath)
-          ) {
+          if (preservedRelativeOffset != null && selectedItemSurvives) {
             nextFocusRelativeOffset = preservedRelativeOffset;
           }
         }
       }
 
-      state.diffScroll.setFiles(nextSession.files);
+      state.diffScroll.setFiles(nextSession.files, nextSession.github != null);
       fileFocus.focusFile({
+        hasOverview: nextSession.github != null,
         activatePane: "preserve",
         fallback: "first-file",
         files: nextSession.files,
-        reveal:
-          options.resetReviewState === true ||
-          !nextSession.files.some((file) => file.path === currentSelectedFilePath),
+        reveal: options.resetReviewState === true || !selectedItemSurvives,
         relativeOffset: nextFocusRelativeOffset,
         target: nextFocusTarget,
       });

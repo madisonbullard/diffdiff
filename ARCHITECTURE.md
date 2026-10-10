@@ -122,6 +122,9 @@ This split is deliberate: data acquisition and shared review behavior live in
   reviewed state.
 - PR-backed comparisons use GitHub's per-file viewed state as the source of
   truth.
+- The PR overview is a local-only review item (file index `-1`), not a changed
+  Git file. Its content-fingerprinted reviewed/collapsed flags live in the local
+  UI-state cache; GitHub viewed mutations and file totals always exclude it.
 - PR-backed review interactions also maintain a local optimistic overlay in the
   TUI for in-flight GitHub mutations such as viewed-state toggles, new review
   comments, submitted review bodies, and merge state so the UI can respond

@@ -2,6 +2,7 @@ import { memo } from "react";
 import type { AppPane, FileTreeNode, PreparedReviewFile } from "../types.ts";
 import type { UiTheme } from "../theme.ts";
 import { SPLIT_BORDER, getCollapseToggleGlyph, tintHex } from "./shared.tsx";
+import { PR_OVERVIEW_PATH } from "../app/review/pull-request-overview.ts";
 
 interface FileTreeSidebarProps {
   activePane: AppPane;
@@ -125,7 +126,9 @@ const FileTreeRow = memo(function FileTreeRow({
               <span fg={theme.textMuted}>{`${getCollapseToggleGlyph(isDirectoryCollapsed)} `}</span>
             </>
           ) : (
-            <span fg={accent}>{`${getFileTreeStatusGlyph(node.status)} `}</span>
+            <span fg={accent}>
+              {node.path === PR_OVERVIEW_PATH ? "◇ " : `${getFileTreeStatusGlyph(node.status)} `}
+            </span>
           )}
           <span fg={isSelected ? theme.text : isCurrentFile ? theme.accent : labelColor}>
             {node.name}
@@ -138,9 +141,13 @@ const FileTreeRow = memo(function FileTreeRow({
             <>
               {isReviewed ? <span fg={theme.success}>{"\u2713 "}</span> : null}
               {isFileCollapsed ? <span fg={theme.textMuted}>{"\u2212 "}</span> : null}
-              <span fg={theme.success}>{`+${node.additions}`}</span>
-              <span fg={theme.border}> </span>
-              <span fg={theme.danger}>{`-${node.deletions}`}</span>
+              {node.path !== PR_OVERVIEW_PATH ? (
+                <>
+                  <span fg={theme.success}>{`+${node.additions}`}</span>
+                  <span fg={theme.border}> </span>
+                  <span fg={theme.danger}>{`-${node.deletions}`}</span>
+                </>
+              ) : null}
             </>
           )}
         </text>

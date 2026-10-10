@@ -9,6 +9,7 @@ import {
   reconcileCollapsedPaths,
 } from "../shared/collections.ts";
 import { LOADING_INDICATOR_FRAMES } from "../shared/constants.ts";
+import { PR_OVERVIEW_PATH } from "../review/pull-request-overview.ts";
 
 export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: DiffdiffAppDerived) {
   useLayoutEffect(() => {
@@ -62,7 +63,10 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
   }, [derived.fileTreeNodes, state.setCollapsedDirectories]);
 
   useEffect(() => {
-    const selectedFilePath = state.session.files[state.selectedFileIndex]?.path;
+    const selectedFilePath =
+      state.selectedFileIndex === -1 && state.session.github != null
+        ? PR_OVERVIEW_PATH
+        : state.session.files[state.selectedFileIndex]?.path;
     state.setSelectedTreePath((path) => {
       if (path !== "" && derived.fileTreeNodePaths.has(path)) return path;
       return selectedFilePath ?? derived.fileTreeNodes[0]?.path ?? "";
@@ -80,6 +84,7 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
     state.activePane,
     state.selectedFileIndex,
     state.session.files,
+    state.session.github,
     state.setCollapsedDirectories,
     state.setSelectedTreePath,
   ]);
@@ -112,9 +117,18 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
     );
   }, [derived.selectedReviewAnchors.length, state.setSelectedReviewAnchorIndex]);
   useEffect(() => {
-    state.setSelectedFileIndex((index) => clampIndex(index, state.session.files.length));
-    state.setActiveFileIndex((index) => clampIndex(index, state.session.files.length));
-  }, [state.session.files.length, state.setSelectedFileIndex, state.setActiveFileIndex]);
+    const clamp = (index: number) =>
+      state.session.github != null
+        ? Math.max(-1, Math.min(state.session.files.length - 1, index))
+        : clampIndex(index, state.session.files.length);
+    state.setSelectedFileIndex(clamp);
+    state.setActiveFileIndex(clamp);
+  }, [
+    state.session.files.length,
+    state.session.github,
+    state.setSelectedFileIndex,
+    state.setActiveFileIndex,
+  ]);
 
   useEffect(() => {
     if (derived.selectedFilePath == null || derived.selectedFileReviewThreads.length === 0) return;

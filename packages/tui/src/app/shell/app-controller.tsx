@@ -32,11 +32,13 @@ import { truncateInlineMessage } from "../shared/text.ts";
 import { createTreeActions } from "../tree/tree-actions.ts";
 import { openHelpDialog, openMergeConfirmDialog } from "./controller-helpers.ts";
 import { createViewActions } from "./view-actions.ts";
+import { PR_OVERVIEW_PATH } from "../review/pull-request-overview.ts";
 import { buildControllerActionDispatchMap } from "./controller-action-dispatch.ts";
 
 export function DiffdiffAppController(props: DiffdiffAppProps) {
   const state = useDiffdiffAppState(props);
   const fileFocus = createFileFocusController({
+    getHasOverview: () => state.session.github != null,
     getCurrentFiles: () => state.session.files,
     getCurrentIndex: () => state.selectedFileIndex,
     revealFile: (path, offset) => state.diffScroll.revealFile(path, offset),
@@ -47,7 +49,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     },
   });
   const derived = useDiffdiffAppDerived(state, props.theme);
-  state.diffScroll.setFiles(derived.displaySession.files);
+  state.diffScroll.setFiles(derived.displaySession.files, derived.displaySession.github != null);
   useDiffdiffAppLayoutEffects(state, derived);
   const sessionActions = useSessionActions({
     fileFocus,
@@ -191,7 +193,8 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         canClearReviewed: state.reviewedPaths.size > 0,
         canOpenFocusedFileInEditor:
           state.activePane === "tree"
-            ? derived.selectedTreeNode?.kind === "file"
+            ? derived.selectedTreeNode?.kind === "file" &&
+              derived.selectedTreeNode.path !== PR_OVERVIEW_PATH
             : derived.selectedFilePath != null,
         canMoveToNextUnreviewed: derived.hasNextUnreviewedFile,
         canOpenSelectedTreeFile: derived.selectedTreeNode?.kind === "file",
@@ -199,7 +202,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         copyCurrentSessionReopenCommand: viewActions.copyCurrentSessionReopenCommand,
         copyFocusedReviewCommentUrl: reviewActions.copyFocusedReviewCommentUrl,
         copyPullRequestUrl: viewActions.copyPullRequestUrl,
-        hasFiles: state.session.files.length > 0,
+        hasFiles: state.session.files.length > 0 || state.session.github != null,
         hasSelectedReviewThread: derived.selectedReviewThread != null,
         isGitHubAuthenticated: props.isGitHubAuthenticated ?? false,
         markAllReviewed: reviewActions.markAllReviewed,
@@ -407,6 +410,9 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
 
   return (
     <DiffdiffAppView
+      onSelectOverview={() => fileFocus.focusFile({ activatePane: "diff", target: { index: -1 } })}
+      onToggleOverviewReviewed={() => reviewActions.toggleReviewed(-1)}
+      onToggleOverviewCollapsed={() => reviewActions.toggleCollapsed(-1)}
       activeFileIndex={state.activeFileIndex}
       activeOverlay={state.activeOverlay}
       activePane={state.activePane}

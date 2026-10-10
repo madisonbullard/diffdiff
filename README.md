@@ -36,6 +36,12 @@ request; checks, comments, and viewed-file state load during review-session prep
 Startup logs include launch-target resolution, before the TUI opens. Find the log path with
 `diffdiff session list --json`; `targetResolutionDurationMs` reports that phase separately.
 
+PR reviews begin with a **PR overview** title page: title, rendered Markdown description,
+author, state, branches, and change counts. Scroll into the changed files, or use `j`/`k`
+to move between the overview and files. `x` marks the overview reviewed and collapses it;
+`c` expands/collapses it, and `gg` returns to it. Overview review marks are local and reset
+when the PR title or description changes; file review marks still sync with GitHub.
+
 ## Install
 
 ```bash

@@ -17,6 +17,7 @@ import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import type { DiffdiffAppProps, PendingInteraction } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import { haveSamePaths } from "../shared/collections.ts";
+import { getOverviewStateKeys, PR_OVERVIEW_PATH } from "./pull-request-overview.ts";
 import type { FileFocusController } from "../shared/file-focus.ts";
 import {
   buildOptimisticViewedStateOperation,
@@ -109,12 +110,15 @@ export function createReviewActions({
   }
 
   function moveSelectedFile(delta: number): void {
-    const nextIndex = clampIndex(state.selectedFileIndex + delta, state.session.files.length);
+    const nextIndex =
+      state.session.github == null
+        ? clampIndex(state.selectedFileIndex + delta, state.session.files.length)
+        : Math.max(-1, Math.min(state.session.files.length - 1, state.selectedFileIndex + delta));
     if (nextIndex === state.selectedFileIndex) {
       return;
     }
 
-    const nextFilePath = state.session.files[nextIndex]?.path;
+    const nextFilePath = nextIndex === -1 ? PR_OVERVIEW_PATH : state.session.files[nextIndex]?.path;
     if (nextFilePath != null) {
       startInteraction("file_selection", {
         details: {
@@ -123,7 +127,7 @@ export function createReviewActions({
           toFilePath: nextFilePath,
           trigger: "diff-navigation",
         },
-        expectedSelectedFilePath: nextFilePath,
+        expectedSelectedFilePath: nextIndex === -1 ? undefined : nextFilePath,
       });
     }
 
@@ -134,7 +138,9 @@ export function createReviewActions({
       activatePane: "preserve",
       target: { path: nextFilePath },
     });
-    state.setStatusMessage(`Selected ${nextFilePath ?? "file"}.`);
+    state.setStatusMessage(
+      nextIndex === -1 ? "Selected PR overview." : `Selected ${nextFilePath ?? "file"}.`,
+    );
   }
 
   function jumpToNextUnreviewedFile(): void {
@@ -271,6 +277,23 @@ export function createReviewActions({
   }
 
   function toggleReviewed(fileIndex: number): void {
+    if (fileIndex === -1 && state.session.github != null) {
+      const keys = getOverviewStateKeys(state.session.github.pullRequest);
+      const reviewed = !state.commentCollapseStates[keys.reviewed];
+      state.setCommentCollapseStates((current) => ({
+        ...current,
+        [keys.reviewed]: reviewed,
+        ...(reviewed ? { [keys.collapsed]: true } : {}),
+      }));
+      if (reviewed && state.session.files.length > 0) {
+        const index = state.session.files.findIndex((file) => !state.reviewedPaths.has(file.path));
+        if (index >= 0) fileFocus.focusFile({ activatePane: "preserve", target: { index } });
+      }
+      state.setStatusMessage(
+        reviewed ? "Reviewed PR overview (local)." : "Marked PR overview as not reviewed (local).",
+      );
+      return;
+    }
     const file = state.session.files[fileIndex];
     if (file == null) {
       return;
@@ -390,6 +413,14 @@ export function createReviewActions({
   }
 
   function toggleCollapsed(fileIndex: number): void {
+    if (fileIndex === -1 && state.session.github != null) {
+      const key = getOverviewStateKeys(state.session.github.pullRequest).collapsed;
+      state.setCommentCollapseStates((current) => ({ ...current, [key]: !current[key] }));
+      state.setStatusMessage(
+        state.commentCollapseStates[key] ? "Expanded PR overview." : "Collapsed PR overview.",
+      );
+      return;
+    }
     const file = state.session.files[fileIndex];
     if (file == null) {
       return;

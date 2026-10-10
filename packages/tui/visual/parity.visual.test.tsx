@@ -267,6 +267,7 @@ test("inline ranged threads split native chunks and retain collapse/selection in
     }),
   });
   try {
+    await app.press("j");
     for (const split of [false, true]) {
       if (split) await app.press("v");
       let rows = app.diffPane().rows.join("\n");

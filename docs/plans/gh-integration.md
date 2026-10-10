@@ -8,6 +8,22 @@
 
 ## Implementation Update
 
+### PR overview title page
+
+- PR-backed comparisons start with a **PR overview** card before the changed
+  files, and a matching first entry in the sidebar. The card shows the title,
+  rendered Markdown description, author, repository, PR number/state, branch
+  direction, commit/file counts, and a GitHub link. Empty bodies have an explicit
+  placeholder. Non-PR comparisons are unchanged.
+- Existing previous/next item navigation includes the overview; `gg` returns
+  to it (numbered file jumps still count changed files). The normal reviewed and
+  collapse actions work on it, as do its mouse controls. Marking it reviewed
+  collapses it and advances to the first unreviewed changed file.
+- Overview review/collapse state is local, persisted alongside comment UI state,
+  and fingerprinted by PR URL, title, and body. Editing the title/description
+  makes the new overview unread and expanded. It never calls GitHub file-viewed
+  mutations or contributes to reviewed-file counts.
+
 ### Draft / ready for review
 
 - Space / Ctrl+X then Shift+D toggles the current open PR between draft and ready

@@ -32,6 +32,7 @@ import {
 } from "../review/review-composer-state.ts";
 import { createTextInputState } from "../text-input/input-state.ts";
 import { createReviewerPickerState } from "../review/reviewer-picker-state.ts";
+import { PR_OVERVIEW_PATH } from "../review/pull-request-overview.ts";
 import {
   buildBranchListItems,
   DEFAULT_BRANCH_LIST_FILTERS,
@@ -95,13 +96,17 @@ export function useDiffdiffAppState({
   const [startupOptions, setStartupOptions] = useState<LaunchOptions>({ ...initialOptions });
   const [selectedFileIndex, setSelectedFileIndex] = useState(() =>
     initialReviewCache?.selectedFilePath == null
-      ? 0
-      : Math.max(
-          initialSession.files.findIndex(
-            (file) => file.path === initialReviewCache.selectedFilePath,
+      ? initialSession.github == null
+        ? 0
+        : -1
+      : initialSession.github != null && initialReviewCache.selectedFilePath === PR_OVERVIEW_PATH
+        ? -1
+        : Math.max(
+            initialSession.files.findIndex(
+              (file) => file.path === initialReviewCache.selectedFilePath,
+            ),
+            0,
           ),
-          0,
-        ),
   );
   const [reviewedPaths, setReviewedPaths] = useState<Set<string>>(() =>
     getSessionReviewedPaths(initialSession, initialReviewCache),
@@ -209,12 +214,17 @@ export function useDiffdiffAppState({
   const [collapsedDirectories, setCollapsedDirectories] = useState<Set<string>>(new Set());
   const [diffScroll] = useState(() => {
     const scroll = new DiffScrollController();
-    scroll.setFiles(initialSession.files);
-    const path = initialSession.files[selectedFileIndex]?.path;
+    scroll.setFiles(initialSession.files, initialSession.github != null);
+    const path =
+      selectedFileIndex === -1 ? PR_OVERVIEW_PATH : initialSession.files[selectedFileIndex]?.path;
     if (path != null) scroll.revealFile(path);
     return scroll;
   });
-  const [selectedTreePath, setSelectedTreePath] = useState(initialSession.files[0]?.path ?? "");
+  const [selectedTreePath, setSelectedTreePath] = useState(
+    selectedFileIndex === -1
+      ? PR_OVERVIEW_PATH
+      : (initialSession.files[selectedFileIndex]?.path ?? ""),
+  );
   const [loadingIndicatorFrame, setLoadingIndicatorFrame] = useState(0);
   const treeScrollRef = useRef<ScrollBoxRenderable | null>(null);
   const mergeBodyScrollRef = useRef<ScrollBoxRenderable | null>(null);

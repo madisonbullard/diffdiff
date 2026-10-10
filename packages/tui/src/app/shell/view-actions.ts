@@ -4,6 +4,7 @@ import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import type { DiffdiffAppDerived } from "./use-app-models.ts";
+import { PR_OVERVIEW_PATH } from "../review/pull-request-overview.ts";
 
 interface CreateViewActionsOptions {
   derived: DiffdiffAppDerived;
@@ -63,7 +64,7 @@ export function createViewActions({
           : undefined
         : derived.selectedFilePath;
 
-    if (focusedFilePath == null) {
+    if (focusedFilePath == null || focusedFilePath === PR_OVERVIEW_PATH) {
       state.setStatusMessage(
         state.activePane === "tree"
           ? "Select a file in the tree first."

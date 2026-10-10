@@ -6,8 +6,13 @@ import type { PreparedReviewSession } from "../../types.ts";
 import type { UiTheme } from "../../theme.ts";
 import { EMPTY_REVIEW_THREADS } from "../review/review-constants.ts";
 import type { DiffLineTarget, DiffScrollController } from "../layout/diff-scroll.ts";
+import { PullRequestOverviewCard } from "../../components/pull-request-overview-card.tsx";
+import { getOverviewStateKeys, PR_OVERVIEW_PATH } from "../review/pull-request-overview.ts";
 
 interface AppDiffPaneProps {
+  onSelectOverview?: () => void;
+  onToggleOverviewReviewed?: () => void;
+  onToggleOverviewCollapsed?: () => void;
   activeFileIndex: number;
   activeOverlay: import("../dialogs/stack.ts").AppDialog | null;
   activePane: import("../../types.ts").AppPane;
@@ -34,6 +39,9 @@ interface AppDiffPaneProps {
 }
 
 export function AppDiffPane({
+  onSelectOverview,
+  onToggleOverviewReviewed,
+  onToggleOverviewCollapsed,
   activeFileIndex,
   activePane,
   collapsedCommentStates,
@@ -57,6 +65,8 @@ export function AppDiffPane({
   theme,
   toggleReviewThreadCollapsed,
 }: AppDiffPaneProps) {
+  const overviewKeys =
+    session.github == null ? undefined : getOverviewStateKeys(session.github.pullRequest);
   return (
     <box flexGrow={1} flexDirection="column" minHeight={0}>
       {stickyFile != null ? (
@@ -85,6 +95,20 @@ export function AppDiffPane({
         }}
         verticalScrollbarOptions={{ trackOptions: { backgroundColor: theme.border } }}
       >
+        {session.github != null && overviewKeys != null ? (
+          <PullRequestOverviewCard
+            github={session.github}
+            isCollapsed={collapsedCommentStates[overviewKeys.collapsed] ?? false}
+            isReviewed={collapsedCommentStates[overviewKeys.reviewed] ?? false}
+            isSelected={selectedFileIndex === -1}
+            rootRef={diffScroll.refs(PR_OVERVIEW_PATH).card}
+            syntaxStyle={syntaxStyle}
+            theme={theme}
+            onSelect={onSelectOverview}
+            onToggleCollapsed={onToggleOverviewCollapsed}
+            onToggleReviewed={onToggleOverviewReviewed}
+          />
+        ) : null}
         {session.files.length === 0 ? (
           <text fg={theme.textMuted}>No changed files found for this comparison.</text>
         ) : null}
@@ -96,8 +120,8 @@ export function AppDiffPane({
               key={file.path}
               file={file}
               diffView={diffView}
-              headerVariant={index === 0 ? "sticky-compact" : undefined}
-              removeTopPadding={index === 0}
+              headerVariant={index === 0 && session.github == null ? "sticky-compact" : undefined}
+              removeTopPadding={index === 0 && session.github == null}
               isCollapsed={collapsedPaths.has(file.path)}
               isReviewed={reviewedPaths.has(file.path)}
               isSelected={isSelected}

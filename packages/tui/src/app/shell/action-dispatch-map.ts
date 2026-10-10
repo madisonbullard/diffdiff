@@ -132,7 +132,12 @@ export function buildActionDispatchMap(options: BuildActionDispatchMapOptions): 
   });
 
   map.set(A.REVIEW_FIRST_FILE, (count) => {
-    const targetIndex = count == null ? 0 : clampIndex(count - 1, state.session.files.length);
+    const targetIndex =
+      count == null
+        ? state.session.github == null
+          ? 0
+          : -1
+        : clampIndex(count - 1, state.session.files.length);
     const targetPath = state.session.files[targetIndex]?.path;
     fileFocus.focusFile({
       activatePane: "preserve",
@@ -143,14 +148,18 @@ export function buildActionDispatchMap(options: BuildActionDispatchMapOptions): 
         ? `Jumped to file ${count}: ${targetPath}.`
         : count != null
           ? `Jumped to file ${count}.`
-          : "Jumped to the first file.",
+          : state.session.github != null
+            ? "Jumped to PR overview."
+            : "Jumped to the first file.",
     );
   });
 
   map.set(A.REVIEW_LAST_FILE, () => {
     fileFocus.focusFile({
       activatePane: "preserve",
-      target: { index: Math.max(state.session.files.length - 1, 0) },
+      target: {
+        index: Math.max(state.session.files.length - 1, state.session.github == null ? 0 : -1),
+      },
     });
     state.setStatusMessage("Jumped to the last file.");
   });
@@ -349,8 +358,8 @@ function moveToHunk(
     return;
   }
 
-  let fileIndex = state.selectedFileIndex;
-  let anchorIndex = state.selectedReviewAnchorIndex;
+  let fileIndex = state.selectedFileIndex === -1 && direction > 0 ? 0 : state.selectedFileIndex;
+  let anchorIndex = state.selectedFileIndex === -1 ? -1 : state.selectedReviewAnchorIndex;
   let target: { fileIndex: number; anchorIndex: number; anchor: SelectedReviewAnchor } | undefined;
   for (let remaining = count; remaining > 0 && fileIndex >= 0 && fileIndex < files.length; ) {
     const file = files[fileIndex]!;

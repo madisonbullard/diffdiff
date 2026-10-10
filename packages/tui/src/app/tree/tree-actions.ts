@@ -4,6 +4,7 @@ import { clampIndex } from "../../view-model.ts";
 import { getAncestorDirectoryPaths } from "../shared/collections.ts";
 import type { FileFocusController } from "../shared/file-focus.ts";
 import type { PendingInteraction } from "../state/app-props.ts";
+import { PR_OVERVIEW_PATH } from "../review/pull-request-overview.ts";
 
 interface CreateTreeActionsOptions {
   derived: DiffdiffAppDerived;
@@ -83,7 +84,8 @@ export function createTreeActions({
               trigger: options?.openDiff ? "tree-open" : "tree-selection",
             },
       expectedPane: node.kind === "file" && options?.openDiff ? "diff" : undefined,
-      expectedSelectedFilePath: node.kind === "file" ? node.path : undefined,
+      expectedSelectedFilePath:
+        node.kind === "file" && node.path !== PR_OVERVIEW_PATH ? node.path : undefined,
       expectedSelectedTreePath: node.path,
     });
 
@@ -98,7 +100,8 @@ export function createTreeActions({
       activatePane: options?.openDiff ? "diff" : "preserve",
       target: { path: node.path },
     });
-    state.setStatusMessage(options?.openDiff ? `Opened ${node.path}.` : `Selected ${node.path}.`);
+    const label = node.path === PR_OVERVIEW_PATH ? "PR overview" : node.path;
+    state.setStatusMessage(options?.openDiff ? `Opened ${label}.` : `Selected ${label}.`);
   }
 
   function openSelectedTreeFile(): void {

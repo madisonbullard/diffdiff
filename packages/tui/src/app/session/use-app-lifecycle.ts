@@ -14,6 +14,7 @@ import { GITHUB_DIALOGS } from "../shared/constants.ts";
 import { EMPTY_REVIEW_THREADS } from "../review/review-constants.ts";
 import { clearReviewComposer } from "../review/review-composer-state.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
+import { PR_OVERVIEW_PATH } from "../review/pull-request-overview.ts";
 
 interface UseLifecycleOptions {
   derived: DiffdiffAppDerived;
@@ -193,7 +194,10 @@ export function useDiffdiffAppLifecycle({
       buildSessionReviewCacheState(state.session, state.reviewedPaths, {
         collapsedPaths: [...state.collapsedPaths],
         commentCollapseStates: state.commentCollapseStates,
-        selectedFilePath: state.session.files[state.selectedFileIndex]?.path,
+        selectedFilePath:
+          state.selectedFileIndex === -1 && state.session.github != null
+            ? PR_OVERVIEW_PATH
+            : state.session.files[state.selectedFileIndex]?.path,
       }),
     );
   }, [

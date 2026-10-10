@@ -2691,6 +2691,35 @@ test("replaces local reviewed state with GitHub viewed state when refresh become
   expect(getAppText(tree)).not.toContain("2 / 2 reviewed");
 });
 
+test("reviews the PR overview locally, persists it, and never marks a GitHub file viewed", async () => {
+  const saveCache = vi.spyOn(diffdiffCore, "saveReviewCache").mockResolvedValue(undefined);
+  const markFileAsViewed = vi.fn(async () => undefined);
+  const onExit = vi.fn();
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        markFileAsViewed,
+        onExit,
+      })}
+    />,
+  );
+  expect(getAppText(tree)).toContain("PR overview");
+  await emitAsyncKey({ name: "x", sequence: "x" });
+  expect(getAppText(tree)).toContain("✓ Reviewed");
+  expect(getAppText(tree)).toContain("0 / 2 reviewed");
+  expect(markFileAsViewed).not.toHaveBeenCalled();
+  await emitAsyncKey({ name: "q", sequence: "q" });
+  expect(onExit).toHaveBeenCalled();
+  const cache = saveCache.mock.calls.at(-1)?.[1];
+  expect(
+    Object.entries(cache?.commentCollapseStates ?? {}).filter(
+      ([key, value]) => key.startsWith("pr-overview:") && value,
+    ),
+  ).toHaveLength(2);
+  expect(cache?.reviewedFiles).toBeUndefined();
+});
+
 test("updates PR reviewed state through the GitHub viewed-file flow", async () => {
   const markFileAsViewed = vi.fn(async () => undefined);
   const tree = render(
@@ -2712,6 +2741,7 @@ test("updates PR reviewed state through the GitHub viewed-file flow", async () =
     />,
   );
 
+  emitKey({ name: "j", sequence: "j" });
   await emitAsyncKey({ name: "x", sequence: "x" });
   await act(async () => {
     await Promise.resolve();
@@ -2744,6 +2774,7 @@ test("optimistically updates and rolls back PR reviewed state", async () => {
     />,
   );
 
+  emitKey({ name: "j", sequence: "j" });
   emitKey({ name: "x", sequence: "x" });
 
   expect(getAppText(tree)).toContain("1 / 2 reviewed");
@@ -2772,6 +2803,7 @@ test("stays in diff mode until an inline review thread is explicitly focused", (
   expect(getAppText(tree)).toContain("DIFF");
   expect(getAppText(tree)).not.toContain("THREAD");
 
+  emitKey({ name: "j", sequence: "j" });
   emitKey({ name: "o", sequence: "o" });
 
   expect(getAppText(tree)).toContain("THREAD");
@@ -3279,6 +3311,7 @@ test("cycles inline thread and comment focus, then copies the focused comment UR
     />,
   );
 
+  emitKey({ name: "j", sequence: "j" });
   emitKey({ name: "o", sequence: "o" });
   emitKey({ name: "]", sequence: "]" });
   emitKey({ name: "y", sequence: "y" });
@@ -3315,6 +3348,7 @@ test("replies to the root comment of the focused inline thread", async () => {
     />,
   );
 
+  emitKey({ name: "j", sequence: "j" });
   emitKey({ name: "o", sequence: "o" });
   emitKey({ name: "]", sequence: "]" });
   emitKey({ name: "r", sequence: "r" });
@@ -3414,6 +3448,7 @@ test("opens the comment composer and submits a pending review thread", async () 
     />,
   );
 
+  emitKey({ name: "j", sequence: "j" });
   emitKey({ name: "a" });
 
   expect(getAppText(tree)).toContain("Add Comment");
@@ -3447,6 +3482,7 @@ test("shows an optimistic review thread while the session reload is pending", as
     />,
   );
 
+  emitKey({ name: "j", sequence: "j" });
   emitKey({ name: "a" });
   emitText("Looks good");
   emitKey({ name: "return" });
@@ -3500,6 +3536,7 @@ test("opens the comment composer when only the raw patch is available", () => {
     />,
   );
 
+  emitKey({ name: "j", sequence: "j" });
   emitKey({ name: "a" });
 
   expect(getAppText(tree)).toContain("Add Comment");
@@ -3517,6 +3554,7 @@ test("inserts file references into the comment composer autocomplete", () => {
     />,
   );
 
+  emitKey({ name: "j", sequence: "j" });
   emitKey({ name: "a" });
   emitText("Please check @app#12-18");
 
@@ -3539,6 +3577,7 @@ test("restores the latest dismissed draft when reopening the same comment target
     />,
   );
 
+  emitKey({ name: "j", sequence: "j" });
   emitKey({ name: "a" });
   emitText("Needs follow-up");
   emitKey({ name: "escape" });
@@ -3567,6 +3606,7 @@ test("opens the external editor for comment composition", async () => {
     />,
   );
 
+  emitKey({ name: "j", sequence: "j" });
   emitKey({ name: "a" });
   emitKey({ ctrl: true, name: "x" });
   emitKey({ name: "e", sequence: "e" });
@@ -3592,6 +3632,7 @@ test("uses ctrl+e for line-end editing in the comment composer", () => {
     />,
   );
 
+  emitKey({ name: "j", sequence: "j" });
   emitKey({ name: "a" });
   emitText("alpha");
   emitKey({ ctrl: true, name: "a" });
@@ -3612,6 +3653,7 @@ test("treats raw DEL input as backspace in the comment composer", () => {
     />,
   );
 
+  emitKey({ name: "j", sequence: "j" });
   emitKey({ name: "a" });
   emitText("Ship it");
   emitKey({ name: "", sequence: "\x7f" });

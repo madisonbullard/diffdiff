@@ -23,7 +23,7 @@ export function useSyntaxHydration(state: DiffdiffAppState, theme: UiTheme, sess
       const current = latest.current;
       const [first, last] = current.diffScroll.visibleRange();
       const file = current.session.files
-        .slice(first, last + 1)
+        .slice(Math.max(0, first), last + 1)
         .find(
           (candidate) =>
             !current.collapsedPaths.has(candidate.path) &&

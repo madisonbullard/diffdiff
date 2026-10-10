@@ -1,5 +1,6 @@
 import type { BoxRenderable, Renderable, ScrollBoxRenderable, TextRenderable } from "@opentui/core";
 import { getTopIntersectingFileIndex } from "../../view-model.ts";
+import { PR_OVERVIEW_PATH } from "../review/pull-request-overview.ts";
 
 export interface DiffLineTarget {
   node: TextRenderable;
@@ -31,6 +32,7 @@ type ScrollAnchor = { path: string; offset: number | "body" };
 export class DiffScrollController {
   private paths: string[] = [];
   private files: readonly { path: string }[] | null = null;
+  private hasOverview = false;
   private nodes = new Map<string, FileNodes>();
   private callbacks = new Map<
     string,
@@ -60,10 +62,12 @@ export class DiffScrollController {
     for (const listener of this.viewportListeners) listener();
   }
 
-  setFiles(files: readonly { path: string }[]): void {
-    if (files === this.files) return;
+  setFiles(files: readonly { path: string }[], hasOverview = false): void {
+    if (files === this.files && hasOverview === this.hasOverview) return;
     this.files = files;
+    this.hasOverview = hasOverview;
     const paths = files.map((file) => file.path);
+    if (hasOverview) paths.unshift(PR_OVERVIEW_PATH);
     if (
       paths.length === this.paths.length &&
       paths.every((path, index) => path === this.paths[index])
@@ -113,7 +117,7 @@ export class DiffScrollController {
   }
 
   getFileTop(index: number): number | undefined {
-    return this.tops[index];
+    return this.tops[index + Number(this.hasOverview)];
   }
   getViewportHeight(): number {
     return this.scroll?.viewport.height ?? 0;
@@ -133,7 +137,7 @@ export class DiffScrollController {
     this.anchor = { path, offset: offset ?? "body" };
     if (this.laidOut) this.applyAnchor();
     const index = this.paths.indexOf(path);
-    if (index >= 0) this.setActive(index);
+    if (index >= 0) this.setActive(index - Number(this.hasOverview));
     this.notifyViewport();
   }
 
@@ -163,7 +167,7 @@ export class DiffScrollController {
   }
 
   private fileAt(row: number): number {
-    return getTopIntersectingFileIndex(this.tops, row);
+    return getTopIntersectingFileIndex(this.tops, row) - Number(this.hasOverview);
   }
 
   private setActive(index: number): void {
@@ -176,8 +180,9 @@ export class DiffScrollController {
     if (this.applying || !this.laidOut || this.scroll == null) return;
     this.pendingLine = null;
     const index = this.fileAt(this.scroll.scrollTop);
-    const path = this.paths[index];
-    if (path != null) this.anchor = { path, offset: this.scroll.scrollTop - this.tops[index]! };
+    const itemIndex = index + Number(this.hasOverview);
+    const path = this.paths[itemIndex];
+    if (path != null) this.anchor = { path, offset: this.scroll.scrollTop - this.tops[itemIndex]! };
     this.setActive(index);
     this.notifyViewport();
   };
@@ -204,7 +209,7 @@ export class DiffScrollController {
     } finally {
       this.applying = false;
     }
-    this.setActive(index);
+    this.setActive(index - Number(this.hasOverview));
   }
 
   private layout = () => {
