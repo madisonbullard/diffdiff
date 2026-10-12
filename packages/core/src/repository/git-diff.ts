@@ -1,6 +1,7 @@
 import { readdir } from "node:fs/promises";
 import { join, posix } from "node:path";
 import { runCommand } from "../command.ts";
+import { mapWithConcurrency } from "../concurrency.ts";
 import { logDiffdiffInfo } from "../logging.ts";
 import type { ChangedFile, ChangeSummary } from "../types/session.ts";
 import {
@@ -129,20 +130,20 @@ async function listUntrackedFiles(
   rootPath: string,
   paths: readonly string[],
 ): Promise<ChangedFile[]> {
-  const filePaths: string[] = [];
-
-  for (const path of paths) {
-    if (path.endsWith("/")) {
-      if (!(await shouldDiffUntrackedDirectory(rootPath, path))) {
-        continue;
+  const expandedPaths = await mapWithConcurrency(
+    paths,
+    UNTRACKED_DIFF_CONCURRENCY,
+    async (path) => {
+      if (path.endsWith("/")) {
+        if (!(await shouldDiffUntrackedDirectory(rootPath, path))) {
+          return [];
+        }
+        return listDirectoryFilesForDiff(rootPath, path);
       }
-
-      filePaths.push(...(await listDirectoryFilesForDiff(rootPath, path)));
-      continue;
-    }
-
-    filePaths.push(path);
-  }
+      return [path];
+    },
+  );
+  const filePaths = expandedPaths.flat();
 
   return mapWithConcurrency(filePaths, UNTRACKED_DIFF_CONCURRENCY, (filePath) =>
     diffUntrackedFile(rootPath, filePath),
@@ -218,35 +219,4 @@ async function diffUntrackedFile(rootPath: string, path: string): Promise<Change
   );
 
   return parseChangedFilePatch(patch);
-}
-
-async function mapWithConcurrency<TInput, TOutput>(
-  items: readonly TInput[],
-  concurrency: number,
-  mapItem: (item: TInput, index: number) => Promise<TOutput>,
-): Promise<TOutput[]> {
-  if (items.length === 0) {
-    return [];
-  }
-
-  const results = Array.from({ length: items.length }, () => undefined) as TOutput[];
-  let nextIndex = 0;
-  const workerCount = Math.max(1, Math.min(concurrency, items.length));
-
-  await Promise.all(
-    Array.from({ length: workerCount }, async () => {
-      while (true) {
-        const currentIndex = nextIndex;
-        nextIndex += 1;
-
-        if (currentIndex >= items.length) {
-          return;
-        }
-
-        results[currentIndex] = await mapItem(items[currentIndex]!, currentIndex);
-      }
-    }),
-  );
-
-  return results;
 }

@@ -74,6 +74,7 @@ export interface DiffdiffAppProps {
     refs: readonly GitHubRefCleanupCandidate[],
   ) => Promise<void>;
   startupInstrumentation?: StartupInstrumentation;
+  onStartupMounted?: () => void;
   submitPendingReview?: (
     reviewSession: GitHubReviewSession,
     event: GitHubReviewSubmissionEvent,

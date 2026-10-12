@@ -196,11 +196,14 @@ class GitRepository implements RepositoryHandle {
       forgeProviders,
       warnings,
     );
-    const enrichedBranches = await enrichBranchSummaries(
-      this.rootPath,
-      enrichedRemoteBranches,
-      resolvedComparison.defaultBranch,
-    );
+    const enrichedBranches =
+      options.loadComparisonDetails === false
+        ? enrichedRemoteBranches
+        : await enrichBranchSummaries(
+            this.rootPath,
+            enrichedRemoteBranches,
+            resolvedComparison.defaultBranch,
+          );
     const session: ReviewSession = {
       repository,
       comparison: resolvedComparison.comparison,
@@ -322,13 +325,8 @@ class GitRepository implements RepositoryHandle {
 
   private async selectDefaultBaseRef(): Promise<string | undefined> {
     const candidates = ["main", "master", "origin/main", "origin/master"];
-    for (const candidate of candidates) {
-      if (await this.hasRef(candidate)) {
-        return candidate;
-      }
-    }
-
-    return this.getOriginHead();
+    const available = await Promise.all(candidates.map((candidate) => this.hasRef(candidate)));
+    return candidates.find((_, index) => available[index]) ?? this.getOriginHead();
   }
 
   private async hasRef(ref: string): Promise<boolean> {

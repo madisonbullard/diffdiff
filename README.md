@@ -35,6 +35,10 @@ worktree in a skipped directory. PR startup resolves the base/head refs with one
 request; checks, comments, and viewed-file state load during review-session preparation.
 Startup logs include launch-target resolution, before the TUI opens. Find the log path with
 `diffdiff session list --json`; `targetResolutionDurationMs` reports that phase separately.
+The `startup_first_diff_frame` log event reports process-origin startup time, overlapping
+network waits, and the remaining local time against a 1,000 ms budget. Branch summaries
+load only when the comparison browser opens. See [startup performance](docs/plans/startup-performance.md)
+for measurement semantics and the real-terminal benchmark command.
 
 PR reviews begin with a **PR overview** title page: title, rendered Markdown description,
 author, state, branches, and change counts. Scroll into the changed files, or use `j`/`k`

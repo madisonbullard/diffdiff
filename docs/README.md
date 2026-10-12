@@ -36,6 +36,8 @@ smallest relevant source of truth.
 - `plans/diff-viewport-navigation.md`
   - Native diff buffers, measured navigation, and scroll anchoring, plus the
     headless visual/perf harness in `packages/tui/visual/`.
+- `plans/startup-performance.md`
+  - Startup budget, local/network telemetry, and repeatable real-PTY benchmarks.
 - `todos/`
   - Versioned implementation slices for follow-on TUI, command, rendering, and
     automation work.

@@ -4,10 +4,8 @@ import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 import {
   clearGitHubToken,
-  ensureComparisonRefsAvailable,
   flushDiffdiffLogs,
   GitHubPullRequestService,
-  getRepositorySearchPath,
   appendReviewComposerHistory,
   loadDiffdiffPreferences,
   loadReviewComposerHistory,
@@ -25,7 +23,9 @@ import {
   startDiffdiffLogging,
   storeGitHubToken,
   syncGitRemotes,
-  GitRepositoryProvider,
+  startStartupPerformance,
+  summarizeStartupPerformance,
+  finishStartupPerformance,
 } from "@madisonbullard/diffdiff-core";
 import { Command } from "commander";
 import packageJson from "../package.json";
@@ -164,6 +164,7 @@ function addStartupOptions(command: Command): void {
 }
 
 async function launchTui(options: LaunchOptions, target?: string): Promise<void> {
+  startStartupPerformance();
   let launchOptions = options;
   let startupInstrumentation = createStartupInstrumentation();
   const logSession = await startDiffdiffLogging({
@@ -182,27 +183,13 @@ async function launchTui(options: LaunchOptions, target?: string): Promise<void>
   startupInstrumentation = logStartupPhase(startupInstrumentation, "targetResolvedAt");
   logDiffdiffInfo("cli", "tui_launch_target_resolved", { options: launchOptions, target });
 
-  const repository = await new GitRepositoryProvider().detectRepository(
-    getRepositorySearchPath(launchOptions.repoPath),
-  );
-  if (repository != null) {
-    const preparedOptions = await ensureComparisonRefsAvailable(
-      repository.rootPath,
-      launchOptions,
-      (message) => {
-        process.stdout.write(`${message}\n`);
-      },
-    );
-    if (preparedOptions !== launchOptions) {
-      process.stdout.write("\n");
-      logDiffdiffInfo("cli", "tui_launch_options_resolved_from_remote_refs", {
-        initialOptions: launchOptions,
-        logFilePath: logSession?.logFilePath,
-        resolvedOptions: preparedOptions,
-      });
-      launchOptions = preparedOptions;
-    }
-  }
+  // Repository/network work doesn't depend on terminal colors or the app module graph.
+  const initialReviewSessionPromise = loadReviewSession({
+    ...launchOptions,
+    loadComparisonDetails: false,
+  });
+  // Handle early rejection while renderer imports/probes are still in flight.
+  void initialReviewSessionPromise.catch(() => undefined);
 
   // Keep the initial module graph light so help/version stay instant, then overlap the
   // background-color probe with the heavier TUI/runtime imports for the real app launch.
@@ -226,11 +213,21 @@ async function launchTui(options: LaunchOptions, target?: string): Promise<void>
   const themeName = themeModule.getPierreThemeName(mode);
   const fallbackTheme = themeModule.getUiTheme(themeName);
 
+  let appMounted = false;
+  let firstDiffFrameLogged = false;
   const renderer = await createCliRenderer({
     useAlternateScreen: true,
     useConsole: false,
     exitOnCtrlC: true,
     backgroundColor: "transparent",
+    postProcessFns: [
+      () => {
+        if (!appMounted || firstDiffFrameLogged) return;
+        firstDiffFrameLogged = true;
+        // The buffer now contains the committed app, not the loading screen.
+        queueMicrotask(() => finishStartupPerformance());
+      },
+    ],
   });
   startupInstrumentation = logStartupPhase(startupInstrumentation, "rendererReadyAt");
 
@@ -279,7 +276,21 @@ async function launchTui(options: LaunchOptions, target?: string): Promise<void>
       );
     const gitHubPullRequestService = new GitHubPullRequestService();
     const isGitHubAuthenticated = (await resolveGitHubAuth({ host: "github.com" })) != null;
-    const initialSession = await loadSession(launchOptions);
+    const initialSession = await loadStartupPreparedReviewSession(
+      loadPreparedReviewSession,
+      launchOptions,
+      themeName,
+      theme,
+      syntaxPalette,
+      initialReviewSessionPromise,
+    );
+    if (initialSession.comparison.mode === "range") {
+      launchOptions = {
+        ...launchOptions,
+        base: initialSession.comparison.base,
+        head: initialSession.comparison.head,
+      };
+    }
     startupInstrumentation = logStartupPhase(startupInstrumentation, "sessionPreparedAt");
     const initialPreferences = await loadDiffdiffPreferences();
     startupInstrumentation = logStartupPhase(startupInstrumentation, "preferencesLoadedAt");
@@ -308,6 +319,10 @@ async function launchTui(options: LaunchOptions, target?: string): Promise<void>
         initialReviewCache={initialReviewCache}
         initialOptions={launchOptions}
         initialSession={initialSession}
+        onStartupMounted={() => {
+          appMounted = true;
+          renderer.requestRender();
+        }}
         listGitHubPullRequests={() => gitHubPullRequestService.listDashboardPullRequests()}
         listReviewerCandidates={(session) =>
           gitHubPullRequestService.listReviewerCandidates(session)
@@ -320,7 +335,7 @@ async function launchTui(options: LaunchOptions, target?: string): Promise<void>
         }
         loadReviewComposerHistory={() => loadReviewComposerHistory()}
         loadComparisonBrowserData={async (nextOptions) => {
-          const session = await loadReviewSession(nextOptions);
+          const session = await loadReviewSession({ ...nextOptions, loadComparisonDetails: true });
           return {
             branches: session.branches,
             commits: session.commits,
@@ -414,6 +429,7 @@ function logStartupPhase(
   logDiffdiffInfo("perf", "startup_phase_completed", {
     phase,
     startup: summarizeStartupInstrumentation(nextInstrumentation),
+    performance: summarizeStartupPerformance(),
   });
   return nextInstrumentation;
 }

@@ -1,9 +1,10 @@
 import { EventEmitter } from "node:events";
 import type { TerminalColors } from "@opentui/core";
-import { expect, test } from "vite-plus/test";
+import { expect, test, vi } from "vite-plus/test";
 import {
   createTerminalUiTheme,
   getTerminalBackgroundMode,
+  getTerminalColors,
   getThemeModeFromTerminalColor,
 } from "../src/theme.ts";
 
@@ -73,6 +74,19 @@ test("falls back quickly when the terminal does not answer the background probe"
     }),
   ).resolves.toBe("dark");
   expect(stdin.setRawModeCalls).toEqual([true, false]);
+});
+
+test("bounds terminal palette probing to the startup budget", async () => {
+  const getPalette = vi.fn(async () => createPalette());
+  await getTerminalColors({ getPalette });
+  expect(getPalette).toHaveBeenCalledWith({ size: 16, timeout: 150 });
+  await expect(
+    getTerminalColors({
+      getPalette: async () => {
+        throw new Error("unavailable");
+      },
+    }),
+  ).resolves.toBeUndefined();
 });
 
 test("uses the terminal reply when the background probe succeeds", async () => {

@@ -56,6 +56,42 @@ describe("parsePullRequestTarget", () => {
 });
 
 describe("resolveLaunchOptionsFromTarget", () => {
+  test("overlaps URL refs loading with clone discovery", async () => {
+    let releaseDiscovery!: (root: string | undefined) => void;
+    const discovery = new Promise<string | undefined>((resolve) => {
+      releaseDiscovery = resolve;
+    });
+    const loadPullRequestRefs = vi.fn(async () => ({
+      baseRefName: "main",
+      headRefName: "feature",
+    }));
+    const pending = resolveLaunchOptionsFromTarget(
+      "diffdiff/diffdiff/42",
+      {},
+      {
+        cwd: "/workspace/diffdiff",
+        detectGitRepositoryRoot: () => discovery,
+        gitHubPullRequestService: { loadPullRequestRefs },
+        hasGitRef: async () => true,
+        listGitHubRemotes: async () => [
+          {
+            name: "origin",
+            repository: {
+              forge: "github",
+              host: "github.com",
+              owner: "diffdiff",
+              repo: "diffdiff",
+            },
+          },
+        ],
+      },
+    );
+    expect(loadPullRequestRefs).toHaveBeenCalledTimes(1);
+    releaseDiscovery("/workspace/diffdiff");
+    await expect(pending).resolves.toMatchObject({ base: "origin/main", head: "origin/feature" });
+    expect(loadPullRequestRefs).toHaveBeenCalledTimes(1);
+  });
+
   test("opens the PR list when launched with pr", async () => {
     const options = await resolveLaunchOptionsFromTarget("pr", { verbose: true });
 
@@ -66,6 +102,17 @@ describe("resolveLaunchOptionsFromTarget", () => {
   });
 
   test("uses the current repo when the PR target matches a current remote", async () => {
+    const listGitHubRemotes = vi.fn(async () => [
+      {
+        name: "origin",
+        repository: {
+          forge: "github" as const,
+          host: "github.com",
+          owner: "diffdiff",
+          repo: "diffdiff",
+        },
+      },
+    ]);
     const gitHubPullRequestService = {
       loadPullRequestRefs: vi.fn(async () => ({
         baseRefName: "main",
@@ -81,17 +128,7 @@ describe("resolveLaunchOptionsFromTarget", () => {
         detectGitRepositoryRoot: vi.fn(async () => "/workspace/diffdiff"),
         gitHubPullRequestService,
         hasGitRef: vi.fn(async (_rootPath, ref) => ref.startsWith("origin/")),
-        listGitHubRemotes: vi.fn(async () => [
-          {
-            name: "origin",
-            repository: {
-              forge: "github",
-              host: "github.com",
-              owner: "diffdiff",
-              repo: "diffdiff",
-            },
-          },
-        ]),
+        listGitHubRemotes,
       },
     );
 
@@ -100,6 +137,7 @@ describe("resolveLaunchOptionsFromTarget", () => {
       head: "origin/feature/ui",
       repoPath: undefined,
     });
+    expect(listGitHubRemotes).toHaveBeenCalledTimes(1);
     expect(gitHubPullRequestService.loadPullRequestRefs).toHaveBeenCalledWith(
       {
         forge: "github",

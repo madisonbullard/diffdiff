@@ -189,6 +189,7 @@ export async function getTerminalColors(
   try {
     const colors = await paletteSource.getPalette({
       size: 16,
+      timeout: TERMINAL_BACKGROUND_QUERY_TIMEOUT_MS,
     });
 
     return colors.palette[0] == null ? undefined : colors;

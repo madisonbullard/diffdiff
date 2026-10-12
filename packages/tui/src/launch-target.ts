@@ -98,13 +98,32 @@ export async function resolveLaunchOptionsFromTarget(
   const cwd = dependencies.cwd ?? process.cwd();
   const detectGitRepositoryRoot =
     dependencies.detectGitRepositoryRoot ?? defaultDetectGitRepositoryRoot;
-  const listGitHubRemotes = dependencies.listGitHubRemotes ?? defaultListGitHubRemotes;
+  const loadGitHubRemotes = dependencies.listGitHubRemotes ?? defaultListGitHubRemotes;
+  const remotesByRoot = new Map<string, Promise<GitHubRemoteMatch[]>>();
+  const listGitHubRemotes = (rootPath: string) => {
+    let result = remotesByRoot.get(rootPath);
+    if (result == null) {
+      result = loadGitHubRemotes(rootPath);
+      remotesByRoot.set(rootPath, result);
+    }
+    return result;
+  };
   const searchRepositoryRoots = dependencies.searchRepositoryRoots ?? defaultSearchRepositoryRoots;
   const promptForRepositoryPath =
     dependencies.promptForRepositoryPath ?? defaultPromptForRepositoryPath;
   const hasGitRef = dependencies.hasGitRef ?? defaultHasGitRef;
   const gitHubPullRequestService =
     dependencies.gitHubPullRequestService ?? new GitHubPullRequestService();
+  // A URL already identifies the API repository. Resolve its refs while finding the clone,
+  // rather than putting filesystem discovery and the first network round trip in series.
+  const pullRequestRefsPromise =
+    pullRequestTarget.kind === "repository"
+      ? gitHubPullRequestService.loadPullRequestRefs(
+          pullRequestTarget.repository,
+          pullRequestTarget.pullRequestNumber,
+        )
+      : undefined;
+  void pullRequestRefsPromise?.catch(() => undefined);
   const contextPath = startupOptions.repoPath ?? cwd;
   const contextRepositoryRoot = await detectGitRepositoryRoot(resolve(cwd, contextPath));
   const resolvedRepositoryRoot = await resolveTargetRepositoryRoot(
@@ -137,22 +156,12 @@ export async function resolveLaunchOptionsFromTarget(
     );
   }
 
-  const pullRequest = await gitHubPullRequestService.loadPullRequestRefs(
-    repository,
-    pullRequestTarget.pullRequestNumber,
-  );
-  const base = await resolvePullRequestRef(
-    resolvedRepositoryRoot,
-    remote.name,
-    pullRequest.baseRefName,
-    hasGitRef,
-  );
-  const head = await resolvePullRequestRef(
-    resolvedRepositoryRoot,
-    remote.name,
-    pullRequest.headRefName,
-    hasGitRef,
-  );
+  const pullRequest = await (pullRequestRefsPromise ??
+    gitHubPullRequestService.loadPullRequestRefs(repository, pullRequestTarget.pullRequestNumber));
+  const [base, head] = await Promise.all([
+    resolvePullRequestRef(resolvedRepositoryRoot, remote.name, pullRequest.baseRefName, hasGitRef),
+    resolvePullRequestRef(resolvedRepositoryRoot, remote.name, pullRequest.headRefName, hasGitRef),
+  ]);
 
   return {
     ...startupOptions,
@@ -413,36 +422,40 @@ async function defaultSearchRepositoryRoots(cwd: string, repoName: string): Prom
   const pendingDirectories = [resolve(cwd)];
 
   while (pendingDirectories.length > 0) {
-    const currentDirectory = pendingDirectories.pop()!;
-    let entries: Dirent[];
+    const batch = pendingDirectories.splice(-16);
+    await Promise.all(
+      batch.map(async (currentDirectory) => {
+        let entries: Dirent[];
 
-    try {
-      entries = await readdir(currentDirectory, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-
-    // Search containers of clones, not the source/dependency trees inside each clone.
-    // A .git file marks a worktree or submodule just as a .git directory marks a clone.
-    if (entries.some((entry) => entry.name === ".git")) {
-      continue;
-    }
-
-    for (const entry of entries) {
-      if (!entry.isDirectory() || SKIPPED_DIRECTORY_NAMES.has(entry.name)) {
-        continue;
-      }
-
-      const entryPath = resolve(currentDirectory, entry.name);
-      if (entry.name === repoName) {
-        const repositoryRoot = await defaultDetectGitRepositoryRoot(entryPath);
-        if (repositoryRoot != null && resolve(repositoryRoot) === entryPath) {
-          roots.add(repositoryRoot);
+        try {
+          entries = await readdir(currentDirectory, { withFileTypes: true });
+        } catch {
+          return;
         }
-      }
 
-      pendingDirectories.push(entryPath);
-    }
+        // Search containers of clones, not the source/dependency trees inside each clone.
+        // A .git file marks a worktree or submodule just as a .git directory marks a clone.
+        if (entries.some((entry) => entry.name === ".git")) {
+          return;
+        }
+
+        for (const entry of entries) {
+          if (!entry.isDirectory() || SKIPPED_DIRECTORY_NAMES.has(entry.name)) {
+            continue;
+          }
+
+          const entryPath = resolve(currentDirectory, entry.name);
+          if (entry.name === repoName) {
+            const repositoryRoot = await defaultDetectGitRepositoryRoot(entryPath);
+            if (repositoryRoot != null && resolve(repositoryRoot) === entryPath) {
+              roots.add(repositoryRoot);
+            }
+          }
+
+          pendingDirectories.push(entryPath);
+        }
+      }),
+    );
   }
 
   return [...roots];

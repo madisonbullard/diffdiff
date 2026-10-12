@@ -23,6 +23,7 @@ interface UseLifecycleOptions {
   refreshGitHubPullRequestList: (options?: { announce?: boolean }) => Promise<void>;
   state: DiffdiffAppState;
   startupInstrumentation?: DiffdiffAppProps["startupInstrumentation"];
+  onStartupMounted?: () => void;
 }
 
 export function useDiffdiffAppLifecycle({
@@ -31,14 +32,22 @@ export function useDiffdiffAppLifecycle({
   prefetchComparisonBrowserData,
   refreshGitHubPullRequestList,
   startupInstrumentation,
+  onStartupMounted,
   state,
 }: UseLifecycleOptions) {
   useEffect(() => {
-    void prefetchComparisonBrowserData();
     void refreshGitHubPullRequestList({ announce: false });
     // Startup prefetch should only run once for the initial session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (state.activeOverlay === "branch") {
+      void prefetchComparisonBrowserData();
+    }
+    // Fetch expensive branch summaries only when the browser is actually opened.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.activeOverlay]);
 
   useEffect(() => {
     return () => {
@@ -81,6 +90,12 @@ export function useDiffdiffAppLifecycle({
     state.setMergeConfirmOpen,
     state.setReviewComposer,
   ]);
+
+  useEffect(() => {
+    onStartupMounted?.();
+    // Only the first app commit marks the startup frame as ready.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     logDiffdiffInfo("app", "app_loaded", {

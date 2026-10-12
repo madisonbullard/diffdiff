@@ -3,6 +3,7 @@ import type { ForgeRepository, GitHubAuthSession } from "../types/github.ts";
 import type { GitHubApiClient, GitHubClientFactory } from "../types/providers.ts";
 import { logDiffdiffError, logDiffdiffInfo, logDiffdiffVerbose } from "../logging.ts";
 import { resolveGitHubAuth } from "./auth.ts";
+import { beginPerformanceOperation } from "../performance.ts";
 
 export class OctokitGitHubClientFactory implements GitHubClientFactory {
   async create(repository: ForgeRepository): Promise<GitHubApiClient | null> {
@@ -35,6 +36,7 @@ class OctokitGitHubApiClient implements GitHubApiClient {
   ) {}
 
   async graphql<T = unknown>(query: string, parameters: Record<string, unknown>): Promise<T> {
+    const finishOperation = beginPerformanceOperation("github:graphql", "network");
     const startedAt = Date.now();
     logDiffdiffVerbose("github", "graphql_request_started", {
       parameters,
@@ -69,10 +71,13 @@ class OctokitGitHubApiClient implements GitHubApiClient {
         query,
       });
       throw error;
+    } finally {
+      finishOperation();
     }
   }
 
   async paginate(route: string, parameters: Record<string, unknown>): Promise<unknown[]> {
+    const finishOperation = beginPerformanceOperation(`github:paginate:${route}`, "network");
     const startedAt = Date.now();
     logDiffdiffVerbose("github", "rest_paginate_started", {
       parameters,
@@ -107,10 +112,13 @@ class OctokitGitHubApiClient implements GitHubApiClient {
         route,
       });
       throw error;
+    } finally {
+      finishOperation();
     }
   }
 
   async request(route: string, parameters: Record<string, unknown>): Promise<unknown> {
+    const finishOperation = beginPerformanceOperation(`github:request:${route}`, "network");
     const startedAt = Date.now();
     logDiffdiffVerbose("github", "rest_request_started", {
       parameters,
@@ -150,6 +158,8 @@ class OctokitGitHubApiClient implements GitHubApiClient {
         route,
       });
       throw error;
+    } finally {
+      finishOperation();
     }
   }
 }

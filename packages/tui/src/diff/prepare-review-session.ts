@@ -40,6 +40,7 @@ export async function loadPreparedReviewSession(
   theme: UiTheme = getUiTheme(themeName),
   syntaxPalette: SyntaxPalette = getSyntaxPalette(themeName),
   prepareOptions: PrepareReviewSessionOptions = {},
+  sessionPromise?: Promise<ReviewSession>,
 ): Promise<PreparedReviewSession> {
   const startedAt = getMonotonicNow();
   logDiffdiffInfo("render", "prepared_review_session_load_started", {
@@ -48,7 +49,7 @@ export async function loadPreparedReviewSession(
     themeName,
   });
   const reviewSessionLoadStartedAt = getMonotonicNow();
-  const session = await loadReviewSession(options);
+  const session = await (sessionPromise ?? loadReviewSession(options));
   const reviewSessionLoadedAt = getMonotonicNow();
   const prepareReviewSessionStartedAt = getMonotonicNow();
   const preparedSession = await prepareReviewSession(

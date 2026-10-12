@@ -853,6 +853,7 @@ test("startup session loading defers syntax rendering until viewport hydration",
     {
       base: "HEAD",
       head: "working tree",
+      loadComparisonDetails: false,
     },
     "pierre-dark",
     getUiTheme("pierre-dark"),

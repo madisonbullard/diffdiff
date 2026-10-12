@@ -94,6 +94,7 @@ const terminalDimensionsState = vi.hoisted(() => ({
 }));
 
 const registeredKeyboardHandlers = new Set<(key: KeyboardInput) => void>();
+const renderedTrees = new Set<ReactTestRenderer>();
 
 vi.mock("@opentui/react", () => {
   return {
@@ -149,6 +150,10 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  act(() => {
+    for (const tree of renderedTrees) tree.unmount();
+  });
+  renderedTrees.clear();
   registeredKeyboardHandlers.clear();
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -1986,6 +1991,22 @@ test("uses leader+j to move through commits while commit search stays focused", 
   ).not.toHaveLength(0);
 });
 
+test("loads comparison browser data only when the branch list opens", async () => {
+  const session = createPreparedSession();
+  const loadComparisonBrowserData = vi.fn(async () => ({
+    branches: session.branches,
+    commits: session.commits,
+    workingTreeSummary: session.workingTreeSummary,
+  }));
+  const syncRemotes = vi.fn(async () => undefined);
+  render(<DiffdiffApp {...createAppProps({ loadComparisonBrowserData, syncRemotes })} />);
+  expect(loadComparisonBrowserData).not.toHaveBeenCalled();
+  expect(syncRemotes).not.toHaveBeenCalled();
+  await emitAsyncKey({ name: "l" });
+  expect(loadComparisonBrowserData).toHaveBeenCalledTimes(1);
+  expect(syncRemotes).toHaveBeenCalledTimes(1);
+});
+
 test("shows an animated event log entry while loading a new base branch", async () => {
   vi.useFakeTimers();
   const nextSession = createPreparedSession({
@@ -2140,11 +2161,8 @@ test("shows a files changed header indicator until refresh reloads the session",
   });
 
   expect(probeFreshness).toHaveBeenCalledTimes(1);
-  expect(syncRemotes).toHaveBeenCalledTimes(1);
-  expect(loadComparisonBrowserData).toHaveBeenCalledWith({
-    base: "origin/main",
-    head: "feature/tui",
-  });
+  expect(syncRemotes).not.toHaveBeenCalled();
+  expect(loadComparisonBrowserData).not.toHaveBeenCalled();
   expect(loadSession).not.toHaveBeenCalled();
   expect(getAppText(tree)).toContain("1 file changed");
   expect(getAppText(tree)).toContain("feature/tui");
@@ -4641,7 +4659,7 @@ function render(node: ReactNode, options: Partial<TestRendererOptions> = {}): Re
   act(() => {
     tree = create(node as never, rendererOptions);
   });
-
+  renderedTrees.add(tree!);
   return tree!;
 }
 

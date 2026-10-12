@@ -40,6 +40,30 @@ describe("parsePorcelainStatusEntries", () => {
 });
 
 describe("loadReviewSession", () => {
+  test("fast review loading skips branch summaries but preserves comparison data", async () => {
+    const repositoryPath = await createTemporaryRepository();
+    await writeFile(join(repositoryPath, "README.md"), "before\n");
+    await runGit(repositoryPath, ["add", "."]);
+    await runGit(repositoryPath, [
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.com",
+      "commit",
+      "-m",
+      "Initial",
+    ]);
+    await runGit(repositoryPath, ["branch", "feature"]);
+    await writeFile(join(repositoryPath, "README.md"), "after\n");
+    const options = { repoPath: repositoryPath, loadComparisonDetails: false };
+    const session = await loadReviewSession(options);
+    expect(session.branches.local).toHaveLength(2);
+    expect(session.branches.local.every((branch) => branch.summary == null)).toBe(true);
+    expect(session.files[0]?.patch).toContain("+after");
+    const fullSession = await loadReviewSession({ repoPath: repositoryPath });
+    expect(fullSession.branches.local.every((branch) => branch.summary != null)).toBe(true);
+  });
+
   test("defaults to HEAD vs working tree when commits exist", async () => {
     const repositoryPath = await createTemporaryRepository();
 

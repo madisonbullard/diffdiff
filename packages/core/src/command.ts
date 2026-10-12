@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { CommandError } from "./errors.ts";
+import { beginPerformanceOperation } from "./performance.ts";
 import { logDiffdiffError, logDiffdiffInfo, logDiffdiffVerbose } from "./logging.ts";
 
 const execFileAsync = promisify(execFile);
@@ -34,6 +35,12 @@ export async function runCommand(
   options: RunCommandOptions,
 ): Promise<string> {
   const startedAt = Date.now();
+  const finishOperation = beginPerformanceOperation(
+    `${command}:${args[0] ?? ""}`,
+    command === "git" && ["fetch", "ls-remote", "push"].includes(args[0] ?? "")
+      ? "network"
+      : "local",
+  );
   logDiffdiffVerbose("command", "command_started", {
     allowedExitCodes: options.allowedExitCodes,
     args,
@@ -119,6 +126,8 @@ export async function runCommand(
       stderr,
       exitCode,
     );
+  } finally {
+    finishOperation();
   }
 }
 

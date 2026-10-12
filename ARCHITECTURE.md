@@ -102,11 +102,17 @@ At a high level, the current runtime flow is:
    `packages/core` resolves PR base/head names with a lightweight refs lookup;
    full review metadata is deferred to review-session preparation.
 2. `packages/core` resolves the repository, loads the review session, and
-   attaches GitHub review context when available.
+   attaches GitHub review context when available. This runs concurrently with
+   TUI imports and terminal probes; local branch summaries are deferred until
+   the comparison browser opens.
 3. `packages/tui` renders the session in the OpenTUI/React app and manages
    keyboard-driven review workflows.
 4. `packages/core` persists session metadata, logs, auth state, preferences, and
    review cache across runs.
+
+Startup telemetry separates overlapping network waits from non-network wall
+time through the first committed review frame. See
+`docs/plans/startup-performance.md` for the budget and real-PTY regression gate.
 
 Within the TUI, all keyboard modes now route through the shared trie-based
 keymap runtime before dispatching to app actions. Pane navigation, dialogs,

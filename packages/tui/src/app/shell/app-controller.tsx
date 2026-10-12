@@ -389,6 +389,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     refreshGitHubPullRequestList: githubActions.refreshGitHubPullRequestList,
     state,
     startupInstrumentation: props.startupInstrumentation,
+    onStartupMounted: props.onStartupMounted,
   });
 
   const canApplyCleanup =

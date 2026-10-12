@@ -1,4 +1,5 @@
 import { runCommand } from "../command.ts";
+import { mapWithConcurrency } from "../concurrency.ts";
 import { prioritizeRemoteBranches } from "../github/index.ts";
 import type { GitRemote } from "../types/github.ts";
 import type { ForgeMetadataProvider } from "../types/providers.ts";
@@ -106,8 +107,8 @@ export async function enrichBranchSummaries(
   }
 
   return {
-    local: await Promise.all(
-      branches.local.map((branch) => attachBranchSummary(rootPath, branch, defaultBranch)),
+    local: await mapWithConcurrency(branches.local, 4, (branch) =>
+      attachBranchSummary(rootPath, branch, defaultBranch),
     ),
     // Remote branch summaries require two git commands per branch. Deferring them keeps
     // startup responsive on repositories with lots of open PR refs while preserving the
