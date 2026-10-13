@@ -165,7 +165,7 @@ export function createGitHubReviewActions({
     }
     openReviewComposer(
       { anchor: derived.selectedReviewAnchor, kind: "review-thread" },
-      `Commenting on ${derived.selectedReviewAnchor.path}:${derived.selectedReviewAnchor.line}.`,
+      `Commenting on ${derived.selectedReviewAnchor.path}:${derived.selectedReviewAnchor.startLine == null ? "" : `${derived.selectedReviewAnchor.startLine}-`}${derived.selectedReviewAnchor.line}.`,
     );
   }
 

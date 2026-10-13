@@ -1,4 +1,5 @@
 import { copyTextToClipboard } from "../../clipboard.ts";
+import { extendReviewRange } from "../../review-anchors.ts";
 import {
   getCommentCollapsed,
   getReviewThreadCollapseKey,
@@ -223,6 +224,7 @@ export function createReviewActions({
   }
 
   function moveSelectedReviewAnchor(delta: number): void {
+    state.setSelectedReviewRange(null);
     if (derived.selectedReviewAnchors.length === 0) {
       state.setStatusMessage("No commentable lines are available in the selected file.");
       return;
@@ -250,6 +252,30 @@ export function createReviewActions({
       copied
         ? "Copied focused comment URL to clipboard."
         : "Unable to copy the focused comment URL.",
+    );
+  }
+
+  function extendSelectedReviewRange(delta: number): void {
+    const file = derived.displaySession.files[state.selectedFileIndex];
+    const anchor = derived.selectedReviewAnchor;
+    if (file == null || anchor == null) {
+      state.setStatusMessage("No commentable lines are available in the selected file.");
+      return;
+    }
+    const next = extendReviewRange(file.patch, anchor, delta);
+    state.setShowSelectedReviewAnchor(true);
+    state.setSelectedReviewRange({
+      file,
+      baseKey:
+        derived.selectedReviewAnchors[
+          clampIndex(state.selectedReviewAnchorIndex, derived.selectedReviewAnchors.length)
+        ]!.key,
+      anchor: next,
+    });
+    state.setStatusMessage(
+      next === anchor
+        ? "Selection reached the edge of this diff hunk and side."
+        : `Selected ${next.path}:${next.startLine}-${next.line} (${next.side}).`,
     );
   }
 
@@ -491,6 +517,7 @@ export function createReviewActions({
     markAllReviewed,
     moveSelectedFile,
     moveSelectedReviewAnchor,
+    extendSelectedReviewRange,
     moveSelectedReviewComment,
     moveSelectedReviewThread,
     toggleCollapsed,

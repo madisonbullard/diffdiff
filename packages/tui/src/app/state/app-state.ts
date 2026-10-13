@@ -117,6 +117,7 @@ export interface DiffdiffAppState {
   selectedFileIndex: number;
   showSelectedReviewAnchor: boolean;
   selectedReviewAnchorIndex: number;
+  selectedReviewRange: import("../../review-anchors.ts").ReviewRangeSelection | null;
   selectedReviewCommentIndexByThreadId: Record<string, number>;
   selectedReviewThreadIndexByFilePath: Record<string, number>;
   selectedTreePath: string;
@@ -185,6 +186,9 @@ export interface DiffdiffAppState {
   setSelectedFileIndex: Dispatch<SetStateAction<number>>;
   setShowSelectedReviewAnchor: Dispatch<SetStateAction<boolean>>;
   setSelectedReviewAnchorIndex: Dispatch<SetStateAction<number>>;
+  setSelectedReviewRange: Dispatch<
+    SetStateAction<import("../../review-anchors.ts").ReviewRangeSelection | null>
+  >;
   setSelectedReviewCommentIndexByThreadId: Dispatch<SetStateAction<Record<string, number>>>;
   setSelectedReviewThreadIndexByFilePath: Dispatch<SetStateAction<Record<string, number>>>;
   setSelectedTreePath: Dispatch<SetStateAction<string>>;

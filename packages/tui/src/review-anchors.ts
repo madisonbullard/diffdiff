@@ -5,6 +5,48 @@ import { getFilePreview } from "./diff/preview-lines.ts";
 export interface SelectedReviewAnchor extends GitHubReviewLineAnchor {
   key: string;
   snippet: string;
+  /** Newly extended edge to reveal; GitHub's `line` always stays the range end. */
+  focusLine?: number;
+}
+
+export interface ReviewRangeSelection {
+  file: PreparedReviewFile;
+  baseKey: string;
+  anchor: SelectedReviewAnchor;
+}
+
+/** Grow only within one hunk and one blob side, including its context lines. */
+export function extendReviewRange(
+  patch: string,
+  anchor: SelectedReviewAnchor,
+  delta: number,
+): SelectedReviewAnchor {
+  const start = anchor.startLine ?? anchor.line;
+  for (const hunk of patch.split(/(?=^@@ )/mu)) {
+    const lines = getPatchAnchors(anchor.path, hunk, anchor.side).filter(
+      (candidate) => candidate.side === anchor.side,
+    );
+    const lo = lines.findIndex((candidate) => candidate.line === start);
+    const hi = lines.findIndex((candidate) => candidate.line === anchor.line);
+    if (lo < 0 || hi < 0) continue;
+    const nextLo = delta < 0 ? Math.max(0, lo + delta) : lo;
+    const nextHi = delta > 0 ? Math.min(lines.length - 1, hi + delta) : hi;
+    if (nextLo === lo && nextHi === hi) return anchor;
+    const first = lines[nextLo]!;
+    const last = lines[nextHi]!;
+    return {
+      ...last,
+      key: `${anchor.path}:${anchor.side}:${last.line}:${first.line}:${anchor.side}`,
+      startLine: first.line,
+      startSide: anchor.side,
+      focusLine: delta < 0 ? first.line : last.line,
+      snippet: lines
+        .slice(nextLo, nextHi + 1)
+        .map((line) => line.snippet)
+        .join("\n"),
+    };
+  }
+  return anchor;
 }
 
 export function getReviewAnchors(
@@ -140,7 +182,11 @@ function createAnchor(
   ];
 }
 
-function getPatchAnchors(path: string, patch: string): SelectedReviewAnchor[] {
+function getPatchAnchors(
+  path: string,
+  patch: string,
+  contextSide: "LEFT" | "RIGHT" = "RIGHT",
+): SelectedReviewAnchor[] {
   const anchors: SelectedReviewAnchor[] = [];
   const lines = patch.split(/\r?\n/u);
   let oldLineNumber = 0;
@@ -160,7 +206,8 @@ function getPatchAnchors(path: string, patch: string): SelectedReviewAnchor[] {
       continue;
     }
 
-    if (line.startsWith("+") && !line.startsWith("+++")) {
+    // File headers occur before a hunk; inside it, even +++/--- are content.
+    if (line.startsWith("+")) {
       anchors.push(
         ...createAnchor(path, newLineNumber, "RIGHT", undefined, undefined, [
           { text: line.slice(1) },
@@ -170,7 +217,7 @@ function getPatchAnchors(path: string, patch: string): SelectedReviewAnchor[] {
       continue;
     }
 
-    if (line.startsWith("-") && !line.startsWith("---")) {
+    if (line.startsWith("-")) {
       anchors.push(
         ...createAnchor(path, oldLineNumber, "LEFT", undefined, undefined, [
           { text: line.slice(1) },
@@ -182,9 +229,14 @@ function getPatchAnchors(path: string, patch: string): SelectedReviewAnchor[] {
 
     if (line.startsWith(" ")) {
       anchors.push(
-        ...createAnchor(path, newLineNumber, "RIGHT", undefined, undefined, [
-          { text: line.slice(1) },
-        ]),
+        ...createAnchor(
+          path,
+          contextSide === "LEFT" ? oldLineNumber : newLineNumber,
+          contextSide,
+          undefined,
+          undefined,
+          [{ text: line.slice(1) }],
+        ),
       );
       oldLineNumber += 1;
       newLineNumber += 1;

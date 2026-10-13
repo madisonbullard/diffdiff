@@ -7,6 +7,19 @@ import * as A from "../../src/app/keymap/actions.ts";
 const defaults = getDefaultKeymaps();
 
 describe("default keymaps", () => {
+  test("shift brackets extend lines in diff and thread modes, without replacing plain brackets", () => {
+    for (const mode of ["diff", "thread"] as const) {
+      expect(searchTrie(defaults.get(mode)!, [parseKeyString("{")])).toEqual(
+        createAction(A.REVIEW_EXTEND_PREVIOUS_LINE),
+      );
+      expect(searchTrie(defaults.get(mode)!, [parseKeyString("}")])).toEqual(
+        createAction(A.REVIEW_EXTEND_NEXT_LINE),
+      );
+      expect(searchTrie(defaults.get(mode)!, [parseKeyString("]")])).toEqual(
+        createAction(mode === "diff" ? A.REVIEW_NEXT_ANCHOR : A.GITHUB_FOCUS_NEXT_COMMENT),
+      );
+    }
+  });
   test("provides a keymap for every expected mode", () => {
     const expectedModes = [
       "diff",

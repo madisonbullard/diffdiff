@@ -220,10 +220,15 @@ export function useDiffdiffAppDerived(
     () => getReviewAnchors(displaySession.files[state.selectedFileIndex], diffView),
     [diffView, displaySession.files, state.selectedFileIndex],
   );
-  const selectedReviewAnchor =
+  const baseReviewAnchor =
     selectedReviewAnchors[
       clampIndex(state.selectedReviewAnchorIndex, selectedReviewAnchors.length)
     ];
+  const selectedReviewAnchor =
+    state.selectedReviewRange?.file === displaySession.files[state.selectedFileIndex] &&
+    state.selectedReviewRange?.baseKey === baseReviewAnchor?.key
+      ? state.selectedReviewRange?.anchor
+      : baseReviewAnchor;
   const hasSelectedReviewThread = selectedReviewThread != null && selectedReviewComment != null;
   const hasThreadKeymap = selectedReviewThread != null;
   const hasNextUnreviewedFile = useMemo(

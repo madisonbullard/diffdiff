@@ -47,6 +47,8 @@ export const REVIEW_NEXT_UNREVIEWED = "review.next-unreviewed";
 export const REVIEW_CLEAR_REVIEWED = "review.clear-reviewed";
 export const REVIEW_NEXT_ANCHOR = "review.next-anchor";
 export const REVIEW_PREVIOUS_ANCHOR = "review.previous-anchor";
+export const REVIEW_EXTEND_PREVIOUS_LINE = "review.extend-previous-line";
+export const REVIEW_EXTEND_NEXT_LINE = "review.extend-next-line";
 
 // ---------------------------------------------------------------------------
 // Tree pane

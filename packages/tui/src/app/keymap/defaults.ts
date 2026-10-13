@@ -74,6 +74,15 @@ const LIST_NAVIGATION: readonly BindingTuple[] = [
   ["end", A.LIST_LAST],
 ];
 
+const FILE_NAVIGATION: readonly BindingTuple[] = [
+  ["j", A.REVIEW_NEXT_FILE],
+  ["down", A.REVIEW_NEXT_FILE],
+  ["k", A.REVIEW_PREVIOUS_FILE],
+  ["up", A.REVIEW_PREVIOUS_FILE],
+  ["home", A.REVIEW_FIRST_FILE],
+  ["end", A.REVIEW_LAST_FILE],
+];
+
 const MODAL_DISMISS: readonly BindingTuple[] = [
   ["escape", A.MODAL_DISMISS],
   ["q", A.MODAL_DISMISS],
@@ -159,12 +168,7 @@ const diffMode = buildModeWithPrefixes(
 
     // Navigation
     ["tab", A.VIEW_PANE_TOGGLE],
-    ["j", A.REVIEW_NEXT_FILE],
-    ["down", A.REVIEW_NEXT_FILE],
-    ["k", A.REVIEW_PREVIOUS_FILE],
-    ["up", A.REVIEW_PREVIOUS_FILE],
-    ["home", A.REVIEW_FIRST_FILE],
-    ["end", A.REVIEW_LAST_FILE],
+    ...FILE_NAVIGATION,
 
     // Review
     ["r", A.REVIEW_TOGGLE_REVIEWED],
@@ -178,6 +182,8 @@ const diffMode = buildModeWithPrefixes(
     ["shift+y", A.VIEW_COPY_REOPEN_COMMAND],
 
     // Review anchors
+    ["shift+[", A.REVIEW_EXTEND_PREVIOUS_LINE],
+    ["shift+]", A.REVIEW_EXTEND_NEXT_LINE],
     ["]", A.REVIEW_NEXT_ANCHOR],
     ["[", A.REVIEW_PREVIOUS_ANCHOR],
 
@@ -243,12 +249,7 @@ const threadMode = buildModeWithPrefixes(
     ["tab", A.VIEW_PANE_TOGGLE],
 
     // File navigation
-    ["j", A.REVIEW_NEXT_FILE],
-    ["down", A.REVIEW_NEXT_FILE],
-    ["k", A.REVIEW_PREVIOUS_FILE],
-    ["up", A.REVIEW_PREVIOUS_FILE],
-    ["home", A.REVIEW_FIRST_FILE],
-    ["end", A.REVIEW_LAST_FILE],
+    ...FILE_NAVIGATION,
 
     // Review
     ["x", A.REVIEW_TOGGLE_REVIEWED],
@@ -260,8 +261,8 @@ const threadMode = buildModeWithPrefixes(
     ["shift+y", A.VIEW_COPY_REOPEN_COMMAND],
 
     // Anchors
-    ["]", A.REVIEW_NEXT_ANCHOR],
-    ["[", A.REVIEW_PREVIOUS_ANCHOR],
+    ["shift+[", A.REVIEW_EXTEND_PREVIOUS_LINE],
+    ["shift+]", A.REVIEW_EXTEND_NEXT_LINE],
 
     // Thread-specific
     ["i", A.GITHUB_FOCUS_PREVIOUS_THREAD],

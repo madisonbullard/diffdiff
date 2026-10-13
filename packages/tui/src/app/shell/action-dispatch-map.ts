@@ -171,6 +171,12 @@ export function buildActionDispatchMap(options: BuildActionDispatchMapOptions): 
   map.set(A.REVIEW_PREVIOUS_ANCHOR, (count) => {
     reviewActions.moveSelectedReviewAnchor(-(count ?? 1));
   });
+  map.set(A.REVIEW_EXTEND_PREVIOUS_LINE, (count) => {
+    reviewActions.extendSelectedReviewRange(-(count ?? 1));
+  });
+  map.set(A.REVIEW_EXTEND_NEXT_LINE, (count) => {
+    reviewActions.extendSelectedReviewRange(count ?? 1);
+  });
 
   map.set(A.REVIEW_TOGGLE_REVIEWED, () => {
     reviewActions.toggleReviewed(state.selectedFileIndex);
@@ -401,6 +407,7 @@ function moveToHunk(
     return next;
   });
   state.setSelectedReviewAnchorIndex(target.anchorIndex);
+  state.setSelectedReviewRange(null);
   state.setShowSelectedReviewAnchor(true);
   state.setStatusMessage(`Jumped to hunk at ${target.anchor.path}:${target.anchor.line}.`);
 }
@@ -439,6 +446,7 @@ function jumpToSelectedFileLine(
 
   state.setShowSelectedReviewAnchor(true);
   state.setSelectedReviewAnchorIndex(targetIndex);
+  state.setSelectedReviewRange(null);
   // State may be unchanged when this repeats a jump after manual scrolling.
   if (
     state.showSelectedReviewAnchor &&

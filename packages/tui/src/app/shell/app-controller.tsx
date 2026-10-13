@@ -45,6 +45,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     setActivePane: state.setActivePane,
     setSelectedFileIndex: (index) => {
       state.setShowSelectedReviewAnchor(false);
+      state.setSelectedReviewRange(null);
       state.setSelectedFileIndex(index);
     },
   });

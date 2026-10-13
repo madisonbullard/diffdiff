@@ -38,7 +38,7 @@ export function getReviewComposerContext(target: ReviewComposerTarget): {
   if (target.kind === "review-thread") {
     return {
       snippet: target.anchor.snippet,
-      subtitle: `Comment on ${target.anchor.path}:${target.anchor.line} (${target.anchor.side.toLowerCase()}).`,
+      subtitle: `Comment on ${target.anchor.path}:${target.anchor.startLine == null ? "" : `${target.anchor.startLine}-`}${target.anchor.line} (${target.anchor.side.toLowerCase()}).`,
       title: "Add Comment",
     };
   }

@@ -210,6 +210,9 @@ export function useDiffdiffAppState({
   const [reviewSubmissionEventIndex, setReviewSubmissionEventIndex] = useState(0);
   const [showSelectedReviewAnchor, setShowSelectedReviewAnchor] = useState(false);
   const [selectedReviewAnchorIndex, setSelectedReviewAnchorIndex] = useState(0);
+  const [selectedReviewRange, setSelectedReviewRange] = useState<
+    import("../../review-anchors.ts").ReviewRangeSelection | null
+  >(null);
   const [activeFileIndex, setActiveFileIndex] = useState(selectedFileIndex);
   const [activePane, setActivePane] = useState<AppPane>("diff");
   const [collapsedDirectories, setCollapsedDirectories] = useState<Set<string>>(new Set());
@@ -388,6 +391,7 @@ export function useDiffdiffAppState({
     selectedDiffRowRef,
     showSelectedReviewAnchor,
     selectedReviewAnchorIndex,
+    selectedReviewRange,
     selectedReviewCommentIndexByThreadId,
     selectedReviewThreadIndexByFilePath,
     selectedTreePath,
@@ -444,6 +448,7 @@ export function useDiffdiffAppState({
     setSelectedFileIndex,
     setShowSelectedReviewAnchor,
     setSelectedReviewAnchorIndex,
+    setSelectedReviewRange,
     setSelectedReviewCommentIndexByThreadId,
     setSelectedReviewThreadIndexByFilePath,
     setSelectedTreePath,

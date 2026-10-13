@@ -109,6 +109,14 @@ All reproduced by `packages/tui/visual/navigation.visual.test.tsx`.
   cursor separate from the `┃` comment marker without changing wrapping;
   addition/deletion signs remain visible. Selection starts hidden and hides
   again when changing files. Unified and split views share this indicator.
+  `Shift+[` / `Shift+]` (`{` / `}`) add the previous/next line to a range,
+  including counted extensions. Every selected line is tinted and marked `▎`;
+  `▶` marks the newly extended edge. Ranges stay within one file, one hunk,
+  and one GitHub side (RIGHT additions/context or LEFT deletions/context).
+  Opposite-side changes are skipped, not included. Ordinary line/hunk jumps,
+  file focus changes, and refreshed file snapshots clear the range. `a` opens
+  a comment for the normalized range, with `startLine` / `startSide` and the
+  final `line` / `side`; the composer shows the full range and its snippet.
 - **Cost:** O(chunks) renderables, independent of line count. OpenTUI culls
   off-screen cards. Both file cards and tree rows are direct scrollbox children.
 - **Flex sizing:** cards have `flexShrink={0}`. The end spacer uses the terminal

@@ -99,14 +99,20 @@ function BufferSide({
           : row[side]?.lineNumber;
       if (number != null) lineNumbers.set(index, number);
       else hideLineNumbers.add(index);
+      const anchorNumber =
+        side === "unified"
+          ? anchor?.side === "LEFT"
+            ? row.unified?.oldLineNumber
+            : row.unified?.newLineNumber
+          : number;
       const selected =
         anchor != null &&
-        (side === "unified"
-          ? (anchor.side === "LEFT" ? row.unified?.oldLineNumber : row.unified?.newLineNumber) ===
-            anchor.line
-          : (anchor.side === "LEFT" ? side === "left" : side === "right") &&
-            number === anchor.line);
-      if (selected) selectedLine = index;
+        (side === "unified" || (anchor.side === "LEFT" ? side === "left" : side === "right")) &&
+        anchorNumber != null &&
+        anchorNumber >= (anchor.startLine ?? anchor.line) &&
+        anchorNumber <= anchor.line;
+      const focused = selected && anchorNumber === (anchor?.focusLine ?? anchor?.line);
+      if (focused) selectedLine = index;
       const annotations = row.annotations[side === "right" ? "right" : "left"];
       const annotationColor =
         annotations.length === 0
@@ -136,7 +142,7 @@ function BufferSide({
       });
       lineSigns.set(index, {
         // Reserve both cells even when inactive, so selection never changes wrapping.
-        before: `${selected ? "▶" : " "}${annotationColor == null ? " " : "┃"}`,
+        before: `${focused ? "▶" : selected ? "▎" : " "}${annotationColor == null ? " " : "┃"}`,
         beforeColor: selected ? theme.accent : annotationColor,
         after: kind === "addition" ? " +" : kind === "deletion" ? " -" : "  ",
         afterColor:
