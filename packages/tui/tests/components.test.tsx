@@ -14,6 +14,7 @@ import { PullRequestListModal } from "../src/components/pull-request-list-modal.
 import { TextInputContent } from "../src/components/text-input-content.tsx";
 import { ReviewRelativeTimeProvider } from "../src/review/comment-metadata.tsx";
 import { PullRequestCommentsModal } from "../src/review/comments-modal.tsx";
+import { ReviewThreadList } from "../src/review/threads.tsx";
 import type { PrefixMenuCommand, PrefixMenuConfig } from "../src/app/commands/prefix-menus.ts";
 import { getPrefixMenuConfig } from "../src/app/commands/prefix-menus.ts";
 import { getUiTheme } from "../src/theme.ts";
@@ -30,6 +31,41 @@ const theme = getUiTheme("pierre-dark");
 const syntaxStyle = { kind: "syntax-style" } as unknown as import("@opentui/core").SyntaxStyle;
 const NOW_MS = Date.parse("2026-04-07T12:01:00Z");
 const BLINK_TEXT_ATTRIBUTE = 1 << 4;
+
+test("resolved thread headers remain visible while bodies collapse and can be expanded", () => {
+  const thread = {
+    id: "101",
+    isResolved: true,
+    isOutdated: false,
+    path: "a.ts",
+    side: "RIGHT" as const,
+    comments: [
+      {
+        id: 101,
+        nodeId: "PRRC_101",
+        author: { login: "octocat" },
+        body: "Resolved comment body",
+        createdAt: "2026-04-07T12:00:00Z",
+        updatedAt: "2026-04-07T12:00:00Z",
+        path: "a.ts",
+        side: "RIGHT" as const,
+        isOutdated: false,
+        url: "https://github.com/a/b/pull/1#discussion_r101",
+      },
+    ],
+  };
+  const collapsed = render(<ReviewThreadList threads={[thread]} theme={theme} />);
+  expect(collectText(collapsed.toJSON())).toContain("resolved");
+  expect(collectText(collapsed.toJSON())).not.toContain("Resolved comment body");
+  const expanded = render(
+    <ReviewThreadList
+      threads={[thread]}
+      theme={theme}
+      collapsedCommentStates={{ "thread:101:resolved": false }}
+    />,
+  );
+  expect(collectText(expanded.toJSON())).toContain("Resolved comment body");
+});
 
 beforeEach(() => {
   (

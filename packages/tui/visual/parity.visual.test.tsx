@@ -287,6 +287,40 @@ test("inline ranged threads split native chunks and retain collapse/selection in
   }
 });
 
+test("resolved inline threads collapse by default and keyboard expansion works in both views", async () => {
+  const repo = createFixtureRepo([{ path: "src/a.ts", after: numberedLines("resolved", 8) }]);
+  const app = await launchApp(repo, {
+    width: 180,
+    height: 45,
+    props: {
+      initialReviewCache: {
+        reviewedPaths: [],
+        collapsedPaths: [],
+        commentCollapseStates: { "thread:RIGHT:3": false },
+      },
+    },
+    prepare: (session) => ({
+      ...session,
+      github: githubReview(repo.path, [{ ...thread("src/a.ts", 3), isResolved: true }]),
+    }),
+  });
+  try {
+    await app.press("j", "o");
+    for (const split of [false, true]) {
+      if (split) await app.press("v");
+      expect(app.diffPane().rows.join("\n")).toContain("resolved");
+      expect(app.diffPane().rows.join("\n")).not.toContain("INLINE_COMMENT_3");
+      await app.press("c");
+      expect(app.diffPane().rows.join("\n")).toContain("INLINE_COMMENT_3");
+      await app.press("c");
+      expect(app.diffPane().rows.join("\n")).not.toContain("INLINE_COMMENT_3");
+    }
+  } finally {
+    app.destroy();
+    repo.dispose();
+  }
+});
+
 test("word-change backgrounds and syntax colors survive native buffer rendering", async () => {
   const repo = createFixtureRepo([
     {

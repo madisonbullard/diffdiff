@@ -8,6 +8,20 @@
 
 ## Implementation Update
 
+### Resolved inline threads
+
+- Resolved review threads collapse automatically on load and refresh, like outdated
+  threads, and keep a visible **resolved** label in their header. `c` or clicking
+  the header still expands them manually; that choice is persisted.
+- Resolved threads use a separate collapse-state key so an expansion saved before
+  resolution does not keep a newly resolved thread open. Unresolved threads retain
+  their existing collapse state.
+- Core enriches REST comment threads with paginated GraphQL `isResolved` status,
+  joined by root comment database ID without changing thread IDs or reply targets.
+  PRs with no inline comments skip the status query; failed status enrichment is
+  logged but does not prevent reviewing comments. Older caches without status
+  remain usable. This does not add resolve/unresolve mutations to the TUI.
+
 ### Repository merge methods
 
 - In the merge modal, `Ctrl+G` toggles **Auto-merge when requirements pass**.

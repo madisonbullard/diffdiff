@@ -97,6 +97,12 @@ function ReviewThreadCard({
             <span fg={theme.text}>{thread.comments[0]?.author.login ?? "unknown"}</span>
             <ReviewMetaSeparator theme={theme} />
             <span>{formatThreadAnchor(thread)}</span>
+            {thread.isResolved ? (
+              <>
+                <ReviewMetaSeparator theme={theme} />
+                <span fg={theme.success}>resolved</span>
+              </>
+            ) : null}
             {thread.isOutdated ? (
               <>
                 <ReviewMetaSeparator theme={theme} />

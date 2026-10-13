@@ -130,6 +130,8 @@ export interface GitHubPullRequestReviewThread {
   id: string;
   comments: GitHubPullRequestComment[];
   isOutdated: boolean;
+  /** Undefined when resolution status is unavailable (including older cached sessions). */
+  isResolved?: boolean;
   line?: number;
   originalLine?: number;
   path: string;

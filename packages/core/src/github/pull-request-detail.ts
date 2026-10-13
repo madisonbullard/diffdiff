@@ -1,5 +1,6 @@
 import { logDiffdiffError } from "../logging.ts";
 import { loadPullRequestChecks } from "./pull-request-checks.ts";
+import { loadPullRequestThreadStates } from "./pull-request-thread-states.ts";
 import {
   buildPullRequestOpinionatedReviewDigest,
   buildPullRequestRequestedReviewerDigest,
@@ -48,7 +49,7 @@ export async function loadPullRequestDetail(
     { checksSummary, pullRequestResponse },
     reviewSignals,
     reviewsResponse,
-    commentsResponse,
+    { commentsResponse, threadStates },
     { changedFiles, allowedMethods, autoMergeAllowed, autoMergeEnabled },
     issueCommentsResponse,
   ] = await Promise.all([
@@ -60,12 +61,20 @@ export async function loadPullRequestDetail(
       pull_number: pullRequestNumber,
       per_page: 100,
     }) as Promise<GitHubReviewResponse[]>,
-    client.paginate("GET /repos/{owner}/{repo}/pulls/{pull_number}/comments", {
-      owner: repository.owner,
-      repo: repository.repo,
-      pull_number: pullRequestNumber,
-      per_page: 100,
-    }) as Promise<GitHubReviewCommentResponse[]>,
+    (
+      client.paginate("GET /repos/{owner}/{repo}/pulls/{pull_number}/comments", {
+        owner: repository.owner,
+        repo: repository.repo,
+        pull_number: pullRequestNumber,
+        per_page: 100,
+      }) as Promise<GitHubReviewCommentResponse[]>
+    ).then(async (commentsResponse) => ({
+      commentsResponse,
+      threadStates:
+        commentsResponse.length === 0
+          ? new Map<string, boolean>()
+          : await loadPullRequestThreadStates(client, repository, pullRequestNumber),
+    })),
     loadPullRequestChangedFiles(client, repository, pullRequestNumber),
     client.paginate("GET /repos/{owner}/{repo}/issues/{issue_number}/comments", {
       owner: repository.owner,
@@ -85,6 +94,9 @@ export async function loadPullRequestDetail(
   );
   const reviewGroups = buildReviewGroups(reviewsResponse, comments);
   const reviewThreads = buildReviewThreads(comments);
+  for (const thread of reviewThreads) {
+    thread.isResolved = threadStates.get(thread.id);
+  }
   const pendingReviewGroup = reviewGroups.find((group) => group.state === "PENDING");
   const merge = buildMergeState(pullRequestResponse);
   merge.allowedMethods = allowedMethods;

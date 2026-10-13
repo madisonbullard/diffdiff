@@ -274,6 +274,79 @@ describe("GitHubMetadataProvider", () => {
 });
 
 describe("GitHubPullRequestService", () => {
+  test("skips thread-status enrichment when there are no inline comments", async () => {
+    const client = createGitHubApiClient();
+    const originalPaginate = client.paginateMock.getMockImplementation() as (
+      route: string,
+      parameters: Record<string, unknown>,
+    ) => Promise<unknown>;
+    client.paginateMock.mockImplementation((route, parameters) =>
+      String(route).endsWith("/pulls/{pull_number}/comments")
+        ? Promise.resolve([])
+        : originalPaginate(route, parameters),
+    );
+    const detail = await loadPullRequestDetail(
+      client,
+      {
+        forge: "github",
+        host: "github.com",
+        owner: "diffdiff",
+        repo: "diffdiff",
+      },
+      42,
+    );
+    expect(detail.reviewThreads).toEqual([]);
+    expect(
+      client.graphqlMock.mock.calls.some(([query]) =>
+        String(query).includes("query PullRequestThreadStates"),
+      ),
+    ).toBe(false);
+  });
+
+  test("loads paginated resolved status onto REST comment threads without changing their IDs", async () => {
+    const client = createGitHubApiClient();
+    const originalGraphql = client.graphqlMock.getMockImplementation() as (
+      query: unknown,
+      parameters: Record<string, unknown>,
+    ) => Promise<unknown>;
+    client.graphqlMock.mockImplementation(async (query, parameters) => {
+      if (!String(query).includes("query PullRequestThreadStates")) {
+        return originalGraphql(query, parameters);
+      }
+      const secondPage = parameters.after === "next";
+      return {
+        repository: {
+          pullRequest: {
+            reviewThreads: {
+              nodes: secondPage
+                ? [{ isResolved: true, comments: { nodes: [{ databaseId: 101 }] } }]
+                : [null, { isResolved: false, comments: { nodes: [{ databaseId: 102 }] } }],
+              pageInfo: { hasNextPage: !secondPage, endCursor: secondPage ? null : "next" },
+            },
+          },
+        },
+      };
+    });
+    const detail = await loadPullRequestDetail(
+      client,
+      {
+        forge: "github",
+        host: "github.com",
+        owner: "diffdiff",
+        repo: "diffdiff",
+      },
+      42,
+    );
+    expect(detail.reviewThreads.find((thread) => thread.id === "101")).toMatchObject({
+      isResolved: true,
+    });
+    expect(
+      client.graphqlMock.mock.calls.filter(([query]) =>
+        String(query).includes("query PullRequestThreadStates"),
+      ),
+    ).toHaveLength(2);
+  });
+
   test.each([
     [true, false, ["merge"]],
     [false, true, ["squash"]],

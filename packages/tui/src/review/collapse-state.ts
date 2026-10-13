@@ -1,11 +1,13 @@
 import type { GitHubPullRequestReviewThread } from "@madisonbullard/diffdiff-core";
 
 export function getReviewThreadCollapseKey(thread: GitHubPullRequestReviewThread): string {
-  return `thread:${thread.id}`;
+  // Resolution changes reset earlier expansion overrides; resolved threads can
+  // still be expanded manually, with that choice persisted separately.
+  return `thread:${thread.id}${thread.isResolved ? ":resolved" : ""}`;
 }
 
 export function getReviewThreadDefaultCollapsed(thread: GitHubPullRequestReviewThread): boolean {
-  return thread.isOutdated;
+  return thread.isOutdated || thread.isResolved === true;
 }
 
 export function getCommentCollapsed(
