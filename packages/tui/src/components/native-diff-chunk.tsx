@@ -1,5 +1,10 @@
-import type { LineColorConfig, LineSign, TextRenderable } from "@opentui/core";
-import { memo, useCallback, useMemo } from "react";
+import type {
+  LineColorConfig,
+  LineNumberRenderable,
+  LineSign,
+  TextRenderable,
+} from "@opentui/core";
+import { memo, useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import type { Ref } from "react";
 import type { SelectedReviewAnchor } from "../review-anchors.ts";
 import type { UiTheme } from "../theme.ts";
@@ -77,6 +82,7 @@ function BufferSide({
   selectedDiffRowRef?: Ref<DiffLineTarget>;
   theme: UiTheme;
 }) {
+  const gutterRef = useRef<LineNumberRenderable | null>(null);
   const data = useMemo(() => {
     const segments: TextSegment[] = [];
     const lineNumbers = new Map<number, number>();
@@ -129,8 +135,9 @@ function BufferSide({
         content: selected ? tintHex(annotatedContent, theme.accent, 0.18) : annotatedContent,
       });
       lineSigns.set(index, {
-        before: annotationColor == null ? " " : "┃",
-        beforeColor: annotationColor,
+        // Reserve both cells even when inactive, so selection never changes wrapping.
+        before: `${selected ? "▶" : " "}${annotationColor == null ? " " : "┃"}`,
+        beforeColor: selected ? theme.accent : annotationColor,
         after: kind === "addition" ? " +" : kind === "deletion" ? " -" : "  ",
         afterColor:
           kind === "addition"
@@ -160,6 +167,18 @@ function BufferSide({
       selectedLine,
     };
   }, [lines, side, anchor, theme]);
+  useLayoutEffect(() => {
+    // OpenTUI 0.1.92 exposes methods, not property setters, for these maps.
+    // JSX props initialize them, but subsequent React prop assignments do not
+    // update the native gutter or repaint the selected line.
+    const gutter = gutterRef.current;
+    if (gutter == null) return;
+    gutter.setLineColors(data.lineColors);
+    gutter.setLineSigns(data.lineSigns);
+    gutter.setLineNumbers(data.lineNumbers);
+    gutter.setHideLineNumbers(data.hideLineNumbers);
+    gutter.requestRender();
+  }, [data]);
   const register = useCallback(
     (node: TextRenderable | null) => {
       if (data.selectedLine < 0 || selectedDiffRowRef == null) return;
@@ -173,6 +192,7 @@ function BufferSide({
   // logical line; highlighted segments are applied without changing its text.
   return (
     <line-number
+      ref={gutterRef}
       width={width}
       minWidth={lineNumberWidth + 2}
       paddingRight={1}

@@ -1128,25 +1128,30 @@ exports[`renders a compact sticky file card header snapshot 1`] = `
             0 => {
               "after": " -",
               "afterColor": "#ff7b72",
-              "before": " ",
+              "before": "  ",
               "beforeColor": undefined,
             },
             1 => {
               "after": " +",
               "afterColor": "#3fb950",
-              "before": " ",
+              "before": "  ",
               "beforeColor": undefined,
             },
             2 => {
               "after": "  ",
               "afterColor": "#8ea4b5",
-              "before": " ",
+              "before": "  ",
               "beforeColor": undefined,
             },
           }
         }
         minWidth={4}
         paddingRight={1}
+        ref={
+          {
+            "current": null,
+          }
+        }
         width="100%"
       >
         <text
@@ -1404,25 +1409,30 @@ exports[`renders an expanded file card snapshot 1`] = `
             0 => {
               "after": " -",
               "afterColor": "#ff7b72",
-              "before": " ",
+              "before": "  ",
               "beforeColor": undefined,
             },
             1 => {
               "after": " +",
               "afterColor": "#3fb950",
-              "before": " ",
+              "before": "  ",
               "beforeColor": undefined,
             },
             2 => {
               "after": "  ",
               "afterColor": "#8ea4b5",
-              "before": " ",
+              "before": "  ",
               "beforeColor": undefined,
             },
           }
         }
         minWidth={4}
         paddingRight={1}
+        ref={
+          {
+            "current": null,
+          }
+        }
         width="100%"
       >
         <text

@@ -101,7 +101,14 @@ All reproduced by `packages/tui/visual/navigation.visual.test.tsx`.
   bundle only 4 tree-sitter grammars and have no word diff.
 - **Line state:** per-line adds/removes, the selected anchor, and comment
   annotation markers are all `<line-number>` `lineColors`/`lineSigns`. They
-  change props on one chunk and never touch layout.
+  update the native maps on one chunk and never touch layout. OpenTUI 0.1.92
+  requires `setLineColors`/`setLineSigns` (and the corresponding numbering
+  methods) for updates; JSX props alone only initialize those maps.
+  `[`/`]` enables line selection, shown by an accent-colored `▶` before the
+  line number and an accent background tint. Two fixed gutter cells keep the
+  cursor separate from the `┃` comment marker without changing wrapping;
+  addition/deletion signs remain visible. Selection starts hidden and hides
+  again when changing files. Unified and split views share this indicator.
 - **Cost:** O(chunks) renderables, independent of line count. OpenTUI culls
   off-screen cards. Both file cards and tree rows are direct scrollbox children.
 - **Flex sizing:** cards have `flexShrink={0}`. The end spacer uses the terminal
