@@ -164,6 +164,7 @@ function createHarness(): {
         state.mergeMethod = value;
       },
     ),
+    setMergeAutoMerge: vi.fn(),
     setMergeModalField: createSetter(
       () => state.mergeModalField,
       (value) => {

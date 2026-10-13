@@ -964,6 +964,83 @@ describe("GitHubPullRequestService", () => {
     ]);
   });
 
+  test("enables auto-merge through GraphQL without merging or cleaning refs", async () => {
+    mockRemoteTrackingRefs("refs/remotes/origin/main", "refs/remotes/origin/feature/ui");
+    const client = createGitHubApiClient();
+    const service = new GitHubPullRequestService({ create: vi.fn(async () => client) });
+    const session = await service.attachReviewSession(createReviewSession());
+    session.github!.pullRequest.merge.autoMergeAllowed = true;
+    client.graphqlMock.mockResolvedValueOnce({
+      enablePullRequestAutoMerge: {
+        pullRequest: { autoMergeRequest: { enabledAt: "2026-10-13T12:00:00Z" } },
+      },
+    });
+    client.requestMock.mockClear();
+    const result = await service.mergePullRequest(session.github!, {
+      autoMerge: true,
+      method: "squash",
+      comparison: session.comparison,
+      commitTitle: "Ship it",
+      commitMessage: "After checks pass",
+    });
+    expect(client.graphqlMock).toHaveBeenLastCalledWith(
+      expect.stringContaining("mutation EnablePullRequestAutoMerge"),
+      {
+        input: {
+          pullRequestId: "PR_node_42",
+          mergeMethod: "SQUASH",
+          commitHeadline: "Ship it",
+          commitBody: "After checks pass",
+        },
+      },
+    );
+    expect(result).toEqual({
+      autoMergeEnabled: true,
+      cleanupCandidates: [],
+      deletedRemoteRefs: [],
+      message: "Auto-merge enabled.",
+    });
+    expect(client.requestMock).not.toHaveBeenCalled();
+    client.graphqlMock.mockResolvedValueOnce({
+      enablePullRequestAutoMerge: { pullRequest: { autoMergeRequest: null } },
+    });
+    await expect(
+      service.mergePullRequest(session.github!, {
+        autoMerge: true,
+        method: "squash",
+        comparison: session.comparison,
+      }),
+    ).rejects.toThrow("GitHub did not confirm");
+    session.github!.pullRequest.merge.autoMergeEnabled = true;
+    await expect(
+      service.mergePullRequest(session.github!, {
+        autoMerge: true,
+        method: "squash",
+        comparison: session.comparison,
+      }),
+    ).rejects.toThrow("Auto-merge is unavailable");
+    session.github!.pullRequest.merge.autoMergeEnabled = false;
+    for (const patch of [
+      { isDraft: true },
+      { isMerged: true },
+      { state: "closed" as const },
+      { merge: { ...session.github!.pullRequest.merge, autoMergeAllowed: false } },
+      { merge: { ...session.github!.pullRequest.merge, allowedMethods: [] } },
+    ]) {
+      const invalidSession = {
+        ...session.github!,
+        pullRequest: { ...session.github!.pullRequest, ...patch },
+      };
+      await expect(
+        service.mergePullRequest(invalidSession, {
+          autoMerge: true,
+          method: "squash",
+          comparison: session.comparison,
+        }),
+      ).rejects.toThrow("Auto-merge is unavailable");
+    }
+  });
+
   test("removes selected cleanup refs from the local clone", async () => {
     const clientFactory: GitHubClientFactory = {
       create: vi.fn(async () => createGitHubApiClient()),

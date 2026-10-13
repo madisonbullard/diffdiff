@@ -1,4 +1,5 @@
 import { runCommand } from "../command.ts";
+import { enablePullRequestAutoMerge } from "./pull-request-auto-merge.ts";
 import { DiffdiffError } from "../errors.ts";
 import { logDiffdiffError, logDiffdiffInfo, logDiffdiffWarn } from "../logging.ts";
 import {
@@ -442,6 +443,9 @@ export class GitHubPullRequestService {
     input: GitHubPullRequestMergeRequest,
   ): Promise<GitHubPullRequestMergeResult> {
     const client = await this.requireClient(reviewSession);
+    if (input.autoMerge) {
+      return enablePullRequestAutoMerge(client, reviewSession, input);
+    }
     const response = (await client.request("PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge", {
       commit_message: input.commitMessage,
       commit_title: input.commitTitle,

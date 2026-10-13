@@ -322,6 +322,7 @@ export function createGitHubMutationActions({
 
   async function submitMergeFromModal(): Promise<void> {
     if (
+      state.isSubmittingReviewAction ||
       state.session.github == null ||
       props.mergePullRequest == null ||
       state.mergeMethod == null ||
@@ -334,9 +335,14 @@ export function createGitHubMutationActions({
     const reviewSession = state.session.github;
     const operationId = optimisticOperations.reserveId();
 
-    optimisticOperations.push(buildOptimisticMergeOperation(operationId));
+    if (!state.mergeAutoMerge)
+      optimisticOperations.push(buildOptimisticMergeOperation(operationId));
     state.setIsSubmittingReviewAction(true);
-    state.setStatusMessage(`Merging pull request with ${state.mergeMethod}...`);
+    state.setStatusMessage(
+      state.mergeAutoMerge
+        ? "Enabling auto-merge..."
+        : `Merging pull request with ${state.mergeMethod}...`,
+    );
     let mergeSucceeded = false;
     let mergeResult:
       | Awaited<ReturnType<NonNullable<DiffdiffAppProps["mergePullRequest"]>>>
@@ -344,6 +350,7 @@ export function createGitHubMutationActions({
     let sessionLoadId: number | undefined;
     try {
       mergeResult = await props.mergePullRequest(reviewSession, {
+        ...(state.mergeAutoMerge ? { autoMerge: true } : {}),
         commitMessage:
           state.mergeCommitMessageInput.value.trim() === ""
             ? undefined
@@ -356,6 +363,25 @@ export function createGitHubMutationActions({
         method: state.mergeMethod,
       });
       mergeSucceeded = true;
+      if (mergeResult.autoMergeEnabled) {
+        state.setSession((current) =>
+          current.github == null
+            ? current
+            : {
+                ...current,
+                github: {
+                  ...current.github,
+                  pullRequest: {
+                    ...current.github.pullRequest,
+                    merge: { ...current.github.pullRequest.merge, autoMergeEnabled: true },
+                  },
+                },
+              },
+        );
+        state.setDialogStack((stack) => closeAppDialog(stack, "merge", "complete"));
+        state.setStatusMessage("Auto-merge enabled. GitHub will merge when requirements pass.");
+        return;
+      }
       state.setDialogStack((currentStack) => closeAppDialog(currentStack, "merge", "complete"));
       state.setStatusMessage("Merged the pull request. Refreshing local refs...");
       sessionLoadId = actions.beginSessionLoad();
@@ -382,11 +408,17 @@ export function createGitHubMutationActions({
 
       if (!mergeSucceeded) {
         optimisticOperations.remove(operationId);
-        persistence.persistenceApi.handleAppError(error, "Unable to merge the pull request.", {
-          action: "merge-pull-request",
-          mergeMethod: state.mergeMethod,
-          pullRequestNumber: state.session.github.pullRequest.number,
-        });
+        persistence.persistenceApi.handleAppError(
+          error,
+          state.mergeAutoMerge
+            ? "Unable to enable auto-merge."
+            : "Unable to merge the pull request.",
+          {
+            action: "merge-pull-request",
+            mergeMethod: state.mergeMethod,
+            pullRequestNumber: state.session.github.pullRequest.number,
+          },
+        );
         return;
       }
 

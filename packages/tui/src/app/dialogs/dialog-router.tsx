@@ -157,10 +157,17 @@ export function DiffdiffAppDialogs({
     return (
       <>
         <MergePullRequestModal
+          autoMerge={models.merge.autoMerge}
           bodySurface={models.merge.bodySurface}
           bodyScrollRef={models.merge.bodyScrollRef}
           canSubmit={
-            session.github.pullRequest.merge.canMerge &&
+            (models.merge.autoMerge
+              ? session.github.pullRequest.merge.autoMergeAllowed === true &&
+                !session.github.pullRequest.merge.autoMergeEnabled &&
+                !session.github.pullRequest.isDraft &&
+                !session.github.pullRequest.isMerged &&
+                session.github.pullRequest.state === "open"
+              : session.github.pullRequest.merge.canMerge) &&
             models.merge.method != null &&
             (session.github.pullRequest.merge.allowedMethods?.includes(models.merge.method) ??
               false)
@@ -173,7 +180,11 @@ export function DiffdiffAppDialogs({
           titleSurface={models.merge.titleSurface}
         />
         {models.merge.showConfirm ? (
-          <MergeConfirmModal method={models.merge.method} theme={theme} />
+          <MergeConfirmModal
+            autoMerge={models.merge.autoMerge}
+            method={models.merge.method}
+            theme={theme}
+          />
         ) : null}
       </>
     );

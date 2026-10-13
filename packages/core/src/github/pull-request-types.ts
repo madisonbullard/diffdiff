@@ -142,8 +142,10 @@ export interface GitHubGraphqlAddPullRequestReviewThreadResponse {
 export interface GitHubGraphqlPullRequestFilesResponse {
   repository?: {
     mergeCommitAllowed?: boolean;
+    autoMergeAllowed?: boolean;
     squashMergeAllowed?: boolean;
     pullRequest?: {
+      autoMergeRequest?: { enabledAt: string } | null;
       files?: {
         nodes?: Array<{
           path?: string | null;

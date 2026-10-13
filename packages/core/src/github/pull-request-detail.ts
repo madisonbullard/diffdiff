@@ -49,7 +49,7 @@ export async function loadPullRequestDetail(
     reviewSignals,
     reviewsResponse,
     commentsResponse,
-    { changedFiles, allowedMethods },
+    { changedFiles, allowedMethods, autoMergeAllowed, autoMergeEnabled },
     issueCommentsResponse,
   ] = await Promise.all([
     loadPullRequestSnapshot(client, repository, pullRequestNumber),
@@ -88,6 +88,8 @@ export async function loadPullRequestDetail(
   const pendingReviewGroup = reviewGroups.find((group) => group.state === "PENDING");
   const merge = buildMergeState(pullRequestResponse);
   merge.allowedMethods = allowedMethods;
+  merge.autoMergeAllowed = autoMergeAllowed;
+  merge.autoMergeEnabled = autoMergeEnabled;
   merge.canMerge = merge.canMerge && allowedMethods.length > 0;
 
   return {
@@ -235,9 +237,13 @@ async function loadPullRequestChangedFiles(
 ): Promise<{
   changedFiles: GitHubPullRequestChangedFilesByPath;
   allowedMethods: GitHubMergeMethod[];
+  autoMergeAllowed: boolean;
+  autoMergeEnabled: boolean;
 }> {
   const changedFiles: GitHubPullRequestChangedFilesByPath = {};
   const allowedMethods: GitHubMergeMethod[] = [];
+  let autoMergeAllowed = false;
+  let autoMergeEnabled = false;
   let after: string | null = null;
 
   while (true) {
@@ -251,8 +257,10 @@ async function loadPullRequestChangedFiles(
         ) {
           repository(owner: $owner, name: $repo) {
             mergeCommitAllowed
+            autoMergeAllowed
             squashMergeAllowed
             pullRequest(number: $pullRequestNumber) {
+              autoMergeRequest { enabledAt }
               files(first: 100, after: $after) {
                 nodes {
                   path
@@ -275,6 +283,8 @@ async function loadPullRequestChangedFiles(
       },
     );
     if (after == null) {
+      autoMergeAllowed = response.repository?.autoMergeAllowed === true;
+      autoMergeEnabled = response.repository?.pullRequest?.autoMergeRequest != null;
       if (response.repository?.mergeCommitAllowed === true) allowedMethods.push("merge");
       if (response.repository?.squashMergeAllowed === true) allowedMethods.push("squash");
     }
@@ -302,7 +312,7 @@ async function loadPullRequestChangedFiles(
       filesConnection?.pageInfo?.hasNextPage !== true ||
       filesConnection.pageInfo.endCursor == null
     ) {
-      return { changedFiles, allowedMethods };
+      return { changedFiles, allowedMethods, autoMergeAllowed, autoMergeEnabled };
     }
 
     after = filesConnection.pageInfo.endCursor;

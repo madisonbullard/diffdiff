@@ -641,6 +641,20 @@ export function buildModalActionDispatchMap({
   map.set(A.MERGE_NEXT_FIELD, () => {
     reviewInputControllers.mergeMessage.cycleField();
   });
+  map.set(A.MERGE_TOGGLE_AUTO, () => {
+    const pr = derived.displaySession.github?.pullRequest;
+    if (
+      state.isSubmittingReviewAction ||
+      pr == null ||
+      !pr.merge.autoMergeAllowed ||
+      pr.merge.autoMergeEnabled ||
+      pr.isDraft ||
+      pr.isMerged ||
+      pr.state !== "open"
+    )
+      return;
+    state.setMergeAutoMerge((current) => !current);
+  });
 
   map.set(A.MERGE_CONFIRM, () => {
     if (activeKeymapMode === "confirm-merge") {

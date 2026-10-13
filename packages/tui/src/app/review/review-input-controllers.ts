@@ -448,6 +448,7 @@ function createMergeMessageController({
     state.setMergeCommitTitleInput(createTextInputState(title));
     state.setMergeCommitMessageInput(createTextInputState(body));
     state.setMergeMethod(defaultMethod);
+    state.setMergeAutoMerge(false);
     state.setMergeConfirmOpen(false);
     state.setMergeModalField(defaultMethod == null ? "method" : "title");
   }

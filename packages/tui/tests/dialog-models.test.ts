@@ -46,6 +46,7 @@ describe("dialog models", () => {
       mergeBodySurface: createTextInputSurface({ cursorOffset: 4, value: "body" }),
       mergeConfirmOpen: true,
       mergeMethod: "squash",
+      mergeAutoMerge: false,
       mergeModalField: "body",
       mergeTitleSurface: createTextInputSurface({ cursorOffset: 5, value: "title" }),
       openPrCount: 7,

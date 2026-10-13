@@ -3893,6 +3893,77 @@ test("opens the external editor for merge composition", async () => {
   expect(getAppText(tree)).toContain("Edited body");
 });
 
+test("enables auto-merge from the merge modal while checks block immediate merging", async () => {
+  const github = createGitHubReviewSession()!;
+  github.pullRequest.merge = {
+    ...github.pullRequest.merge,
+    canMerge: false,
+    autoMergeAllowed: true,
+  };
+  const mergePullRequest = vi.fn(async () => ({
+    autoMergeEnabled: true,
+    cleanupCandidates: [],
+    deletedRemoteRefs: [],
+    message: "Auto-merge enabled.",
+  }));
+  const loadSession = vi.fn();
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github }),
+        mergePullRequest,
+        loadSession,
+      })}
+    />,
+  );
+  emitKey({ name: "m" });
+  emitKey({ name: "j" });
+  emitKey({ ctrl: true, name: "g" });
+  expect(getAppText(tree)).toContain("[x] Auto-merge");
+  await emitAsyncKey({ name: "return" });
+  expect(getAppText(tree)).toContain("Confirm Auto-Merge");
+  await emitAsyncKey({ name: "return" });
+  expect(mergePullRequest).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({ autoMerge: true, method: "squash" }),
+  );
+  expect(loadSession).not.toHaveBeenCalled();
+  expect(getAppText(tree)).toContain("Auto-merge enabled.");
+  emitKey({ name: "m" });
+  expect(getAppText(tree)).toContain("Auto-merge is already enabled.");
+});
+
+test("auto-merge failures preserve the open PR and allow retry", async () => {
+  const github = createGitHubReviewSession()!;
+  github.pullRequest.merge.autoMergeAllowed = true;
+  const mergePullRequest = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("Permission denied"))
+    .mockResolvedValueOnce({
+      autoMergeEnabled: true,
+      cleanupCandidates: [],
+      deletedRemoteRefs: [],
+      message: "Enabled",
+    });
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({ initialSession: createPreparedSession({ github }), mergePullRequest })}
+    />,
+  );
+  emitKey({ name: "m" });
+  emitKey({ name: "j" });
+  emitKey({ ctrl: true, name: "g" });
+  await emitAsyncKey({ name: "return" });
+  await emitAsyncKey({ name: "return" });
+  expect(getAppText(tree)).toContain("Merge Pull Request");
+  expect(getAppText(tree)).toContain("Permission denied");
+  expect(getAppText(tree)).toContain("[x] Auto-merge");
+  await emitAsyncKey({ name: "return" });
+  await emitAsyncKey({ name: "return" });
+  expect(mergePullRequest).toHaveBeenCalledTimes(2);
+  expect(getAppText(tree)).toContain("Auto-merge enabled.");
+});
+
 test("uses ctrl+e for line-end editing in merge title", () => {
   const openExternalEditor = vi.fn(async () => "Edited title\n\nEdited body");
   const tree = render(

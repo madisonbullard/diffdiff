@@ -64,6 +64,7 @@ export interface ReviewSubmissionDialogModels {
 }
 
 export interface MergeDialogModels {
+  autoMerge: boolean;
   bodyScrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   bodySurface: TextInputSurface;
   field: "method" | "title" | "body";
@@ -148,6 +149,7 @@ export function createDiffdiffDialogModels({
   mergeBodySurface,
   mergeConfirmOpen,
   mergeMethod,
+  mergeAutoMerge,
   mergeModalField,
   mergeTitleSurface,
   openPrCount,
@@ -196,6 +198,7 @@ export function createDiffdiffDialogModels({
   mergeBodySurface: TextInputSurface;
   mergeConfirmOpen: boolean;
   mergeMethod: GitHubMergeMethod | undefined;
+  mergeAutoMerge: boolean;
   mergeModalField: "method" | "title" | "body";
   mergeTitleSurface: TextInputSurface;
   openPrCount: number;
@@ -260,6 +263,7 @@ export function createDiffdiffDialogModels({
       selectedIndex: filterIndex,
     },
     merge: {
+      autoMerge: mergeAutoMerge,
       bodyScrollRef: mergeBodyScrollRef,
       bodySurface: mergeBodySurface,
       field: mergeModalField,

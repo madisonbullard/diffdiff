@@ -88,6 +88,7 @@ export interface DiffdiffAppState {
   mergeCommitTitleInput: TextInputState;
   mergeConfirmOpen: boolean;
   mergeMethod: GitHubMergeMethod | undefined;
+  mergeAutoMerge: boolean;
   mergeModalField: MergeModalField;
   optimisticGitHubOperations: GitHubOptimisticOperation[];
   optimisticGitHubOperationIdRef: MutableRefObject<number>;
@@ -167,6 +168,7 @@ export interface DiffdiffAppState {
   setMergeCommitTitleInput: Dispatch<SetStateAction<TextInputState>>;
   setMergeConfirmOpen: Dispatch<SetStateAction<boolean>>;
   setMergeMethod: Dispatch<SetStateAction<GitHubMergeMethod | undefined>>;
+  setMergeAutoMerge: Dispatch<SetStateAction<boolean>>;
   setMergeModalField: Dispatch<SetStateAction<MergeModalField>>;
   setOptimisticGitHubOperations: Dispatch<SetStateAction<GitHubOptimisticOperation[]>>;
   setPullRequestConversationIndex: Dispatch<SetStateAction<number>>;

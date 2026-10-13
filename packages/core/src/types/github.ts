@@ -202,6 +202,8 @@ export type GitHubPullRequestChangedFilesByPath = Record<string, GitHubPullReque
 export interface GitHubPullRequestMergeState {
   /** Supported methods explicitly enabled by the repository; absent means unknown. */
   allowedMethods?: GitHubMergeMethod[];
+  autoMergeAllowed?: boolean;
+  autoMergeEnabled?: boolean;
   canMerge: boolean;
   isDraft: boolean;
   isMerged: boolean;
@@ -217,6 +219,7 @@ export interface GitHubRefCleanupCandidate {
 }
 
 export interface GitHubPullRequestMergeRequest {
+  autoMerge?: boolean;
   commitMessage?: string;
   commitTitle?: string;
   comparison: ComparisonInfo;
@@ -224,6 +227,7 @@ export interface GitHubPullRequestMergeRequest {
 }
 
 export interface GitHubPullRequestMergeResult {
+  autoMergeEnabled?: boolean;
   cleanupCandidates: GitHubRefCleanupCandidate[];
   deletedRemoteRefs: string[];
   message: string;

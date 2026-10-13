@@ -9,13 +9,22 @@ export function openHelpDialog(state: DiffdiffAppState): void {
 
 export function openMergeConfirmDialog(
   derived: Pick<DiffdiffAppDerived, "displaySession">,
-  state: Pick<DiffdiffAppState, "mergeMethod" | "setMergeConfirmOpen" | "setStatusMessage">,
+  state: Pick<
+    DiffdiffAppState,
+    "mergeMethod" | "mergeAutoMerge" | "setMergeConfirmOpen" | "setStatusMessage"
+  >,
 ): void {
   if (
     derived.displaySession.github == null ||
     state.mergeMethod == null ||
     !derived.displaySession.github.pullRequest.merge.allowedMethods?.includes(state.mergeMethod) ||
-    !derived.displaySession.github.pullRequest.merge.canMerge
+    !(state.mergeAutoMerge
+      ? derived.displaySession.github.pullRequest.merge.autoMergeAllowed &&
+        !derived.displaySession.github.pullRequest.merge.autoMergeEnabled &&
+        !derived.displaySession.github.pullRequest.isDraft &&
+        !derived.displaySession.github.pullRequest.isMerged &&
+        derived.displaySession.github.pullRequest.state === "open"
+      : derived.displaySession.github.pullRequest.merge.canMerge)
   ) {
     return;
   }

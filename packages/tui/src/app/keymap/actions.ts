@@ -164,6 +164,7 @@ export const SUBMIT_REVIEW_SUBMIT = "submit-review.submit";
 // Merge modal specific
 // ---------------------------------------------------------------------------
 export const MERGE_NEXT_FIELD = "merge.next-field";
+export const MERGE_TOGGLE_AUTO = "merge.toggle-auto";
 export const MERGE_CONFIRM = "merge.confirm";
 
 // ---------------------------------------------------------------------------

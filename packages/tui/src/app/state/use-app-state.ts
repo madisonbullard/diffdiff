@@ -184,6 +184,7 @@ export function useDiffdiffAppState({
   const [mergeMethod, setMergeMethod] = useState<GitHubMergeMethod | undefined>(
     initialGitHubPreferences?.defaultMergeMethod,
   );
+  const [mergeAutoMerge, setMergeAutoMerge] = useState(false);
   const [mergeModalField, setMergeModalField] = useState<MergeModalField>(
     initialGitHubPreferences?.defaultMergeMethod == null ? "method" : "title",
   );
@@ -359,6 +360,7 @@ export function useDiffdiffAppState({
     mergeCommitTitleInput,
     mergeConfirmOpen,
     mergeMethod,
+    mergeAutoMerge,
     mergeModalField,
     optimisticGitHubOperations,
     optimisticGitHubOperationIdRef,
@@ -425,6 +427,7 @@ export function useDiffdiffAppState({
     setMergeCommitTitleInput,
     setMergeConfirmOpen,
     setMergeMethod,
+    setMergeAutoMerge,
     setMergeModalField,
     setOptimisticGitHubOperations,
     setPullRequestConversationIndex,

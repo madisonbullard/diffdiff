@@ -10,6 +10,15 @@
 
 ### Repository merge methods
 
+- In the merge modal, `Ctrl+G` toggles **Auto-merge when requirements pass**.
+  The confirmation names auto-merge explicitly. It uses the selected method and
+  edited title/body, and remains available while checks or reviews block immediate
+  merging. GitHub enforces eligibility and permissions; failures keep the form retryable.
+- Repository auto-merge support and existing requests load with viewed-file metadata.
+  Disabled/unknown support, draft/closed/merged PRs, and existing requests cannot
+  enable auto-merge. Successful enablement keeps the PR open and never triggers
+  local ref cleanup; disabling auto-merge is outside this slice.
+
 - The merge dialog lists only supported methods explicitly enabled by the repository
   (`mergeCommitAllowed` / `squashMergeAllowed`), loaded alongside viewed-file state
   without an additional startup request. Keyboard selection uses the same list.

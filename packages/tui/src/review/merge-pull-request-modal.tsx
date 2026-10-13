@@ -12,6 +12,7 @@ import { MODAL_OVERLAY, REVIEW_BORDER } from "./shared.tsx";
 const MERGE_BODY_MAX_HEIGHT = 8;
 
 export function MergePullRequestModal({
+  autoMerge = false,
   bodySurface,
   bodyScrollRef,
   canSubmit,
@@ -22,6 +23,7 @@ export function MergePullRequestModal({
   theme,
   titleSurface,
 }: {
+  autoMerge?: boolean;
   bodySurface: TextInputSurface;
   bodyScrollRef?: Ref<ScrollBoxRenderable | null>;
   canSubmit: boolean;
@@ -97,6 +99,13 @@ export function MergePullRequestModal({
           </text>
         </box>
         <box width="100%" flexDirection="column" gap={0}>
+          <text fg={autoMerge ? theme.success : theme.textMuted} wrapMode="word">
+            {pullRequest.merge.autoMergeEnabled
+              ? "Auto-merge is already enabled."
+              : pullRequest.merge.autoMergeAllowed
+                ? `${autoMerge ? "[x]" : "[ ]"} Auto-merge when requirements pass • ctrl+g toggle`
+                : "Auto-merge is unavailable for this repository."}
+          </text>
           {mergeMethods.map((mergeMethod) => {
             const isFocused = field === "method" && mergeMethod === (method ?? mergeMethods[0]);
             const isSelected = mergeMethod === method;
@@ -191,7 +200,11 @@ export function MergePullRequestModal({
         {isSubmitting ? (
           <AsciiLoadingLabel
             color={theme.accent}
-            message="Merging pull request and refreshing local refs..."
+            message={
+              autoMerge
+                ? "Enabling auto-merge..."
+                : "Merging pull request and refreshing local refs..."
+            }
             theme={theme}
           />
         ) : (

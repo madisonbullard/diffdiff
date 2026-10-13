@@ -578,6 +578,7 @@ const submitReviewMode = buildModeWithPrefixes(
 // ---------------------------------------------------------------------------
 
 const mergeMethodMode = buildMode([
+  ["ctrl+g", A.MERGE_TOGGLE_AUTO],
   ["escape", A.MODAL_DISMISS],
   ["tab", A.MERGE_NEXT_FIELD],
   ["j", A.LIST_MOVE_DOWN],
@@ -589,6 +590,7 @@ const mergeMethodMode = buildMode([
 
 const mergeTitleMode = buildModeWithPrefixes(
   [
+    ["ctrl+g", A.MERGE_TOGGLE_AUTO],
     ["escape", A.MODAL_DISMISS],
     ["tab", A.MERGE_NEXT_FIELD],
     ["backspace", A.TEXT_BACKSPACE],
@@ -605,6 +607,7 @@ const mergeTitleMode = buildModeWithPrefixes(
 
 const mergeBodyMode = buildModeWithPrefixes(
   [
+    ["ctrl+g", A.MERGE_TOGGLE_AUTO],
     ["escape", A.MODAL_DISMISS],
     ["tab", A.MERGE_NEXT_FIELD],
     ["backspace", A.TEXT_BACKSPACE],
@@ -620,9 +623,7 @@ const mergeBodyMode = buildModeWithPrefixes(
   ],
 );
 
-// ---------------------------------------------------------------------------
 // Confirm merge
-// ---------------------------------------------------------------------------
 
 const confirmMergeMode = buildMode([...MODAL_DISMISS, ["return", A.MERGE_CONFIRM]]);
 
@@ -663,8 +664,7 @@ export function getDefaultKeymaps(): ResolvedKeymaps {
   map.set("merge-method", mergeMethodMode);
   map.set("merge-title", mergeTitleMode);
   map.set("merge-body", mergeBodyMode);
-  map.set("confirm-merge", confirmMergeMode);
-  map.set("cleanup", cleanupMode);
+  map.set("confirm-merge", confirmMergeMode).set("cleanup", cleanupMode);
   map.set("clear-reviewed", buildMode([...MODAL_DISMISS, ["return", A.CLEAR_REVIEWED_CONFIRM]]));
   map.set("diagnostics", buildMode([...MODAL_DISMISS, ...LIST_NAVIGATION]));
 

@@ -52,3 +52,28 @@ for (const allowedMethods of [
     }
   });
 }
+
+test("auto-merge toggle and confirmation render while immediate merge is blocked", async () => {
+  const repo = createFixtureRepo([{ path: "src/a.ts", after: numberedLines("test", 3) }]);
+  const github = githubReview(repo.path, []);
+  github.auth.isAuthenticated = true;
+  Object.assign(github.pullRequest.merge, {
+    allowedMethods: ["squash"],
+    canMerge: false,
+    autoMergeAllowed: true,
+  });
+  const app = await launchApp(repo, { prepare: (session) => ({ ...session, github }) });
+  try {
+    await app.press(" ", "m");
+    expect(app.frame()).toContain("[ ] Auto-merge");
+    await app.press("\u0007");
+    expect(app.frame()).toContain("[x] Auto-merge");
+    await app.press("\r");
+    expect(app.frame()).toContain("Confirm Auto-Merge");
+    await app.press("\u001b");
+    expect(app.frame()).toContain("[x] Auto-merge");
+  } finally {
+    app.destroy();
+    repo.dispose();
+  }
+});
