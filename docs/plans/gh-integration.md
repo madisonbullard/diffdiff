@@ -8,6 +8,16 @@
 
 ## Implementation Update
 
+### Repository merge methods
+
+- The merge dialog lists only supported methods explicitly enabled by the repository
+  (`mergeCommitAllowed` / `squashMergeAllowed`), loaded alongside viewed-file state
+  without an additional startup request. Keyboard selection uses the same list.
+- A saved default is honored only when enabled for the current repository. If only
+  one method is enabled it is selected automatically; otherwise choose a method.
+- No enabled supported methods (including missing settings) disables confirmation
+  and submission. Rebase merging is not currently supported by diffdiff.
+
 ### PR overview title page
 
 - PR-backed comparisons start with a **PR overview** card before the changed

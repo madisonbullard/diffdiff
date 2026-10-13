@@ -14,6 +14,7 @@ export function openMergeConfirmDialog(
   if (
     derived.displaySession.github == null ||
     state.mergeMethod == null ||
+    !derived.displaySession.github.pullRequest.merge.allowedMethods?.includes(state.mergeMethod) ||
     !derived.displaySession.github.pullRequest.merge.canMerge
   ) {
     return;

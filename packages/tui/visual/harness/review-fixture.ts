@@ -54,6 +54,7 @@ export function githubReview(
       author: { login: "author" },
       checks: { state: "unknown", total: 0, failed: 0, pending: 0, successful: 0 },
       merge: {
+        allowedMethods: ["merge", "squash"],
         canMerge: false,
         isDraft: false,
         isMerged: false,

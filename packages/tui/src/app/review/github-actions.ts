@@ -253,9 +253,16 @@ export function createGitHubReviewActions({
       return;
     }
 
+    const methods = derived.displaySession.github!.pullRequest.merge.allowedMethods ?? [];
+    const preferredMethod = state.gitHubPreferencesRef.current.defaultMergeMethod;
     controllers.mergeMessage.open({
       body: derived.displaySession.github!.pullRequest.body ?? "",
-      defaultMethod: state.gitHubPreferencesRef.current.defaultMergeMethod,
+      defaultMethod:
+        preferredMethod != null && methods.includes(preferredMethod)
+          ? preferredMethod
+          : methods.length === 1
+            ? methods[0]
+            : undefined,
       title: derived.displaySession.github!.pullRequest.title,
     });
     state.setDialogStack((currentStack) => openAppDialog(currentStack, "merge"));

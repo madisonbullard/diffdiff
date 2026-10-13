@@ -200,6 +200,8 @@ export interface GitHubPullRequestChangedFile {
 export type GitHubPullRequestChangedFilesByPath = Record<string, GitHubPullRequestChangedFile>;
 
 export interface GitHubPullRequestMergeState {
+  /** Supported methods explicitly enabled by the repository; absent means unknown. */
+  allowedMethods?: GitHubMergeMethod[];
   canMerge: boolean;
   isDraft: boolean;
   isMerged: boolean;

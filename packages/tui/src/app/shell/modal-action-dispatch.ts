@@ -178,7 +178,12 @@ export function buildModalActionDispatchMap({
   }
 
   function updateMergeMethod(delta: number): void {
-    const nextMethod = getMergeMethod(getMergeMethodIndex(state.mergeMethod) + delta);
+    const methods = derived.displaySession.github?.pullRequest.merge.allowedMethods ?? [];
+    const nextMethod = getMergeMethod(
+      getMergeMethodIndex(state.mergeMethod, methods) + delta,
+      methods,
+    );
+    if (nextMethod == null) return;
     state.setMergeMethod(nextMethod);
     void persistenceApi.persistGitHubPreferences({
       ...state.gitHubPreferencesRef.current,

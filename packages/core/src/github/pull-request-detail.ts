@@ -7,6 +7,7 @@ import {
 import type { PullRequestCoarseFingerprint, PullRequestFingerprint } from "../types/session.ts";
 import type {
   ForgeRepository,
+  GitHubMergeMethod,
   GitHubPullRequestChangedFilesByPath,
   GitHubPullRequestChecksSummary,
   GitHubPullRequestDetail,
@@ -48,7 +49,7 @@ export async function loadPullRequestDetail(
     reviewSignals,
     reviewsResponse,
     commentsResponse,
-    changedFiles,
+    { changedFiles, allowedMethods },
     issueCommentsResponse,
   ] = await Promise.all([
     loadPullRequestSnapshot(client, repository, pullRequestNumber),
@@ -86,6 +87,8 @@ export async function loadPullRequestDetail(
   const reviewThreads = buildReviewThreads(comments);
   const pendingReviewGroup = reviewGroups.find((group) => group.state === "PENDING");
   const merge = buildMergeState(pullRequestResponse);
+  merge.allowedMethods = allowedMethods;
+  merge.canMerge = merge.canMerge && allowedMethods.length > 0;
 
   return {
     author: mapActor(pullRequestResponse.user),
@@ -229,8 +232,12 @@ async function loadPullRequestChangedFiles(
   client: GitHubApiClient,
   repository: ForgeRepository,
   pullRequestNumber: number,
-): Promise<GitHubPullRequestChangedFilesByPath> {
+): Promise<{
+  changedFiles: GitHubPullRequestChangedFilesByPath;
+  allowedMethods: GitHubMergeMethod[];
+}> {
   const changedFiles: GitHubPullRequestChangedFilesByPath = {};
+  const allowedMethods: GitHubMergeMethod[] = [];
   let after: string | null = null;
 
   while (true) {
@@ -243,6 +250,8 @@ async function loadPullRequestChangedFiles(
           $after: String
         ) {
           repository(owner: $owner, name: $repo) {
+            mergeCommitAllowed
+            squashMergeAllowed
             pullRequest(number: $pullRequestNumber) {
               files(first: 100, after: $after) {
                 nodes {
@@ -265,6 +274,10 @@ async function loadPullRequestChangedFiles(
         repo: repository.repo,
       },
     );
+    if (after == null) {
+      if (response.repository?.mergeCommitAllowed === true) allowedMethods.push("merge");
+      if (response.repository?.squashMergeAllowed === true) allowedMethods.push("squash");
+    }
     const filesConnection:
       | NonNullable<
           NonNullable<
@@ -289,7 +302,7 @@ async function loadPullRequestChangedFiles(
       filesConnection?.pageInfo?.hasNextPage !== true ||
       filesConnection.pageInfo.endCursor == null
     ) {
-      return changedFiles;
+      return { changedFiles, allowedMethods };
     }
 
     after = filesConnection.pageInfo.endCursor;

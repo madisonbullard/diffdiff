@@ -11,7 +11,6 @@ const REVIEW_SUBMISSION_EVENTS: readonly GitHubReviewSubmissionEvent[] = [
   "REQUEST_CHANGES",
 ];
 
-const MERGE_METHODS: readonly GitHubMergeMethod[] = ["merge", "squash"];
 const SECOND_IN_MS = 1_000;
 const MINUTE_IN_MS = 60 * SECOND_IN_MS;
 const HOUR_IN_MS = 60 * MINUTE_IN_MS;
@@ -182,12 +181,18 @@ export function getReviewSubmissionEvent(index: number): GitHubReviewSubmissionE
   ]!;
 }
 
-export function getMergeMethod(index: number): GitHubMergeMethod {
-  return MERGE_METHODS[Math.max(0, Math.min(index, MERGE_METHODS.length - 1))]!;
+export function getMergeMethod(
+  index: number,
+  methods: readonly GitHubMergeMethod[],
+): GitHubMergeMethod | undefined {
+  return methods[Math.max(0, Math.min(index, methods.length - 1))];
 }
 
-export function getMergeMethodIndex(method?: GitHubMergeMethod): number {
-  return method == null ? 0 : Math.max(MERGE_METHODS.indexOf(method), 0);
+export function getMergeMethodIndex(
+  method: GitHubMergeMethod | undefined,
+  methods: readonly GitHubMergeMethod[],
+): number {
+  return method == null ? 0 : Math.max(methods.indexOf(method), 0);
 }
 
 export function formatReviewEvent(event: GitHubReviewSubmissionEvent): string {
@@ -216,6 +221,10 @@ export function getMergeBlockedReason(pullRequest: GitHubPullRequestDetail): str
 
   if (pullRequest.isDraft) {
     return "GitHub currently marks this PR as a draft, so merge is disabled.";
+  }
+
+  if (!pullRequest.merge.allowedMethods?.length) {
+    return "No supported merge methods are enabled for this repository.";
   }
 
   if (pullRequest.merge.mergeableState != null) {

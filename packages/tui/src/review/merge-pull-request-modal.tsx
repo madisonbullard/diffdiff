@@ -9,7 +9,6 @@ import { TextInputContent } from "../components/text-input-content.tsx";
 import { formatMergeMethod, getMergeBlockedReason } from "./formatting.ts";
 import { MODAL_OVERLAY, REVIEW_BORDER } from "./shared.tsx";
 
-const MERGE_METHODS: readonly GitHubMergeMethod[] = ["merge", "squash"];
 const MERGE_BODY_MAX_HEIGHT = 8;
 
 export function MergePullRequestModal({
@@ -34,6 +33,7 @@ export function MergePullRequestModal({
   titleSurface: TextInputSurface;
 }) {
   const mergeBlockedReason = getMergeBlockedReason(pullRequest);
+  const mergeMethods = pullRequest.merge.allowedMethods ?? [];
 
   return (
     <box
@@ -97,8 +97,8 @@ export function MergePullRequestModal({
           </text>
         </box>
         <box width="100%" flexDirection="column" gap={0}>
-          {MERGE_METHODS.map((mergeMethod) => {
-            const isFocused = field === "method" && mergeMethod === (method ?? MERGE_METHODS[0]);
+          {mergeMethods.map((mergeMethod) => {
+            const isFocused = field === "method" && mergeMethod === (method ?? mergeMethods[0]);
             const isSelected = mergeMethod === method;
             const accent = mergeMethod === "merge" ? theme.accent : theme.success;
 

@@ -13,6 +13,7 @@ import { resolveGitHubAuth, storeGitHubToken } from "../src/github/auth.ts";
 import { getGitHubAuthConfigPaths } from "../src/github/config.ts";
 import { buildConversationItems } from "../src/github/pull-request-mappers.ts";
 import { GitHubPullRequestService } from "../src/github/pull-request-service.ts";
+import { loadPullRequestDetail } from "../src/github/pull-request-detail.ts";
 import {
   buildPullRequestFingerprint,
   buildReviewSessionFingerprint,
@@ -273,6 +274,42 @@ describe("GitHubMetadataProvider", () => {
 });
 
 describe("GitHubPullRequestService", () => {
+  test.each([
+    [true, false, ["merge"]],
+    [false, true, ["squash"]],
+    [true, true, ["merge", "squash"]],
+    [false, false, []],
+    [undefined, undefined, []],
+  ])(
+    "loads allowed merge methods (%s, %s)",
+    async (mergeCommitAllowed, squashMergeAllowed, expected) => {
+      const client = createGitHubApiClient({
+        repositoryMergeSettings: { mergeCommitAllowed, squashMergeAllowed },
+      });
+      const detail = await loadPullRequestDetail(
+        client,
+        {
+          forge: "github",
+          host: "github.com",
+          owner: "diffdiff",
+          repo: "diffdiff",
+        },
+        42,
+      );
+      expect(detail.merge.allowedMethods).toEqual(expected);
+      expect(detail.merge.canMerge).toBe(expected.length > 0);
+      expect(
+        client.graphqlMock.mock.calls.find(([query]) =>
+          String(query).includes("query PullRequestChangedFiles"),
+        )?.[0],
+      ).toContain("mergeCommitAllowed");
+      expect(
+        client.graphqlMock.mock.calls.find(([query]) =>
+          String(query).includes("query PullRequestChangedFiles"),
+        )?.[0],
+      ).toContain("squashMergeAllowed");
+    },
+  );
   test("lists open authored and review-requested pull requests across repositories", async () => {
     const clientFactory: GitHubClientFactory = {
       create: vi.fn(async () =>
@@ -958,6 +995,7 @@ describe("GitHubPullRequestService", () => {
 
 function createGitHubApiClient(
   options: {
+    repositoryMergeSettings?: { mergeCommitAllowed?: boolean; squashMergeAllowed?: boolean };
     checkRuns?: Array<{ conclusion: string | null; status: string }>;
     combinedStatusState?: string;
     commentPath?: string;
@@ -1062,6 +1100,10 @@ function createGitHubApiClient(
 
       return {
         repository: {
+          ...(options.repositoryMergeSettings ?? {
+            mergeCommitAllowed: true,
+            squashMergeAllowed: true,
+          }),
           pullRequest: {
             files: {
               nodes: page.map((file) => ({

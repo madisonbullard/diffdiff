@@ -324,7 +324,8 @@ export function createGitHubMutationActions({
     if (
       state.session.github == null ||
       props.mergePullRequest == null ||
-      state.mergeMethod == null
+      state.mergeMethod == null ||
+      !state.session.github.pullRequest.merge.allowedMethods?.includes(state.mergeMethod)
     ) {
       return;
     }

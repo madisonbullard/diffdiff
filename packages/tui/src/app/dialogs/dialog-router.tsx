@@ -159,7 +159,12 @@ export function DiffdiffAppDialogs({
         <MergePullRequestModal
           bodySurface={models.merge.bodySurface}
           bodyScrollRef={models.merge.bodyScrollRef}
-          canSubmit={session.github.pullRequest.merge.canMerge && models.merge.method != null}
+          canSubmit={
+            session.github.pullRequest.merge.canMerge &&
+            models.merge.method != null &&
+            (session.github.pullRequest.merge.allowedMethods?.includes(models.merge.method) ??
+              false)
+          }
           field={models.merge.field}
           isSubmitting={models.merge.isSubmitting}
           method={models.merge.method}

@@ -35,6 +35,7 @@ function createPullRequest(
     latestOpinionatedReviews: [],
     merge: {
       canMerge: true,
+      allowedMethods: ["merge", "squash"],
       isDraft: false,
       isMerged: false,
     },
