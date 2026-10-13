@@ -11,7 +11,7 @@ for (const [width, height] of [
     const repo = createFixtureRepo([{ path: "src/a.ts", after: numberedLines("test", 3) }]);
     const github = githubReview(repo.path, []);
     github.auth.isAuthenticated = true;
-    github.pullRequest.reviewRequests = [{ kind: "user", label: "user-0" }];
+    github.pullRequest.reviewRequests = [{ kind: "user", label: "USER-10" }];
     let writes = 0;
     const app = await launchApp(repo, {
       width,
@@ -39,6 +39,10 @@ for (const [width, height] of [
       expect(app.frame()).toContain("ctrl+s");
       expect(app.frame()).toContain("cancel");
       expect(app.frame()).toContain("Requested");
+      expect(app.frame()).toContain("@user-10");
+      if (height >= 30) {
+        expect(app.frame().indexOf("@user-10")).toBeLessThan(app.frame().indexOf("@user-0"));
+      }
       for (let index = 0; index < 19; index++) await app.press("\x1b[B");
       expect(app.frame()).toContain("@user-19");
       await app.press("\r");

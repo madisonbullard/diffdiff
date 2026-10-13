@@ -22,7 +22,7 @@ export function ReviewerPickerModal({
   requests: readonly GitHubPullRequestRequestedReviewer[];
   theme: UiTheme;
 }) {
-  const users = filterReviewerCandidates(picker);
+  const users = filterReviewerCandidates(picker, requests);
   const { height } = useTerminalDimensions();
   const compact = height < 30;
   const noticeRows =

@@ -28,11 +28,18 @@ export function createReviewerPickerState(): ReviewerPickerState {
   };
 }
 
-export function filterReviewerCandidates(picker: ReviewerPickerState): GitHubReviewerCandidate[] {
+export function filterReviewerCandidates(
+  picker: ReviewerPickerState,
+  requests: readonly GitHubPullRequestRequestedReviewer[],
+): GitHubReviewerCandidate[] {
   const query = picker.input.value.trim().toLowerCase().replace(/^@/u, "");
-  return picker.users.filter((user) =>
-    `${user.login} ${user.name ?? ""}`.toLowerCase().includes(query),
-  );
+  const requested = getRequestedReviewerLogins(requests);
+  return picker.users
+    .filter((user) => `${user.login} ${user.name ?? ""}`.toLowerCase().includes(query))
+    .sort(
+      (a, b) =>
+        Number(requested.has(b.login.toLowerCase())) - Number(requested.has(a.login.toLowerCase())),
+    );
 }
 
 export function getRequestedReviewerLogins(

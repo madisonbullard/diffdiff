@@ -311,6 +311,43 @@ test("reviewer picker can be opened from the command palette and canceled withou
   expect(getAppText(tree)).toContain("No requests sent");
 });
 
+test("reviewer picker puts requested users first and selects the focused user in that order", async () => {
+  const github = createGitHubReviewSession();
+  github.pullRequest.reviewRequests = [
+    { kind: "user", label: "EXISTING" },
+    { kind: "user", label: "BOB" },
+    { kind: "team", label: "alice" },
+  ];
+  const props = createReviewerAppProps({ initialSession: createPreparedSession({ github }) });
+  const tree = render(<DiffdiffApp {...props} />);
+  await openReviewerPicker();
+  const modalText = () => getAppText(tree);
+  const expectRequestedFirst = () => {
+    const text = modalText();
+    expect(text.indexOf("@bob")).toBeLessThan(text.indexOf("@existing"));
+    expect(text.indexOf("@existing")).toBeLessThan(text.indexOf("@alice"));
+  };
+  expectRequestedFirst();
+  emitKey({ name: "return" });
+  expect(tree.root.findByType(ReviewerPickerModal).props.picker.selected.size).toBe(0);
+  emitText("Robert");
+  expect(modalText()).toContain("1 matching users");
+  expect(modalText()).toContain("@bob");
+  for (let index = 0; index < 6; index++) emitKey({ name: "backspace" });
+  await emitAsyncKey({ ctrl: true, name: "r" });
+  expectRequestedFirst();
+  emitKey({ name: "down" });
+  emitKey({ name: "return" });
+  expect(tree.root.findByType(ReviewerPickerModal).props.picker.selected.size).toBe(0);
+  emitKey({ name: "down" });
+  emitKey({ name: "return" });
+  expect(tree.root.findByType(ReviewerPickerModal).props.picker.selected).toEqual(
+    new Set(["alice"]),
+  );
+  await emitAsyncKey({ ctrl: true, name: "s" });
+  expect(props.requestReviewers).toHaveBeenCalledExactlyOnceWith(github, ["alice"]);
+});
+
 test("reviewer picker marks existing requests and does not select or resend them", async () => {
   const github = createGitHubReviewSession();
   github.pullRequest.reviewRequests = [{ kind: "user", label: "EXISTING" }];

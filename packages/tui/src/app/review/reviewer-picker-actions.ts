@@ -92,13 +92,20 @@ export function createReviewerPickerActions({
   function moveReviewerSelection(delta: number): void {
     state.setReviewerPicker((picker) => ({
       ...picker,
-      index: clampIndex(picker.index + delta, filterReviewerCandidates(picker).length),
+      index: clampIndex(
+        picker.index + delta,
+        filterReviewerCandidates(picker, state.session.github?.pullRequest.reviewRequests ?? [])
+          .length,
+      ),
     }));
   }
 
   function toggleReviewerSelection(): void {
     if (state.reviewerPicker.isLoading || state.reviewerPickerAsyncRef.current.submitting) return;
-    const users = filterReviewerCandidates(state.reviewerPicker);
+    const users = filterReviewerCandidates(
+      state.reviewerPicker,
+      state.session.github?.pullRequest.reviewRequests ?? [],
+    );
     const user = users[clampIndex(state.reviewerPicker.index, users.length)];
     if (user == null) return;
     const login = user.login.toLowerCase();

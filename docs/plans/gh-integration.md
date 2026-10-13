@@ -80,14 +80,16 @@
   case-insensitively. Arrow keys move focus; Enter toggles a person; Ctrl+S sends
   the selected requests. Selection survives filtering. Escape cancels without writes;
   cancellation and duplicate submissions are blocked while a request is in flight.
-- Existing requested users are marked and cannot be selected again. Requests are
+- Existing requested users appear at the top of the matching list, are marked,
+  and cannot be selected again. Relative candidate order within the requested and
+  available groups is preserved. Requests are
   additive: existing users and team requests are not removed. This picker requests
   individual users; selecting or removing teams is not part of this slice.
 - `packages/core` owns paginated repository `assignableUsers` discovery and the
   REST `requested_reviewers` mutation. The PR author is excluded; requests require
   authentication and an open PR. GitHub still enforces repository permissions and
   reviewer eligibility on submission.
-- GitHub's native `suggestedReviewers` appear first, with reasons based on past
+- GitHub's native `suggestedReviewers` lead the remaining available users, with reasons based on past
   commits and/or review comments. These are GitHub recommendations, not a local
   recency score or a guarantee that the user edited a particular file. Only users
   in the repository candidate list are included. Recommendation failures do not
