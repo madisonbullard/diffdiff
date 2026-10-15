@@ -1,0 +1,24 @@
+ Checks  #1 · 52eb733 · ✗ 1 failed  ◐ 1 running  ✓ 1 passed            1/3  esc 
+ › ✗ Type checking                                                       failed 
+   ◐ Build packages                                                     running 
+   ✓ Unit tests                                                          passed 
+ ────────────────────────────────────────────────────────────────────────────── 
+ ✗ Type checking  failed · GitHub Actions · 4m 12s                              
+                                                                                
+ Type checking failed                                                           
+                                                                                
+ src/review.ts:3 — Expected a documented default.                               
+ Run vp check before merging.                                                   
+                                                                                
+ https://github.com/example/repo/actions/runs/1                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ y copy link  ↑↓ select  pgup/pgdn scroll details  r refresh                    
+   CHECKS                                                                       

@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                     ┃                                                                                 ▀
+  │                                  ┃  ▼ PR overview                                                 ○ Mark reviewed   
+  │ 0 / 2 reviewed         +5 / -1   ┃                                                                                  
+  │                                  ┃  Improve the keyboard-driven review workflow                                     
+                                     ┃                                                                                  
+  ┃ ◇ PR overview                    ┃  example/repo  #1  ·  Open  ·  @author                                           
+  ┃ ▼ src                        1   ┃                                                                                  
+  ┃   M review.ts            +2 -1   ┃  feature → main  ·  1 commits  ·  1 files                                        
+  ┃ A README.md              +3 -0   ┃                                                                                  
+                                     ┃  ─────────────────────────────────────────────────────────────────────────────   
+                                     ┃                                                                                  
+                                     ┃                                                                                  
+                                     ┃                                                                                  
+                                     ┃                                                                                  
+                                     ┃                                                                                  
+                                     ┃                                                                                  
+                                     ┃                                                                                  
+                                     ┃                                                                                  
+                                     ┃  View pull request on GitHub ↗                                                   
+                                     ┃                                                                                  
+                                                                                                                        
+                                     ┃                                                                                  
+                                     ┃  ▼ src/review.ts                                                                 
+                                     ┃                            space  open                                    esc    
+                                     ┃  @@ -1,3 +1,4 @@           Pull request              Review                      
+                                     ┃       1   export function  s  Checks · 1 failing     a  Comment on line          
+                                     ┃       2 -   return false;  t  Conversation           A  Submit review            
+                                     ┃   ┃   2 +   // Keep the r  w  Request reviewers                                  
+                                     ┃   ┃   3 +   return true;   m  Merge                  App                         
+                                     ┃  ┃ ▼ reviewer  │  src/rev  D  Convert to draft       l  Compare                  
+                                     ┃                            p  Pull request list      d  Diagnostics              
+                                     ┃    40 weeks ago: Could we                            h  Keys                     
+                                     ┃                                                      Y  Copy reopen command      
+                                     ┃       4   }                                                                      
+                                     ┃                                                                                  
+   SPACE   waiting for key                                                                                              

@@ -1,0 +1,23 @@
+ Conversation  #1 · 3 items · inline threads stay in the diff          1/3  esc
+ › alex  comment                                                             6h
+   sam   changes requested                                                   5h
+   you   comment                                                             1h
+ ──────────────────────────────────────────────────────────────────────────────
+ alex  commented 6 hours ago
+
+ The keyboard shortcuts feel good. Please make destructive actions more
+ explicit before merging.
+
+
+
+
+
+
+
+
+
+
+
+
+
+ r reply  ↑↓ select  y copy link  pgup/pgdn scroll

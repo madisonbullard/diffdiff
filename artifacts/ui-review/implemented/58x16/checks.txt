@@ -1,0 +1,16 @@
+ PR Checks  #1 · 1 failed · 1 pending · 0 passed   escape 
+ PR Checks needs more space. Enlarge this 58×16 terminal  
+ or close the dialog.                                     
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+   CHECKS               Modal Picker mode active. Awa...  

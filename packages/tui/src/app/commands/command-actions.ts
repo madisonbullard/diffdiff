@@ -44,7 +44,6 @@ export function createCommandActions({
     clearPrefixMode();
     inputController.reset();
     state.setDialogStack((currentStack) => openAppDialog(currentStack, "command-palette"));
-    state.setStatusMessage("Opened command palette.");
   }
 
   function closeCommandModal(): void {
@@ -52,7 +51,6 @@ export function createCommandActions({
       closeAppDialog(currentStack, "command-palette", "dismiss"),
     );
     inputController.reset();
-    state.setStatusMessage("Closed command palette.");
   }
 
   return {

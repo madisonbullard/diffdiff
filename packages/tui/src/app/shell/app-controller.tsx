@@ -314,9 +314,13 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     [activeKeymapMode, activePrefixMenu, props.theme],
   );
   const helpLabel =
-    formatActionBindings(state.reverseKeymaps, "system.help", ["diff", "thread", "tree"])?.split(
-      " / ",
-    )[0] ?? "?";
+    formatActionBindings(
+      state.reverseKeymaps,
+      activeKeymapMode === "commands" || activeKeymapMode === "help"
+        ? "commands.switch-tab"
+        : "system.help",
+      [activeKeymapMode],
+    )?.split(" / ")[0] ?? "";
   const footerEvent = useMemo(
     () =>
       getFooterEventPresentation({
@@ -393,13 +397,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     onStartupMounted: props.onStartupMounted,
   });
 
-  const canApplyCleanup =
-    (state.cleanupCandidates.some((candidate) => candidate.kind === "local-branch") &&
-      state.cleanupSelection.removeLocal) ||
-    (state.cleanupCandidates.some((candidate) => candidate.kind === "remote-tracking") &&
-      state.cleanupSelection.removeRemote);
   const dialogModels = useDiffdiffDialogModels({
-    canApplyCleanup,
     commandPalette: commandPaletteModels,
     commands,
     derived,
@@ -412,6 +410,43 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
 
   return (
     <DiffdiffAppView
+      dialogUi={{
+        detailScrollRef: state.checksDetailScrollRef,
+        detailFocused: state.inspectorDetailFocused,
+        mode: activeKeymapMode,
+        reverse: state.reverseKeymaps,
+        error:
+          state.errorDialogOwner === state.dialogStackRef.current.at(-1)
+            ? state.errorToastMessage
+            : null,
+        newline: state.renderer.capabilities?.kitty_keyboard ? "extended" : "legacy",
+        run: (action, count) => {
+          const writeKey =
+            state.activeOverlay === "comment-composer"
+              ? "comment"
+              : state.activeOverlay === "submit-review"
+                ? "review"
+                : state.activeOverlay === "merge"
+                  ? "merge"
+                  : state.activeOverlay === "reviewer-picker"
+                    ? "reviewers"
+                    : undefined;
+          if (
+            writeKey != null &&
+            state.writeGuard.isPending(writeKey) &&
+            action !== "modal.dismiss"
+          )
+            return;
+          if (action.startsWith("facet.")) {
+            const key = action.slice(6) as keyof typeof state.branchListFilters;
+            if (Object.hasOwn(state.branchListFilters, key))
+              state.setBranchListFilters((filters) => ({ ...filters, [key]: !filters[key] }));
+            return;
+          }
+          if (!dispatchAction(actionDispatchMap, action, count ?? null))
+            commandActions.runCommandByValue(action);
+        },
+      }}
       onSelectOverview={() => fileFocus.focusFile({ activatePane: "diff", target: { index: -1 } })}
       onToggleOverviewReviewed={() => reviewActions.toggleReviewed(-1)}
       onToggleOverviewCollapsed={() => reviewActions.toggleCollapsed(-1)}
@@ -471,3 +506,4 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
     />
   );
 }
+import { dispatchAction } from "../keymap/action-dispatch.ts";

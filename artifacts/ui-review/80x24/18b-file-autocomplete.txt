@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-Vzunw /private/var/folders/42/w3sgx72173zby1  
+   PR  #1 Improve the keyboard-driven review wor1 check failed  │  merge ready  
+                                                                                
+                                                                                
+  │ Commentmontsrc/review.t ctrl+e  line end   leader+e  editor   up/down  d    
+  │                                                                             
+    ┃                                                                           
+  ┃ ┃    return false;                                                          
+  ┃                                                                             
+  ┃ ┃                                                                           
+  ┃ ┃  @                                                                        
+    ┃                                                                          █
+    ┃                                                                          █
+    ┃                                                                          █
+    ┃                                                                          ▀
+    ┃                                                                        t  
+    ┃                                                                           
+                                                                                
+    ┃                                                                           
+    ┃  >nREADME.mdw.tserence for @.                                             
+    ┃                                                                           
+    Type your comment body. Use up/down for recent drafts and @ to              
+   COMMENT    ?  help                           Commenting on src/review.ts:2.  

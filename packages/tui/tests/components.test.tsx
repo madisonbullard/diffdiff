@@ -1,14 +1,15 @@
 import type { BranchInfo, GitHubPullRequestDetail } from "@madisonbullard/diffdiff-core";
 import type { ReactNode } from "react";
-import type { ReactTestInstance, ReactTestRenderer } from "react-test-renderer";
+import type { ReactTestRenderer } from "react-test-renderer";
 import { act, create } from "react-test-renderer";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 import { BranchModal } from "../src/components/branch-modal.tsx";
 import { CommandPaletteModal } from "../src/components/command-palette-modal.tsx";
 import { FileCard, StickyFileHeader } from "../src/components/file-card.tsx";
 import { FileTreeSidebar } from "../src/components/file-tree-sidebar.tsx";
-import { HelpModal } from "../src/components/help-modal.tsx";
-import { ListFilterModal } from "../src/components/list-filter-modal.tsx";
+import { KeysTab } from "../src/components/keys-tab.tsx";
+import { DialogUiProvider } from "../src/components/dialog/context.tsx";
+import { getDefaultKeymaps, buildReverseKeymaps } from "../src/app/keymap/index.ts";
 import { PrefixPickerOverlay } from "../src/components/prefix-picker-overlay.tsx";
 import { PullRequestListModal } from "../src/components/pull-request-list-modal.tsx";
 import { TextInputContent } from "../src/components/text-input-content.tsx";
@@ -28,6 +29,7 @@ import {
 } from "../src/view-model.ts";
 
 const theme = getUiTheme("pierre-dark");
+vi.mock("@opentui/react", () => ({ useTerminalDimensions: () => ({ width: 160, height: 48 }) }));
 const syntaxStyle = { kind: "syntax-style" } as unknown as import("@opentui/core").SyntaxStyle;
 const NOW_MS = Date.parse("2026-04-07T12:01:00Z");
 const BLINK_TEXT_ATTRIBUTE = 1 << 4;
@@ -185,7 +187,7 @@ test("renders a branch modal snapshot", () => {
     />,
   );
 
-  expect(tree.toJSON()).toMatchSnapshot();
+  expect(collectText(tree.toJSON()).replace(/\s+/gu, " ").trim()).toMatchSnapshot();
   expect(collectText(tree.toJSON())).toContain("Build TUI reviewer");
   expect(collectText(tree.toJSON())).toContain("(#42)");
   expect(collectText(tree.toJSON())).toContain("Working tree");
@@ -226,7 +228,7 @@ test("shows the PR review action when a PR entry is selected", () => {
 
   const text = collectText(tree.toJSON());
 
-  expect(text).toContain("open PR review");
+  expect(text).toContain("Build TUI reviewer (#42)");
   expect(text).not.toContain("set head");
   expect(text).not.toContain("set base");
 });
@@ -263,10 +265,10 @@ test("renders a commit view snapshot", () => {
     />,
   );
 
-  expect(tree.toJSON()).toMatchSnapshot();
-  expect(collectText(tree.toJSON())).toContain("2 commits in the current comparison");
+  expect(collectText(tree.toJSON()).replace(/\s+/gu, " ").trim()).toMatchSnapshot();
+  expect(collectText(tree.toJSON())).toContain("2/2");
   expect(collectText(tree.toJSON())).toContain("abcdef0 (origin/main) Polish branch categories");
-  expect(collectText(tree.toJSON())).toContain("left / right / tab");
+  expect(collectText(tree.toJSON())).toContain("Commits");
 });
 
 test("shows commit history in working tree commit view", () => {
@@ -301,10 +303,8 @@ test("shows commit history in working tree commit view", () => {
     />,
   );
 
-  expect(collectText(tree.toJSON())).toContain("2 commits in the current comparison");
-  expect(collectText(tree.toJSON())).toContain(
-    "1234567 (HEAD -> feature/tui, origin/feature/tui) Revamp the list modal",
-  );
+  expect(collectText(tree.toJSON())).toContain("1/2");
+  expect(collectText(tree.toJSON())).toContain("1234567");
   expect(collectText(tree.toJSON())).not.toContain("Working tree changes are not committed yet.");
 });
 
@@ -343,7 +343,7 @@ test("renders a pull request list modal with truncated titles", () => {
   expect(collectText(tree.toJSON())).toContain("GitHub PRs");
   expect(collectText(tree.toJSON())).toContain("diffdiff/diffdiff");
   expect(collectText(tree.toJSON())).toContain("madison");
-  expect(collectText(tree.toJSON())).toContain("...");
+  expect(collectText(tree.toJSON())).toContain("…");
 });
 
 test("shows more pull requests at once in the pull request list modal", () => {
@@ -377,7 +377,7 @@ test("shows more pull requests at once in the pull request list modal", () => {
 
   const text = collectText(tree.toJSON());
   expect(text).toContain("Visible PR 10");
-  expect(text).not.toContain("Visible PR 11");
+  expect(text).toContain("Visible PR 12");
 });
 
 test("stretches the PR comments modal to the available height", () => {
@@ -390,13 +390,12 @@ test("stretches the PR comments modal to the available height", () => {
   );
 
   const modalFrame = tree.root.find(
-    (node) => String(node.type) === "box" && node.props.maxWidth === 118,
+    (node) => String(node.type) === "box" && node.props.width === 118,
   );
   const scrollbox = tree.root.find((node) => String(node.type) === "scrollbox");
 
-  expect(modalFrame.props.height ?? modalFrame.props.maxHeight).toBe("92%");
-  expect(scrollbox.props.flexGrow).toBe(1);
-  expect(scrollbox.props.height).toBeUndefined();
+  expect(modalFrame.props.height).toBe(42);
+  expect(scrollbox.props.height).toBeGreaterThan(12);
 });
 
 test("shows binary, reviewed, and collapsed states clearly", () => {
@@ -576,89 +575,29 @@ test("renders empty branch columns and help copy", () => {
       theme={theme}
     />,
   );
-  const filterModal = render(<ListFilterModal filters={filters} selectedIndex={0} theme={theme} />);
-  const helpCommands = [
-    {
-      category: "System",
-      title: "Open command palette",
-      value: "system.command-palette",
-    },
-    {
-      category: "Comparison",
-      title: "Open comparison list",
-      value: "comparison.list",
-    },
-    {
-      category: "GitHub",
-      title: "Copy PR URL",
-      value: "github.copy-url",
-    },
-    {
-      category: "Review",
-      keybindingContexts: ["diff"] as const,
-      title: "Toggle reviewed",
-      value: "review.toggle-reviewed",
-    },
-    {
-      category: "View",
-      keybindingContexts: ["tree"] as const,
-      title: "Open selected file",
-      value: "view.open-selected-file",
-    },
-  ];
-  const commandBindingLabels = new Map<string, string | undefined>([
-    ["system.command-palette", "ctrl+p"],
-    ["comparison.list", "l / ctrl+x l / space l"],
-    ["github.copy-url", "y / ctrl+x y"],
-    ["review.toggle-reviewed", "r"],
-    ["view.open-selected-file", "return / right"],
-  ]);
   const helpModal = render(
-    <HelpModal
-      activePane="diff"
-      commandBindingLabels={commandBindingLabels}
-      commands={helpCommands}
-      theme={theme}
-    />,
+    <DialogUiProvider
+      value={{
+        mode: "help",
+        reverse: buildReverseKeymaps(getDefaultKeymaps()),
+        run: () => undefined,
+        newline: "legacy",
+      }}
+    >
+      <KeysTab
+        query={{ value: "comparison", cursorOffset: 10 }}
+        index={0}
+        leaderOnly={false}
+        theme={theme}
+      />
+    </DialogUiProvider>,
   );
 
   expect(collectText(branchModal.toJSON())).toContain("Working tree");
-  expect(collectText(branchModal.toJSON())).toContain("ACTIVE");
-  expect(collectText(filterModal.toJSON())).toContain("Remote branches");
-  expect(collectText(helpModal.toJSON())).toContain("ctrl+p");
+  expect(collectText(branchModal.toJSON())).toContain("[ ] Remote");
   expect(collectText(helpModal.toJSON())).toContain("ctrl+x");
-  expect(collectText(helpModal.toJSON())).toContain("open comparison list");
-  expect(collectText(helpModal.toJSON())).toContain("copy PR URL");
-  expect(collectText(helpModal.toJSON())).toContain("Global");
-  expect(collectText(helpModal.toJSON())).toContain("Diff Pane");
-  expect(collectText(helpModal.toJSON())).toContain("Tree Pane");
-  expect(collectText(helpModal.toJSON())).toContain("toggle reviewed");
-  expect(collectText(helpModal.toJSON())).toContain("open selected file");
-
-  const comparisonRow = helpModal.root.find(
-    (node) =>
-      String(node.type) === "box" &&
-      node.props.justifyContent === "space-between" &&
-      collectText(node).includes("open comparison list") &&
-      collectText(node).includes("ctrl+x"),
-  );
-  const comparisonColumns = comparisonRow.children.filter(
-    (child): child is ReactTestInstance => typeof child !== "string",
-  );
-  const copyUrlRow = helpModal.root.find(
-    (node) =>
-      String(node.type) === "box" &&
-      node.props.justifyContent === "space-between" &&
-      collectText(node).includes("copy PR URL"),
-  );
-  const comparisonItem = findAncestor(comparisonRow, (node) => node.props.backgroundColor != null)!;
-  const copyUrlItem = findAncestor(copyUrlRow, (node) => node.props.backgroundColor != null)!;
-
-  expect(comparisonRow.props.gap).toBe(2);
-  expect(comparisonColumns[0]?.props.flexGrow).toBe(1);
-  expect(comparisonColumns[1]?.props.flexShrink).toBe(0);
-  expect(comparisonItem.props.paddingLeft).toBeUndefined();
-  expect(comparisonItem.props.backgroundColor).not.toBe(copyUrlItem.props.backgroundColor);
+  expect(collectText(helpModal.toJSON())).toContain("comparison list");
+  expect(collectText(helpModal.toJSON())).toContain("Keys");
 });
 
 test("renders a compact modal picker overlay", () => {
@@ -687,33 +626,8 @@ test("renders a compact modal picker overlay", () => {
   expect(collectText(overlay.toJSON())).toContain("Open comparison list");
   expect(collectText(overlay.toJSON())).toContain("Open diagnostics");
 
-  const overlayRows = overlay.root.findAll(
-    (node) =>
-      String(node.type) === "box" &&
-      node.props.justifyContent === "space-between" &&
-      (collectText(node).includes("Open comparison list") ||
-        collectText(node).includes("Open diagnostics")),
-  );
-  const firstOverlayRow = overlayRows[0]!;
-  const secondOverlayRow = overlayRows[1]!;
-  const overlayColumns = firstOverlayRow.children.filter(
-    (child): child is ReactTestInstance => typeof child !== "string",
-  );
-  const firstOverlayItem = findAncestor(
-    firstOverlayRow,
-    (node) => node.props.backgroundColor != null,
-  )!;
-  const secondOverlayItem = findAncestor(
-    secondOverlayRow,
-    (node) => node.props.backgroundColor != null,
-  )!;
-
-  expect(firstOverlayRow.props.gap).toBe(2);
-  expect(overlayColumns[0]?.props.flexGrow).toBe(1);
-  expect(overlayColumns[1]?.props.flexShrink).toBe(0);
-  expect(firstOverlayItem.props.paddingLeft).toBeUndefined();
-  expect(firstOverlayItem.props.paddingTop).toBeUndefined();
-  expect(firstOverlayItem.props.backgroundColor).not.toBe(secondOverlayItem.props.backgroundColor);
+  expect(collectText(overlay.toJSON())).toContain("l  ");
+  expect(collectText(overlay.toJSON())).toContain("esc cancel");
 });
 
 test("groups suggested commands under a dedicated heading in the palette", () => {
@@ -758,28 +672,11 @@ test("groups suggested commands under a dedicated heading in the palette", () =>
   expect(text).toContain("Comparison");
   expect(text.indexOf("Suggested")).toBeLessThan(text.indexOf("Comparison"));
 
-  const paletteRows = palette.root.findAll(
-    (node) =>
-      String(node.type) === "box" &&
-      node.props.justifyContent === "space-between" &&
-      (collectText(node).includes("Open command palette") ||
-        collectText(node).includes("Jump to next unreviewed file") ||
-        collectText(node).includes("Open comparison list")),
-  );
-  const firstPaletteItem = findAncestor(
-    paletteRows[0]!,
-    (node) => node.props.backgroundColor != null,
-  )!;
-  const secondPaletteItem = findAncestor(
-    paletteRows[1]!,
-    (node) => node.props.backgroundColor != null,
-  )!;
-
-  expect(firstPaletteItem.props.paddingLeft).toBeUndefined();
-  expect(firstPaletteItem.props.backgroundColor).not.toBe(secondPaletteItem.props.backgroundColor);
+  expect(text).toContain("ctrl+p");
+  expect(text).toContain("Jump to next unreviewed file");
 });
 
-test("renders palette command descriptions on an indented second line", () => {
+test("keeps selected-command description in the shared detail strip", () => {
   const title = "Open comparison list with a deliberately verbose title that needs to wrap cleanly";
   const description =
     "Browse the working tree, branches, pull requests, and commits from one list.";
@@ -804,29 +701,10 @@ test("renders palette command descriptions on an indented second line", () => {
   const descriptionNode = palette.root.find(
     (node) => String(node.type) === "text" && collectText(node).trim() === description,
   );
-  const titleNode = palette.root.find(
-    (node) => String(node.type) === "text" && collectText(node).includes(title),
-  );
-  const commandRow = palette.root.find(
-    (node) =>
-      String(node.type) === "box" &&
-      node.props.justifyContent === "space-between" &&
-      collectText(node).includes(title) &&
-      collectText(node).includes("ctrl+p"),
-  );
-  const commandColumns = commandRow.children.filter(
-    (child): child is ReactTestInstance => typeof child !== "string",
-  );
-  const commandItem = findAncestor(commandRow, (node) => node.props.backgroundColor != null)!;
-
   expect(descriptionNode.props.wrapMode).toBe("word");
-  expect(descriptionNode.parent?.props.paddingLeft).toBe(2);
-  expect(titleNode.props.wrapMode).toBe("word");
-  expect(commandRow.props.gap).toBe(2);
-  expect(commandColumns[0]?.props.flexGrow).toBe(1);
-  expect(commandColumns[1]?.props.flexShrink).toBe(0);
-  expect(commandItem.props.paddingLeft).toBeUndefined();
-  expect(collectText(palette.toJSON())).toContain("fuzzy filter");
+  expect(descriptionNode.props.height).toBe(2);
+  expect(collectText(palette.toJSON())).toContain("ctrl+p");
+  expect(collectText(palette.toJSON())).toContain("Search commands");
 });
 
 test("renders a blinking block cursor over the next input character", () => {
@@ -1304,22 +1182,6 @@ function render(node: ReactNode): ReactTestRenderer {
   });
 
   return tree!;
-}
-
-function findAncestor(
-  node: ReactTestInstance,
-  predicate: (candidate: ReactTestInstance) => boolean,
-): ReactTestInstance | undefined {
-  let current = node.parent;
-
-  while (current != null) {
-    if (predicate(current)) {
-      return current;
-    }
-    current = current.parent;
-  }
-
-  return undefined;
 }
 
 function collectText(node: unknown): string {

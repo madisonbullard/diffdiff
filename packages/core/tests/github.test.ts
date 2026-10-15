@@ -1025,16 +1025,33 @@ describe("GitHubPullRequestService", () => {
     );
     expect(result.cleanupCandidates).toEqual([
       {
+        expectedSha: "headsha",
+        mergedHeadSha: session.github!.pullRequest.headSha,
         branchName: "feature/ui",
         kind: "local-branch",
         ref: "feature/ui",
       },
       {
+        expectedSha: "headsha",
         branchName: "feature/ui",
         kind: "remote-tracking",
         ref: "origin/feature/ui",
       },
     ]);
+  });
+
+  test("confirmed merge survives a local ref refresh failure", async () => {
+    const client = createGitHubApiClient();
+    const service = new GitHubPullRequestService({ create: async () => client });
+    const session = await service.attachReviewSession(createReviewSession());
+    vi.spyOn(commandModule, "runCommand").mockRejectedValue(new Error("fetch offline"));
+    const result = await service.mergePullRequest(session.github!, {
+      comparison: session.comparison,
+      method: "squash",
+    });
+    expect(result.sha).toBeDefined();
+    expect(result.refsRefreshError).toContain("fetch offline");
+    expect(result.cleanupCandidates).toEqual([]);
   });
 
   test("enables auto-merge through GraphQL without merging or cleaning refs", async () => {
@@ -1114,32 +1131,28 @@ describe("GitHubPullRequestService", () => {
     }
   });
 
-  test("removes selected cleanup refs from the local clone", async () => {
+  test("refuses cleanup without a verified branch tip", async () => {
     const clientFactory: GitHubClientFactory = {
       create: vi.fn(async () => createGitHubApiClient()),
     };
     const runCommandSpy = vi.spyOn(commandModule, "runCommand").mockResolvedValue("");
     const service = new GitHubPullRequestService(clientFactory);
 
-    await service.removeCleanupRefs("/tmp/diffdiff", [
-      {
-        branchName: "feature/ui",
-        kind: "local-branch",
-        ref: "feature/ui",
-      },
-      {
-        branchName: "feature/ui",
-        kind: "remote-tracking",
-        ref: "origin/feature/ui",
-      },
-    ]);
-
-    expect(runCommandSpy).toHaveBeenCalledWith("git", ["branch", "-D", "feature/ui"], {
-      cwd: "/tmp/diffdiff",
-    });
-    expect(runCommandSpy).toHaveBeenCalledWith("git", ["branch", "-dr", "origin/feature/ui"], {
-      cwd: "/tmp/diffdiff",
-    });
+    await expect(
+      service.removeCleanupRefs("/tmp/diffdiff", [
+        {
+          branchName: "feature/ui",
+          kind: "local-branch",
+          ref: "feature/ui",
+        },
+        {
+          branchName: "feature/ui",
+          kind: "remote-tracking",
+          ref: "origin/feature/ui",
+        },
+      ]),
+    ).rejects.toThrow("missing verified branch tip");
+    expect(runCommandSpy).not.toHaveBeenCalled();
   });
 });
 

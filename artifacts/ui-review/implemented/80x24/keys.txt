@@ -1,0 +1,24 @@
+  Commands  Keys   Resolved bindings · includes your overrides    1/298  escape 
+  Search keys, modes, or actions…                                               
+   diff                                                                         
+ › scroll page down                                                    pagedown 
+   scroll page up                                                        pageup 
+   scroll half page down                                                 ctrl+d 
+   scroll half page up                                                   ctrl+u 
+   system command palette                                                ctrl+p 
+   system help                                ? / ctrl+x ? / ctrl+x h / space h 
+   system diagnostics                                    d / ctrl+x d / space d 
+   view pane toggle                                                         tab 
+   review next file                                                    j / down 
+   review previous file                                                  k / up 
+   review first file                                                       home 
+   review last file                                                         end 
+   review toggle reviewed                                      r / x / ctrl+x r 
+   review toggle collapsed                                     c / z / ctrl+x c 
+   review next unreviewed                                          u / ctrl+x u 
+   review clear reviewed                                   alt+r / ctrl+x alt+r 
+   view open file in editor                                        e / ctrl+x e 
+   view diff toggle                                                v / ctrl+x v 
+ Ctrl+X is a silent leader. Space, g, and s show next-key menus.                
+ down move  tab commands                                                        
+   KEYS    tab  commands                                                Ready.  

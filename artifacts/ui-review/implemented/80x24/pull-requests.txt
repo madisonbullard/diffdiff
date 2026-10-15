@@ -1,0 +1,24 @@
+ GitHub PRs  40 open · 6 draft · 14 requested                      1/40  escape 
+  / Search pull requests…                                                       
+ › #1 Improve keyboard-driven review workflow… example/repo · draft · requested 
+   #4 Improve keyboard-driven review workflow 4        example/repo · requested 
+   #7 Improve keyboard-driven review workflow 7        example/repo · requested 
+   #10 Improve keyboard-driven review workflow 10      example/repo · requested 
+   #13 Improve keyboard-driven review workflow 13      example/repo · requested 
+   #16 Improve keyboard-driven review workflow 16      example/repo · requested 
+   #19 Improve keyboard-driven review workflow 19      example/repo · requested 
+   #22 Improve keyboard-driven review workflo… example/repo · draft · requested 
+   #25 Improve keyboard-driven review workflow 25      example/repo · requested 
+   #28 Improve keyboard-driven review workflow 28      example/repo · requested 
+   #31 Improve keyboard-driven review workflow 31      example/repo · requested 
+   #34 Improve keyboard-driven review workflow 34      example/repo · requested 
+   #37 Improve keyboard-driven review workflow 37      example/repo · requested 
+   #40 Improve keyboard-driven review workflow 40      example/repo · requested 
+   #2 Improve keyboard-driven review workflow 2                    example/repo 
+   #3 Improve keyboard-driven review workflow 3                    example/repo 
+   #5 Improve keyboard-driven review workflow 5                    example/repo 
+   #6 Improve keyboard-driven review workflow 6                    example/repo 
+ Improve keyboard-driven review workflow 1                                      
+ alex · example/repo                                                            
+ enter open  down move  ctrl+r refresh                                          
+   PR SEARCH                                   Loaded 40 GitHub pull requests.  

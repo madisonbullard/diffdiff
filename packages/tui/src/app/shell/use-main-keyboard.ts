@@ -1,4 +1,4 @@
-import { useKeyboard } from "@opentui/react";
+import { flushSync, useKeyboard } from "@opentui/react";
 import { useCallback, useEffect, useRef } from "react";
 import { findKeymapPrefixByNodeLabel } from "../keymap/prefixes.ts";
 import type { KeyboardInput } from "../../keyboard-input.ts";
@@ -9,6 +9,10 @@ import type { ReviewInputControllers } from "../review/review-input-controllers.
 import type { AppTextInputControllers } from "../text-input/input-controllers.ts";
 import type { KeymapMode } from "./keymap-mode.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
+import { insertTextInputText } from "../text-input/input-state.ts";
+import { updateReviewComposerInput } from "../review/review-composer-state.ts";
+import type { PasteEvent } from "@opentui/core";
+import { resolveDialogRect, type DialogFamily } from "../../components/dialog/geometry.ts";
 
 interface UseMainKeyboardOptions {
   actionDispatchMap: ActionDispatchMap;
@@ -32,6 +36,7 @@ export function useMainKeyboard({
   state,
 }: UseMainKeyboardOptions) {
   const keyboardHandlerRef = useRef<(key: KeyboardInput) => void>(() => undefined);
+  const pasteHandlerRef = useRef<(event: PasteEvent) => void>(() => undefined);
 
   function isPaneKeymapMode(mode: KeymapMode): boolean {
     return mode === "diff" || mode === "thread" || mode === "tree";
@@ -55,7 +60,10 @@ export function useMainKeyboard({
       case "commands": {
         return textInputControllers.commandPalette.applyKey(key);
       }
+      case "help":
+        return textInputControllers.commandPalette.applyKey(key);
       case "pull-request-search": {
+        if (key.sequence === "/" && state.pullRequestSearchInput.value === "") return true;
         return textInputControllers.pullRequestSearch.applyKey(key);
       }
       case "reviewer-picker": {
@@ -68,7 +76,10 @@ export function useMainKeyboard({
         return reviewInputControllers.reviewComposer.applyKey(key);
       }
       case "submit-review": {
-        return reviewInputControllers.reviewSubmission.applyKey(key);
+        return (
+          state.reviewSubmissionField === "body" &&
+          reviewInputControllers.reviewSubmission.applyKey(key)
+        );
       }
       case "merge-title": {
         return reviewInputControllers.mergeMessage.applyTitleKey(key);
@@ -175,6 +186,61 @@ export function useMainKeyboard({
   }
 
   keyboardHandlerRef.current = (key) => {
+    const family: DialogFamily = [
+      "comment",
+      "submit-review",
+      "merge-method",
+      "merge-title",
+      "merge-body",
+      "confirm-merge",
+    ].includes(activeKeymapMode)
+      ? "form"
+      : ["checks", "conversation", "diagnostics"].includes(activeKeymapMode)
+        ? "inspector"
+        : state.activeOverlay === "clear-reviewed"
+          ? "confirm"
+          : "picker";
+    if (
+      state.activeOverlay != null &&
+      resolveDialogRect(family, state.terminalDimensions.width, state.terminalDimensions.height)
+        .tooSmall &&
+      key.name !== "escape"
+    )
+      return;
+    if (
+      activeKeymapMode === "comment" &&
+      (key.name === "up" || key.name === "down") &&
+      !key.ctrl &&
+      !key.meta &&
+      !state.writeGuard.isPending("comment")
+    ) {
+      if (reviewInputControllers.reviewComposer.applyKey(key)) return;
+    }
+    if (
+      activeKeymapMode === "submit-review" &&
+      state.reviewSubmissionField === "body" &&
+      (key.name === "up" || key.name === "down") &&
+      !key.ctrl &&
+      !key.meta
+    ) {
+      reviewInputControllers.reviewSubmission.applyKey(key);
+      return;
+    }
+    if (
+      activeKeymapMode === "reviewer-picker" &&
+      state.reviewerPickerAsyncRef.current.submitting &&
+      key.name !== "escape"
+    )
+      return;
+    const writeKey =
+      activeKeymapMode === "comment"
+        ? "comment"
+        : activeKeymapMode === "submit-review"
+          ? "review"
+          : activeKeymapMode.startsWith("merge-") || activeKeymapMode === "confirm-merge"
+            ? "merge"
+            : undefined;
+    if (writeKey != null && state.writeGuard.isPending(writeKey) && key.name !== "escape") return;
     if (
       isPaneKeymapMode(activeKeymapMode) &&
       state.errorToastMessage != null &&
@@ -187,6 +253,64 @@ export function useMainKeyboard({
     handleResult(key);
   };
 
+  pasteHandlerRef.current = (event) => {
+    const multiline =
+      activeKeymapMode === "comment" ||
+      activeKeymapMode === "submit-review" ||
+      activeKeymapMode === "merge-body";
+    const normalized = new TextDecoder().decode(event.bytes).replace(/\r\n?/gu, "\n");
+    const text = multiline ? normalized : normalized.replace(/\n/gu, " ");
+    const insert = (input: import("../text-input/input-state.ts").TextInputState) =>
+      insertTextInputText(input, text);
+    switch (activeKeymapMode) {
+      case "commands":
+      case "help":
+        state.setCommandInput(insert);
+        state.setCommandIndex(0);
+        break;
+      case "pull-request-search":
+        state.setPullRequestSearchInput(insert);
+        state.setPullRequestListIndex(0);
+        break;
+      case "commit-search":
+        state.setCommitSearchInput(insert);
+        state.setCommitListIndex(0);
+        state.setBranchListIndex(0);
+        break;
+      case "submit-review":
+        if (state.writeGuard.isPending("review") || state.reviewSubmissionField !== "body") break;
+        state.setReviewSubmissionInput(insert);
+        break;
+      case "merge-title":
+      case "merge-body":
+        if (state.writeGuard.isPending("merge")) break;
+        (activeKeymapMode === "merge-title"
+          ? state.setMergeCommitTitleInput
+          : state.setMergeCommitMessageInput)(insert);
+        break;
+      case "reviewer-picker":
+        if (state.reviewerPickerAsyncRef.current.submitting) break;
+        state.setReviewerPicker((picker) => ({ ...picker, index: 0, input: insert(picker.input) }));
+        break;
+      case "comment":
+        if (state.writeGuard.isPending("comment")) break;
+        state.setReviewComposer((composer) => updateReviewComposerInput(composer, insert));
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  useEffect(() => {
+    const handler = (event: PasteEvent) => flushSync(() => pasteHandlerRef.current(event));
+    state.renderer.keyInput.on("paste", handler);
+    return () => {
+      state.renderer.keyInput.off("paste", handler);
+    };
+  }, [state.renderer]);
+
   useEffect(() => {
     state.keymapRuntime.reset();
     state.keybindController.clearPrefixMode();
@@ -194,7 +318,9 @@ export function useMainKeyboard({
 
   useKeyboard(
     useCallback((key: KeyboardInput) => {
-      keyboardHandlerRef.current(key);
+      // Native stdin can deliver several keys before React commits. Commit each
+      // event's state/mode transition before the parser emits the next key.
+      flushSync(() => keyboardHandlerRef.current(key));
     }, []),
   );
 }

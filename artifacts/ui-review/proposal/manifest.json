@@ -1,0 +1,288 @@
+[
+  {
+    "name": "p01-commands",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Picker · command palette, grouped, one row per command, primary key only",
+    "before": "05-command-palette"
+  },
+  {
+    "name": "p02-commands-filtered",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Picker · filtered (flat list, match highlight, section as metadata)",
+    "before": "05-command-palette"
+  },
+  {
+    "name": "p03-keys",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Picker · Keys tab: searchable reference generated from the keymap, current pane first",
+    "before": "06-help-diff"
+  },
+  {
+    "name": "p04-space-menu",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Key menu · non-modal which-key popover, key-first, grouped; the app stays undimmed",
+    "before": "01-space-menu"
+  },
+  {
+    "name": "p06-reviewers",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Picker · multi-select: requested ✓, chosen [x], cursor ›, sections, long + wide names",
+    "before": "15-reviewer-selected"
+  },
+  {
+    "name": "p07-reviewers-error",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Picker · inline failure keeps selection and offers retry",
+    "before": "15-reviewer-selected"
+  },
+  {
+    "name": "p08-compare",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Picker · branches tab, inline facets replace Filters (D3), enter sets head (D8), 43 branches windowed",
+    "before": "08-compare-branches"
+  },
+  {
+    "name": "p08b-pull-requests",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Picker · one dense row per PR with number, author, state, and age; 40 PRs windowed",
+    "before": "12-pull-requests"
+  },
+  {
+    "name": "p09-checks",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Inspector · glyph + word status, list/detail side by side when wide",
+    "before": "16-checks"
+  },
+  {
+    "name": "p09b-conversation",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Inspector · timeline list + readable detail; reply from the selected item",
+    "before": "17-conversation"
+  },
+  {
+    "name": "p10-comment",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Form · composer: context line, editor gets the space, one action bar",
+    "before": "19-inline-comment"
+  },
+  {
+    "name": "p10b-comment-autocomplete",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Form · @file popover on a raised tint under the caret; it owns the keys and the bar",
+    "before": "18b-file-autocomplete"
+  },
+  {
+    "name": "p11-comment-submitting",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Form · in-flight write: input paused, no duplicate submit, esc backgrounds the write (D9)",
+    "before": "19-inline-comment"
+  },
+  {
+    "name": "p12-submit-review",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Form · event radio with consequences, summary field",
+    "before": "21-submit-review"
+  },
+  {
+    "name": "p13-merge",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Form · method, auto-merge, remembered cleanup option (D12), title/body; hazards next to the action",
+    "before": "24-merge"
+  },
+  {
+    "name": "p14-merge-confirm",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Form · inline two-step confirmation (D4): fields lock, ▲ title, warning band, warning primary",
+    "before": "25-confirm-merge"
+  },
+  {
+    "name": "p15-auto-merge-confirm",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Form · auto-merge confirmation names its own consequence, in full at 80×24",
+    "before": "27-confirm-auto-merge"
+  },
+  {
+    "name": "p17-clear-reviewed",
+    "size": "120x40",
+    "theme": "pierre-dark",
+    "description": "Confirm · small, named action and count",
+    "before": "23-clear-reviewed"
+  },
+  {
+    "name": "p01-commands",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Picker · command palette, grouped, one row per command, primary key only",
+    "before": "05-command-palette"
+  },
+  {
+    "name": "p02-commands-filtered",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Picker · filtered (flat list, match highlight, section as metadata)",
+    "before": "05-command-palette"
+  },
+  {
+    "name": "p03-keys",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Picker · Keys tab: searchable reference generated from the keymap, current pane first",
+    "before": "06-help-diff"
+  },
+  {
+    "name": "p04-space-menu",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Key menu · non-modal which-key popover, key-first, grouped; the app stays undimmed",
+    "before": "01-space-menu"
+  },
+  {
+    "name": "p06-reviewers",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Picker · multi-select: requested ✓, chosen [x], cursor ›, sections, long + wide names",
+    "before": "15-reviewer-selected"
+  },
+  {
+    "name": "p07-reviewers-error",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Picker · inline failure keeps selection and offers retry",
+    "before": "15-reviewer-selected"
+  },
+  {
+    "name": "p08-compare",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Picker · branches tab, inline facets replace Filters (D3), enter sets head (D8), 43 branches windowed",
+    "before": "08-compare-branches"
+  },
+  {
+    "name": "p08b-pull-requests",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Picker · one dense row per PR with number, author, state, and age; 40 PRs windowed",
+    "before": "12-pull-requests"
+  },
+  {
+    "name": "p09-checks",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Inspector · glyph + word status, list/detail side by side when wide",
+    "before": "16-checks"
+  },
+  {
+    "name": "p09b-conversation",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Inspector · timeline list + readable detail; reply from the selected item",
+    "before": "17-conversation"
+  },
+  {
+    "name": "p10-comment",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Form · composer: context line, editor gets the space, one action bar",
+    "before": "19-inline-comment"
+  },
+  {
+    "name": "p10b-comment-autocomplete",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Form · @file popover on a raised tint under the caret; it owns the keys and the bar",
+    "before": "18b-file-autocomplete"
+  },
+  {
+    "name": "p11-comment-submitting",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Form · in-flight write: input paused, no duplicate submit, esc backgrounds the write (D9)",
+    "before": "19-inline-comment"
+  },
+  {
+    "name": "p12-submit-review",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Form · event radio with consequences, summary field",
+    "before": "21-submit-review"
+  },
+  {
+    "name": "p13-merge",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Form · method, auto-merge, remembered cleanup option (D12), title/body; hazards next to the action",
+    "before": "24-merge"
+  },
+  {
+    "name": "p14-merge-confirm",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Form · inline two-step confirmation (D4): fields lock, ▲ title, warning band, warning primary",
+    "before": "25-confirm-merge"
+  },
+  {
+    "name": "p15-auto-merge-confirm",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Form · auto-merge confirmation names its own consequence, in full at 80×24",
+    "before": "27-confirm-auto-merge"
+  },
+  {
+    "name": "p17-clear-reviewed",
+    "size": "80x24",
+    "theme": "pierre-dark",
+    "description": "Confirm · small, named action and count",
+    "before": "23-clear-reviewed"
+  },
+  {
+    "name": "p01-commands",
+    "size": "120x40",
+    "theme": "terminal (catppuccin palette)",
+    "description": "Picker · command palette, grouped, one row per command, primary key only",
+    "before": "05-command-palette"
+  },
+  {
+    "name": "p06-reviewers",
+    "size": "120x40",
+    "theme": "terminal (catppuccin palette)",
+    "description": "Picker · multi-select: requested ✓, chosen [x], cursor ›, sections, long + wide names",
+    "before": "15-reviewer-selected"
+  },
+  {
+    "name": "p09-checks",
+    "size": "120x40",
+    "theme": "terminal (catppuccin palette)",
+    "description": "Inspector · glyph + word status, list/detail side by side when wide",
+    "before": "16-checks"
+  },
+  {
+    "name": "p13-merge",
+    "size": "120x40",
+    "theme": "terminal (catppuccin palette)",
+    "description": "Form · method, auto-merge, remembered cleanup option (D12), title/body; hazards next to the action",
+    "before": "24-merge"
+  },
+  {
+    "name": "p18-too-small",
+    "size": "58x16",
+    "theme": "pierre-dark",
+    "description": "Fallback · below the minimum size the dialog explains itself instead of clipping"
+  }
+]

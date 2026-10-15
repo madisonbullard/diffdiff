@@ -1,0 +1,24 @@
+ Submit review  #1 · 1 pending comment                                      esc 
+   ○ Comment                                          Feedback without approval 
+ › ● Approve                                                Mark ready to merge 
+   ○ Request changes                               Block merging until resolved 
+ ────────────────────────────────────────────────────────────────────────────── 
+ Summary (optional) — tab to edit                                               
+ Looks good once the default is documented.                                     
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ enter approve  ↑↓ choose  tab summary                                          
+   SUBMIT                                                                       

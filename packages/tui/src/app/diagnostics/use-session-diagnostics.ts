@@ -62,13 +62,11 @@ export function useSessionDiagnostics({
     state.setDialogStack((currentStack) =>
       openAppDialog(currentStack, "diagnostics", { clear: true }),
     );
-    state.setStatusMessage("Opened diagnostics.");
     void loadDiagnostics();
   }, [loadDiagnostics, state]);
 
   const closeDiagnostics = useCallback((): void => {
     state.setDialogStack((currentStack) => closeAppDialog(currentStack, "diagnostics", "dismiss"));
-    state.setStatusMessage("Closed diagnostics.");
   }, [state]);
 
   const moveDiagnosticSelection = useCallback(

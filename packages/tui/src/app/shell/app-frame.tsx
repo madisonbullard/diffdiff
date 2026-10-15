@@ -14,8 +14,12 @@ import { AppDiffPane } from "./app-diff-pane.tsx";
 import { AppFooter } from "./app-footer.tsx";
 import { AppHeader } from "./app-header.tsx";
 import { AppSidebar } from "./app-sidebar.tsx";
+import { DialogUiProvider, type DialogUi } from "../../components/dialog/context.tsx";
+import { dialogTokens } from "../../components/dialog/tokens.ts";
+import { truncateInlineMessage } from "../shared/text.ts";
 
 interface DiffdiffAppViewProps {
+  dialogUi: DialogUi;
   onSelectOverview?: () => void;
   onToggleOverviewReviewed?: () => void;
   onToggleOverviewCollapsed?: () => void;
@@ -76,6 +80,7 @@ interface DiffdiffAppViewProps {
 }
 
 export function DiffdiffAppView({
+  dialogUi,
   onSelectOverview,
   onToggleOverviewReviewed,
   onToggleOverviewCollapsed,
@@ -124,6 +129,7 @@ export function DiffdiffAppView({
   treeSummaryLabels,
   visibleTreeNodes,
 }: DiffdiffAppViewProps) {
+  const hasOverlaySurface = activeOverlay != null || activePrefixMenu?.picker != null;
   return (
     <box
       width="100%"
@@ -196,35 +202,46 @@ export function DiffdiffAppView({
               toggleReviewThreadCollapsed={toggleReviewThreadCollapsed}
             />
           </box>
-
-          {activePrefixMenu?.picker != null ? (
-            <PrefixPickerOverlay
-              commands={activePrefixMenuCommands}
-              prefixMenu={activePrefixMenu}
-              theme={theme}
-            />
-          ) : null}
-
-          <DiffdiffAppDialogs
-            activeDialog={activeOverlay}
-            models={dialogModels}
-            session={session}
-            terminalWidth={terminalWidth}
-            theme={theme}
-          />
         </box>
       </VisibleCommentRelativeTimeProvider>
+      <DialogUiProvider value={dialogUi}>
+        {activePrefixMenu?.picker != null ? (
+          <PrefixPickerOverlay
+            commands={activePrefixMenuCommands}
+            prefixMenu={activePrefixMenu}
+            theme={theme}
+          />
+        ) : null}
+        <DiffdiffAppDialogs
+          activeDialog={activeOverlay}
+          models={dialogModels}
+          session={session}
+          terminalWidth={terminalWidth}
+          theme={theme}
+        />
+      </DialogUiProvider>
 
       <AppFooter
-        footerEvent={footerEvent}
-        footerEventMessage={footerEventMessage}
+        footerEvent={
+          errorToastMessage != null && hasOverlaySurface
+            ? { color: theme.danger, message: errorToastMessage }
+            : footerEvent
+        }
+        footerEventMessage={
+          errorToastMessage != null && hasOverlaySurface
+            ? truncateInlineMessage(
+                `✗ ${errorToastMessage}`,
+                Math.max(0, terminalWidth - footerModeBadge.label.length - helpLabel.length - 20),
+              )
+            : footerEventMessage
+        }
         footerModeBadge={footerModeBadge}
         helpLabel={helpLabel}
         showLoadingIndicator={showFooterLoadingIndicator}
-        theme={theme}
+        theme={{ ...theme, chromeBackground: dialogTokens(theme).footer }}
       />
 
-      {errorToastMessage != null ? (
+      {errorToastMessage != null && !hasOverlaySurface ? (
         <ErrorToast message={errorToastMessage} terminalWidth={terminalWidth} theme={theme} />
       ) : null}
     </box>

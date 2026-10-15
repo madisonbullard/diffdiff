@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                                                                                                       ▀
+  │             Pull requests  open · authored by you or awaiting your review                  1/40  esc  rk reviewed   
+  │ 0 / 2 revi  › Filter by title, repo, author, or #number         40 open · 5 drafts · 11 awaiting you                
+  │             ────────────────────────────────────────────────────────────────────────────────────────                
+                › #42   Improve the keyboard-driven review wor…  example/repo · alex · review reque…  2h                
+  ┃ ◇ PR overv    #41   Add clearer review status indicators     example/repo · sam · draft           1d                
+  ┃ ▼ src         #318  Speed up startup by deferring branch s…  example/tools · you · yours          3d                
+  ┃   M review    #7    Docs: explain reviewed state sync        example/docs · jordan · review req…  5d                
+  ┃ A README.m    #300  Fixture pull request 5 with a title lo…  example/tools · user-5 · review re…  6d                
+                  #299  Fixture pull request 6 with a title lo…  example/repo · user-6 · yours        7d  ───────────   
+                  #298  Fixture pull request 7 with a title lo…  example/repo · user-7 · yours        8d                
+                  #297  Fixture pull request 8 with a title lo…  example/tools · user-8 · yours       9d                
+                  #296  Fixture pull request 9 with a title lo…  example/repo · user-9 · review req… 10d                
+                  #295  Fixture pull request 10 with a title l…  example/repo · user-10 · yours      11d                
+                  #294  Fixture pull request 11 with a title l…  example/tools · user-11 · yours     12d                
+                  #293  Fixture pull request 12 with a title l…  example/repo · user-12 · yours      13d                
+                  #292  Fixture pull request 13 with a title l…  example/repo · user-13 · review re… 14d                
+                  #291  Fixture pull request 14 with a title l…  example/tools · user-14 · yours     15d                
+                  #290  Fixture pull request 15 with a title l…  example/repo · user-15 · yours      16d                
+                  #289  Fixture pull request 16 with a title l…  example/repo · user-16 · yours      17d                
+                  #288  Fixture pull request 17 with a title l…  example/tools · user-17 · review r… 18d                
+                  #287  Fixture pull request 18 with a title l…  example/repo · user-18 · yours      19d                
+                  #286  Fixture pull request 19 with a title l…  example/repo · user-19 · yours      20d  ED  +2 / -1   
+                  #285  Fixture pull request 20 with a title l…  example/tools · user-20 · yours     21d                
+                  #284  Fixture pull request 21 with a title l…  example/repo · user-21 · review re… 22d                
+                  #283  Fixture pull request 22 with a title l…  example/repo · user-22 · yours      23d                
+                  #282  Fixture pull request 23 with a title l…  example/tools · user-23 · yours     24d                
+                  #281  Fixture pull request 24 with a title l…  example/repo · user-24 · yours      25d                
+                  #280  Fixture pull request 25 with a title l…  example/repo · user-25 · review re… 26d                
+                  #279  Fixture pull request 26 with a title l…  example/tools · user-26 · yours     27d     1 comment  
+                  #278  Fixture pull request 27 with a title l…  example/repo · user-27 · yours      28d                
+                  #277  Fixture pull request 28 with a title l…  example/repo · user-28 · yours      29d                
+                enter review  ↑↓ move  y copy URL  F refresh                                                            
+                                                                                                                        
+                                     ┃                                                                                  
+   PULL REQUESTS                                                                                                        

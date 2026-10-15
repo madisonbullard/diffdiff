@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-Vzunw /private/var/folders/42/w3sgx72173zby1  
+   PR  #1 Improve the keyboard-driven review wor1 check failed  │  merge ready  
+                                                                                
+                               ┃                                               ▀
+  │                                                                             
+  │ 0 / 2 reviewed   +5 /   Modal Picker                                        
+                            Press a key to open a modal.                        
+  ┃ ◇ PR overview           Open diagnostics                              d     
+  ┃ ▼ src                   Open help                                     h     
+  ┃   M review.ts      +2   Copy diffdiff CLI command for this      shift+y     
+  ┃ A README.md        +3   session                                             
+                            Open GitHub PR list                           p     
+                            Open PR comments                              t     
+                            Open PR checks                                s     
+                            Request reviewers                             w     
+                            Convert PR to draft                     shift+d     
+                            Add review comment                            a     
+                            Submit review                           shift+a     
+                            Merge pull request                            m     
+                            Open comparison list                          l     
+                                                                                
+                               ┃                                                
+   SPACE    ?  help               Modal Picker mode active. Awaiting next key.  

@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                                                                                                       ▀
+  │              Commands  Keys                                                           diff pane  esc  rk reviewed   
+  │ 0 / 2 revi  › Search keys or actions                                                from your keymap                
+  │               Diff pane · current                                                                                   
+                › j k ↓ ↑           Next / previous file                                                                
+  ┃ ◇ PR overv    ] [               Next / previous line or comment                                                     
+  ┃ ▼ src         } {               Grow selection down / up (shift+] [)                                                
+  ┃   M review    i o               Previous / next review thread                                                       
+  ┃ A README.m    a                 Comment on selected line                                                            
+                  x                 Mark file reviewed                                                    ───────────   
+                  c z               Collapse or expand file                                                             
+                  pgdn pgup ^d ^u   Scroll page / half page                                                             
+                  gg ge             First / last file (with count: 5gg)                                                 
+                  gn gp             Next / previous hunk                                                                
+                                                                                                                        
+                  Menus                                                                                                 
+                  space             Open… (PR, review, checks, merge)                                                   
+                  ctrl+x            Leader: every command, e.g. ctrl+x e                                                
+                  g                 Go to…                                                                              
+                  ctrl+p            Commands                                                                            
+                                                                                                                        
+                  Anywhere                                                                                              
+                  tab               Switch file tree / diff                                               ED  +2 / -1   
+                  v                 Split or unified diff                                                               
+                  R                 Refresh comparison                                                                  
+                  q                 Quit                                                                                
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                             1 comment  
+                                                                                                                        
+                                                                                                                        
+                enter run  ↑↓ move  tab commands                                                                        
+                                                                                                                        
+                                     ┃                                                                                  
+   KEYS                                                                                                                 

@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+                                                                                                                        
+                                     ┃                                                                                  
+  │                                  ┃  ▼ README.md                                                    ADDED  +3 / -0   
+  │ 1 / 2 reviewed         +5 / -1   ┃                                                                                  
+  │                                  ┃       1 + # Review workflow                                                      
+                                     ┃       2 +                                                                        
+  ┃ ▼ src                        1   ┃       3 + A terminal-first code review experience.                               
+  ┃   M review.ts        ✓ − +2 -1   ┃                                                                                  
+  ┃ A README.md              +3 -0                                                                                     █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                           Clear Review Marks                enter  confirm   esc / q  cancel                          █
+                           Remove the reviewed state from 1 file?                                                      █
+                                                                                                                       █
+                           ┃                                                                                           █
+                           ┃  This keeps the current comparison open, but every file will                              █
+                           ┃  be marked unreviewed.                                                                    █
+                           ┃                                                                                           █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+   CONFIRM    ?  help                                                      Confirm clearing review marks from 1 files.  

@@ -23,6 +23,26 @@ afterEach(async () => {
 });
 
 describe("diffdiff preferences", () => {
+  test("migrates cleanup flags to one remembered afterMerge option", async () => {
+    const home = await mkdtemp(join(tmpdir(), "diffdiff-preferences-"));
+    temporaryDirectories.push(home);
+    const path = join(home, "prefs.json");
+    for (const [removeLocal, removeRemote, expected] of [
+      [false, false, false],
+      [true, false, true],
+      [false, true, true],
+    ]) {
+      await writeFile(path, JSON.stringify({ github: { cleanup: { removeLocal, removeRemote } } }));
+      expect((await loadDiffdiffPreferences(path)).github.cleanup.afterMerge).toBe(expected);
+    }
+    await writeFile(
+      path,
+      JSON.stringify({ github: { cleanup: { afterMerge: false, removeLocal: true } } }),
+    );
+    expect((await loadDiffdiffPreferences(path)).github.cleanup).toEqual({ afterMerge: false });
+    await writeFile(path, JSON.stringify({ github: { cleanup: {} } }));
+    expect((await loadDiffdiffPreferences(path)).github.cleanup).toEqual({ afterMerge: true });
+  });
   test("returns the default preferences when no file exists", async () => {
     const homePath = await mkdtemp(join(tmpdir(), "diffdiff-preferences-"));
     temporaryDirectories.push(homePath);
@@ -55,8 +75,7 @@ describe("diffdiff preferences", () => {
     expect(preferences).toEqual({
       github: {
         cleanup: {
-          removeLocal: false,
-          removeRemote: true,
+          afterMerge: true,
         },
         defaultMergeMethod: "squash",
       },
@@ -96,8 +115,7 @@ describe("diffdiff preferences", () => {
     expect(preferences).toEqual({
       github: {
         cleanup: {
-          removeLocal: false,
-          removeRemote: true,
+          afterMerge: true,
         },
         defaultMergeMethod: undefined,
       },
@@ -128,12 +146,13 @@ describe("diffdiff preferences", () => {
     expect(parsed).toMatchObject({
       github: {
         cleanup: {
-          removeLocal: true,
-          removeRemote: false,
+          afterMerge: true,
         },
         defaultMergeMethod: "merge",
       },
       version: 1,
     });
+    expect(parsed.github.cleanup).not.toHaveProperty("removeLocal");
+    expect(parsed.github.cleanup).not.toHaveProperty("removeRemote");
   });
 });

@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-i4b2jt  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Make terminal reviews clear, fast, and safe  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                                                                                                        
+  │           Add Comment  Comment on src/review.ts:2 (right).                                      escape              
+  │ 0 / 1 re  // review line 2                                                                                          
+  │                                                                                                                     
+               Write a comment…                                                                                         
+  ┃ ◇ PR ove                                                                                                            
+  ┃ ▼ src                                                                                                              █
+  ┃   A revi                                                                                                           █
+                                                                                                              +6 / -0  █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       ▀
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+              @ reference files · 0 saved drafts · ctrl+j newline                                                       
+                                                                                                                        
+              enter send  ctrl+j newline  ctrl+x e editor                                                               
+                                                                                                                        
+                                                                                                                        
+   COMMENT                                                                                    Focused src/review.ts:2.  

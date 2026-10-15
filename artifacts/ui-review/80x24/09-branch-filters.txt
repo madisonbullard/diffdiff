@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-Vzunw /private/var/folders/42/w3sgx72173zby1  
+   PR  #1 Improve the keyboard-driven review wor1 check failed  │  merge ready  
+                                                                                
+                                                                               ▀
+  │           Filters                                   esc  close k reviewed   
+  │ 0 / 2 rev Choose which list item types are visible in the branch            
+                                                                   w workflow   
+  ┃ ◇ PR over ┃                                                                 
+  ┃ ▼ src     ┃  Working tree                                 ON   thor         
+  ┃   M revie ┃                                                                 
+  ┃ A README. ┃                                                    1 files      
+              ┃  Local branches                               ON                
+              ┃                                                    ──────────   
+              ┃  Open PRs                                     ON                
+              ┃                                                                 
+              ┃                                                     keep        
+              ┃  Remote branches                             OFF                
+                                                                                
+              ┃                                                    tions        
+              ┃   space / enter  toggle   shift+space / shift+enter             
+              ┃                                                                 
+                                                                                
+   FILTERS    ?  help                                     Opened list filters.  

@@ -1,18 +1,15 @@
-import { formatCommitListEntry } from "../view-model.ts";
-import type { BranchListFilters, BranchListItem, CommitListItem } from "../types.ts";
+import type { BranchDialogModels } from "../app/dialogs/dialog-models.ts";
 import type { UiTheme } from "../theme.ts";
+import type { BranchListFilters, BranchListItem, CommitListItem } from "../types.ts";
 import type { TextInputSurface } from "../text-input-surface.ts";
-import {
-  getBranchListItemMeta,
-  getBranchListItemTitle,
-  BranchListView,
-  CategoryPill,
-  CommitListView,
-  ListViewTab,
-} from "./branch-list-view.tsx";
-import { KeyCap, ModalFrame, SPLIT_BORDER, selectItem } from "./shared.tsx";
-import { SINGLE_LINE_TEXT_INPUT_HINT } from "./text-input-hints.ts";
-
+import { getBranchListItemMeta, getBranchListItemTitle } from "./branch-labels.ts";
+import { DialogPanel } from "./dialog/panel.tsx";
+import { DialogList, DialogRow } from "./dialog/list-view.tsx";
+import { useDialogUi } from "./dialog/context.tsx";
+import { TextInputContent } from "./text-input-content.tsx";
+import { fitText } from "./dialog/text.ts";
+import * as A from "../app/keymap/actions.ts";
+import { formatCommitListEntry } from "../view-model.ts";
 export function BranchModal({
   activeView,
   base,
@@ -22,15 +19,13 @@ export function BranchModal({
   commitIndex,
   commitSearchSurface,
   commitSearchActive,
-  comparisonMode,
   filters,
   head,
-  localBranchCount,
-  openPrCount,
-  remoteBranchCount,
   theme,
+  facetsActive = false,
+  facetIndex = 0,
 }: {
-  activeView: "branch" | "commit";
+  activeView: BranchDialogModels["activeView"];
   base: string;
   branchItems: readonly BranchListItem[];
   branchIndex: number;
@@ -45,210 +40,142 @@ export function BranchModal({
   openPrCount: number;
   remoteBranchCount: number;
   theme: UiTheme;
+  facetsActive?: boolean;
+  facetIndex?: number;
 }) {
-  const selectedBranchItem = selectItem(branchItems, branchIndex);
-  const selectedCommitItem = selectItem(commitItems, commitIndex);
-
+  const ui = useDialogUi();
+  const index = activeView === "branch" ? branchIndex : commitIndex;
+  const length = activeView === "branch" ? branchItems.length : commitItems.length;
+  const facets = [
+    ["workingTree", "Working tree"],
+    ["localBranch", "Local"],
+    ["openPr", "PR"],
+    ["remoteBranch", "Remote"],
+  ] as const;
   return (
-    <ModalFrame
-      title="List"
-      subtitle={
-        activeView === "branch"
-          ? "Browse working tree changes, branches, and open pull requests."
-          : "Browse the comparison commit log and choose base/head commits."
-      }
+    <DialogPanel
+      title="Compare"
+      context={`${base} ← ${head}`}
+      position={`${length ? index + 1 : 0}/${length}`}
       theme={theme}
-      maxWidth={108}
-      headerRight={
-        <text fg={theme.textMuted} wrapMode="none">
-          <KeyCap label="tab" theme={theme} />
-          <span>{" switch view  "}</span>
-          <KeyCap label="left / right" theme={theme} />
-          <span>{" panes  "}</span>
-          {activeView === "branch" ? (
-            <>
-              <KeyCap label="f" theme={theme} />
-              <span>{" filters  "}</span>
-            </>
-          ) : null}
-          <KeyCap label="esc" theme={theme} />
-          <span>{" close"}</span>
-        </text>
+      actions={
+        facetsActive
+          ? [
+              { action: A.FILTER_TOGGLE, label: "toggle", primary: true },
+              { action: A.FILTER_ENABLE_ALL, label: "all" },
+              { action: A.FILTER_DISABLE_ALL, label: "none" },
+              { action: A.MODAL_DISMISS, label: "done" },
+            ]
+          : [
+              {
+                action: A.LIST_ACCEPT,
+                label:
+                  branchItems[branchIndex]?.kind === "open-pr" && activeView === "branch"
+                    ? "open PR"
+                    : "set head",
+                primary: true,
+              },
+              { action: A.BRANCH_SELECT_BASE, label: "set base" },
+              { action: A.BRANCH_SWITCH_TAB, label: "view" },
+              {
+                action: activeView === "branch" ? A.BRANCH_OPEN_FILTERS : A.BRANCH_SEARCH,
+                label: activeView === "branch" ? "filters" : "search",
+              },
+            ]
       }
     >
-      <box
-        width="100%"
-        border={["left"]}
-        customBorderChars={SPLIT_BORDER}
-        borderColor={theme.border}
-        backgroundColor={theme.surface}
-        paddingLeft={2}
-        paddingRight={1}
-        paddingTop={1}
-        paddingBottom={1}
-        flexDirection="column"
-        gap={1}
-      >
-        <box width="100%" flexDirection="row" justifyContent="space-between" gap={2}>
-          <text fg={theme.textMuted} wrapMode="none">
-            <span fg={theme.warning}>base</span>
-            <span fg={theme.textMuted}>{" \u2190 "}</span>
-            <span fg={theme.text}>{base}</span>
-            <span fg={theme.border}>{"  \u2502  "}</span>
-            <span fg={theme.accent}>head</span>
-            <span fg={theme.textMuted}>{" \u2192 "}</span>
-            <span fg={theme.text}>{head}</span>
-          </text>
-          <box flexDirection="row" gap={1}>
-            {(() => {
-              const tabs = [
-                { label: "Branches", isActive: activeView === "branch" },
-                { label: "Commits", isActive: activeView === "commit" },
-              ];
-              const maxLen = Math.max(...tabs.map((tab) => tab.label.length));
-              return tabs.map((tab) => (
-                <text key={tab.label} wrapMode="none">
-                  <ListViewTab
-                    label={tab.label}
-                    isActive={tab.isActive}
-                    width={maxLen}
-                    theme={theme}
-                  />
-                </text>
-              ));
-            })()}
+      {(rect) => (
+        <>
+          <box height={1} flexShrink={0} flexDirection="row">
+            <text
+              fg={activeView === "branch" ? theme.accent : theme.textMuted}
+              onMouseUp={() => ui.run(A.BRANCH_GO_TO_BRANCHES)}
+            >
+              Branches{" "}
+            </text>
+            <text
+              fg={activeView === "commit" ? theme.accent : theme.textMuted}
+              onMouseUp={() => ui.run(A.BRANCH_GO_TO_COMMITS)}
+            >
+              Commits
+            </text>
           </box>
-        </box>
-        {activeView === "branch" ? (
-          <text fg={theme.textMuted} wrapMode="none">
-            <span>{`${localBranchCount}`}</span>
-            <span>{" local"}</span>
-            <span fg={theme.border}>{"  \u2502  "}</span>
-            <span>{`${openPrCount}`}</span>
-            <span>{" open PR"}</span>
-            <span fg={theme.border}>{"  \u2502  "}</span>
-            <span>{`${remoteBranchCount}`}</span>
-            <span>{" remote"}</span>
-            <span fg={theme.border}>{"  \u2502  "}</span>
-            <CategoryPill label="working tree" isEnabled={filters.workingTree} theme={theme} />
-            <span> </span>
-            <CategoryPill label="local" isEnabled={filters.localBranch} theme={theme} />
-            <span> </span>
-            <CategoryPill label="PR" isEnabled={filters.openPr} theme={theme} />
-            <span> </span>
-            <CategoryPill label="remote" isEnabled={filters.remoteBranch} theme={theme} />
-          </text>
-        ) : (
-          <text fg={theme.textMuted} wrapMode="none">
-            {commitItems.length === 0
-              ? comparisonMode === "working-tree"
-                ? "Working tree changes are not committed yet."
-                : "No commits are unique to the selected head ref."
-              : `${commitItems.length} commits in the current comparison`}
-          </text>
-        )}
-      </box>
-
-      {activeView === "branch" ? (
-        <BranchListView
-          base={base}
-          branchItems={branchItems}
-          comparisonMode={comparisonMode}
-          head={head}
-          selectedIndex={branchIndex}
-          theme={theme}
-        />
-      ) : (
-        <CommitListView
-          commitItems={commitItems}
-          searchSurface={commitSearchSurface}
-          searchActive={commitSearchActive}
-          selectedIndex={commitIndex}
-          theme={theme}
-        />
-      )}
-
-      <box
-        width="100%"
-        border={["left"]}
-        customBorderChars={SPLIT_BORDER}
-        borderColor={activeView === "branch" ? theme.borderActive : theme.border}
-        backgroundColor={theme.surface}
-        paddingLeft={2}
-        paddingRight={1}
-        paddingTop={1}
-        paddingBottom={1}
-        flexDirection="column"
-        gap={1}
-      >
-        {activeView === "branch" ? (
-          <>
-            {selectedBranchItem != null ? (
-              <>
-                <text fg={theme.text} wrapMode="none">
-                  {getBranchListItemTitle(selectedBranchItem)}
-                </text>
-                <text fg={theme.textMuted} wrapMode="none">
-                  {getBranchListItemMeta(selectedBranchItem, base, head)}
-                </text>
-              </>
-            ) : (
-              <text fg={theme.textMuted}>
-                Enable at least one branch filter to populate the list.
-              </text>
-            )}
-            <text fg={theme.textMuted} wrapMode="none">
-              {selectedBranchItem?.kind === "open-pr" ? (
-                <>
-                  <KeyCap label="enter" theme={theme} />
-                  <span>{" open PR review  "}</span>
-                </>
-              ) : (
-                <>
-                  <KeyCap label="h" theme={theme} />
-                  <span>{" set head  "}</span>
-                  <KeyCap label="b" theme={theme} />
-                  <span>{" set base  "}</span>
-                </>
+          {activeView === "branch" && !commitSearchActive ? (
+            <box height={1} flexShrink={0} flexDirection="row">
+              {facets.map(([key, label], i) => (
+                <text
+                  key={key}
+                  fg={facetsActive && facetIndex === i ? theme.accent : theme.textMuted}
+                  onMouseUp={() => ui.run(`facet.${key}`)}
+                >{`${filters[key] ? "[x]" : "[ ]"} ${label}  `}</text>
+              ))}
+            </box>
+          ) : (
+            <text height={1} flexShrink={0} fg={theme.textMuted}>
+              <TextInputContent
+                showCursor={commitSearchActive}
+                surface={commitSearchSurface}
+                placeholder={activeView === "branch" ? "/ Search branches…" : "/ Search commits…"}
+                placeholderColor={theme.textMuted}
+                cursorColor={theme.accent}
+              />
+            </text>
+          )}
+          {activeView === "branch" ? (
+            <DialogList
+              items={branchItems}
+              index={branchIndex}
+              height={rect.bodyRows - 4}
+              theme={theme}
+              onMove={(delta) =>
+                ui.run(delta > 0 ? A.LIST_MOVE_DOWN : A.LIST_MOVE_UP, Math.abs(delta))
+              }
+              render={(item, i) => (
+                <DialogRow
+                  selected={!facetsActive && i === branchIndex}
+                  label={getBranchListItemTitle(item)}
+                  right={item.kind}
+                  theme={theme}
+                  width={rect.innerWidth}
+                  onSelect={() =>
+                    ui.run(i > index ? A.LIST_MOVE_DOWN : A.LIST_MOVE_UP, Math.abs(i - index))
+                  }
+                  onActivate={() => ui.run(A.LIST_ACCEPT)}
+                />
               )}
-              <span fg={theme.border}>{"\u2502  "}</span>
-              <KeyCap label="w" theme={theme} />
-              <span>{" working tree  "}</span>
-              <KeyCap label="o" theme={theme} />
-              <span>{" remote toggle  "}</span>
-              <KeyCap label="f" theme={theme} />
-              <span>{" filters"}</span>
-            </text>
-          </>
-        ) : selectedCommitItem != null ? (
-          <>
-            <text fg={theme.text} wrapMode="none">
-              {formatCommitListEntry(selectedCommitItem.commit)}
-            </text>
-            <text fg={theme.textMuted} wrapMode="none">
-              <span>{selectedCommitItem.commit.author}</span>
-            </text>
-            <text fg={theme.textMuted} wrapMode="none">
-              <KeyCap label="h" theme={theme} />
-              <span>{" set head  "}</span>
-              <KeyCap label="b" theme={theme} />
-              <span>{" set base  "}</span>
-              <span fg={theme.border}>{"\u2502  "}</span>
-              <KeyCap label="/" theme={theme} />
-              <span>{" search  "}</span>
-              <KeyCap label="left / right / tab" theme={theme} />
-              <span>{" switch view"}</span>
-            </text>
-            {SINGLE_LINE_TEXT_INPUT_HINT.length > 0 ? (
-              <text fg={theme.textMuted} wrapMode="word">
-                {SINGLE_LINE_TEXT_INPUT_HINT}
-              </text>
-            ) : null}
-          </>
-        ) : (
-          <text fg={theme.textMuted}>Nothing to show.</text>
-        )}
-      </box>
-    </ModalFrame>
+            />
+          ) : (
+            <DialogList
+              items={commitItems}
+              index={commitIndex}
+              height={rect.bodyRows - 4}
+              theme={theme}
+              render={(item, i) => (
+                <DialogRow
+                  selected={i === commitIndex}
+                  label={`${item.commit.shortSha} ${item.commit.subject}`}
+                  theme={theme}
+                  width={rect.innerWidth}
+                  onSelect={() =>
+                    ui.run(i > index ? A.LIST_MOVE_DOWN : A.LIST_MOVE_UP, Math.abs(i - index))
+                  }
+                  onActivate={() => ui.run(A.LIST_ACCEPT)}
+                />
+              )}
+            />
+          )}
+          <text height={2} flexShrink={0} wrapMode="word" fg={theme.textMuted}>
+            {fitText(
+              activeView === "branch" && branchItems[branchIndex]
+                ? getBranchListItemMeta(branchItems[branchIndex]!, base, head)
+                : commitItems[commitIndex]
+                  ? `${formatCommitListEntry(commitItems[commitIndex]!.commit)}\n${commitItems[commitIndex]!.commit.author}`
+                  : "No comparisons match. Change the filters to show more.",
+              rect.innerWidth * 2,
+            )}
+          </text>
+        </>
+      )}
+    </DialogPanel>
   );
 }

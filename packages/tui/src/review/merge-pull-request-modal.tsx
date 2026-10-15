@@ -3,18 +3,16 @@ import type { ScrollBoxRenderable } from "@opentui/core";
 import type { Ref } from "react";
 import type { UiTheme } from "../theme.ts";
 import type { TextInputSurface } from "../text-input-surface.ts";
-import { AsciiLoadingLabel } from "../components/ascii-loading-pane.tsx";
-import { MULTILINE_TEXT_INPUT_WITH_EDITOR_HINT } from "../components/text-input-hints.ts";
-import { TextInputContent } from "../components/text-input-content.tsx";
+import { DialogPanel } from "../components/dialog/panel.tsx";
+import { DialogEditor } from "../components/dialog/editor.tsx";
+import { useDialogUi } from "../components/dialog/context.tsx";
+import { dialogTokens } from "../components/dialog/tokens.ts";
+import { fitText } from "../components/dialog/text.ts";
 import { formatMergeMethod, getMergeBlockedReason } from "./formatting.ts";
-import { MODAL_OVERLAY, REVIEW_BORDER } from "./shared.tsx";
-
-const MERGE_BODY_MAX_HEIGHT = 8;
-
+import * as A from "../app/keymap/actions.ts";
 export function MergePullRequestModal({
   autoMerge = false,
   bodySurface,
-  bodyScrollRef,
   canSubmit,
   field,
   isSubmitting,
@@ -22,6 +20,8 @@ export function MergePullRequestModal({
   pullRequest,
   theme,
   titleSurface,
+  confirming = false,
+  cleanupAfterMerge = true,
 }: {
   autoMerge?: boolean;
   bodySurface: TextInputSurface;
@@ -29,192 +29,120 @@ export function MergePullRequestModal({
   canSubmit: boolean;
   field: "method" | "title" | "body";
   isSubmitting: boolean;
-  method?: GitHubMergeMethod;
+  method: GitHubMergeMethod | null | undefined;
   pullRequest: GitHubPullRequestDetail;
   theme: UiTheme;
   titleSurface: TextInputSurface;
+  confirming?: boolean;
+  cleanupAfterMerge?: boolean;
 }) {
-  const mergeBlockedReason = getMergeBlockedReason(pullRequest);
-  const mergeMethods = pullRequest.merge.allowedMethods ?? [];
-
+  const ui = useDialogUi();
+  const methods = pullRequest.merge.allowedMethods ?? [];
+  const blocked =
+    method == null ? "Choose an allowed merge method." : getMergeBlockedReason(pullRequest);
+  const title = autoMerge ? "Enable Auto-Merge" : "Merge Pull Request";
   return (
-    <box
-      position="absolute"
-      top={0}
-      right={0}
-      bottom={0}
-      left={0}
-      alignItems="center"
-      justifyContent="center"
-      zIndex={55}
-      backgroundColor={MODAL_OVERLAY}
-    >
-      <box
-        width="92%"
-        maxWidth={108}
-        backgroundColor={theme.modalBg}
-        padding={1}
-        flexDirection="column"
-        gap={1}
-      >
-        <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
-          <box flexDirection="column">
-            <text fg={theme.accent} wrapMode="none">
-              Merge Pull Request
-            </text>
-            <text
-              fg={theme.textMuted}
-              wrapMode="none"
-            >{`PR #${pullRequest.number} • ${pullRequest.title}`}</text>
-          </box>
-          <text fg={theme.textMuted} wrapMode="none">
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" tab "}
-            </span>
-            <span>{" next field  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" ctrl+e "}
-            </span>
-            <span>{" line end  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" leader+e "}
-            </span>
-            <span>{" editor  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" enter "}
-            </span>
-            <span>{" confirm  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" shift+enter "}
-            </span>
-            <span>{" newline  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" ctrl+j "}
-            </span>
-            <span>{" newline  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" esc "}
-            </span>
-            <span>{" close"}</span>
-          </text>
-        </box>
-        <box width="100%" flexDirection="column" gap={0}>
-          <text fg={autoMerge ? theme.success : theme.textMuted} wrapMode="word">
-            {pullRequest.merge.autoMergeEnabled
+    <DialogPanel
+      title={title}
+      context={`#${pullRequest.number} · ${pullRequest.headRefName} → ${pullRequest.baseRefName}`}
+      family="form"
+      theme={theme}
+      tone={confirming ? "warning" : undefined}
+      status={
+        isSubmitting
+          ? "Sending… input paused · Esc continues in background"
+          : confirming
+            ? autoMerge
+              ? "Press Enter to enable auto-merge. GitHub will wait for requirements to pass."
+              : "Press Enter to merge now. This cannot be undone."
+            : pullRequest.merge.autoMergeEnabled
               ? "Auto-merge is already enabled."
-              : pullRequest.merge.autoMergeAllowed
-                ? `${autoMerge ? "[x]" : "[ ]"} Auto-merge when requirements pass • ctrl+g toggle`
-                : "Auto-merge is unavailable for this repository."}
+              : !canSubmit
+                ? autoMerge
+                  ? pullRequest.merge.autoMergeEnabled
+                    ? "Auto-merge is already enabled."
+                    : "Auto-merge is unavailable for this pull request."
+                  : blocked
+                : undefined
+      }
+      actions={[
+        {
+          action: A.MERGE_CONFIRM,
+          label: confirming ? (autoMerge ? "enable auto-merge" : "merge now") : "continue",
+          primary: true,
+          warning: confirming,
+          disabled: !canSubmit || isSubmitting,
+        },
+        ...(confirming
+          ? [{ action: A.MODAL_DISMISS, label: "back to editing" }]
+          : [
+              { action: A.MERGE_NEXT_FIELD, label: "field" },
+              { action: A.MERGE_TOGGLE_AUTO, label: "auto-merge" },
+              { action: A.MERGE_TOGGLE_CLEANUP, label: "cleanup", disabled: autoMerge },
+            ]),
+      ]}
+    >
+      {(rect) => (
+        <>
+          <text
+            height={1}
+            flexShrink={0}
+            fg={field === "method" ? theme.accent : theme.textMuted}
+          >{`Method  ${methods.length ? methods.map((value) => `${value === method ? "●" : "○"} ${formatMergeMethod(value)}`).join("   ") : "No allowed merge methods"}`}</text>
+          <text height={1} flexShrink={0} fg={theme.textMuted}>
+            Commit title
           </text>
-          {mergeMethods.map((mergeMethod) => {
-            const isFocused = field === "method" && mergeMethod === (method ?? mergeMethods[0]);
-            const isSelected = mergeMethod === method;
-            const accent = mergeMethod === "merge" ? theme.accent : theme.success;
-
-            return (
-              <box
-                key={mergeMethod}
-                width="100%"
-                border={["left"]}
-                customBorderChars={REVIEW_BORDER}
-                borderColor={isFocused ? accent : theme.border}
-                backgroundColor={isFocused ? theme.surfaceMuted : theme.surface}
-                paddingLeft={2}
-                paddingRight={1}
-                paddingTop={0}
-                paddingBottom={0}
-              >
-                <text fg={isFocused ? theme.text : theme.textMuted} wrapMode="none">
-                  <span fg={accent}>{isFocused ? "> " : "  "}</span>
-                  <span>{formatMergeMethod(mergeMethod)}</span>
-                  <span fg={theme.border}>{"  │  "}</span>
-                  <span fg={isSelected ? accent : theme.textMuted}>
-                    {isSelected ? "default selection" : "available"}
-                  </span>
-                </text>
-              </box>
-            );
-          })}
-        </box>
-        <box
-          width="100%"
-          border={["left"]}
-          customBorderChars={REVIEW_BORDER}
-          borderColor={field === "title" ? theme.borderActive : theme.border}
-          backgroundColor={field === "title" ? theme.surfaceMuted : theme.surface}
-          paddingLeft={2}
-          paddingRight={1}
-          paddingTop={1}
-          paddingBottom={1}
-        >
-          <text fg={theme.text} wrapMode="word">
-            <span fg={theme.textMuted}>{"Title: "}</span>
-            <TextInputContent
-              cursorColor={theme.accent}
-              cursorTextColor={theme.inverseText}
-              showCursor={field === "title"}
-              surface={titleSurface}
-            />
-          </text>
-        </box>
-        <box
-          width="100%"
-          border={["left"]}
-          customBorderChars={REVIEW_BORDER}
-          borderColor={field === "body" ? theme.borderActive : theme.border}
-          backgroundColor={field === "body" ? theme.surfaceMuted : theme.surface}
-          paddingLeft={2}
-          paddingRight={0}
-          paddingTop={1}
-          paddingBottom={1}
-          minHeight={6}
-          flexDirection="column"
-          gap={0}
-        >
-          <text fg={theme.textMuted} wrapMode="none">
-            Body:
-          </text>
-          <scrollbox
-            ref={bodyScrollRef}
-            width="100%"
-            height={MERGE_BODY_MAX_HEIGHT}
-            focused={field === "body"}
-            viewportOptions={{
-              backgroundColor: field === "body" ? theme.surfaceMuted : theme.surface,
-            }}
-            contentOptions={{
-              backgroundColor: field === "body" ? theme.surfaceMuted : theme.surface,
-            }}
-            verticalScrollbarOptions={{ trackOptions: { backgroundColor: theme.border } }}
-          >
-            <text fg={theme.text} wrapMode="word">
-              <TextInputContent
-                cursorColor={theme.accent}
-                cursorTextColor={theme.inverseText}
-                showCursor={field === "body"}
-                surface={bodySurface}
-              />
-            </text>
-          </scrollbox>
-        </box>
-        {isSubmitting ? (
-          <AsciiLoadingLabel
-            color={theme.accent}
-            message={
-              autoMerge
-                ? "Enabling auto-merge..."
-                : "Merging pull request and refreshing local refs..."
-            }
+          <DialogEditor
+            surface={titleSurface}
+            height={1}
+            width={rect.innerWidth}
+            focused={field === "title" && !confirming}
+            paused={isSubmitting}
             theme={theme}
           />
-        ) : (
-          <text fg={canSubmit ? theme.textMuted : theme.warning} wrapMode="word">
-            {canSubmit
-              ? `Edit the merge title/body. ${MULTILINE_TEXT_INPUT_WITH_EDITOR_HINT} Press enter to open the confirmation step.`
-              : mergeBlockedReason}
+          <text height={1} flexShrink={0} fg={theme.textMuted}>
+            Commit message
           </text>
-        )}
-      </box>
-    </box>
+          <DialogEditor
+            surface={bodySurface}
+            height={rect.bodyRows - 8}
+            width={rect.innerWidth}
+            focused={field === "body" && !confirming}
+            paused={isSubmitting}
+            theme={theme}
+          />
+          <text
+            height={1}
+            flexShrink={0}
+            fg={theme.text}
+            onMouseUp={() => {
+              if (!confirming) ui.run(A.MERGE_TOGGLE_AUTO);
+            }}
+          >{`[${autoMerge ? "x" : " "}] Auto-merge`}</text>
+          <text
+            height={1}
+            flexShrink={0}
+            fg={autoMerge ? theme.textMuted : theme.text}
+            onMouseUp={() => {
+              if (!confirming) ui.run(A.MERGE_TOGGLE_CLEANUP);
+            }}
+          >{`[${cleanupAfterMerge && !autoMerge ? "x" : " "}] Clean up local refs after merge${autoMerge ? " · unavailable with auto-merge" : ""}`}</text>
+          <text
+            height={2}
+            flexShrink={0}
+            fg={theme.textMuted}
+            bg={confirming ? dialogTokens(theme).warning : undefined}
+            wrapMode="word"
+          >
+            {fitText(
+              autoMerge
+                ? "GitHub merges when checks and review requirements pass. No local cleanup runs later."
+                : `${pullRequest.headRefName} + tracking ref · only if GitHub deletes the branch. Checked-out branches and extra commits are kept.`,
+              rect.innerWidth * 2,
+            )}
+          </text>
+        </>
+      )}
+    </DialogPanel>
   );
 }

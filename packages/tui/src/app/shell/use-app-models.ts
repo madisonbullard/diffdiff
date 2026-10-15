@@ -152,9 +152,17 @@ export function useDiffdiffAppDerived(
         localBranches: state.comparisonBrowserData.branches.local,
         remoteBranches: state.comparisonBrowserData.branches.remote,
         workingTreeSummary: state.comparisonBrowserData.workingTreeSummary,
-      }),
+      }).filter((item) =>
+        `${item.branch?.name ?? "working tree"} ${item.branch?.pullRequest?.title ?? ""}`
+          .toLowerCase()
+          .includes(
+            state.activeListView === "branch" ? state.commitSearchInput.value.toLowerCase() : "",
+          ),
+      ),
     [
       state.branchListFilters,
+      state.commitSearchInput.value,
+      state.activeListView,
       state.comparisonBrowserData.branches.local,
       state.comparisonBrowserData.branches.remote,
       state.comparisonBrowserData.workingTreeSummary,

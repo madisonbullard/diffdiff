@@ -1,0 +1,16 @@
+                                                          
+                                                          
+                                                          
+                                                          
+   Merge #1                                         esc   
+   Merge needs at least 60×18 cells; this terminal is     
+   58×16.                                                 
+   Enlarge the window or press ctrl+x e to edit the       
+   message in $EDITOR.                                    
+                                                          
+   esc close                                              
+                                                          
+                                                          
+                                                          
+                                                          
+   MERGE                                                  

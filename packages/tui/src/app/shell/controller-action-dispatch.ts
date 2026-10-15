@@ -64,7 +64,6 @@ export function buildControllerActionDispatchMap({
   return buildActionDispatchMap({
     activeKeymapMode,
     applyBranchSelection: launchActions.applyBranchSelection,
-    applyCleanupSelection: githubActions.applyCleanupSelection,
     applyCommitSelection: launchActions.applyCommitSelection,
     applyDashboardPullRequestSelection: launchActions.applyDashboardPullRequestSelection,
     applyPullRequestSelection: launchActions.applyPullRequestSelection,

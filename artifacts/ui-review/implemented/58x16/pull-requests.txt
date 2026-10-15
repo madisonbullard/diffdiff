@@ -1,0 +1,16 @@
+ GitHub PRs  40 open · 6 draft · 14 reques…  1/40  escape 
+  / Search pull requests…                                 
+ › #1 Improve keyboard-driv… example/repo · draft · requ… 
+   #4 Improve keyboard-driven r… example/repo · requested 
+   #7 Improve keyboard-driven r… example/repo · requested 
+   #10 Improve keyboard-driven … example/repo · requested 
+   #13 Improve keyboard-driven … example/repo · requested 
+   #16 Improve keyboard-driven … example/repo · requested 
+   #19 Improve keyboard-driven … example/repo · requested 
+   #22 Improve keyboard-dri… example/repo · draft · requ… 
+   #25 Improve keyboard-driven … example/repo · requested 
+   #28 Improve keyboard-driven … example/repo · requested 
+ Improve keyboard-driven review workflow 1                
+ alex · example/repo                                      
+ enter open  down move  ctrl+r refresh                    
+   PR SEARCH               Loaded 40 GitHub pull requ...  

@@ -2,6 +2,8 @@
 
 import { clampIndex } from "../../view-model.ts";
 import clipboard from "clipboardy";
+import { keyRows } from "../../components/dialog/key-rows.ts";
+import { getCleanupAfterMerge } from "@madisonbullard/diffdiff-core";
 import * as A from "../keymap/actions.ts";
 import type { ActionDispatchMap } from "../keymap/action-dispatch.ts";
 import { closeDialog as closeAppDialog, openDialog as openAppDialog } from "../dialogs/stack.ts";
@@ -21,7 +23,6 @@ export interface BuildModalActionDispatchMapOptions {
     target: "base" | "head",
     branch: import("@madisonbullard/diffdiff-core").BranchInfo,
   ) => Promise<void>;
-  applyCleanupSelection: () => Promise<void>;
   applyCommitSelection: (target: "base" | "head", sha: string, shortSha: string) => Promise<void>;
   applyDashboardPullRequestSelection: (
     pullRequest: import("@madisonbullard/diffdiff-core").GitHubDashboardPullRequest,
@@ -38,7 +39,7 @@ export interface BuildModalActionDispatchMapOptions {
   moveReviewerSelection: (delta: number) => void;
   refreshReviewerCandidates: () => Promise<void>;
   submitReviewerRequests: () => Promise<void>;
-  toggleReviewerSelection: () => void;
+  toggleReviewerSelection: (index?: number) => void;
   copySelectedPullRequestConversationItemUrl: () => Promise<void>;
   derived: DiffdiffAppDerived;
   filteredCommands: readonly AppCommand[];
@@ -62,7 +63,6 @@ export interface BuildModalActionDispatchMapOptions {
 export function buildModalActionDispatchMap({
   activeKeymapMode,
   applyBranchSelection,
-  applyCleanupSelection,
   applyCommitSelection,
   applyDashboardPullRequestSelection,
   applyPullRequestSelection,
@@ -109,7 +109,6 @@ export function buildModalActionDispatchMap({
     state.setDialogStack((currentStack) => closeAppDialog(currentStack, "branch", "dismiss"));
     textInputControllers.commitSearch.reset();
     textInputControllers.commitSearch.deactivate();
-    state.setStatusMessage("Closed list modal.");
   }
 
   function closePullRequestList(): void {
@@ -118,12 +117,10 @@ export function buildModalActionDispatchMap({
     );
     textInputControllers.pullRequestSearch.reset();
     textInputControllers.pullRequestSearch.deactivate();
-    state.setStatusMessage("Closed pull request list.");
   }
 
   function closeListFilters(): void {
     state.setDialogStack((currentStack) => closeAppDialog(currentStack, "list-filter", "dismiss"));
-    state.setStatusMessage("Closed list filters.");
   }
 
   function closeCommentComposer(): void {
@@ -132,7 +129,6 @@ export function buildModalActionDispatchMap({
 
   function closePullRequestConversation(): void {
     state.setDialogStack((currentStack) => closeAppDialog(currentStack, "comments", "dismiss"));
-    state.setStatusMessage("Closed PR conversation.");
   }
 
   function closeSubmitReviewModal(): void {
@@ -140,19 +136,11 @@ export function buildModalActionDispatchMap({
       closeAppDialog(currentStack, "submit-review", "dismiss"),
     );
     reviewInputControllers.reviewSubmission.close();
-    state.setStatusMessage("Closed submit review modal.");
   }
 
   function closeMergeModal(): void {
     reviewInputControllers.mergeMessage.close();
     state.setDialogStack((currentStack) => closeAppDialog(currentStack, "merge", "dismiss"));
-    state.setStatusMessage("Closed merge modal.");
-  }
-
-  function closeCleanupModal(): void {
-    state.setDialogStack((currentStack) => closeAppDialog(currentStack, "cleanup", "dismiss"));
-    state.setCleanupCandidates([]);
-    state.setStatusMessage("Skipped post-merge cleanup.");
   }
 
   function closeClearReviewedModal(): void {
@@ -164,7 +152,6 @@ export function buildModalActionDispatchMap({
 
   function closeHelpModal(): void {
     state.setDialogStack((currentStack) => closeAppDialog(currentStack, "help", "dismiss"));
-    state.setStatusMessage("Closed help.");
   }
 
   function setAllBranchFilters(enabled: boolean): void {
@@ -193,7 +180,22 @@ export function buildModalActionDispatchMap({
   }
 
   function moveListSelection(delta: number): void {
+    if (
+      state.inspectorDetailFocused &&
+      ["checks", "conversation", "diagnostics"].includes(activeKeymapMode)
+    ) {
+      state.checksDetailScrollRef.current?.scrollBy(delta);
+      return;
+    }
     switch (activeKeymapMode) {
+      case "help":
+        state.setCommandIndex((index) =>
+          clampIndex(
+            index + delta,
+            keyRows(state.reverseKeymaps, state.commandInput.value, state.helpLeaderOnly).length,
+          ),
+        );
+        return;
       case "checks":
         state.setChecksIndex((index) =>
           clampIndex(
@@ -223,9 +225,14 @@ export function buildModalActionDispatchMap({
         return;
       case "compare-commits":
       case "commit-search":
-        state.setCommitListIndex((currentIndex) =>
-          clampIndex(currentIndex + delta, derived.filteredCommitItems.length),
-        );
+        if (activeKeymapMode === "commit-search" && state.activeListView === "branch")
+          state.setBranchListIndex((index) =>
+            clampIndex(index + delta, derived.branchItems.length),
+          );
+        else
+          state.setCommitListIndex((currentIndex) =>
+            clampIndex(currentIndex + delta, derived.filteredCommitItems.length),
+          );
         return;
       case "filters":
         state.setFilterIndex((currentIndex) =>
@@ -248,9 +255,6 @@ export function buildModalActionDispatchMap({
       case "merge-method":
         updateMergeMethod(delta);
         return;
-      case "cleanup":
-        state.setCleanupCandidateIndex((currentIndex) => clampIndex(currentIndex + delta, 2));
-        return;
       case "diagnostics":
         moveDiagnosticSelection(delta);
         return;
@@ -259,6 +263,27 @@ export function buildModalActionDispatchMap({
 
   function jumpListSelection(edge: "first" | "last"): void {
     switch (activeKeymapMode) {
+      case "help":
+        state.setCommandIndex(
+          edge === "first"
+            ? 0
+            : Math.max(
+                0,
+                keyRows(state.reverseKeymaps, state.commandInput.value, state.helpLeaderOnly)
+                  .length - 1,
+              ),
+        );
+        return;
+      case "reviewer-picker":
+        moveReviewerSelection(
+          edge === "first" ? -Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER,
+        );
+        return;
+      case "conversation":
+        state.setPullRequestConversationIndex(
+          edge === "first" ? 0 : Math.max(derived.pullRequestConversationItems.length - 1, 0),
+        );
+        return;
       case "checks":
         state.setChecksIndex(
           edge === "first"
@@ -285,9 +310,14 @@ export function buildModalActionDispatchMap({
         return;
       case "compare-commits":
       case "commit-search":
-        state.setCommitListIndex(
-          edge === "first" ? 0 : Math.max(derived.filteredCommitItems.length - 1, 0),
-        );
+        if (activeKeymapMode === "commit-search" && state.activeListView === "branch")
+          state.setBranchListIndex(
+            edge === "first" ? 0 : Math.max(derived.branchItems.length - 1, 0),
+          );
+        else
+          state.setCommitListIndex(
+            edge === "first" ? 0 : Math.max(derived.filteredCommitItems.length - 1, 0),
+          );
         return;
       case "filters":
         state.setFilterIndex(edge === "first" ? 0 : Math.max(LIST_FILTER_KEYS.length - 1, 0));
@@ -306,7 +336,6 @@ export function buildModalActionDispatchMap({
     switch (activeKeymapMode) {
       case "checks":
         state.setDialogStack((stack) => closeAppDialog(stack, "checks"));
-        state.setStatusMessage("Closed PR checks.");
         return;
       case "reviewer-picker":
         closeReviewerPicker();
@@ -318,8 +347,7 @@ export function buildModalActionDispatchMap({
         closePullRequestList();
         return;
       case "pull-request-search":
-        textInputControllers.pullRequestSearch.reset();
-        textInputControllers.pullRequestSearch.deactivate();
+        closePullRequestList();
         return;
       case "compare-branches":
       case "compare-commits":
@@ -354,9 +382,6 @@ export function buildModalActionDispatchMap({
         state.setMergeConfirmOpen(false);
         state.setStatusMessage("Returned to the merge form.");
         return;
-      case "cleanup":
-        closeCleanupModal();
-        return;
       case "clear-reviewed":
         closeClearReviewedModal();
         return;
@@ -372,12 +397,10 @@ export function buildModalActionDispatchMap({
         toggleReviewerSelection();
         return;
       case "pull-request-list":
+      case "pull-request-search":
         if (derived.selectedPullRequest != null) {
           void applyDashboardPullRequestSelection(derived.selectedPullRequest);
         }
-        return;
-      case "pull-request-search":
-        textInputControllers.pullRequestSearch.deactivate();
         return;
       case "compare-branches":
         if (
@@ -385,10 +408,34 @@ export function buildModalActionDispatchMap({
           derived.selectedBranchItem.branch != null
         ) {
           void applyPullRequestSelection(derived.selectedBranchItem.branch);
+        } else if (derived.selectedBranchItem?.kind === "working-tree") {
+          void applyWorkingTreeSelection();
+        } else if (derived.selectedBranchItem?.branch != null) {
+          void applyBranchSelection("head", derived.selectedBranchItem.branch);
         }
         return;
+      case "compare-commits":
+        if (derived.selectedCommitItem != null)
+          void applyCommitSelection(
+            "head",
+            derived.selectedCommitItem.commit.sha,
+            derived.selectedCommitItem.commit.shortSha,
+          );
+        return;
       case "commit-search":
-        textInputControllers.commitSearch.deactivate();
+        if (state.activeListView === "branch") {
+          if (derived.selectedBranchItem?.kind === "open-pr" && derived.selectedBranchItem.branch)
+            void applyPullRequestSelection(derived.selectedBranchItem.branch);
+          else if (derived.selectedBranchItem?.branch)
+            void applyBranchSelection("head", derived.selectedBranchItem.branch);
+          else if (derived.selectedBranchItem?.kind === "working-tree")
+            void applyWorkingTreeSelection();
+        } else if (derived.selectedCommitItem)
+          void applyCommitSelection(
+            "head",
+            derived.selectedCommitItem.commit.sha,
+            derived.selectedCommitItem.commit.shortSha,
+          );
         return;
       case "comment":
         acceptReviewComposerSelection();
@@ -398,6 +445,9 @@ export function buildModalActionDispatchMap({
 
   function backspaceText(): void {
     switch (activeKeymapMode) {
+      case "help":
+        textInputControllers.commandPalette.backspace();
+        return;
       case "reviewer-picker":
         textInputControllers.reviewerSearch.backspace();
         return;
@@ -442,6 +492,7 @@ export function buildModalActionDispatchMap({
   map.set(A.LIST_MOVE_DOWN, (count) => {
     moveListSelection(count ?? 1);
   });
+  map.set(A.INSPECTOR_FOCUS, () => state.setInspectorDetailFocused((focused) => !focused));
 
   map.set(A.CHECKS_COPY_URL, async () => {
     const items = derived.displaySession.github?.pullRequest.checks.items ?? [];
@@ -473,19 +524,11 @@ export function buildModalActionDispatchMap({
   });
 
   map.set(A.LIST_PAGE_DOWN, () => {
-    if (activeKeymapMode === "commands") {
-      state.setCommandIndex((currentIndex) =>
-        clampIndex(currentIndex + 10, filteredCommands.length),
-      );
-    }
+    moveListSelection(Math.max(1, state.terminalDimensions.height - 10));
   });
 
   map.set(A.LIST_PAGE_UP, () => {
-    if (activeKeymapMode === "commands") {
-      state.setCommandIndex((currentIndex) =>
-        clampIndex(currentIndex - 10, filteredCommands.length),
-      );
-    }
+    moveListSelection(-Math.max(1, state.terminalDimensions.height - 10));
   });
 
   map.set(A.LIST_ACCEPT, () => {
@@ -494,6 +537,7 @@ export function buildModalActionDispatchMap({
   map.set(A.REVIEWERS_SUBMIT, () => {
     void submitReviewerRequests();
   });
+  map.set(A.REVIEWERS_TOGGLE_AT, (index) => toggleReviewerSelection(index ?? undefined));
   map.set(A.REVIEWERS_REFRESH, () => {
     void refreshReviewerCandidates();
   });
@@ -509,6 +553,12 @@ export function buildModalActionDispatchMap({
   map.set(A.TEXT_NEWLINE, () => {
     insertNewline();
   });
+  map.set(A.TEXT_ACCEPT_COMPLETION, () => {
+    reviewInputControllers.reviewComposer.acceptAutocomplete();
+  });
+  map.set(A.REVIEW_SWITCH_FIELD, () =>
+    state.setReviewSubmissionField((field) => (field === "event" ? "body" : "event")),
+  );
 
   map.set(A.TEXT_OPEN_EXTERNAL_EDITOR, () => {
     switch (activeKeymapMode) {
@@ -536,6 +586,28 @@ export function buildModalActionDispatchMap({
     state.setActiveListView((currentView) => (currentView === "branch" ? "commit" : "branch"));
     textInputControllers.commitSearch.deactivate();
   });
+  map.set(A.COMMANDS_SWITCH_TAB, () => {
+    state.setCommandIndex(0);
+    state.setDialogStack((stack) =>
+      openAppDialog(stack, activeKeymapMode === "help" ? "command-palette" : "help", {
+        replace: true,
+      }),
+    );
+  });
+  map.set(A.MERGE_TOGGLE_CLEANUP, () => {
+    if (state.mergeAutoMerge) return;
+    const current = state.gitHubPreferencesRef.current;
+    const afterMerge = !getCleanupAfterMerge(current.cleanup);
+    void persistenceApi.persistGitHubPreferences({
+      ...current,
+      cleanup: { afterMerge },
+    });
+  });
+  map.set(A.MERGE_PREVIOUS_FIELD, () =>
+    state.setMergeModalField((field) =>
+      field === "body" ? "title" : field === "title" ? "method" : "body",
+    ),
+  );
 
   map.set(A.BRANCH_GO_TO_BRANCHES, () => {
     state.setActiveListView("branch");
@@ -550,7 +622,6 @@ export function buildModalActionDispatchMap({
   map.set(A.BRANCH_OPEN_FILTERS, () => {
     state.setFilterIndex(0);
     state.setDialogStack((currentStack) => openAppDialog(currentStack, "list-filter"));
-    state.setStatusMessage("Opened list filters.");
   });
 
   map.set(A.BRANCH_TOGGLE_REMOTE, () => {
@@ -663,27 +734,6 @@ export function buildModalActionDispatchMap({
     }
 
     openMergeConfirmModal();
-  });
-
-  map.set(A.CLEANUP_TOGGLE_OPTION, () => {
-    const nextKey = state.cleanupCandidateIndex === 0 ? "removeLocal" : "removeRemote";
-    const hasCandidate = state.cleanupCandidates.some((candidate) =>
-      nextKey === "removeLocal"
-        ? candidate.kind === "local-branch"
-        : candidate.kind === "remote-tracking",
-    );
-    if (!hasCandidate) {
-      return;
-    }
-
-    persistenceApi.updateCleanupSelection((currentSelection) => ({
-      ...currentSelection,
-      [nextKey]: !currentSelection[nextKey],
-    }));
-  });
-
-  map.set(A.CLEANUP_APPLY, () => {
-    void applyCleanupSelection();
   });
 
   map.set(A.CLEAR_REVIEWED_CONFIRM, () => {

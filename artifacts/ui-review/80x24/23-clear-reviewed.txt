@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-Vzunw /private/var/folders/42/w3sgx72173zby1  
+                                                                                
+                               ┃                                                
+  │                            ┃  ▼ README.md                  ADDED  +3 / -0   
+  │ 1 / 2 reviewed   +5 / -1   ┃                                                
+                               ┃       1 + # Review workflow                    
+  ┃ ▼ src                  1   ┃       2 +                                      
+  ┃   M review.ts                                              e review         
+  ┃ A README.md   Clear Review Mar enter  confirm   esc / q  ca                 
+                  Remove the reviewed state from 1 file?                       ▄
+                                                                                
+                  ┃                                                             
+                  ┃  This keeps the current comparison open,                    
+                  ┃  but every file will be marked unreviewed.                  
+                  ┃                                                             
+                  ┃                                                             
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+   CONFIRM    ?  help              Confirm clearing review marks from 1 files.  

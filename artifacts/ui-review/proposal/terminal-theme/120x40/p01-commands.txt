@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                                                                                                       ▀
+  │              Commands  Keys                                                                1/24  esc  rk reviewed   
+  │ 0 / 2 revi  › Search commands                                                            24 commands                
+  │               Suggested                                                                                             
+                › Open PR checks  1 failing, 1 running                                           space s                
+  ┃ ◇ PR overv    Request reviewers  alex requested                                              space w                
+  ┃ ▼ src         Submit review  1 pending comment                                                     A                
+  ┃   M review                                                                                                          
+  ┃ A README.m    Review                                                                                                
+                  Mark file reviewed  src/review.ts                                                    x  ───────────   
+                  Next unreviewed file                                                                 u                
+                  Add review comment  src/review.ts:2                                                  a                
+                  Collapse or expand file                                                              c                
+                                                                                                                        
+                  Pull request                                                                                          
+                  Merge pull request  squash · checks failing                                          m                
+                  Open conversation  1 comment                                                         t                
+                  Convert to draft                                                               space D                
+                  Open pull request list                                                               p                
+                  Copy PR URL                                                                          y                
+                                                                                                                        
+                  View                                                                                                  
+                  Switch split / unified                                                               v  ED  +2 / -1   
+                  Switch pane                                                                        tab                
+                  Open file in editor                                                                  e                
+                                                                                                                        
+                  Comparison                                                                                            
+                  Compare branches or commits                                                          l                
+                  Refresh comparison                                                                   R                
+                                                                                                             1 comment  
+                  App                                                                                                   
+                  Keyboard shortcuts                                                                   ?                
+                enter run  ↑↓ move  tab keys  ctrl+u clear                                                              
+                                                                                                                        
+                                     ┃                                                                                  
+   COMMANDS                                                                                                             

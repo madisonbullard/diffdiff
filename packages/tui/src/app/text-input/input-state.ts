@@ -1,5 +1,23 @@
 import { getKeyboardInputName, type KeyboardInput } from "../../keyboard-input.ts";
 
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
+function previousGrapheme(value: string, offset: number): number {
+  let previous = 0;
+  for (const { index } of graphemes.segment(value)) {
+    if (index >= offset) break;
+    previous = index;
+  }
+  return previous;
+}
+
+function nextGrapheme(value: string, offset: number): number {
+  for (const { index, segment } of graphemes.segment(value)) {
+    if (index + segment.length > offset) return index + segment.length;
+  }
+  return value.length;
+}
+
 export interface TextInputSnapshot {
   cursorOffset: number;
   preferredColumn: number | null;
@@ -56,10 +74,11 @@ export function insertTextInputText(state: TextInputState, text: string): TextIn
   }
 
   const cursorOffset = clampCursor(state.value, state.cursorOffset);
+  const value = `${state.value.slice(0, cursorOffset)}${text}${state.value.slice(cursorOffset)}`;
   return withSnapshot(state, {
-    cursorOffset: cursorOffset + text.length,
+    cursorOffset: nextGrapheme(value, cursorOffset + text.length - 1),
     preferredColumn: null,
-    value: `${state.value.slice(0, cursorOffset)}${text}${state.value.slice(cursorOffset)}`,
+    value,
   });
 }
 
@@ -73,7 +92,7 @@ export function backspaceTextInput(state: TextInputState): TextInputState {
     return state;
   }
 
-  return deleteTextRange(state, cursorOffset - 1, cursorOffset);
+  return deleteTextRange(state, previousGrapheme(state.value, cursorOffset), cursorOffset);
 }
 
 export function deleteTextInput(state: TextInputState): TextInputState {
@@ -82,17 +101,17 @@ export function deleteTextInput(state: TextInputState): TextInputState {
     return state;
   }
 
-  return deleteTextRange(state, cursorOffset, cursorOffset + 1);
+  return deleteTextRange(state, cursorOffset, nextGrapheme(state.value, cursorOffset));
 }
 
 export function moveTextInputCursorLeft(state: TextInputState): TextInputState {
   const cursorOffset = clampCursor(state.value, state.cursorOffset);
-  return moveCursor(state, Math.max(cursorOffset - 1, 0));
+  return moveCursor(state, previousGrapheme(state.value, cursorOffset));
 }
 
 export function moveTextInputCursorRight(state: TextInputState): TextInputState {
   const cursorOffset = clampCursor(state.value, state.cursorOffset);
-  return moveCursor(state, Math.min(cursorOffset + 1, state.value.length));
+  return moveCursor(state, nextGrapheme(state.value, cursorOffset));
 }
 
 export function moveTextInputCursorUp(state: TextInputState): TextInputState {
@@ -354,9 +373,8 @@ export function applyTextInputKey(
 function isEditablePrintableKey(key: KeyboardInput): boolean {
   return (
     key.sequence != null &&
-    key.sequence.length === 1 &&
-    key.sequence >= " " &&
-    key.sequence !== "\x7f" &&
+    key.sequence !== "" &&
+    !/\p{Cc}/u.test(key.sequence) &&
     key.ctrl !== true &&
     key.meta !== true &&
     key.super !== true
@@ -391,10 +409,13 @@ function moveCursorVertically(state: TextInputState, delta: -1 | 1): TextInputSt
   }
 
   const currentLineStart = getLineStart(state.value, cursorOffset);
-  const preferredColumn = state.preferredColumn ?? cursorOffset - currentLineStart;
+  const preferredColumn =
+    state.preferredColumn ??
+    [...graphemes.segment(state.value.slice(currentLineStart, cursorOffset))].length;
   const targetLineStart = getLineStartOffset(lines, targetLineIndex);
-  const targetLineLength = lines[targetLineIndex]?.length ?? 0;
-  const targetOffset = targetLineStart + Math.min(preferredColumn, targetLineLength);
+  const targetLine = lines[targetLineIndex] ?? "";
+  const segments = [...graphemes.segment(targetLine)];
+  const targetOffset = targetLineStart + (segments[preferredColumn]?.index ?? targetLine.length);
 
   return {
     ...state,
@@ -447,7 +468,12 @@ function areTextInputsEqual(left: TextInputState, right: TextInputState): boolea
 }
 
 function clampCursor(value: string, cursorOffset: number): number {
-  return Math.max(0, Math.min(cursorOffset, value.length));
+  const offset = Math.max(0, Math.min(cursorOffset, value.length));
+  if (offset === 0 || offset === value.length) return offset;
+  for (const { index, segment } of graphemes.segment(value)) {
+    if (offset < index + segment.length) return index;
+  }
+  return value.length;
 }
 
 function getLineStart(value: string, cursorOffset: number): number {
@@ -462,29 +488,20 @@ function getLineEnd(value: string, cursorOffset: number): number {
 }
 
 function getWordBoundaryBackward(value: string, cursorOffset: number): number {
-  let nextOffset = clampCursor(value, cursorOffset);
-
-  while (nextOffset > 0 && isWordSeparator(value[nextOffset - 1]!)) {
-    nextOffset -= 1;
-  }
-  while (nextOffset > 0 && !isWordSeparator(value[nextOffset - 1]!)) {
-    nextOffset -= 1;
-  }
-
-  return nextOffset;
+  const parts = [...graphemes.segment(value.slice(0, clampCursor(value, cursorOffset)))];
+  let index = parts.length;
+  while (index > 0 && isWordSeparator(parts[index - 1]!.segment)) index -= 1;
+  while (index > 0 && !isWordSeparator(parts[index - 1]!.segment)) index -= 1;
+  return parts[index]?.index ?? 0;
 }
 
 function getWordBoundaryForward(value: string, cursorOffset: number): number {
-  let nextOffset = clampCursor(value, cursorOffset);
-
-  while (nextOffset < value.length && isWordSeparator(value[nextOffset]!)) {
-    nextOffset += 1;
-  }
-  while (nextOffset < value.length && !isWordSeparator(value[nextOffset]!)) {
-    nextOffset += 1;
-  }
-
-  return nextOffset;
+  const offset = clampCursor(value, cursorOffset);
+  const parts = [...graphemes.segment(value.slice(offset))];
+  let index = 0;
+  while (index < parts.length && isWordSeparator(parts[index]!.segment)) index += 1;
+  while (index < parts.length && !isWordSeparator(parts[index]!.segment)) index += 1;
+  return offset + (parts[index]?.index ?? value.length - offset);
 }
 
 function getLineStartOffset(lines: readonly string[], lineIndex: number): number {

@@ -1,0 +1,24 @@
+  Commands  Keys                                                 diff pane  esc 
+ › Search keys or actions                                      from your keymap 
+   Diff pane · current                                                          
+ › j k ↓ ↑           Next / previous file                                       
+   ] [               Next / previous line or comment                            
+   } {               Grow selection down / up (shift+] [)                       
+   i o               Previous / next review thread                              
+   a                 Comment on selected line                                   
+   x                 Mark file reviewed                                         
+   c z               Collapse or expand file                                    
+   pgdn pgup ^d ^u   Scroll page / half page                                    
+   gg ge             First / last file (with count: 5gg)                        
+   gn gp             Next / previous hunk                                       
+                                                                                
+   Menus                                                                        
+   space             Open… (PR, review, checks, merge)                          
+   ctrl+x            Leader: every command, e.g. ctrl+x e                       
+   g                 Go to…                                                     
+   ctrl+p            Commands                                                   
+                                                                                
+   Anywhere                                                                     
+   tab               Switch file tree / diff                                    
+ enter run  ↑↓ move  tab commands                                               
+   KEYS                                                                         

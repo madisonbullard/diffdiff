@@ -5,6 +5,8 @@ import * as A from "./actions.ts";
 const root = new MutableTrieNode();
 for (const [key, action] of [
   ["escape", A.MODAL_DISMISS],
+  ["tab", A.INSPECTOR_FOCUS],
+  ["shift+tab", A.INSPECTOR_FOCUS],
   ["q", A.MODAL_DISMISS],
   ["j", A.LIST_MOVE_DOWN],
   ["down", A.LIST_MOVE_DOWN],

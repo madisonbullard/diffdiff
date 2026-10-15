@@ -1,10 +1,40 @@
 import { runCommand } from "../command.ts";
+import { logDiffdiffError } from "../logging.ts";
 import type {
   GitHubPullRequestMergeRequest,
   GitHubRefCleanupCandidate,
   GitHubReviewSession,
 } from "../types/github.ts";
 import type { DeletedRemoteRef } from "./pull-request-types.ts";
+
+export async function preparePostMergeCleanup(
+  reviewSession: GitHubReviewSession,
+  comparison: GitHubPullRequestMergeRequest["comparison"],
+) {
+  try {
+    const deleted = await refreshPostMergeRefs(reviewSession);
+    const cleanupCandidates = await buildCleanupCandidates(
+      reviewSession.repositoryRootPath,
+      comparison,
+      deleted,
+      reviewSession.pullRequest.headSha,
+    );
+    return {
+      cleanupCandidates,
+      deletedRemoteRefs: deleted.map((ref) => ref.remoteRef),
+      refsRefreshError: undefined,
+    };
+  } catch (error) {
+    logDiffdiffError("github", "merged_ref_refresh_failed", error, {
+      pullRequestNumber: reviewSession.pullRequest.number,
+    });
+    return {
+      cleanupCandidates: [] as GitHubRefCleanupCandidate[],
+      deletedRemoteRefs: [] as string[],
+      refsRefreshError: error instanceof Error ? error.message : "Unable to refresh local refs.",
+    };
+  }
+}
 
 export async function refreshPostMergeRefs(
   reviewSession: GitHubReviewSession,
@@ -53,6 +83,7 @@ export async function buildCleanupCandidates(
   repositoryRootPath: string,
   comparison: GitHubPullRequestMergeRequest["comparison"],
   deletedRemoteRefs: readonly DeletedRemoteRef[],
+  mergedHeadSha = comparison.headSha,
 ): Promise<GitHubRefCleanupCandidate[]> {
   const cleanupCandidates: GitHubRefCleanupCandidate[] = [];
 
@@ -63,6 +94,12 @@ export async function buildCleanupCandidates(
 
     if (await hasRef(repositoryRootPath, `refs/heads/${ref.branchName}`)) {
       cleanupCandidates.push({
+        expectedSha: (
+          await runCommand("git", ["rev-parse", "--verify", `refs/heads/${ref.branchName}`], {
+            cwd: repositoryRootPath,
+          })
+        ).trim(),
+        mergedHeadSha,
         branchName: ref.branchName,
         kind: "local-branch",
         ref: ref.branchName,
@@ -71,6 +108,11 @@ export async function buildCleanupCandidates(
 
     if (await hasRef(repositoryRootPath, `refs/remotes/${ref.remoteRef}`)) {
       cleanupCandidates.push({
+        expectedSha: (
+          await runCommand("git", ["rev-parse", "--verify", `refs/remotes/${ref.remoteRef}`], {
+            cwd: repositoryRootPath,
+          })
+        ).trim(),
         branchName: ref.branchName,
         kind: "remote-tracking",
         ref: ref.remoteRef,
@@ -85,6 +127,34 @@ export async function buildCleanupCandidates(
 
     return left.ref.localeCompare(right.ref);
   });
+}
+
+/** Revalidate at deletion time; compare-and-swap protects ref changes during cleanup. */
+export async function removeSafeCleanupRef(
+  repositoryRootPath: string,
+  ref: GitHubRefCleanupCandidate,
+): Promise<void> {
+  const git = (...args: string[]) => runCommand("git", args, { cwd: repositoryRootPath });
+  if (ref.expectedSha == null || !/^[a-f0-9]{40,64}$/u.test(ref.expectedSha))
+    throw new Error(`Kept ${ref.ref}: missing verified branch tip.`);
+  const name = `${ref.kind === "local-branch" ? "refs/heads/" : "refs/remotes/"}${ref.ref}`;
+  await git("check-ref-format", name);
+  const current = (await git("rev-parse", "--verify", name)).trim();
+  if (current !== ref.expectedSha) throw new Error(`Kept ${ref.ref}: branch changed after merge.`);
+  if (ref.kind === "local-branch") {
+    const worktrees = await git("worktree", "list", "--porcelain");
+    if (worktrees.split("\n").includes(`branch ${name}`))
+      throw new Error(`Kept ${ref.ref}: checked out in a worktree.`);
+    if (!ref.mergedHeadSha || !/^[a-f0-9]{40,64}$/u.test(ref.mergedHeadSha))
+      throw new Error(`Kept ${ref.ref}: missing merged PR head.`);
+    try {
+      await git("merge-base", "--is-ancestor", current, ref.mergedHeadSha);
+    } catch {
+      throw new Error(`Kept ${ref.ref}: contains commits outside the merged PR head.`);
+    }
+  }
+  // Never force-delete a branch with unverified commits, including squash merges.
+  await git("update-ref", "-d", name, current);
 }
 
 export function dedupeCleanupCandidates(

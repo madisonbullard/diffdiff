@@ -1,7 +1,6 @@
 export type AppDialog =
   | "branch"
   | "clear-reviewed"
-  | "cleanup"
   | "command-palette"
   | "comment-composer"
   | "comments"
@@ -32,10 +31,6 @@ const APP_DIALOG_EXIT_ACTIONS: Record<
   "clear-reviewed": {
     complete: "restore-parent",
     dismiss: "restore-parent",
-  },
-  cleanup: {
-    complete: "close-all",
-    dismiss: "close-all",
   },
   "command-palette": {
     dismiss: "restore-parent",

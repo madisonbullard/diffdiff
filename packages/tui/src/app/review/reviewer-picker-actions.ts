@@ -2,6 +2,7 @@ import type { DiffdiffAppProps } from "../state/app-props.ts";
 import { logDiffdiffError } from "@madisonbullard/diffdiff-core";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
+import { formatActionBindings } from "../keymap/display.ts";
 import { closeDialog, openDialog } from "../dialogs/stack.ts";
 import { clampIndex } from "../../view-model.ts";
 import {
@@ -39,7 +40,13 @@ export function createReviewerPickerActions({
       state.setStatusMessage("Reviewers can only be requested for an open pull request.");
       return;
     }
-    if (state.isSubmittingReviewAction) return;
+    if (
+      state.reviewerPickerAsyncRef.current.submitting ||
+      (state.reviewerPicker.error != null && state.reviewerPicker.selected.size > 0)
+    ) {
+      state.setDialogStack((stack) => openDialog(stack, "reviewer-picker"));
+      return;
+    }
     state.setReviewerPicker(createReviewerPickerState());
     state.setDialogStack((stack) => openDialog(stack, "reviewer-picker"));
     state.setStatusMessage("Select reviewers, then press ctrl+s to request reviews.");
@@ -47,10 +54,14 @@ export function createReviewerPickerActions({
   }
 
   function closeReviewerPicker(): void {
-    if (state.reviewerPickerAsyncRef.current.submitting) return;
+    if (state.reviewerPickerAsyncRef.current.submitting) {
+      state.setDialogStack((stack) => closeDialog(stack, "reviewer-picker"));
+      state.setStatusMessage("Requesting reviewers in the background...");
+      return;
+    }
     state.reviewerPickerAsyncRef.current.loadId += 1;
     state.setDialogStack((stack) => closeDialog(stack, "reviewer-picker"));
-    state.setReviewerPicker(createReviewerPickerState());
+    if (state.reviewerPicker.error == null) state.setReviewerPicker(createReviewerPickerState());
     state.setStatusMessage("Canceled reviewer selection. No requests sent.");
   }
 
@@ -100,13 +111,13 @@ export function createReviewerPickerActions({
     }));
   }
 
-  function toggleReviewerSelection(): void {
+  function toggleReviewerSelection(index = state.reviewerPicker.index): void {
     if (state.reviewerPicker.isLoading || state.reviewerPickerAsyncRef.current.submitting) return;
     const users = filterReviewerCandidates(
       state.reviewerPicker,
       state.session.github?.pullRequest.reviewRequests ?? [],
     );
-    const user = users[clampIndex(state.reviewerPicker.index, users.length)];
+    const user = users[clampIndex(index, users.length)];
     if (user == null) return;
     const login = user.login.toLowerCase();
     if (
@@ -117,7 +128,7 @@ export function createReviewerPickerActions({
       const selected = new Set(picker.selected);
       if (selected.has(login)) selected.delete(login);
       else selected.add(login);
-      return { ...picker, selected };
+      return { ...picker, index: clampIndex(index, users.length), selected };
     });
   }
 
@@ -142,7 +153,10 @@ export function createReviewerPickerActions({
         picker.selected.has(user.login.toLowerCase()) && !requested.has(user.login.toLowerCase()),
     );
     if (users.length === 0) return;
+    const release = state.writeGuard.acquire("reviewers");
+    if (release == null) return;
     const token = state.reviewerPickerAsyncRef.current.loadId;
+    const owner = state.dialogStackRef.current.at(-1);
     const sessionLoadId = actions.beginSessionLoad();
     state.reviewerPickerAsyncRef.current.submitting = true;
     state.setReviewerPicker((current) => ({ ...current, isSubmitting: true, error: null }));
@@ -174,7 +188,10 @@ export function createReviewerPickerActions({
           },
         };
       });
-      state.setDialogStack((stack) => closeDialog(stack, "reviewer-picker", "complete"));
+      if (state.dialogStackRef.current.at(-1) === owner) {
+        state.setDialogStack((stack) => closeDialog(stack, "reviewer-picker", "complete"));
+      }
+      state.setReviewerPicker((current) => ({ ...current, selected: new Set() }));
       state.setStatusMessage(
         `Requested reviews from ${users.map((user) => user.login).join(", ")}.`,
       );
@@ -182,15 +199,35 @@ export function createReviewerPickerActions({
       const next = await props.loadSession(state.startupOptions);
       if (actions.isLatestSessionLoad(sessionLoadId)) actions.applyLoadedSession(next);
     } catch (error) {
-      if (state.reviewerPickerAsyncRef.current.loadId !== token) return;
+      if (state.reviewerPickerAsyncRef.current.loadId !== token) {
+        if (!sent)
+          persistence.persistenceApi.handleAppError(
+            error,
+            "Unable to request reviewers.",
+            { action: "request-reviewers", pullRequestNumber: github.pullRequest.number },
+            {
+              dialogOwner: owner,
+              displayMessage: `PR #${github.pullRequest.number}: reviewer request failed. Reopen reviewers from Commands to retry.`,
+            },
+          );
+        return;
+      }
       if (sent && !actions.isLatestSessionLoad(sessionLoadId)) return;
       if (!sent) {
+        const retry = formatActionBindings(state.reverseKeymaps, "reviewers.submit", [
+          "reviewer-picker",
+        ])?.split(" / ")[0];
+        const message = `Unable to request reviewers. Your selection is preserved${retry ? `; ${retry} retries` : ""}.`;
         state.setReviewerPicker((current) => ({
           ...current,
-          error: "Unable to request reviewers. Your selection is preserved; ctrl+s retries.",
+          error: message,
         }));
-        logDiffdiffError("app", "request_reviewers_failed", error, { action: "request-reviewers" });
-        state.setStatusMessage("Unable to request reviewers. Your selection is preserved.");
+        persistence.persistenceApi.handleAppError(
+          error,
+          message,
+          { action: "request-reviewers" },
+          { dialogOwner: owner, displayMessage: message },
+        );
         return;
       }
       persistence.persistenceApi.handleAppError(
@@ -204,7 +241,8 @@ export function createReviewerPickerActions({
         state.reviewerPickerAsyncRef.current.submitting = false;
         state.setReviewerPicker((current) => ({ ...current, isSubmitting: false }));
       }
-      state.setIsSubmittingReviewAction(false);
+      release();
+      state.setIsSubmittingReviewAction(state.writeGuard.hasPending());
     }
   }
 

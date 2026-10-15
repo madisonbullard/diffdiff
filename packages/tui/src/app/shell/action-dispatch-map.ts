@@ -103,7 +103,7 @@ export function buildActionDispatchMap(options: BuildActionDispatchMapOptions): 
     [A.SCROLL_HALF_PAGE_UP, -0.5],
   ] as const) {
     map.set(action, (count) => {
-      if (options.activeKeymapMode === "checks") {
+      if (["checks", "conversation", "diagnostics"].includes(options.activeKeymapMode)) {
         state.checksDetailScrollRef.current?.scrollBy(fraction * (count ?? 1), "viewport");
       } else {
         state.diffScroll.scrollBy(fraction * (count ?? 1), true);

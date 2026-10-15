@@ -68,6 +68,7 @@ export const GITHUB_PULL_REQUEST_LIST = "github.pull-request-list";
 export const GITHUB_REQUEST_REVIEWERS = "github.request-reviewers";
 export const GITHUB_TOGGLE_DRAFT = "github.toggle-draft";
 export const REVIEWERS_SUBMIT = "reviewers.submit";
+export const REVIEWERS_TOGGLE_AT = "reviewers.toggle-at";
 export const REVIEWERS_REFRESH = "reviewers.refresh";
 export const GITHUB_COMMENTS = "github.comments";
 export const GITHUB_COPY_URL = "github.copy-url";
@@ -118,6 +119,12 @@ export const MODAL_DISMISS = "modal.dismiss";
 // ---------------------------------------------------------------------------
 export const TEXT_BACKSPACE = "text.backspace";
 export const TEXT_NEWLINE = "text.newline";
+export const REVIEW_SWITCH_FIELD = "review.switch-field";
+export const COMMANDS_SWITCH_TAB = "commands.switch-tab";
+export const INSPECTOR_FOCUS = "inspector.focus";
+export const MERGE_TOGGLE_CLEANUP = "merge.toggle-cleanup";
+export const MERGE_PREVIOUS_FIELD = "merge.previous-field";
+export const TEXT_ACCEPT_COMPLETION = "text.accept-completion";
 export const TEXT_OPEN_EXTERNAL_EDITOR = "text.open-external-editor";
 
 // ---------------------------------------------------------------------------
@@ -172,8 +179,6 @@ export const MERGE_CONFIRM = "merge.confirm";
 // ---------------------------------------------------------------------------
 // Cleanup modal specific
 // ---------------------------------------------------------------------------
-export const CLEANUP_TOGGLE_OPTION = "cleanup.toggle-option";
-export const CLEANUP_APPLY = "cleanup.apply";
 
 // ---------------------------------------------------------------------------
 // Clear-reviewed modal specific

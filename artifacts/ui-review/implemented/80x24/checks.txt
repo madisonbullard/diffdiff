@@ -1,0 +1,24 @@
+ PR Checks  #1 · 1 failed · 1 pending · 0 passed                         escape 
+ › ✗ Type checking                                                      failure 
+   ◐ Build packages                                                      queued 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ Type checking                                                                  
+ GitHub Actions · failure                                                       
+ One type error in src/review.ts:3.                                             
+ Run vp check before merging.                                                   
+ https://github.com/example/repo/actions/runs/1                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ r refresh  tab focus details  pagedown scroll details  down move               
+   CHECKS                         Modal Picker mode active. Awaiting next key.  

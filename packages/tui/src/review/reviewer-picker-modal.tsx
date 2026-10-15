@@ -1,18 +1,16 @@
 import type { GitHubPullRequestRequestedReviewer } from "@madisonbullard/diffdiff-core";
 import type { UiTheme } from "../theme.ts";
-import { useTerminalDimensions } from "@opentui/react";
-import { createTextInputSurface } from "../text-input-surface.ts";
-import { KeyCap, ModalFrame, SPLIT_BORDER, tintHex } from "../components/shared.tsx";
-import { AsciiLoadingLabel } from "../components/ascii-loading-pane.tsx";
 import { TextInputContent } from "../components/text-input-content.tsx";
-import { clampIndex } from "../view-model.ts";
+import { DialogPanel } from "../components/dialog/panel.tsx";
+import { DialogList, DialogRow } from "../components/dialog/list-view.tsx";
+import { useDialogUi } from "../components/dialog/context.tsx";
 import {
   filterReviewerCandidates,
   getRequestedReviewerLogins,
   reviewerRecommendationLabel,
   type ReviewerPickerState,
 } from "../app/review/reviewer-picker-state.ts";
-
+import * as A from "../app/keymap/actions.ts";
 export function ReviewerPickerModal({
   picker,
   requests,
@@ -22,158 +20,89 @@ export function ReviewerPickerModal({
   requests: readonly GitHubPullRequestRequestedReviewer[];
   theme: UiTheme;
 }) {
+  const ui = useDialogUi();
   const users = filterReviewerCandidates(picker, requests);
-  const { height } = useTerminalDimensions();
-  const compact = height < 30;
-  const noticeRows =
-    (picker.selected.size > 0 ? 3 : 0) +
-    (picker.error != null ? 3 : 0) +
-    (picker.recommendationsUnavailable ? 2 : 0);
-  const visibleCount = Math.max(1, Math.min(8, Math.floor((height - 20 - noticeRows) / 2)));
-  const index = clampIndex(picker.index, users.length);
-  const start = Math.max(
-    0,
-    Math.min(index - Math.floor(visibleCount / 2), users.length - visibleCount),
-  );
   const requested = getRequestedReviewerLogins(requests);
-  const selected = [...picker.selected].join(", ");
   return (
-    <ModalFrame
+    <DialogPanel
       title="Request reviewers"
-      subtitle="Choose people to review this pull request. Existing requests are kept."
-      maxWidth={84}
-      maxHeight="100%"
+      context={`${users.length} matching users · ${picker.selected.size} selected`}
       theme={theme}
-      headerRight={
-        picker.isSubmitting || picker.isLoading ? (
-          <AsciiLoadingLabel
-            color={theme.accent}
-            message={picker.isSubmitting ? "Requesting" : "Loading"}
-            theme={theme}
-          />
-        ) : undefined
+      position={`${users.length ? picker.index + 1 : 0}/${users.length}`}
+      status={
+        picker.error ??
+        (picker.isSubmitting
+          ? "Requesting reviewers… Esc continues in background"
+          : picker.isLoading
+            ? "Loading reviewers…"
+            : picker.recommendationsUnavailable
+              ? "GitHub suggestions unavailable. You can still select reviewers."
+              : undefined)
       }
+      tone={picker.error ? "danger" : undefined}
+      actions={[
+        {
+          action: A.REVIEWERS_SUBMIT,
+          label: "request",
+          primary: true,
+          disabled: picker.isSubmitting || !picker.selected.size,
+        },
+        { action: A.LIST_ACCEPT, label: "select", disabled: picker.isSubmitting },
+        { action: A.REVIEWERS_REFRESH, label: "reload" },
+      ]}
     >
-      <box
-        width="100%"
-        flexDirection="column"
-        backgroundColor={theme.surface}
-        border={["left"]}
-        customBorderChars={SPLIT_BORDER}
-        borderColor={theme.borderActive}
-        paddingLeft={2}
-        paddingRight={2}
-        paddingTop={0}
-        paddingBottom={1}
-        gap={0}
-        flexShrink={0}
-      >
-        <text height={1} fg={theme.textMuted}>
-          Filter by name or username
-        </text>
-        <text height={1} fg={theme.text}>
-          <TextInputContent
-            cursorColor={theme.accent}
-            cursorTextColor={theme.inverseText}
-            showCursor={!picker.isSubmitting}
-            surface={createTextInputSurface(picker.input)}
+      {(rect) => (
+        <>
+          <text height={1} flexShrink={0} fg={theme.text}>
+            <TextInputContent
+              surface={picker.input}
+              showCursor={!picker.isSubmitting}
+              placeholder="Filter by name or username"
+              placeholderColor={theme.textMuted}
+              cursorColor={theme.accent}
+            />
+          </text>
+          <DialogList
+            items={users}
+            index={picker.index}
+            height={rect.bodyRows - 3}
+            theme={theme}
+            empty={picker.isLoading ? "Loading reviewers..." : "No reviewers match this filter."}
+            onMove={(delta) =>
+              ui.run(delta > 0 ? A.LIST_MOVE_DOWN : A.LIST_MOVE_UP, Math.abs(delta))
+            }
+            render={(user, i) => (
+              <DialogRow
+                selected={picker.index === i}
+                onClick={() => ui.run(A.REVIEWERS_TOGGLE_AT, i)}
+                label={`${requested.has(user.login.toLowerCase()) || picker.selected.has(user.login.toLowerCase()) ? "[x]" : "[ ]"} ${user.name ? `${user.name} (@${user.login})` : `@${user.login}`}`}
+                right={
+                  requested.has(user.login.toLowerCase())
+                    ? "Requested"
+                    : reviewerRecommendationLabel(user)
+                }
+                theme={theme}
+                width={rect.innerWidth}
+                onSelect={() =>
+                  ui.run(
+                    i > picker.index ? A.LIST_MOVE_DOWN : A.LIST_MOVE_UP,
+                    Math.abs(i - picker.index),
+                  )
+                }
+                onActivate={() => ui.run(A.LIST_ACCEPT)}
+              />
+            )}
           />
-        </text>
-        <text
-          height={1}
-          fg={theme.textMuted}
-        >{`${users.length} matching users · ${picker.selected.size} selected`}</text>
-      </box>
-      <box width="100%" flexDirection="column">
-        {users.slice(start, start + visibleCount).map((user, offset) => {
-          const login = user.login.toLowerCase();
-          const alreadyRequested = requested.has(login);
-          const focused = index === start + offset;
-          const recommendation = reviewerRecommendationLabel(user);
-          return (
-            <box
-              key={login}
-              width="100%"
-              flexDirection="column"
-              border={["left"]}
-              customBorderChars={SPLIT_BORDER}
-              borderColor={focused ? theme.borderActive : theme.border}
-              backgroundColor={focused ? tintHex(theme.surface, theme.accent, 0.24) : theme.surface}
-              paddingLeft={2}
-              paddingRight={2}
-              flexShrink={0}
-            >
-              <text height={1} fg={alreadyRequested ? theme.textMuted : theme.text} wrapMode="none">
-                <span fg={focused ? theme.accent : theme.textMuted}>
-                  {alreadyRequested || picker.selected.has(login) ? "[x] " : "[ ] "}
-                </span>
-                <span>{user.name ? `${user.name} (@${user.login})` : `@${user.login}`}</span>
-                {alreadyRequested ? <span fg={theme.success}>{" · Requested"}</span> : null}
-              </text>
-              {recommendation != null ? (
-                <text height={1} fg={theme.warning} wrapMode="none">{`    ${recommendation}`}</text>
-              ) : null}
-            </box>
-          );
-        })}
-        {users.length === 0 ? (
-          <box paddingLeft={2} paddingTop={1} paddingBottom={1} backgroundColor={theme.surface}>
-            <text fg={theme.textMuted}>
-              {picker.isLoading
-                ? "Loading reviewers..."
-                : picker.error != null
-                  ? "Reviewer list unavailable."
-                  : picker.input.value.trim()
-                    ? "No reviewers match this filter."
-                    : "No eligible reviewers found."}
-            </text>
-          </box>
-        ) : null}
-      </box>
-      <box
-        width="100%"
-        flexDirection="column"
-        backgroundColor={theme.surface}
-        paddingLeft={2}
-        paddingRight={2}
-        paddingTop={compact ? 0 : 1}
-        paddingBottom={1}
-        gap={compact ? 0 : 1}
-        flexShrink={0}
-      >
-        {selected !== "" ? (
-          <text
-            fg={theme.text}
-            wrapMode="word"
-            height={compact ? 1 : 2}
-          >{`Selected: ${selected}`}</text>
-        ) : null}
-        {picker.error != null ? (
-          <text height={2} fg={theme.danger}>
-            {picker.error}
+          <text height={2} flexShrink={0} fg={theme.textMuted} wrapMode="word">
+            {picker.selected.size
+              ? `Selected: ${[...picker.selected].join(", ")}`
+              : "Existing review requests are kept. Select people, then request."}
+            {picker.recommendationsUnavailable
+              ? "\nGitHub suggestions unavailable. You can still select reviewers."
+              : ""}
           </text>
-        ) : null}
-        {picker.recommendationsUnavailable ? (
-          <text height={1} fg={theme.textMuted}>
-            GitHub suggestions unavailable. You can still select reviewers.
-          </text>
-        ) : null}
-        <text height={1} fg={theme.textMuted} wrapMode="word">
-          <KeyCap label="↑ / ↓" theme={theme} />
-          <span>{" move  "}</span>
-          <KeyCap label="enter" theme={theme} />
-          <span>{" select  "}</span>
-          <KeyCap label="ctrl+s" theme={theme} />
-          <span>{" request  "}</span>
-          <KeyCap label="esc" theme={theme} />
-          <span>{" cancel"}</span>
-        </text>
-        <text height={1} fg={theme.textMuted}>
-          {picker.isSubmitting
-            ? "Sending requests; please wait."
-            : "Type to filter · ctrl+r reloads reviewers"}
-        </text>
-      </box>
-    </ModalFrame>
+        </>
+      )}
+    </DialogPanel>
   );
 }

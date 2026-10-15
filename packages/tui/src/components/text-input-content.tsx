@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import type { TextInputSurface } from "../text-input-surface.ts";
 
 const BLINK_TEXT_ATTRIBUTE = 1 << 4;
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
 export function TextInputContent({
   cursorColor,
@@ -38,10 +39,13 @@ export function TextInputContent({
   }
 
   const clampedOffset = Math.max(0, Math.min(cursorOffset, value.length));
-  const cursorCharacter = value.slice(clampedOffset, clampedOffset + 1);
+  const cursorCharacter =
+    graphemes.segment(value.slice(clampedOffset))[Symbol.iterator]().next().value?.segment ?? "";
   const blockCharacter = cursorCharacter === "" || cursorCharacter === "\n" ? " " : cursorCharacter;
   const suffixOffset =
-    cursorCharacter === "" || cursorCharacter === "\n" ? clampedOffset : clampedOffset + 1;
+    cursorCharacter === "" || cursorCharacter === "\n"
+      ? clampedOffset
+      : clampedOffset + cursorCharacter.length;
 
   return (
     <Fragment>

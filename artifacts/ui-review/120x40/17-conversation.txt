@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                     ┃                                                                                 ▀
+  │                                                                                                                ed   
+  │ 0 PR Conversation                                             j/k  move   r  reply   y  copy link   esc  close      
+  │                                                                                                                     
+      │                                                                                                                 
+  ┃ ◇ │  > alex  │  pr comment  │  6 hours ago                                                                          
+  ┃ ▼ │                                                                                                                 
+  ┃   │  The keyboard shortcuts feel good. Please make destructive actions more explicit before merging.                
+  ┃ A │                                                                                                                 
+                                                                                                                   ──   
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                   -1   
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                   ent  
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                     ┃                                                                                  
+   CONVO    ?  help                                                                                Opened PR comments.  

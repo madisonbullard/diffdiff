@@ -1,0 +1,12 @@
+
+  space  open                                    esc
+  Pull request              Review
+  s  Checks · 1 failing     a  Comment on line
+  t  Conversation           A  Submit review
+  w  Request reviewers
+  m  Merge                  App
+  D  Convert to draft       l  Compare
+  p  Pull request list      d  Diagnostics
+                            h  Keys
+                            Y  Copy reopen command
+

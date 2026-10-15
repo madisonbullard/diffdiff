@@ -29,6 +29,12 @@ smallest relevant source of truth.
 
 ### Product and implementation direction
 
+- `plans/menu-modal-unification.md`
+  - Approved direction: audit of every menu/dialog, the unified five-family dialog system, native
+    mockups, rollout slices, acceptance tests, and all twelve decisions. The implementation record
+    covers the safety/input work and unified dialog rollout, with actual application captures.
+- `plans/menu-modal-unification-handoff.md`
+  - The audit brief behind that proposal: evidence, constraints, and deliverables.
 - `plans/gh-integration.md`
   - Current durable plan snapshot for GitHub PR interaction in the TUI.
 - `plans/release-architecture.md`

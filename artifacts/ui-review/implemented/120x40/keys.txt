@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-i4b2jt  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Make terminal reviews clear, fast, and safe  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                                                                                                       ▀
+  │              Commands  Keys   Resolved bindings · includes your overrides              1/298  escape  rk reviewed   
+  │ 0 / 1 revi   Search keys, modes, or actions…                                                                        
+  │               diff                                                                                                  
+                › scroll page down                                                              pagedown                
+  ┃ ◇ PR overv    scroll page up                                                                  pageup                
+  ┃ ▼ src         scroll half page down                                                           ctrl+d                
+  ┃   A review    scroll half page up                                                             ctrl+u                
+                  system command palette                                                          ctrl+p                
+                  system help                                          ? / ctrl+x ? / ctrl+x h / space h  ───────────   
+                  system diagnostics                                              d / ctrl+x d / space d                
+                  view pane toggle                                                                   tab                
+                  review next file                                                              j / down                
+                  review previous file                                                            k / up                
+                  review first file                                                                 home                
+                  review last file                                                                   end                
+                  review toggle reviewed                                                r / x / ctrl+x r                
+                  review toggle collapsed                                               c / z / ctrl+x c                
+                  review next unreviewed                                                    u / ctrl+x u                
+                  review clear reviewed                                             alt+r / ctrl+x alt+r                
+                  view open file in editor                                                  e / ctrl+x e  ED  +6 / -0   
+                  view diff toggle                                                          v / ctrl+x v                
+                  view copy reopen command                      shift+y / ctrl+x shift+y / space shift+y                
+                  review extend previous line                                                    shift+[                
+                  review extend next line                                                        shift+]                
+                  review next anchor                                                                   ]                
+                  review previous anchor                                                               [                
+                  github focus previous thread                                                         i                
+                  github focus next thread                                                             o                
+                  comparison refresh                                            shift+r / ctrl+x shift+r                
+                  comparison list                                                 l / ctrl+x l / space l                
+                Ctrl+X is a silent leader. Space, g, and s show next-key menus.                                         
+                down move  tab commands                                                                                 
+                                                                                                                        
+                                                                                                                        
+   KEYS    tab  commands                                                                                        Ready.  

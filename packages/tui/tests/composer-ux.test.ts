@@ -10,6 +10,30 @@ import {
 import { formatMergeMessageBuffer, parseMergeMessageBuffer } from "../src/review/merge-message.ts";
 
 describe("composer ux helpers", () => {
+  test("does not restore a dismissed draft that was subsequently submitted", () => {
+    const scope = {
+      repositoryRootPath: "/repo",
+      targetKey: "line-2",
+      targetKind: "review-thread" as const,
+    };
+    const draft = {
+      body: "sent",
+      createdAt: "2026-10-14T12:00:00Z",
+      outcome: "dismissed" as const,
+      repositoryRootPath: "/repo",
+      target: { key: "line-2", kind: "review-thread" as const },
+    };
+    const submitted = {
+      ...draft,
+      createdAt: "2026-10-14T12:01:00Z",
+      outcome: "submitted" as const,
+    };
+    expect(findLatestDismissedReviewComposerDraft([draft, submitted], scope)).toBeUndefined();
+    const newerWork = { ...draft, body: "new work", createdAt: "2026-10-14T12:00:30Z" };
+    expect(findLatestDismissedReviewComposerDraft([draft, newerWork, submitted], scope)?.body).toBe(
+      "new work",
+    );
+  });
   test("preserves typed line ranges when inserting file references", () => {
     const autocomplete = buildReviewComposerAutocompleteState({
       body: "Please check @app#12-18",

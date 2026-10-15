@@ -62,8 +62,11 @@ export interface GitHubPendingReview {
 export type GitHubMergeMethod = "merge" | "squash";
 
 export interface GitHubCleanupPreferences {
-  removeLocal: boolean;
-  removeRemote: boolean;
+  afterMerge?: boolean;
+  /** @deprecated Read only when migrating version-1 preferences. Never written. */
+  removeLocal?: boolean;
+  /** @deprecated Read only when migrating version-1 preferences. Never written. */
+  removeRemote?: boolean;
 }
 
 export interface GitHubUserPreferences {
@@ -215,6 +218,8 @@ export interface GitHubPullRequestMergeState {
 }
 
 export interface GitHubRefCleanupCandidate {
+  expectedSha?: string;
+  mergedHeadSha?: string;
   branchName: string;
   kind: "local-branch" | "remote-tracking";
   ref: string;
@@ -229,6 +234,7 @@ export interface GitHubPullRequestMergeRequest {
 }
 
 export interface GitHubPullRequestMergeResult {
+  refsRefreshError?: string;
   autoMergeEnabled?: boolean;
   cleanupCandidates: GitHubRefCleanupCandidate[];
   deletedRemoteRefs: string[];

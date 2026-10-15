@@ -1,10 +1,12 @@
 import type { UiTheme } from "../theme.ts";
 import type { TextInputSurface } from "../text-input-surface.ts";
-import { AsciiLoadingLabel } from "../components/ascii-loading-pane.tsx";
-import { MULTILINE_TEXT_INPUT_WITH_EDITOR_HINT } from "../components/text-input-hints.ts";
-import { TextInputContent } from "../components/text-input-content.tsx";
-import { MODAL_OVERLAY, REVIEW_BORDER } from "./shared.tsx";
-
+import { DialogPanel } from "../components/dialog/panel.tsx";
+import { DialogEditor } from "../components/dialog/editor.tsx";
+import { DialogList, DialogRow } from "../components/dialog/list-view.tsx";
+import { useDialogUi, primaryBinding } from "../components/dialog/context.tsx";
+import { fitPath, fitText, cellWidth } from "../components/dialog/text.ts";
+import { dialogTokens } from "../components/dialog/tokens.ts";
+import * as A from "../app/keymap/actions.ts";
 export function ReviewComposerModal({
   autocomplete,
   autocompleteIndex,
@@ -17,162 +19,104 @@ export function ReviewComposerModal({
   autocomplete: import("./composer-autocomplete.ts").ReviewComposerAutocompleteState;
   autocompleteIndex: number;
   bodySurface: TextInputSurface;
-  context: {
-    snippet: string;
-    subtitle: string;
-    title: string;
-  };
+  context: { snippet: string; subtitle: string; title: string };
   historyEntryCount: number;
   isSubmitting: boolean;
   theme: UiTheme;
 }) {
+  const ui = useDialogUi();
   return (
-    <box
-      position="absolute"
-      top={0}
-      right={0}
-      bottom={0}
-      left={0}
-      alignItems="center"
-      justifyContent="center"
-      zIndex={55}
-      backgroundColor={MODAL_OVERLAY}
+    <DialogPanel
+      title={context.title}
+      context={context.subtitle}
+      family="form"
+      theme={theme}
+      status={isSubmitting ? "Sending… input paused · Esc continues in background" : undefined}
+      actions={[
+        {
+          action: A.LIST_ACCEPT,
+          label: autocomplete.isVisible ? "insert file" : "send",
+          primary: true,
+          disabled: isSubmitting || !bodySurface.value.trim(),
+        },
+        { action: A.TEXT_NEWLINE, label: "newline" },
+        { action: A.TEXT_OPEN_EXTERNAL_EDITOR, label: "editor" },
+        ...(autocomplete.isVisible
+          ? [{ action: A.TEXT_ACCEPT_COMPLETION, label: "insert file" }]
+          : []),
+      ]}
     >
-      <box
-        width="92%"
-        maxWidth={108}
-        backgroundColor={theme.modalBg}
-        padding={1}
-        flexDirection="column"
-        gap={1}
-      >
-        <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
-          <box flexDirection="column">
-            <text fg={theme.accent} wrapMode="none">
-              {context.title}
+      {(rect) => {
+        const options = autocomplete.isVisible ? Math.min(4, Math.max(1, rect.bodyRows - 6)) : 0;
+        const editorHeight = rect.bodyRows - 4;
+        const before = bodySurface.value.slice(0, bodySurface.cursorOffset);
+        const lines = before.split("\n");
+        const row =
+          lines.reduce(
+            (total, line) =>
+              total + Math.max(1, Math.ceil((cellWidth(line) + 1) / rect.innerWidth)),
+            0,
+          ) - 1;
+        const col = cellWidth(lines.at(-1) ?? "") % rect.innerWidth;
+        const popupWidth = Math.min(60, rect.innerWidth);
+        return (
+          <>
+            <text height={2} flexShrink={0} fg={theme.textMuted} wrapMode="word">
+              {fitText(context.snippet, rect.innerWidth * 2)}
             </text>
-            <text fg={theme.textMuted} wrapMode="none">
-              {context.subtitle}
-            </text>
-          </box>
-          <text fg={theme.textMuted} wrapMode="none">
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" ctrl+e "}
-            </span>
-            <span>{" line end  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" leader+e "}
-            </span>
-            <span>{" editor  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" up/down "}
-            </span>
-            <span>{" drafts  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" @ "}
-            </span>
-            <span>{" files  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" enter "}
-            </span>
-            <span>{" submit  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" shift+enter "}
-            </span>
-            <span>{" newline  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" ctrl+j "}
-            </span>
-            <span>{" newline  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" esc "}
-            </span>
-            <span>{" close"}</span>
-          </text>
-        </box>
-        <box
-          width="100%"
-          border={["left"]}
-          customBorderChars={REVIEW_BORDER}
-          borderColor={theme.border}
-          backgroundColor={theme.surface}
-          paddingLeft={2}
-          paddingRight={1}
-          paddingTop={1}
-          paddingBottom={1}
-        >
-          <text fg={theme.text} wrapMode="word">
-            {context.snippet}
-          </text>
-        </box>
-        <box
-          width="100%"
-          border={["left"]}
-          customBorderChars={REVIEW_BORDER}
-          borderColor={theme.borderActive}
-          backgroundColor={theme.surfaceMuted}
-          paddingLeft={2}
-          paddingRight={1}
-          paddingTop={1}
-          paddingBottom={1}
-          minHeight={8}
-        >
-          <text fg={theme.text} wrapMode="word">
-            <TextInputContent
-              cursorColor={theme.accent}
-              cursorTextColor={theme.inverseText}
-              surface={bodySurface}
-            />
-          </text>
-        </box>
-        {autocomplete.isVisible ? (
-          <box
-            width="100%"
-            border={["left"]}
-            customBorderChars={REVIEW_BORDER}
-            borderColor={theme.border}
-            backgroundColor={theme.surface}
-            paddingLeft={2}
-            paddingRight={1}
-            paddingTop={1}
-            paddingBottom={1}
-            flexDirection="column"
-            gap={0}
-          >
-            <text fg={theme.textMuted} wrapMode="none">
-              {autocomplete.options.length === 0
-                ? `No files match @${autocomplete.query}.`
-                : `Insert file reference for @${autocomplete.query || ""}.`}
-            </text>
-            {autocomplete.options.map((option, index) => {
-              const isSelected = index === autocompleteIndex;
-              return (
-                <text
-                  key={`${option.path}:${option.insertText}`}
-                  fg={isSelected ? theme.accent : theme.text}
-                  wrapMode="none"
+            <box height={editorHeight} flexShrink={0}>
+              <DialogEditor
+                surface={bodySurface}
+                height={editorHeight}
+                width={rect.innerWidth}
+                paused={isSubmitting}
+                placeholder="Write a comment…"
+                theme={theme}
+              />
+              {autocomplete.isVisible ? (
+                <box
+                  position="absolute"
+                  top={Math.max(0, Math.min(row + 1, editorHeight - options))}
+                  left={Math.min(col, rect.innerWidth - popupWidth)}
+                  width={popupWidth}
+                  height={options}
+                  zIndex={2}
+                  backgroundColor={dialogTokens(theme).popover}
                 >
-                  <span>{isSelected ? "> " : "  "}</span>
-                  <span>{option.insertText}</span>
-                </text>
-              );
-            })}
-          </box>
-        ) : null}
-        {isSubmitting ? (
-          <AsciiLoadingLabel
-            color={theme.accent}
-            message="Submitting review comment..."
-            theme={theme}
-          />
-        ) : (
-          <text fg={theme.textMuted} wrapMode="word">
-            {historyEntryCount > 0
-              ? `Type your comment body. ${historyEntryCount} saved draft${historyEntryCount === 1 ? "" : "s"} available for browsing. ${MULTILINE_TEXT_INPUT_WITH_EDITOR_HINT}`
-              : `Type your comment body. Use up/down for recent drafts and @ to reference changed files. ${MULTILINE_TEXT_INPUT_WITH_EDITOR_HINT}`}
-          </text>
-        )}
-      </box>
-    </box>
+                  <DialogList
+                    items={autocomplete.options}
+                    index={autocompleteIndex}
+                    height={options}
+                    theme={theme}
+                    empty={`No files match @${autocomplete.query}.`}
+                    render={(option, index) => (
+                      <DialogRow
+                        selected={index === autocompleteIndex}
+                        label={fitPath(option.insertText, popupWidth - 2)}
+                        width={popupWidth}
+                        theme={theme}
+                        onSelect={() =>
+                          ui.run(
+                            index > autocompleteIndex ? A.LIST_MOVE_DOWN : A.LIST_MOVE_UP,
+                            Math.abs(index - autocompleteIndex),
+                          )
+                        }
+                        onActivate={() => ui.run(A.TEXT_ACCEPT_COMPLETION)}
+                      />
+                    )}
+                  />
+                </box>
+              ) : null}
+            </box>
+            <text
+              height={2}
+              flexShrink={0}
+              fg={theme.textMuted}
+              wrapMode="word"
+            >{`@ reference files · ${historyEntryCount} saved drafts${primaryBinding(ui, A.TEXT_NEWLINE) ? ` · ${primaryBinding(ui, A.TEXT_NEWLINE)} newline` : ""}`}</text>
+          </>
+        );
+      }}
+    </DialogPanel>
   );
 }

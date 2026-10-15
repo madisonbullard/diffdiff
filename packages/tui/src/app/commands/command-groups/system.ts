@@ -23,7 +23,7 @@ export function buildSystemCommands({
       description: "Show keyboard shortcuts and usage help.",
       keywords: ["?", "shortcuts"],
       suggested: true,
-      title: "Open help",
+      title: "Open Keys",
       value: "system.help",
       run: () => openHelp(),
     },

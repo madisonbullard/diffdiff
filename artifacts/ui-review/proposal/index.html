@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>diffdiff — proposed dialog system</title>
+  <style>
+    body {
+      margin: 0;
+      background: #0b1620;
+      color: #e3edf4;
+      font:
+        15px system-ui,
+        sans-serif;
+    }
+    header,
+    main {
+      max-width: 1800px;
+      margin: auto;
+      padding: 24px;
+    }
+    header {
+      border-bottom: 1px solid #324655;
+    }
+    h1 {
+      margin: 0 0 12px;
+    }
+    p {
+      color: #afc1ce;
+      line-height: 1.6;
+      max-width: 1100px;
+    }
+    a {
+      color: #9edbff;
+    }
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 14px;
+      font-size: 14px;
+    }
+    section {
+      padding: 18px 0 30px;
+      border-bottom: 1px solid #324655;
+    }
+    h2 {
+      font-size: 18px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
+      gap: 18px;
+      align-items: start;
+    }
+    figure {
+      margin: 0;
+      min-width: 0;
+    }
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid #324655;
+    }
+    figcaption {
+      margin: 8px 0;
+      color: #afc1ce;
+      font-size: 13px;
+    }
+    details {
+      margin-top: 14px;
+    }
+    summary {
+      cursor: pointer;
+      color: #9edbff;
+    }
+  </style>
+  <header>
+    <h1>Proposed dialog system — native OpenTUI mockups</h1>
+    <p>
+      Updated 2026-10-14 for Madison's decisions: borderless tinted panels over a dimmed app, sheets
+      below 30 rows, inline merge confirmation, a Keys tab instead of Help, no Ctrl+X menu, and Esc
+      that closes a dialog while its write keeps going. Key menus are non-modal, so the app behind
+      them stays undimmed.
+    </p>
+    <p>
+      Each image is a real OpenTUI/Yoga frame rendered headlessly from <code>mockups.tsx</code> over
+      the dimmed real app frame, rasterized with the same Menlo span renderer as the audit captures
+      (thin vertical seams between spans are a rasterizer artifact in both sets). They prove
+      geometry and hierarchy, not final copy or production code. Plan:
+      <a href="../../../docs/plans/menu-modal-unification.md"
+        >docs/plans/menu-modal-unification.md</a
+      >.
+    </p>
+    <nav>
+      <a href="#p01-commands">p01-commands</a
+      ><a href="#p02-commands-filtered">p02-commands-filtered</a><a href="#p03-keys">p03-keys</a
+      ><a href="#p04-space-menu">p04-space-menu</a><a href="#p06-reviewers">p06-reviewers</a
+      ><a href="#p07-reviewers-error">p07-reviewers-error</a><a href="#p08-compare">p08-compare</a
+      ><a href="#p08b-pull-requests">p08b-pull-requests</a><a href="#p09-checks">p09-checks</a
+      ><a href="#p09b-conversation">p09b-conversation</a><a href="#p10-comment">p10-comment</a
+      ><a href="#p10b-comment-autocomplete">p10b-comment-autocomplete</a
+      ><a href="#p11-comment-submitting">p11-comment-submitting</a
+      ><a href="#p12-submit-review">p12-submit-review</a><a href="#p13-merge">p13-merge</a
+      ><a href="#p14-merge-confirm">p14-merge-confirm</a
+      ><a href="#p15-auto-merge-confirm">p15-auto-merge-confirm</a
+      ><a href="#p17-clear-reviewed">p17-clear-reviewed</a
+      ><a href="#p18-too-small">p18-too-small</a>
+    </nav>
+  </header>
+  <main>
+    <section id="p01-commands">
+      <h2>
+        p01-commands — Picker · command palette, grouped, one row per command, primary key only
+      </h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p01-commands.png"
+            ><img loading="lazy" src="pierre-dark/120x40/p01-commands.png" alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p01-commands.png"
+            ><img loading="lazy" src="pierre-dark/80x24/p01-commands.png" alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+        <figure>
+          <a href="terminal-theme/120x40/p01-commands.png"
+            ><img
+              loading="lazy"
+              src="terminal-theme/120x40/p01-commands.png"
+              alt="proposed · terminal-derived theme · 120x40"
+          /></a>
+          <figcaption>proposed · terminal-derived theme · 120x40</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/05-command-palette.png"
+              ><img
+                loading="lazy"
+                src="../120x40/05-command-palette.png"
+                alt="current · 120x40 · 05-command-palette"
+            /></a>
+            <figcaption>current · 120x40 · 05-command-palette</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/05-command-palette.png"
+              ><img
+                loading="lazy"
+                src="../80x24/05-command-palette.png"
+                alt="current · 80x24 · 05-command-palette"
+            /></a>
+            <figcaption>current · 80x24 · 05-command-palette</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p02-commands-filtered">
+      <h2>
+        p02-commands-filtered — Picker · filtered (flat list, match highlight, section as metadata)
+      </h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p02-commands-filtered.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/120x40/p02-commands-filtered.png"
+              alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p02-commands-filtered.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/80x24/p02-commands-filtered.png"
+              alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/05-command-palette.png"
+              ><img
+                loading="lazy"
+                src="../120x40/05-command-palette.png"
+                alt="current · 120x40 · 05-command-palette"
+            /></a>
+            <figcaption>current · 120x40 · 05-command-palette</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/05-command-palette.png"
+              ><img
+                loading="lazy"
+                src="../80x24/05-command-palette.png"
+                alt="current · 80x24 · 05-command-palette"
+            /></a>
+            <figcaption>current · 80x24 · 05-command-palette</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p03-keys">
+      <h2>
+        p03-keys — Picker · Keys tab: searchable reference generated from the keymap, current pane
+        first
+      </h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p03-keys.png"
+            ><img loading="lazy" src="pierre-dark/120x40/p03-keys.png" alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p03-keys.png"
+            ><img loading="lazy" src="pierre-dark/80x24/p03-keys.png" alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/06-help-diff.png"
+              ><img
+                loading="lazy"
+                src="../120x40/06-help-diff.png"
+                alt="current · 120x40 · 06-help-diff"
+            /></a>
+            <figcaption>current · 120x40 · 06-help-diff</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/06-help-diff.png"
+              ><img
+                loading="lazy"
+                src="../80x24/06-help-diff.png"
+                alt="current · 80x24 · 06-help-diff"
+            /></a>
+            <figcaption>current · 80x24 · 06-help-diff</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p04-space-menu">
+      <h2>
+        p04-space-menu — Key menu · non-modal which-key popover, key-first, grouped; the app stays
+        undimmed
+      </h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p04-space-menu.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/120x40/p04-space-menu.png"
+              alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p04-space-menu.png"
+            ><img loading="lazy" src="pierre-dark/80x24/p04-space-menu.png" alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/01-space-menu.png"
+              ><img
+                loading="lazy"
+                src="../120x40/01-space-menu.png"
+                alt="current · 120x40 · 01-space-menu"
+            /></a>
+            <figcaption>current · 120x40 · 01-space-menu</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/01-space-menu.png"
+              ><img
+                loading="lazy"
+                src="../80x24/01-space-menu.png"
+                alt="current · 80x24 · 01-space-menu"
+            /></a>
+            <figcaption>current · 80x24 · 01-space-menu</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p06-reviewers">
+      <h2>
+        p06-reviewers — Picker · multi-select: requested ✓, chosen [x], cursor ›, sections, long +
+        wide names
+      </h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p06-reviewers.png"
+            ><img loading="lazy" src="pierre-dark/120x40/p06-reviewers.png" alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p06-reviewers.png"
+            ><img loading="lazy" src="pierre-dark/80x24/p06-reviewers.png" alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+        <figure>
+          <a href="terminal-theme/120x40/p06-reviewers.png"
+            ><img
+              loading="lazy"
+              src="terminal-theme/120x40/p06-reviewers.png"
+              alt="proposed · terminal-derived theme · 120x40"
+          /></a>
+          <figcaption>proposed · terminal-derived theme · 120x40</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/15-reviewer-selected.png"
+              ><img
+                loading="lazy"
+                src="../120x40/15-reviewer-selected.png"
+                alt="current · 120x40 · 15-reviewer-selected"
+            /></a>
+            <figcaption>current · 120x40 · 15-reviewer-selected</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/15-reviewer-selected.png"
+              ><img
+                loading="lazy"
+                src="../80x24/15-reviewer-selected.png"
+                alt="current · 80x24 · 15-reviewer-selected"
+            /></a>
+            <figcaption>current · 80x24 · 15-reviewer-selected</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p07-reviewers-error">
+      <h2>p07-reviewers-error — Picker · inline failure keeps selection and offers retry</h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p07-reviewers-error.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/120x40/p07-reviewers-error.png"
+              alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p07-reviewers-error.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/80x24/p07-reviewers-error.png"
+              alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/15-reviewer-selected.png"
+              ><img
+                loading="lazy"
+                src="../120x40/15-reviewer-selected.png"
+                alt="current · 120x40 · 15-reviewer-selected"
+            /></a>
+            <figcaption>current · 120x40 · 15-reviewer-selected</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/15-reviewer-selected.png"
+              ><img
+                loading="lazy"
+                src="../80x24/15-reviewer-selected.png"
+                alt="current · 80x24 · 15-reviewer-selected"
+            /></a>
+            <figcaption>current · 80x24 · 15-reviewer-selected</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p08-compare">
+      <h2>
+        p08-compare — Picker · branches tab, inline facets replace Filters (D3), enter sets head
+        (D8), 43 branches windowed
+      </h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p08-compare.png"
+            ><img loading="lazy" src="pierre-dark/120x40/p08-compare.png" alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p08-compare.png"
+            ><img loading="lazy" src="pierre-dark/80x24/p08-compare.png" alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/08-compare-branches.png"
+              ><img
+                loading="lazy"
+                src="../120x40/08-compare-branches.png"
+                alt="current · 120x40 · 08-compare-branches"
+            /></a>
+            <figcaption>current · 120x40 · 08-compare-branches</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/08-compare-branches.png"
+              ><img
+                loading="lazy"
+                src="../80x24/08-compare-branches.png"
+                alt="current · 80x24 · 08-compare-branches"
+            /></a>
+            <figcaption>current · 80x24 · 08-compare-branches</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p08b-pull-requests">
+      <h2>
+        p08b-pull-requests — Picker · one dense row per PR with number, author, state, and age; 40
+        PRs windowed
+      </h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p08b-pull-requests.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/120x40/p08b-pull-requests.png"
+              alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p08b-pull-requests.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/80x24/p08b-pull-requests.png"
+              alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/12-pull-requests.png"
+              ><img
+                loading="lazy"
+                src="../120x40/12-pull-requests.png"
+                alt="current · 120x40 · 12-pull-requests"
+            /></a>
+            <figcaption>current · 120x40 · 12-pull-requests</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/12-pull-requests.png"
+              ><img
+                loading="lazy"
+                src="../80x24/12-pull-requests.png"
+                alt="current · 80x24 · 12-pull-requests"
+            /></a>
+            <figcaption>current · 80x24 · 12-pull-requests</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p09-checks">
+      <h2>p09-checks — Inspector · glyph + word status, list/detail side by side when wide</h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p09-checks.png"
+            ><img loading="lazy" src="pierre-dark/120x40/p09-checks.png" alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p09-checks.png"
+            ><img loading="lazy" src="pierre-dark/80x24/p09-checks.png" alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+        <figure>
+          <a href="terminal-theme/120x40/p09-checks.png"
+            ><img
+              loading="lazy"
+              src="terminal-theme/120x40/p09-checks.png"
+              alt="proposed · terminal-derived theme · 120x40"
+          /></a>
+          <figcaption>proposed · terminal-derived theme · 120x40</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/16-checks.png"
+              ><img loading="lazy" src="../120x40/16-checks.png" alt="current · 120x40 · 16-checks"
+            /></a>
+            <figcaption>current · 120x40 · 16-checks</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/16-checks.png"
+              ><img loading="lazy" src="../80x24/16-checks.png" alt="current · 80x24 · 16-checks"
+            /></a>
+            <figcaption>current · 80x24 · 16-checks</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p09b-conversation">
+      <h2>
+        p09b-conversation — Inspector · timeline list + readable detail; reply from the selected
+        item
+      </h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p09b-conversation.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/120x40/p09b-conversation.png"
+              alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p09b-conversation.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/80x24/p09b-conversation.png"
+              alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/17-conversation.png"
+              ><img
+                loading="lazy"
+                src="../120x40/17-conversation.png"
+                alt="current · 120x40 · 17-conversation"
+            /></a>
+            <figcaption>current · 120x40 · 17-conversation</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/17-conversation.png"
+              ><img
+                loading="lazy"
+                src="../80x24/17-conversation.png"
+                alt="current · 80x24 · 17-conversation"
+            /></a>
+            <figcaption>current · 80x24 · 17-conversation</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p10-comment">
+      <h2>p10-comment — Form · composer: context line, editor gets the space, one action bar</h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p10-comment.png"
+            ><img loading="lazy" src="pierre-dark/120x40/p10-comment.png" alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p10-comment.png"
+            ><img loading="lazy" src="pierre-dark/80x24/p10-comment.png" alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/19-inline-comment.png"
+              ><img
+                loading="lazy"
+                src="../120x40/19-inline-comment.png"
+                alt="current · 120x40 · 19-inline-comment"
+            /></a>
+            <figcaption>current · 120x40 · 19-inline-comment</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/19-inline-comment.png"
+              ><img
+                loading="lazy"
+                src="../80x24/19-inline-comment.png"
+                alt="current · 80x24 · 19-inline-comment"
+            /></a>
+            <figcaption>current · 80x24 · 19-inline-comment</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p10b-comment-autocomplete">
+      <h2>
+        p10b-comment-autocomplete — Form · @file popover on a raised tint under the caret; it owns
+        the keys and the bar
+      </h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p10b-comment-autocomplete.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/120x40/p10b-comment-autocomplete.png"
+              alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p10b-comment-autocomplete.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/80x24/p10b-comment-autocomplete.png"
+              alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/18b-file-autocomplete.png"
+              ><img
+                loading="lazy"
+                src="../120x40/18b-file-autocomplete.png"
+                alt="current · 120x40 · 18b-file-autocomplete"
+            /></a>
+            <figcaption>current · 120x40 · 18b-file-autocomplete</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/18b-file-autocomplete.png"
+              ><img
+                loading="lazy"
+                src="../80x24/18b-file-autocomplete.png"
+                alt="current · 80x24 · 18b-file-autocomplete"
+            /></a>
+            <figcaption>current · 80x24 · 18b-file-autocomplete</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p11-comment-submitting">
+      <h2>
+        p11-comment-submitting — Form · in-flight write: input paused, no duplicate submit, esc
+        backgrounds the write (D9)
+      </h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p11-comment-submitting.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/120x40/p11-comment-submitting.png"
+              alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p11-comment-submitting.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/80x24/p11-comment-submitting.png"
+              alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/19-inline-comment.png"
+              ><img
+                loading="lazy"
+                src="../120x40/19-inline-comment.png"
+                alt="current · 120x40 · 19-inline-comment"
+            /></a>
+            <figcaption>current · 120x40 · 19-inline-comment</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/19-inline-comment.png"
+              ><img
+                loading="lazy"
+                src="../80x24/19-inline-comment.png"
+                alt="current · 80x24 · 19-inline-comment"
+            /></a>
+            <figcaption>current · 80x24 · 19-inline-comment</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p12-submit-review">
+      <h2>p12-submit-review — Form · event radio with consequences, summary field</h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p12-submit-review.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/120x40/p12-submit-review.png"
+              alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p12-submit-review.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/80x24/p12-submit-review.png"
+              alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/21-submit-review.png"
+              ><img
+                loading="lazy"
+                src="../120x40/21-submit-review.png"
+                alt="current · 120x40 · 21-submit-review"
+            /></a>
+            <figcaption>current · 120x40 · 21-submit-review</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/21-submit-review.png"
+              ><img
+                loading="lazy"
+                src="../80x24/21-submit-review.png"
+                alt="current · 80x24 · 21-submit-review"
+            /></a>
+            <figcaption>current · 80x24 · 21-submit-review</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p13-merge">
+      <h2>
+        p13-merge — Form · method, auto-merge, remembered cleanup option (D12), title/body; hazards
+        next to the action
+      </h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p13-merge.png"
+            ><img loading="lazy" src="pierre-dark/120x40/p13-merge.png" alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p13-merge.png"
+            ><img loading="lazy" src="pierre-dark/80x24/p13-merge.png" alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+        <figure>
+          <a href="terminal-theme/120x40/p13-merge.png"
+            ><img
+              loading="lazy"
+              src="terminal-theme/120x40/p13-merge.png"
+              alt="proposed · terminal-derived theme · 120x40"
+          /></a>
+          <figcaption>proposed · terminal-derived theme · 120x40</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/24-merge.png"
+              ><img loading="lazy" src="../120x40/24-merge.png" alt="current · 120x40 · 24-merge"
+            /></a>
+            <figcaption>current · 120x40 · 24-merge</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/24-merge.png"
+              ><img loading="lazy" src="../80x24/24-merge.png" alt="current · 80x24 · 24-merge"
+            /></a>
+            <figcaption>current · 80x24 · 24-merge</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p14-merge-confirm">
+      <h2>
+        p14-merge-confirm — Form · inline two-step confirmation (D4): fields lock, ▲ title, warning
+        band, warning primary
+      </h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p14-merge-confirm.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/120x40/p14-merge-confirm.png"
+              alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p14-merge-confirm.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/80x24/p14-merge-confirm.png"
+              alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/25-confirm-merge.png"
+              ><img
+                loading="lazy"
+                src="../120x40/25-confirm-merge.png"
+                alt="current · 120x40 · 25-confirm-merge"
+            /></a>
+            <figcaption>current · 120x40 · 25-confirm-merge</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/25-confirm-merge.png"
+              ><img
+                loading="lazy"
+                src="../80x24/25-confirm-merge.png"
+                alt="current · 80x24 · 25-confirm-merge"
+            /></a>
+            <figcaption>current · 80x24 · 25-confirm-merge</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p15-auto-merge-confirm">
+      <h2>
+        p15-auto-merge-confirm — Form · auto-merge confirmation names its own consequence, in full
+        at 80×24
+      </h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p15-auto-merge-confirm.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/120x40/p15-auto-merge-confirm.png"
+              alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p15-auto-merge-confirm.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/80x24/p15-auto-merge-confirm.png"
+              alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/27-confirm-auto-merge.png"
+              ><img
+                loading="lazy"
+                src="../120x40/27-confirm-auto-merge.png"
+                alt="current · 120x40 · 27-confirm-auto-merge"
+            /></a>
+            <figcaption>current · 120x40 · 27-confirm-auto-merge</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/27-confirm-auto-merge.png"
+              ><img
+                loading="lazy"
+                src="../80x24/27-confirm-auto-merge.png"
+                alt="current · 80x24 · 27-confirm-auto-merge"
+            /></a>
+            <figcaption>current · 80x24 · 27-confirm-auto-merge</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p17-clear-reviewed">
+      <h2>p17-clear-reviewed — Confirm · small, named action and count</h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/120x40/p17-clear-reviewed.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/120x40/p17-clear-reviewed.png"
+              alt="proposed · 120x40"
+          /></a>
+          <figcaption>proposed · 120x40</figcaption>
+        </figure>
+        <figure>
+          <a href="pierre-dark/80x24/p17-clear-reviewed.png"
+            ><img
+              loading="lazy"
+              src="pierre-dark/80x24/p17-clear-reviewed.png"
+              alt="proposed · 80x24"
+          /></a>
+          <figcaption>proposed · 80x24</figcaption>
+        </figure>
+      </div>
+      <details>
+        <summary>Current (before)</summary>
+        <div class="grid">
+          <figure>
+            <a href="../120x40/23-clear-reviewed.png"
+              ><img
+                loading="lazy"
+                src="../120x40/23-clear-reviewed.png"
+                alt="current · 120x40 · 23-clear-reviewed"
+            /></a>
+            <figcaption>current · 120x40 · 23-clear-reviewed</figcaption>
+          </figure>
+          <figure>
+            <a href="../80x24/23-clear-reviewed.png"
+              ><img
+                loading="lazy"
+                src="../80x24/23-clear-reviewed.png"
+                alt="current · 80x24 · 23-clear-reviewed"
+            /></a>
+            <figcaption>current · 80x24 · 23-clear-reviewed</figcaption>
+          </figure>
+        </div>
+      </details>
+    </section>
+    <section id="p18-too-small">
+      <h2>
+        p18-too-small — Fallback · below the minimum size the dialog explains itself instead of
+        clipping
+      </h2>
+      <div class="grid">
+        <figure>
+          <a href="pierre-dark/58x16/p18-too-small.png"
+            ><img loading="lazy" src="pierre-dark/58x16/p18-too-small.png" alt="proposed · 58x16"
+          /></a>
+          <figcaption>proposed · 58x16</figcaption>
+        </figure>
+      </div>
+    </section>
+  </main>
+</html>

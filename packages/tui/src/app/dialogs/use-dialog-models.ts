@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { getCleanupAfterMerge } from "@madisonbullard/diffdiff-core";
 import type { AppCommand } from "../commands/registry.ts";
 import type { CommandPaletteModels } from "../commands/command-palette-models.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
@@ -16,7 +17,6 @@ interface SessionDiagnostics {
 }
 
 export function useDiffdiffDialogModels({
-  canApplyCleanup,
   commandPalette,
   commands,
   derived,
@@ -26,7 +26,6 @@ export function useDiffdiffDialogModels({
   reviewComposerModels,
   state,
 }: {
-  canApplyCleanup: boolean;
   commandPalette: CommandPaletteModels;
   commands: readonly AppCommand[];
   derived: DiffdiffAppDerived;
@@ -39,20 +38,24 @@ export function useDiffdiffDialogModels({
   return useMemo(
     () =>
       createDiffdiffDialogModels({
+        pendingWrites: {
+          merge: state.writeGuard.isPending("merge"),
+          comment: state.writeGuard.isPending("comment"),
+          review: state.writeGuard.isPending("review"),
+        },
+        helpLeaderOnly: state.helpLeaderOnly,
+        reviewSubmissionField: state.reviewSubmissionField,
+        cleanupAfterMerge: getCleanupAfterMerge(state.gitHubPreferences.cleanup),
         activeListView: state.activeListView,
         activePane: state.activePane,
         branchItems: derived.branchItems,
         branchListFilters: state.branchListFilters,
         branchListIndex: state.branchListIndex,
-        canApplyCleanup,
         checks: {
           selectedIndex: state.checksIndex,
           onSelect: state.setChecksIndex,
           detailScrollRef: state.checksDetailScrollRef,
         },
-        cleanupCandidateIndex: state.cleanupCandidateIndex,
-        cleanupCandidates: state.cleanupCandidates,
-        cleanupSelection: state.cleanupSelection,
         commandPalette,
         commitListIndex: state.commitListIndex,
         commitSearchActive: state.commitSearchActive,
@@ -96,7 +99,9 @@ export function useDiffdiffDialogModels({
         session: derived.displaySession,
       }),
     [
-      canApplyCleanup,
+      state.helpLeaderOnly,
+      state.reviewSubmissionField,
+      state.gitHubPreferences,
       commandPalette,
       commands,
       derived,
@@ -114,14 +119,12 @@ export function useDiffdiffDialogModels({
       state.activePane,
       state.branchListFilters,
       state.branchListIndex,
-      state.cleanupCandidateIndex,
-      state.cleanupCandidates,
-      state.cleanupSelection,
       state.commitListIndex,
       state.commitSearchActive,
       state.filterIndex,
       state.isPullRequestListLoading,
       state.isSubmittingReviewAction,
+      state.statusMessage,
       state.mergeBodyScrollRef,
       state.mergeMethod,
       state.mergeAutoMerge,

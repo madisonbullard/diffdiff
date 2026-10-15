@@ -31,7 +31,7 @@ for (const allowedMethods of [
       expect(app.frame().includes("Squash merge")).toBe(allowedMethods.includes("squash"));
       if (allowedMethods.length === 1) {
         const selectedLabel = allowedMethods[0] === "merge" ? "Merge commit" : "Squash merge";
-        expect(app.frame()).toContain(`${selectedLabel}  │  default selection`);
+        expect(app.frame()).toContain(`● ${selectedLabel}`);
       }
       // Tab from title/body back to the method field, then navigate both directions.
       if (allowedMethods.length > 0) await app.press("\t", "\t");
@@ -39,12 +39,12 @@ for (const allowedMethods of [
       expect(app.frame().includes("Merge commit")).toBe(allowedMethods.includes("merge"));
       expect(app.frame().includes("Squash merge")).toBe(allowedMethods.includes("squash"));
       if (allowedMethods.length === 0) {
-        expect(app.frame()).toContain("No supported merge methods are enabled");
+        expect(app.frame()).toContain("No allowed merge methods");
         await app.press("\r");
         expect(app.frame()).toContain("Merge Pull Request");
       } else {
         const selectedLabel = allowedMethods.at(-1) === "merge" ? "Merge commit" : "Squash merge";
-        expect(app.frame()).toContain(`> ${selectedLabel}  │  default selection`);
+        expect(app.frame()).toContain(`● ${selectedLabel}`);
       }
     } finally {
       app.destroy();
@@ -69,7 +69,8 @@ test("auto-merge toggle and confirmation render while immediate merge is blocked
     await app.press("\u0007");
     expect(app.frame()).toContain("[x] Auto-merge");
     await app.press("\r");
-    expect(app.frame()).toContain("Confirm Auto-Merge");
+    expect(app.frame()).toContain("Enable Auto-Merge");
+    expect(app.frame()).toContain("confirm enabling auto-merge");
     await app.press("\u001b");
     expect(app.frame()).toContain("[x] Auto-merge");
   } finally {

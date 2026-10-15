@@ -1,4 +1,9 @@
-import { closeDialog as closeAppDialog, openDialog as openAppDialog } from "../dialogs/stack.ts";
+import { closeDialog as closeAppDialog } from "../dialogs/stack.ts";
+import { formDraftKey } from "./form-drafts.ts";
+import { cleanMergedRefs } from "./merge-cleanup.ts";
+import { mutationErrorOptions } from "./mutation-errors.ts";
+import { getCleanupAfterMerge } from "@madisonbullard/diffdiff-core";
+import { canSubmitMerge } from "../../review/merge-eligibility.ts";
 import { getReviewSubmissionEvent } from "../../review/formatting.ts";
 import { formatThreadAnchor } from "../../review/threads.tsx";
 import type { DiffdiffAppDerived } from "../shell/use-app-models.ts";
@@ -76,13 +81,14 @@ export function createGitHubMutationActions({
     if (
       props.setPullRequestDraft == null ||
       state.isSubmittingReviewAction ||
-      state.draftToggleInFlightRef.current
+      state.writeGuard.isPending("draft")
     )
       return;
+    const release = state.writeGuard.acquire("draft");
+    if (release == null) return;
     const isDraft = !github.pullRequest.isDraft;
     const destination = isDraft ? "draft" : "ready for review";
     const loadId = actions.beginSessionLoad();
-    state.draftToggleInFlightRef.current = true;
     state.setIsSubmittingReviewAction(true);
     state.setStatusMessage(`Marking pull request as ${destination}...`);
     let changed = false;
@@ -120,8 +126,8 @@ export function createGitHubMutationActions({
         { displayMessage: message },
       );
     } finally {
-      state.draftToggleInFlightRef.current = false;
-      state.setIsSubmittingReviewAction(false);
+      release();
+      state.setIsSubmittingReviewAction(state.writeGuard.hasPending());
     }
   }
 
@@ -151,6 +157,10 @@ export function createGitHubMutationActions({
       return;
     }
 
+    const release = state.writeGuard.acquire("comment");
+    if (release == null) return;
+    const owner = state.dialogStackRef.current.at(-1);
+    const sessionLoadId = actions.beginSessionLoad();
     const operationId = optimisticOperations.reserveId();
     let quotedBody: string | undefined;
 
@@ -188,7 +198,6 @@ export function createGitHubMutationActions({
     }
 
     let mutationSucceeded = false;
-    let sessionLoadId: number | undefined;
     state.setIsSubmittingReviewAction(true);
 
     try {
@@ -211,10 +220,13 @@ export function createGitHubMutationActions({
 
       mutationSucceeded = true;
       void persistSubmittedComment?.(nextBody, reviewComposerTarget).catch(() => undefined);
-      state.setDialogStack((currentStack) =>
-        closeAppDialog(currentStack, "comment-composer", "complete"),
-      );
-      controllers.reviewComposer.reset();
+      if (!actions.isLatestSessionLoad(sessionLoadId)) return;
+      if (state.dialogStackRef.current.at(-1) === owner) {
+        state.setDialogStack((currentStack) =>
+          closeAppDialog(currentStack, "comment-composer", "complete"),
+        );
+        controllers.reviewComposer.reset();
+      }
       state.setStatusMessage(
         reviewComposerTarget.kind === "review-thread"
           ? "Added review comment."
@@ -222,22 +234,34 @@ export function createGitHubMutationActions({
             ? "Added review reply."
             : "Added PR reply comment.",
       );
-      sessionLoadId = actions.beginSessionLoad();
       const nextSession = await props.loadSession(state.startupOptions);
       if (actions.isLatestSessionLoad(sessionLoadId)) {
         actions.applyLoadedSession(nextSession);
       }
     } catch (error) {
-      if (sessionLoadId != null && !actions.isLatestSessionLoad(sessionLoadId)) {
-        return;
-      }
       if (!mutationSucceeded) {
         optimisticOperations.remove(operationId);
-        persistence.persistenceApi.handleAppError(error, "Unable to submit the comment.", {
-          action: reviewComposerTarget.kind,
-        });
+        persistence.persistenceApi.handleAppError(
+          error,
+          "Unable to submit the comment.",
+          {
+            action: reviewComposerTarget.kind,
+          },
+          mutationErrorOptions(
+            state,
+            owner,
+            error,
+            reviewSession.pullRequest.number,
+            reviewComposerTarget.kind === "review-thread"
+              ? "github.add-comment"
+              : reviewComposerTarget.kind === "review-thread-reply"
+                ? "github.reply-thread"
+                : "conversation.reply",
+          ),
+        );
         return;
       }
+      if (!actions.isLatestSessionLoad(sessionLoadId)) return;
 
       persistence.persistenceApi.handleAppError(
         error,
@@ -245,9 +269,11 @@ export function createGitHubMutationActions({
         {
           action: reviewComposerTarget.kind,
         },
+        { dialogOwner: owner },
       );
     } finally {
-      state.setIsSubmittingReviewAction(false);
+      release();
+      state.setIsSubmittingReviewAction(state.writeGuard.hasPending());
     }
   }
 
@@ -255,7 +281,17 @@ export function createGitHubMutationActions({
     if (state.session.github == null || props.submitPendingReview == null) {
       return;
     }
-
+    if (
+      getReviewSubmissionEvent(state.reviewSubmissionEventIndex) === "REQUEST_CHANGES" &&
+      state.reviewSubmissionInput.value.trim() === ""
+    ) {
+      state.setStatusMessage("Add a summary before requesting changes.");
+      return;
+    }
+    const release = state.writeGuard.acquire("review");
+    if (release == null) return;
+    const owner = state.dialogStackRef.current.at(-1);
+    const sessionLoadId = actions.beginSessionLoad();
     const reviewSession = state.session.github;
     const event = getReviewSubmissionEvent(state.reviewSubmissionEventIndex);
     const nextBody =
@@ -278,34 +314,45 @@ export function createGitHubMutationActions({
     state.setIsSubmittingReviewAction(true);
     state.setStatusMessage("Submitting review...");
     let mutationSucceeded = false;
-    let sessionLoadId: number | undefined;
     try {
       await props.submitPendingReview(reviewSession, event, nextBody);
       mutationSucceeded = true;
-      state.setDialogStack((currentStack) =>
-        closeAppDialog(currentStack, "submit-review", "complete"),
-      );
-      controllers.reviewSubmission.reset();
+      const drafts = state.formDraftsRef.current.get(formDraftKey(state.session));
+      if (drafts?.review?.body.trim() === (nextBody ?? "")) delete drafts.review;
+      if (!actions.isLatestSessionLoad(sessionLoadId)) return;
+      if (state.dialogStackRef.current.at(-1) === owner) {
+        state.setDialogStack((currentStack) =>
+          closeAppDialog(currentStack, "submit-review", "complete"),
+        );
+        controllers.reviewSubmission.reset();
+      }
       state.setStatusMessage("Submitted review.");
-      sessionLoadId = actions.beginSessionLoad();
       const nextSession = await props.loadSession(state.startupOptions);
       if (!actions.isLatestSessionLoad(sessionLoadId)) {
         return;
       }
       actions.applyLoadedSession(nextSession);
     } catch (error) {
-      if (sessionLoadId != null && !actions.isLatestSessionLoad(sessionLoadId)) {
-        return;
-      }
-
       if (!mutationSucceeded) {
         optimisticOperations.remove(operationId);
-        persistence.persistenceApi.handleAppError(error, "Unable to submit the review.", {
-          action: "submit-review",
-          event,
-        });
+        persistence.persistenceApi.handleAppError(
+          error,
+          "Unable to submit the review.",
+          {
+            action: "submit-review",
+            event,
+          },
+          mutationErrorOptions(
+            state,
+            owner,
+            error,
+            reviewSession.pullRequest.number,
+            "github.submit-review",
+          ),
+        );
         return;
       }
+      if (!actions.isLatestSessionLoad(sessionLoadId)) return;
 
       persistence.persistenceApi.handleAppError(
         error,
@@ -314,25 +361,32 @@ export function createGitHubMutationActions({
           action: "submit-review",
           event,
         },
+        { dialogOwner: owner },
       );
     } finally {
-      state.setIsSubmittingReviewAction(false);
+      release();
+      state.setIsSubmittingReviewAction(state.writeGuard.hasPending());
     }
   }
 
   async function submitMergeFromModal(): Promise<void> {
     if (
-      state.isSubmittingReviewAction ||
       state.session.github == null ||
       props.mergePullRequest == null ||
       state.mergeMethod == null ||
-      !state.session.github.pullRequest.merge.allowedMethods?.includes(state.mergeMethod)
+      !canSubmitMerge(state.session.github.pullRequest, state.mergeMethod, state.mergeAutoMerge)
     ) {
       return;
     }
 
+    const release = state.writeGuard.acquire("merge");
+    if (release == null) return;
+    const owner = state.dialogStackRef.current.at(-1);
+    const sessionLoadId = actions.beginSessionLoad();
     state.setMergeConfirmOpen(false);
     const reviewSession = state.session.github;
+    const cleanupAfterMerge =
+      !state.mergeAutoMerge && getCleanupAfterMerge(state.gitHubPreferencesRef.current.cleanup);
     const operationId = optimisticOperations.reserveId();
 
     if (!state.mergeAutoMerge)
@@ -347,7 +401,6 @@ export function createGitHubMutationActions({
     let mergeResult:
       | Awaited<ReturnType<NonNullable<DiffdiffAppProps["mergePullRequest"]>>>
       | undefined;
-    let sessionLoadId: number | undefined;
     try {
       mergeResult = await props.mergePullRequest(reviewSession, {
         ...(state.mergeAutoMerge ? { autoMerge: true } : {}),
@@ -363,6 +416,16 @@ export function createGitHubMutationActions({
         method: state.mergeMethod,
       });
       mergeSucceeded = true;
+      const drafts = state.formDraftsRef.current.get(formDraftKey(state.session));
+      if (
+        drafts?.merge?.title === state.mergeCommitTitleInput.value &&
+        drafts.merge.body === state.mergeCommitMessageInput.value
+      )
+        delete drafts.merge;
+      const cleanupMessage = cleanupAfterMerge
+        ? await cleanMergedRefs(mergeResult, reviewSession, props.removeCleanupRefs)
+        : "";
+      if (!actions.isLatestSessionLoad(sessionLoadId)) return;
       if (mergeResult.autoMergeEnabled) {
         state.setSession((current) =>
           current.github == null
@@ -378,34 +441,34 @@ export function createGitHubMutationActions({
                 },
               },
         );
-        state.setDialogStack((stack) => closeAppDialog(stack, "merge", "complete"));
+        if (state.dialogStackRef.current.at(-1) === owner) {
+          state.setDialogStack((stack) => closeAppDialog(stack, "merge", "complete"));
+        }
         state.setStatusMessage("Auto-merge enabled. GitHub will merge when requirements pass.");
         return;
       }
-      state.setDialogStack((currentStack) => closeAppDialog(currentStack, "merge", "complete"));
+      const stillOwned = state.dialogStackRef.current.at(-1) === owner;
+      if (stillOwned) {
+        state.setDialogStack((currentStack) => closeAppDialog(currentStack, "merge", "complete"));
+      }
       state.setStatusMessage("Merged the pull request. Refreshing local refs...");
-      sessionLoadId = actions.beginSessionLoad();
       const nextSession = await props.loadSession(state.startupOptions);
       if (!actions.isLatestSessionLoad(sessionLoadId)) {
         return;
       }
       actions.applyLoadedSession(nextSession);
-      if (mergeResult.cleanupCandidates.length > 0) {
-        state.setCleanupCandidateIndex(0);
-        state.setCleanupCandidates(mergeResult.cleanupCandidates);
-        state.setCleanupSelection(state.gitHubPreferencesRef.current.cleanup);
-        state.setDialogStack((currentStack) =>
-          openAppDialog(currentStack, "cleanup", { replace: true, triggeredBy: "merge" }),
+      if (mergeResult.refsRefreshError) {
+        state.setErrorToastMessage(
+          `Merged PR #${reviewSession.pullRequest.number}. Ref refresh failed: ${mergeResult.refsRefreshError}. Local refs were kept.`,
         );
-        state.setStatusMessage("Merged the pull request. Choose any stale refs to remove.");
-      } else {
-        state.setStatusMessage("Merged the pull request and refreshed local refs.");
-      }
+        state.setStatusMessage(
+          `Merged the pull request; local refs were kept. ${mergeResult.refsRefreshError}`,
+        );
+      } else
+        state.setStatusMessage(
+          `Merged the pull request and refreshed local refs.${cleanupMessage}`,
+        );
     } catch (error) {
-      if (sessionLoadId != null && !actions.isLatestSessionLoad(sessionLoadId)) {
-        return;
-      }
-
       if (!mergeSucceeded) {
         optimisticOperations.remove(operationId);
         persistence.persistenceApi.handleAppError(
@@ -418,18 +481,17 @@ export function createGitHubMutationActions({
             mergeMethod: state.mergeMethod,
             pullRequestNumber: state.session.github.pullRequest.number,
           },
+          mutationErrorOptions(
+            state,
+            owner,
+            error,
+            reviewSession.pullRequest.number,
+            "github.merge",
+          ),
         );
         return;
       }
-
-      if (mergeResult?.cleanupCandidates.length) {
-        state.setCleanupCandidateIndex(0);
-        state.setCleanupCandidates(mergeResult.cleanupCandidates);
-        state.setCleanupSelection(state.gitHubPreferencesRef.current.cleanup);
-        state.setDialogStack((currentStack) =>
-          openAppDialog(currentStack, "cleanup", { clear: true, triggeredBy: "merge" }),
-        );
-      }
+      if (!actions.isLatestSessionLoad(sessionLoadId)) return;
 
       persistence.persistenceApi.handleAppError(
         error,
@@ -439,54 +501,16 @@ export function createGitHubMutationActions({
           mergeMethod: state.mergeMethod,
           pullRequestNumber: state.session.github.pullRequest.number,
         },
+        { dialogOwner: owner },
       );
     } finally {
-      state.setIsSubmittingReviewAction(false);
-    }
-  }
-
-  async function applyCleanupSelection(): Promise<void> {
-    if (state.session.github == null || props.removeCleanupRefs == null) {
-      return;
-    }
-
-    const refsToRemove = state.cleanupCandidates.filter((candidate) =>
-      candidate.kind === "local-branch"
-        ? state.cleanupSelection.removeLocal
-        : state.cleanupSelection.removeRemote,
-    );
-    if (refsToRemove.length === 0) {
-      return;
-    }
-
-    state.setIsSubmittingReviewAction(true);
-    state.setStatusMessage("Removing selected refs...");
-    const sessionLoadId = actions.beginSessionLoad();
-    try {
-      await props.removeCleanupRefs(state.session.repository.rootPath, refsToRemove);
-      const nextSession = await props.loadSession(state.startupOptions);
-      if (!actions.isLatestSessionLoad(sessionLoadId)) {
-        return;
-      }
-      actions.applyLoadedSession(nextSession);
-      state.setCleanupCandidates([]);
-      state.setDialogStack((currentStack) => closeAppDialog(currentStack, "cleanup", "complete"));
-      state.setStatusMessage("Removed selected refs and reloaded the current session.");
-    } catch (error) {
-      if (actions.isLatestSessionLoad(sessionLoadId)) {
-        persistence.persistenceApi.handleAppError(error, "Unable to remove the selected refs.", {
-          action: "remove-cleanup-refs",
-          refsToRemove,
-        });
-      }
-    } finally {
-      state.setIsSubmittingReviewAction(false);
+      release();
+      state.setIsSubmittingReviewAction(state.writeGuard.hasPending());
     }
   }
 
   return {
     togglePullRequestDraft,
-    applyCleanupSelection,
     submitCommentComposer,
     submitMergeFromModal,
     submitReviewFromModal,

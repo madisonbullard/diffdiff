@@ -31,7 +31,7 @@ describe("review input controllers", () => {
     harness.controllers.reviewComposer.open(target, "Commenting on src/app.ts:12.");
 
     expect(harness.state.reviewComposer.input.value).toBe("Restored draft");
-    expect(harness.statusMessage).toBe("Commenting on src/app.ts:12. Restored draft.");
+    expect(harness.statusMessage).toBe("Restored comment draft.");
   });
 
   test("accepts autocomplete through the review composer controller", () => {
@@ -127,6 +127,8 @@ function createHarness(): {
   let statusMessage = "Ready.";
 
   const state = {
+    formDraftsRef: { current: new Map() },
+    setReviewSubmissionField: vi.fn(),
     mergeCommitMessageInput: createTextInputState(),
     mergeCommitTitleInput: createTextInputState(),
     mergeConfirmOpen: false,

@@ -1,0 +1,24 @@
+ Add Comment  Comment on src/review.ts:2 (right).                        escape 
+ // review line 2                                                               
+                                                                                
+ Please explain this default. See @                                             
+                   › src/review.ts                                              
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ @ reference files · 0 saved drafts · ctrl+j newline                            
+                                                                                
+ enter insert file  ctrl+j newline  ctrl+x e editor  tab insert file            
+   COMMENT                                            Focused src/review.ts:2.  

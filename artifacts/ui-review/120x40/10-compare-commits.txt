@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                     ┃                                                                                 ▀
+  │                                  ┃  ▼ PR overview                                                 ○ Mark reviewed   
+  │ 0 / 2 reviewed         +5 / -1   ┃                                                                                  
+  │                                  ┃  Improve the keyboard-driven review workflow                                     
+                                     ┃                                                                                  
+  ┃ ◇ PR overview                    ┃  example/repo  #1  ·  Open  ·  @author                                           
+  ┃ ▼ src                        1   ┃                                                                                  
+  ┃                                                                                                                     
+  ┃ A  List                                                   tab  switch view   left / right  panes   esc  close       
+       Browse the comparison commit log and choose base/head commits.                                             ───   
+                                                                                                                        
+       ┃                                                                                                                
+       ┃  base ← main  │  head → feature                                                    Branches   Commits          
+       ┃                                                                                                                
+       ┃  1 commits in the current comparison                                                                           
+       ┃                                                                                                                
+                                                                                                                        
+       ┃  /search commits...                                                                                            
+       ┃  52eb733 (HEAD -> feature) head                                                                                
+                                                                                                                        
+       ┃                                                                                                                
+       ┃  52eb733 (HEAD -> feature) head                                                                                
+       ┃                                                                                                           -1   
+       ┃  visual                                                                                                        
+       ┃                                                                                                                
+       ┃   h  set head   b  set base  │   /  search   left / right / tab  switch view                                   
+       ┃                                                                                                                
+                                                                                                                        
+                                     ┃   ┃   3 +   return true;                                                         
+                                     ┃  ┃ ▼ reviewer  │  src/review.ts:2-3                                   1 comment  
+                                     ┃                                                                                  
+                                     ┃    40 weeks ago: Could we explain why this defaults to true?                     
+                                     ┃                                                                                  
+                                     ┃       4   }                                                                      
+                                     ┃                                                                                  
+   COMMITS    ?  help                                                                             Closed list filters.  

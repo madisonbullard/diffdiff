@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-Vzunw /private/var/folders/42/w3sgx72173zby1  
+   PR  #1 Improve the keyboard-driven review wor1 check failed  │  merge ready  
+                                                                                
+                               ┃                                               ▀
+  │                            ┃  ▼ PR overview               ○ Mark reviewed   
+  │ 0 / 2 reviewed   +5 / -1   ┃                                                
+                               ┃  Improve the keyboard-driven review workflow   
+  ┃ ◇ PR overview              ┃                                                
+  ┃ ▼ src                  1   ┃  example/repo  #1  ·  Open  ·  @author         
+  ┃   M review.ts      +2 -1   ┃                                                
+  ┃ A README.md        +3 -0   ┃  feature → main  ·  1 commits  ·  1 files      
+                               ┃                                                
+                               ┃  ───────────────────────────────────────────   
+                               ┃                                                
+                               ┃                                                
+                               ┃                                                
+                               ┃                                                
+                               ┃                                                
+                               ┃                                                
+                               ┃                                                
+                               ┃                                                
+                               ┃                                                
+   DIFF    ?  help                                                      Ready.  

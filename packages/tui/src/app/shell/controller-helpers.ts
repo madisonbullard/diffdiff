@@ -1,10 +1,19 @@
 import { openDialog as openAppDialog } from "../dialogs/stack.ts";
 import type { DiffdiffAppDerived } from "./use-app-models.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
+import { canSubmitMerge } from "../../review/merge-eligibility.ts";
 
 export function openHelpDialog(state: DiffdiffAppState): void {
+  state.setHelpLeaderOnly(state.activePrefix === "leader");
+  state.setCommandInput({
+    value: "",
+    cursorOffset: 0,
+    preferredColumn: null,
+    undoStack: [],
+    redoStack: [],
+  });
+  state.setCommandIndex(0);
   state.setDialogStack((currentStack) => openAppDialog(currentStack, "help"));
-  state.setStatusMessage("Opened help.");
 }
 
 export function openMergeConfirmDialog(
@@ -16,19 +25,19 @@ export function openMergeConfirmDialog(
 ): void {
   if (
     derived.displaySession.github == null ||
-    state.mergeMethod == null ||
-    !derived.displaySession.github.pullRequest.merge.allowedMethods?.includes(state.mergeMethod) ||
-    !(state.mergeAutoMerge
-      ? derived.displaySession.github.pullRequest.merge.autoMergeAllowed &&
-        !derived.displaySession.github.pullRequest.merge.autoMergeEnabled &&
-        !derived.displaySession.github.pullRequest.isDraft &&
-        !derived.displaySession.github.pullRequest.isMerged &&
-        derived.displaySession.github.pullRequest.state === "open"
-      : derived.displaySession.github.pullRequest.merge.canMerge)
+    !canSubmitMerge(
+      derived.displaySession.github.pullRequest,
+      state.mergeMethod,
+      state.mergeAutoMerge,
+    )
   ) {
     return;
   }
 
   state.setMergeConfirmOpen(true);
-  state.setStatusMessage(`Press enter again to confirm the ${state.mergeMethod} merge.`);
+  state.setStatusMessage(
+    state.mergeAutoMerge
+      ? `Press enter again to confirm enabling auto-merge with ${state.mergeMethod}.`
+      : `Press enter again to confirm the ${state.mergeMethod} merge.`,
+  );
 }

@@ -7,59 +7,13 @@
  */
 
 import type { KeymapMode } from "../shell/keymap-mode.ts";
-import { serializeKeyEvent, parseKeyString } from "./key-event.ts";
+import { buildMode, buildModeWithPrefixes, type BindingTuple } from "./build-mode.ts";
 import { GOTO_PREFIX, IN_FILE_PREFIX, LEADER_PREFIX, SPACE_PREFIX } from "./prefixes.ts";
-import { MutableTrieNode } from "./trie.ts";
 import type { KeyTrieNode, ResolvedKeymaps } from "./types.ts";
 import * as A from "./actions.ts";
 import { reviewerPickerMode } from "./reviewer-picker.ts";
 import { checksMode } from "./checks.ts";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const k = (raw: string): string => serializeKeyEvent(parseKeyString(raw));
-
-type BindingTuple = readonly [key: string, actionId: string];
-
-function buildMode(bindings: readonly BindingTuple[], options?: { label?: string }): KeyTrieNode {
-  const root = new MutableTrieNode({ label: options?.label });
-
-  for (const [keyStr, actionId] of bindings) {
-    root.setAction(k(keyStr), actionId);
-  }
-
-  return root.freeze();
-}
-
-/**
- * Build a mode that contains a prefix sub-node (e.g. `ctrl+x` as leader,
- * `space` as modal picker).
- */
-function buildModeWithPrefixes(
-  directBindings: readonly BindingTuple[],
-  prefixes: readonly {
-    trigger: string;
-    label?: string;
-    bindings: readonly BindingTuple[];
-  }[],
-): KeyTrieNode {
-  const root = new MutableTrieNode();
-
-  for (const [keyStr, actionId] of directBindings) {
-    root.setAction(k(keyStr), actionId);
-  }
-
-  for (const prefix of prefixes) {
-    const child = root.getOrCreateChild(k(prefix.trigger), { label: prefix.label });
-    for (const [keyStr, actionId] of prefix.bindings) {
-      child.setAction(k(keyStr), actionId);
-    }
-  }
-
-  return root.freeze();
-}
+import { helpMode, PICKER_POSITION_KEYS } from "./keys.ts";
 
 // ---------------------------------------------------------------------------
 // Shared binding sets
@@ -380,18 +334,15 @@ const treeMode = buildModeWithPrefixes(
 // Help modal
 // ---------------------------------------------------------------------------
 
-const helpMode = buildMode([
-  ["escape", A.HELP_DISMISS],
-  ["q", A.HELP_DISMISS],
-  ["shift+/", A.HELP_DISMISS],
-]);
-
 // ---------------------------------------------------------------------------
 // Command palette
 // ---------------------------------------------------------------------------
 
 const commandsMode = buildModeWithPrefixes(
   [
+    ["tab", A.COMMANDS_SWITCH_TAB],
+    ["ctrl+n", A.LIST_MOVE_DOWN],
+    ["ctrl+p", A.LIST_MOVE_UP],
     ["escape", A.MODAL_DISMISS],
     ["down", A.LIST_MOVE_DOWN],
     ["up", A.LIST_MOVE_UP],
@@ -429,6 +380,10 @@ const pullRequestListMode = buildMode([
 
 const pullRequestSearchMode = buildModeWithPrefixes(
   [
+    ...PICKER_POSITION_KEYS,
+    ["ctrl+r", A.PR_LIST_REFRESH],
+    ["ctrl+n", A.LIST_MOVE_DOWN],
+    ["ctrl+p", A.LIST_MOVE_UP],
     ["escape", A.MODAL_DISMISS],
     ["return", A.LIST_ACCEPT],
     ["backspace", A.TEXT_BACKSPACE],
@@ -449,6 +404,7 @@ const pullRequestSearchMode = buildModeWithPrefixes(
 // ---------------------------------------------------------------------------
 
 const compareBranchesMode = buildMode([
+  ["/", A.BRANCH_SEARCH],
   ...MODAL_DISMISS,
   ...LIST_NAVIGATION,
   ["tab", A.BRANCH_SWITCH_TAB],
@@ -468,6 +424,7 @@ const compareBranchesMode = buildMode([
 // ---------------------------------------------------------------------------
 
 const compareCommitsMode = buildMode([
+  ["return", A.LIST_ACCEPT],
   ...MODAL_DISMISS,
   ...LIST_NAVIGATION,
   ["tab", A.BRANCH_SWITCH_TAB],
@@ -483,6 +440,8 @@ const compareCommitsMode = buildMode([
 
 const commitSearchMode = buildModeWithPrefixes(
   [
+    ...PICKER_POSITION_KEYS,
+    ["tab", A.BRANCH_SWITCH_TAB],
     ["escape", A.MODAL_DISMISS],
     ["return", A.LIST_ACCEPT],
     ["backspace", A.TEXT_BACKSPACE],
@@ -503,6 +462,8 @@ const commitSearchMode = buildModeWithPrefixes(
 // ---------------------------------------------------------------------------
 
 const filtersMode = buildMode([
+  ["left", A.LIST_MOVE_UP],
+  ["right", A.LIST_MOVE_DOWN],
   ["escape", A.MODAL_DISMISS],
   ["q", A.MODAL_DISMISS],
   ["f", A.MODAL_DISMISS],
@@ -523,12 +484,13 @@ const filtersMode = buildMode([
 
 const commentMode = buildModeWithPrefixes(
   [
+    ["linefeed", A.TEXT_NEWLINE],
     ["escape", A.MODAL_DISMISS],
     ["backspace", A.TEXT_BACKSPACE],
     ["down", A.LIST_MOVE_DOWN],
     ["up", A.LIST_MOVE_UP],
     ["shift+return", A.TEXT_NEWLINE],
-    ["tab", A.LIST_ACCEPT],
+    ["tab", A.TEXT_ACCEPT_COMPLETION],
     ["return", A.LIST_ACCEPT],
   ],
   [
@@ -545,6 +507,10 @@ const commentMode = buildModeWithPrefixes(
 // ---------------------------------------------------------------------------
 
 const conversationMode = buildMode([
+  ["pagedown", A.SCROLL_PAGE_DOWN],
+  ["pageup", A.SCROLL_PAGE_UP],
+  ["tab", A.INSPECTOR_FOCUS],
+  ["shift+tab", A.INSPECTOR_FOCUS],
   ...MODAL_DISMISS,
   ["t", A.MODAL_DISMISS],
   ...LIST_NAVIGATION,
@@ -558,6 +524,9 @@ const conversationMode = buildMode([
 
 const submitReviewMode = buildModeWithPrefixes(
   [
+    ["tab", A.REVIEW_SWITCH_FIELD],
+    ["shift+tab", A.REVIEW_SWITCH_FIELD],
+    ["linefeed", A.TEXT_NEWLINE],
     ["escape", A.MODAL_DISMISS],
     ["down", A.LIST_MOVE_DOWN],
     ["up", A.LIST_MOVE_UP],
@@ -579,6 +548,8 @@ const submitReviewMode = buildModeWithPrefixes(
 // ---------------------------------------------------------------------------
 
 const mergeMethodMode = buildMode([
+  ["shift+tab", A.MERGE_PREVIOUS_FIELD],
+  ["ctrl+r", A.MERGE_TOGGLE_CLEANUP],
   ["ctrl+g", A.MERGE_TOGGLE_AUTO],
   ["escape", A.MODAL_DISMISS],
   ["tab", A.MERGE_NEXT_FIELD],
@@ -591,6 +562,8 @@ const mergeMethodMode = buildMode([
 
 const mergeTitleMode = buildModeWithPrefixes(
   [
+    ["shift+tab", A.MERGE_PREVIOUS_FIELD],
+    ["ctrl+r", A.MERGE_TOGGLE_CLEANUP],
     ["ctrl+g", A.MERGE_TOGGLE_AUTO],
     ["escape", A.MODAL_DISMISS],
     ["tab", A.MERGE_NEXT_FIELD],
@@ -608,6 +581,9 @@ const mergeTitleMode = buildModeWithPrefixes(
 
 const mergeBodyMode = buildModeWithPrefixes(
   [
+    ["shift+tab", A.MERGE_PREVIOUS_FIELD],
+    ["ctrl+r", A.MERGE_TOGGLE_CLEANUP],
+    ["linefeed", A.TEXT_NEWLINE],
     ["ctrl+g", A.MERGE_TOGGLE_AUTO],
     ["escape", A.MODAL_DISMISS],
     ["tab", A.MERGE_NEXT_FIELD],
@@ -631,13 +607,6 @@ const confirmMergeMode = buildMode([...MODAL_DISMISS, ["return", A.MERGE_CONFIRM
 // ---------------------------------------------------------------------------
 // Cleanup
 // ---------------------------------------------------------------------------
-
-const cleanupMode = buildMode([
-  ["escape", A.MODAL_DISMISS],
-  ...LIST_NAVIGATION,
-  ["space", A.CLEANUP_TOGGLE_OPTION],
-  ["return", A.CLEANUP_APPLY],
-]);
 
 // ---------------------------------------------------------------------------
 // Assembled default keymaps
@@ -665,9 +634,18 @@ export function getDefaultKeymaps(): ResolvedKeymaps {
   map.set("merge-method", mergeMethodMode);
   map.set("merge-title", mergeTitleMode);
   map.set("merge-body", mergeBodyMode);
-  map.set("confirm-merge", confirmMergeMode).set("cleanup", cleanupMode);
+  map.set("confirm-merge", confirmMergeMode);
   map.set("clear-reviewed", buildMode([...MODAL_DISMISS, ["return", A.CLEAR_REVIEWED_CONFIRM]]));
-  map.set("diagnostics", buildMode([...MODAL_DISMISS, ...LIST_NAVIGATION]));
+  map.set(
+    "diagnostics",
+    buildMode([
+      ...MODAL_DISMISS,
+      ...LIST_NAVIGATION,
+      ["tab", A.INSPECTOR_FOCUS],
+      ["pagedown", A.SCROLL_PAGE_DOWN],
+      ["pageup", A.SCROLL_PAGE_UP],
+    ]),
+  );
 
   return map;
 }

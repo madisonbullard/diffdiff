@@ -63,6 +63,7 @@ export function createAppTextInputControllers(state: DiffdiffAppState): AppTextI
       setInput: state.setCommitSearchInput,
       onTextChanged: () => {
         state.setCommitListIndex(0);
+        state.setBranchListIndex(0);
       },
     }),
     pullRequestSearch: createSearchTextInputController({

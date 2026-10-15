@@ -1,7 +1,6 @@
 import type {
   GitHubDashboardPullRequest,
   GitHubMergeMethod,
-  GitHubRefCleanupCandidate,
   GitHubUserPreferences,
 } from "@madisonbullard/diffdiff-core";
 import type { ScrollBoxRenderable } from "@opentui/core";
@@ -52,22 +51,26 @@ export interface DiffdiffAppState {
   baseBranchLoadingMessage: string | null;
   branchListFilters: BranchListFilters;
   branchListIndex: number;
-  cleanupCandidateIndex: number;
-  cleanupCandidates: GitHubRefCleanupCandidate[];
-  cleanupSelection: import("@madisonbullard/diffdiff-core").GitHubCleanupPreferences;
   collapsedDirectories: Set<string>;
   collapsedPaths: Set<string>;
   commentCollapseStates: Record<string, boolean>;
   comparisonBrowserData: ComparisonBrowserData;
   commandIndex: number;
+  inspectorDetailFocused: boolean;
+  setInspectorDetailFocused: Dispatch<SetStateAction<boolean>>;
+  helpLeaderOnly: boolean;
+  setHelpLeaderOnly: Dispatch<SetStateAction<boolean>>;
   commandInput: TextInputState;
   commitListIndex: number;
   commitSearchActive: boolean;
   commitSearchInput: TextInputState;
   dialogStack: readonly AppDialogStackEntry[];
+  dialogStackRef: MutableRefObject<readonly AppDialogStackEntry[]>;
   diffScroll: DiffScrollController;
   diffViewPreference: DiffViewPreference;
   errorToastMessage: string | null;
+  errorDialogOwner: AppDialogStackEntry | null;
+  setErrorDialogOwner: Dispatch<SetStateAction<AppDialogStackEntry | null>>;
   filterIndex: number;
   gitHubPreferences: GitHubUserPreferences;
   gitHubPreferencesRef: MutableRefObject<GitHubUserPreferences>;
@@ -77,7 +80,7 @@ export interface DiffdiffAppState {
   isPullRequestListLoading: boolean;
   isReloading: boolean;
   isSubmittingReviewAction: boolean;
-  draftToggleInFlightRef: MutableRefObject<boolean>;
+  writeGuard: ReturnType<typeof import("../review/write-guard.ts").createWriteGuard>;
   keybindController: ReturnType<typeof createKeybindController>;
   /** The previously selected file index for alternate-file navigation (`ga`). */
   lastAccessedFileIndex: number | null;
@@ -114,6 +117,9 @@ export interface DiffdiffAppState {
   reviewComposer: ReviewComposerUiState;
   reviewSubmissionInput: TextInputState;
   reviewSubmissionEventIndex: number;
+  formDraftsRef: MutableRefObject<Map<string, import("../review/form-drafts.ts").FormDrafts>>;
+  reviewSubmissionField: "event" | "body";
+  setReviewSubmissionField: Dispatch<SetStateAction<"event" | "body">>;
   selectedFileIndex: number;
   showSelectedReviewAnchor: boolean;
   selectedReviewAnchorIndex: number;
@@ -139,11 +145,6 @@ export interface DiffdiffAppState {
   setBaseBranchLoadingMessage: Dispatch<SetStateAction<string | null>>;
   setBranchListFilters: Dispatch<SetStateAction<BranchListFilters>>;
   setBranchListIndex: Dispatch<SetStateAction<number>>;
-  setCleanupCandidateIndex: Dispatch<SetStateAction<number>>;
-  setCleanupCandidates: Dispatch<SetStateAction<GitHubRefCleanupCandidate[]>>;
-  setCleanupSelection: Dispatch<
-    SetStateAction<import("@madisonbullard/diffdiff-core").GitHubCleanupPreferences>
-  >;
   setCollapsedDirectories: Dispatch<SetStateAction<Set<string>>>;
   setCollapsedPaths: Dispatch<SetStateAction<Set<string>>>;
   setCommentCollapseStates: Dispatch<SetStateAction<Record<string, boolean>>>;

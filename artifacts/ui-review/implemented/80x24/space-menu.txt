@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-i4b2j /private/var/folders/42/w3sgx72173zby1  
+   PR  #1 Make terminal reviews clear, fast, and1 check failed  │  merge ready  
+                                                                                
+                               ┃                                                
+  │                                                                             
+  │ 0 / 1 reviewed   +6 / -0   ┃                                                
+                               ┃  ▼ src/review.ts              ADDED  +6 / -0   
+  ┃ ◇ PR overview              ┃      Modal Picker  ·  esc cancel               
+  ┃ ▼ src                  1   ┃      d  Open diagnostics                       
+  ┃   A review.ts      +6 -0   ┃  ▶   h  Open Keys                             █
+                               ┃      shift+y  Copy diffdiff CLI command for … █
+                               ┃      p  Open GitHub PR list                   █
+                               ┃      t  Open PR comments                      █
+                               ┃      s  Open PR checks                        █
+                               ┃      w  Request reviewers                     █
+                                      shift+d  Convert PR to draft             ▀
+                                      a  Add review comment                     
+                                      shift+a  Submit review                    
+                                      m  Merge pull request                     
+                                      l  Open comparison list                   
+                                      Press a key to open a modal.              
+                                                                                
+   SPACE    ?  keys               Modal Picker mode active. Awaiting next key.  

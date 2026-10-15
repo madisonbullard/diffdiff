@@ -127,7 +127,7 @@ for (const [label, checks, expected] of [
       expect(app.frame()).toContain("PR Checks");
       expect(app.frame()).toContain(expected);
       expect(app.frame()).toContain("refresh");
-      expect(app.frame()).toContain("close");
+      expect(app.frame()).toContain("escape");
     } finally {
       app.destroy();
       repo.dispose();
@@ -204,7 +204,7 @@ test("mouse selection, detail scrolling, and refreshing stay within the checks d
     expect(app.frame()).toContain("Lint error 0");
     await app.press("\x1b[6~");
     expect(app.frame()).not.toContain("Lint error 0");
-    expect(app.frame()).toContain("Lint error 4");
+    expect(app.frame()).toContain("Lint error 11");
     const rows = app.frame().split("\n");
     const y = rows.findIndex((row) => row.includes("Deploy waiting"));
     await app.click(rows[y]!.indexOf("Deploy waiting") + 1, y);

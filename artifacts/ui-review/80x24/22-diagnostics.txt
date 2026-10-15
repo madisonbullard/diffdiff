@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-Vzunw /private/var/folders/42/w3sgx72173zby1  
+   PR  #1 Improve the keyboard-driven review wor1 check failed  │  merge ready  
+                                                                                
+                               ┃                                                
+                                                                                
+   Diagnostics                       j/k  move   home/end  jump   esc  close    
+                                                                                
+   ┃                                  ┃                                         
+   ┃  1 event  │  ready  │  latest 0  ┃  /fixture/session.jsonlSession log      
+                                                                                
+   ┃                                  ┃                                         
+   ┃  Event Log  │  Newest first      ┃  ┃                                     █
+                                      ┃  ┃   INFO   startup  │  startup_fir    █
+   ┃                                  ┃     2026-10-14T09:00:00Z  │  1 of 1    █
+   ┃  >  INFO   startup.start...      ┃  ┃                                     ▀
+   ┃  09:00:00  │  First diff frame   ┃  ┃  Full Event                          
+   ┃                                  ┃  ┃  {"durationMs":142,           ▀      
+                                      ┃  ┃                                      
+                                      ┃  ┃                                      
+                                      ┃                                         
+                                                                                
+                               ┃                                                
+   DIAGNOSTICS    ?  help                                  Opened diagnostics.  

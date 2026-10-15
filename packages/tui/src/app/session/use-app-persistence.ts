@@ -4,10 +4,11 @@ import {
   logDiffdiffInfo,
   logDiffdiffWarn,
   saveDiffdiffPreferences,
+  loadDiffdiffPreferences,
   saveReviewCache,
   updateDiffdiffSessionActivity,
 } from "@madisonbullard/diffdiff-core";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import type { DiffdiffAppProps, DiffdiffAppPersistenceApi } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 
@@ -20,6 +21,7 @@ export function useDiffdiffAppPersistence(
   state: DiffdiffAppState,
   props: Pick<DiffdiffAppProps, "logFilePath" | "onExit">,
 ): DiffdiffAppPersistence {
+  const preferenceWrites = useRef(Promise.resolve());
   const flushPendingSessionActivity = useCallback(() => {
     const pendingActivity = state.pendingSessionActivityRef.current;
     state.pendingSessionActivityRef.current = null;
@@ -69,9 +71,10 @@ export function useDiffdiffAppPersistence(
   }, [resolvedLogFilePath, state.setErrorToastMessage]);
 
   const showErrorToast = useCallback(
-    (contextMessage?: string) => {
+    (contextMessage?: string, owner = state.dialogStackRef.current.at(-1) ?? null) => {
       const message = contextMessage == null ? "An error occurred." : contextMessage;
       state.setErrorToastMessage(message);
+      state.setErrorDialogOwner(owner);
       logDiffdiffWarn("app", "error_toast_shown", {
         logFilePath: resolvedLogFilePath,
         message,
@@ -85,7 +88,10 @@ export function useDiffdiffAppPersistence(
       error: unknown,
       fallbackMessage: string,
       context: Record<string, unknown>,
-      options?: { displayMessage?: string },
+      options?: {
+        displayMessage?: string;
+        dialogOwner?: import("../dialogs/stack.ts").AppDialogStackEntry | null;
+      },
     ) => {
       const message = error instanceof Error ? error.message : fallbackMessage;
       const displayMessage = options?.displayMessage ?? message;
@@ -101,7 +107,7 @@ export function useDiffdiffAppPersistence(
         statusMessage: displayMessage,
       });
       state.setStatusMessage(displayMessage);
-      showErrorToast(displayMessage);
+      showErrorToast(displayMessage, options?.dialogOwner);
     },
     [resolvedLogFilePath, showErrorToast, state.setStatusMessage],
   );
@@ -125,14 +131,21 @@ export function useDiffdiffAppPersistence(
 
   const persistDiffdiffPreferences = useCallback(
     async (nextPreferences: import("@madisonbullard/diffdiff-core").DiffdiffPreferences) => {
-      try {
-        await saveDiffdiffPreferences(nextPreferences);
-      } catch (error) {
-        handleAppError(error, "Unable to save diffdiff preferences.", {
-          action: "save-preferences",
-          preferences: nextPreferences,
-        });
-      }
+      preferenceWrites.current = preferenceWrites.current.then(async () => {
+        try {
+          const previous = await loadDiffdiffPreferences();
+          await saveDiffdiffPreferences({
+            ...nextPreferences,
+            keys: nextPreferences.keys ?? previous.keys,
+          });
+        } catch (error) {
+          handleAppError(error, "Unable to save diffdiff preferences.", {
+            action: "save-preferences",
+            preferences: nextPreferences,
+          });
+        }
+      });
+      await preferenceWrites.current;
     },
     [handleAppError],
   );
@@ -144,27 +157,6 @@ export function useDiffdiffAppPersistence(
       await persistDiffdiffPreferences({ github: nextPreferences });
     },
     [persistDiffdiffPreferences, state.gitHubPreferencesRef, state.setGitHubPreferences],
-  );
-
-  const updateCleanupSelection = useCallback(
-    (
-      updater: (currentSelection: typeof state.cleanupSelection) => typeof state.cleanupSelection,
-    ) => {
-      state.setCleanupSelection((currentSelection) => {
-        const nextSelection = updater(currentSelection);
-        void persistGitHubPreferences({
-          ...state.gitHubPreferencesRef.current,
-          cleanup: nextSelection,
-        });
-        return nextSelection;
-      });
-    },
-    [
-      persistGitHubPreferences,
-      state.cleanupSelection,
-      state.gitHubPreferencesRef,
-      state.setCleanupSelection,
-    ],
   );
 
   const persistenceApi = useMemo<DiffdiffAppPersistenceApi>(
@@ -213,7 +205,6 @@ export function useDiffdiffAppPersistence(
         }, delayMs);
       },
       showToast,
-      updateCleanupSelection,
     }),
     [
       dismissErrorToast,
@@ -229,7 +220,6 @@ export function useDiffdiffAppPersistence(
       state.pendingSessionActivityRef,
       state.reviewCacheTimeoutRef,
       state.sessionActivityTimeoutRef,
-      updateCleanupSelection,
     ],
   );
 

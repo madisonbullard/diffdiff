@@ -1,0 +1,24 @@
+  Commands  Keys                                                       1/6  esc 
+ › rev                                                                6 matches 
+ › Mark file reviewed  src/review.ts                                  Review  x 
+   Next unreviewed file                                               Review  u 
+   Add review comment  src/review.ts:2                                Review  a 
+   Collapse or expand file                                            Review  c 
+   Mark all files reviewed  PR viewed state syncs one file at a time     Review 
+   Clear review marks  PR viewed state syncs one file at a time          Review 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ enter run  ↑↓ move  tab keys  ctrl+u clear                                     
+   COMMANDS                                                                     

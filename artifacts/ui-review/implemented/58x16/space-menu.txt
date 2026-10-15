@@ -1,0 +1,16 @@
+                                                          
+  diffdiff / di Modal Picker  ·  esc cancel               
+   PR  #1 Make  d  Open diagnostics                       
+                h  Open Keys                              
+                shift+y  Copy diffdiff CLI command for …  
+  │             p  Open GitHub PR list                    
+  │ 0 / 1 revie t  Open PR comments                       
+                s  Open PR checks                         
+  ┃ ◇ PR overvi w  Request reviewers                      
+  ┃ ▼ src       shift+d  Convert PR to draft              
+  ┃   A review. a  Add review comment                     
+                shift+a  Submit review                   █
+                m  Merge pull request                     
+                1 more in Keys · next keys still work     
+                                                          
+   SPACE    ?  keys     Modal Picker mode active. Awa...  

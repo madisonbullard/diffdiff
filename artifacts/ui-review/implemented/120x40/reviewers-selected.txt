@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-i4b2jt  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Make terminal reviews clear, fast, and safe  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                                                                                                       ▀
+  │             Request reviewers  31 matching users · 1 selected                           1/31  escape  rk reviewed   
+  │ 0 / 1 revi   Filter by name or username                                                                             
+  │             › [x] Reviewer 0 李 (@reviewer-0)              Suggested · past commits and past reviews                
+                  [ ] Reviewer 1 李 (@reviewer-1)              Suggested · past commits and past reviews                
+  ┃ ◇ PR overv    [ ] Reviewer 2 李 (@reviewer-2)              Suggested · past commits and past reviews                
+  ┃ ▼ src         [ ] Reviewer 3 李 (@reviewer-3)                                                                       
+  ┃   A review    [ ] Reviewer 4 李 (@reviewer-4)                                                                       
+                  [ ] Reviewer 5 李 (@reviewer-5)                                                                       
+                  [ ] Reviewer 6 李 (@reviewer-6)                                                         ───────────   
+                  [ ] Reviewer 7 李 (@reviewer-7)                                                                       
+                  [ ] Reviewer 8 李 (@reviewer-8)                                                                       
+                  [ ] Reviewer 9 李 (@reviewer-9)                                                                       
+                  [ ] Reviewer 10 李 (@reviewer-10)                                                                     
+                  [ ] Reviewer 11 李 (@reviewer-11)                                                                     
+                  [ ] Reviewer 12 李 (@reviewer-12)                                                                     
+                  [ ] Reviewer 13 李 (@reviewer-13)                                                                     
+                  [ ] Reviewer 14 李 (@reviewer-14)                                                                     
+                  [ ] Reviewer 15 李 (@reviewer-15)                                                                     
+                  [ ] Reviewer 16 李 (@reviewer-16)                                                                     
+                  [ ] Reviewer 17 李 (@reviewer-17)                                                       ED  +6 / -0   
+                  [ ] Reviewer 18 李 (@reviewer-18)                                                                     
+                  [ ] Reviewer 19 李 (@reviewer-19)                                                                     
+                  [ ] Reviewer 20 李 (@reviewer-20)                                                                     
+                  [ ] Reviewer 21 李 (@reviewer-21)                                                                     
+                  [ ] Reviewer 22 李 (@reviewer-22)                                                                     
+                  [ ] Reviewer 23 李 (@reviewer-23)                                                                     
+                  [ ] Reviewer 24 李 (@reviewer-24)                                                                     
+                  [ ] Reviewer 25 李 (@reviewer-25)                                                                     
+                  [ ] Reviewer 26 李 (@reviewer-26)                                                                     
+                Selected: reviewer-0                                                                                    
+                                                                                                                        
+                ctrl+s request  enter select  ctrl+r reload                                                             
+                                                                                                                        
+                                                                                                                        
+   REVIEWERS                                                   Select reviewers, then press ctrl+s to request reviews.  

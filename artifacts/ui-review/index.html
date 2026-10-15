@@ -1,0 +1,999 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>diffdiff — UI review screenshots</title>
+  <style>
+    body {
+      margin: 0;
+      background: #0b1620;
+      color: #e3edf4;
+      font:
+        15px system-ui,
+        sans-serif;
+    }
+    header,
+    main {
+      max-width: 1800px;
+      margin: auto;
+      padding: 24px;
+    }
+    header {
+      border-bottom: 1px solid #324655;
+    }
+    h1 {
+      margin: 0 0 12px;
+    }
+    p {
+      color: #afc1ce;
+      line-height: 1.6;
+    }
+    a {
+      color: #9edbff;
+    }
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+    }
+    section {
+      padding: 18px 0 30px;
+      border-bottom: 1px solid #324655;
+    }
+    h2 {
+      font-size: 20px;
+    }
+    .pair {
+      display: grid;
+      grid-template-columns: 3fr 2fr;
+      gap: 20px;
+      align-items: start;
+    }
+    figure {
+      margin: 0;
+      min-width: 0;
+    }
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid #324655;
+    }
+    figcaption {
+      margin: 10px 0;
+      color: #afc1ce;
+    }
+    code {
+      font-size: 13px;
+    }
+    @media (max-width: 900px) {
+      .pair {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+  <header>
+    <h1>diffdiff UI review</h1>
+    <p>
+      60 native-frame captures · 30 views · standard 120×40 and compact 80×24 · pierre-dark ·
+      synthetic GitHub data.<br />
+      Read <a href="README.md">the review handoff</a> for scope, caveats, and the next-agent brief.
+      Captured 2026-10-14.
+    </p>
+    <nav>
+      <a href="#00-overview">00-overview</a>
+      <a href="#01-space-menu">01-space-menu</a>
+      <a href="#02-leader-menu">02-leader-menu</a>
+      <a href="#03-goto-menu">03-goto-menu</a>
+      <a href="#04-in-file-menu">04-in-file-menu</a>
+      <a href="#05-command-palette">05-command-palette</a>
+      <a href="#06-help-diff">06-help-diff</a>
+      <a href="#07-help-tree">07-help-tree</a>
+      <a href="#08-compare-branches">08-compare-branches</a>
+      <a href="#09-branch-filters">09-branch-filters</a>
+      <a href="#10-compare-commits">10-compare-commits</a>
+      <a href="#11-commit-search">11-commit-search</a>
+      <a href="#12-pull-requests">12-pull-requests</a>
+      <a href="#13-pull-request-search">13-pull-request-search</a>
+      <a href="#14-reviewer-picker">14-reviewer-picker</a>
+      <a href="#15-reviewer-selected">15-reviewer-selected</a>
+      <a href="#16-checks">16-checks</a>
+      <a href="#17-conversation">17-conversation</a>
+      <a href="#18-pr-comment">18-pr-comment</a>
+      <a href="#19-inline-comment">19-inline-comment</a>
+      <a href="#18b-file-autocomplete">18b-file-autocomplete</a>
+      <a href="#20-thread-reply">20-thread-reply</a>
+      <a href="#21-submit-review">21-submit-review</a>
+      <a href="#22-diagnostics">22-diagnostics</a>
+      <a href="#23-clear-reviewed">23-clear-reviewed</a>
+      <a href="#24-merge">24-merge</a>
+      <a href="#25-confirm-merge">25-confirm-merge</a>
+      <a href="#26-auto-merge">26-auto-merge</a>
+      <a href="#27-confirm-auto-merge">27-confirm-auto-merge</a>
+      <a href="#28-cleanup">28-cleanup</a>
+    </nav>
+  </header>
+  <main>
+    <section id="00-overview">
+      <h2>00-overview — PR overview and application chrome</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/00-overview.png"
+            ><img
+              loading="lazy"
+              src="120x40/00-overview.png"
+              alt="PR overview and application chrome at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/00-overview.png">PNG</a> ·
+            <a href="120x40/00-overview.txt">Text</a> ·
+            <a href="120x40/00-overview.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/00-overview.png"
+            ><img
+              loading="lazy"
+              src="80x24/00-overview.png"
+              alt="PR overview and application chrome at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/00-overview.png">PNG</a> ·
+            <a href="80x24/00-overview.txt">Text</a> ·
+            <a href="80x24/00-overview.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="01-space-menu">
+      <h2>01-space-menu — Space action menu</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/01-space-menu.png"
+            ><img loading="lazy" src="120x40/01-space-menu.png" alt="Space action menu at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/01-space-menu.png">PNG</a> ·
+            <a href="120x40/01-space-menu.txt">Text</a> ·
+            <a href="120x40/01-space-menu.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/01-space-menu.png"
+            ><img loading="lazy" src="80x24/01-space-menu.png" alt="Space action menu at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/01-space-menu.png">PNG</a> ·
+            <a href="80x24/01-space-menu.txt">Text</a> ·
+            <a href="80x24/01-space-menu.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="02-leader-menu">
+      <h2>02-leader-menu — Ctrl+X action menu</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/02-leader-menu.png"
+            ><img loading="lazy" src="120x40/02-leader-menu.png" alt="Ctrl+X action menu at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/02-leader-menu.png">PNG</a> ·
+            <a href="120x40/02-leader-menu.txt">Text</a> ·
+            <a href="120x40/02-leader-menu.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/02-leader-menu.png"
+            ><img loading="lazy" src="80x24/02-leader-menu.png" alt="Ctrl+X action menu at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/02-leader-menu.png">PNG</a> ·
+            <a href="80x24/02-leader-menu.txt">Text</a> ·
+            <a href="80x24/02-leader-menu.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="03-goto-menu">
+      <h2>03-goto-menu — Go-to navigation menu</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/03-goto-menu.png"
+            ><img
+              loading="lazy"
+              src="120x40/03-goto-menu.png"
+              alt="Go-to navigation menu at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/03-goto-menu.png">PNG</a> ·
+            <a href="120x40/03-goto-menu.txt">Text</a> ·
+            <a href="120x40/03-goto-menu.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/03-goto-menu.png"
+            ><img loading="lazy" src="80x24/03-goto-menu.png" alt="Go-to navigation menu at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/03-goto-menu.png">PNG</a> ·
+            <a href="80x24/03-goto-menu.txt">Text</a> ·
+            <a href="80x24/03-goto-menu.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="04-in-file-menu">
+      <h2>04-in-file-menu — In-file navigation prefix</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/04-in-file-menu.png"
+            ><img
+              loading="lazy"
+              src="120x40/04-in-file-menu.png"
+              alt="In-file navigation prefix at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/04-in-file-menu.png">PNG</a> ·
+            <a href="120x40/04-in-file-menu.txt">Text</a> ·
+            <a href="120x40/04-in-file-menu.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/04-in-file-menu.png"
+            ><img
+              loading="lazy"
+              src="80x24/04-in-file-menu.png"
+              alt="In-file navigation prefix at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/04-in-file-menu.png">PNG</a> ·
+            <a href="80x24/04-in-file-menu.txt">Text</a> ·
+            <a href="80x24/04-in-file-menu.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="05-command-palette">
+      <h2>05-command-palette — Command palette</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/05-command-palette.png"
+            ><img
+              loading="lazy"
+              src="120x40/05-command-palette.png"
+              alt="Command palette at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/05-command-palette.png">PNG</a> ·
+            <a href="120x40/05-command-palette.txt">Text</a> ·
+            <a href="120x40/05-command-palette.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/05-command-palette.png"
+            ><img loading="lazy" src="80x24/05-command-palette.png" alt="Command palette at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/05-command-palette.png">PNG</a> ·
+            <a href="80x24/05-command-palette.txt">Text</a> ·
+            <a href="80x24/05-command-palette.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="06-help-diff">
+      <h2>06-help-diff — Help from diff pane</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/06-help-diff.png"
+            ><img loading="lazy" src="120x40/06-help-diff.png" alt="Help from diff pane at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/06-help-diff.png">PNG</a> ·
+            <a href="120x40/06-help-diff.txt">Text</a> ·
+            <a href="120x40/06-help-diff.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/06-help-diff.png"
+            ><img loading="lazy" src="80x24/06-help-diff.png" alt="Help from diff pane at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/06-help-diff.png">PNG</a> ·
+            <a href="80x24/06-help-diff.txt">Text</a> ·
+            <a href="80x24/06-help-diff.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="07-help-tree">
+      <h2>07-help-tree — Help from tree pane</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/07-help-tree.png"
+            ><img loading="lazy" src="120x40/07-help-tree.png" alt="Help from tree pane at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/07-help-tree.png">PNG</a> ·
+            <a href="120x40/07-help-tree.txt">Text</a> ·
+            <a href="120x40/07-help-tree.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/07-help-tree.png"
+            ><img loading="lazy" src="80x24/07-help-tree.png" alt="Help from tree pane at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/07-help-tree.png">PNG</a> ·
+            <a href="80x24/07-help-tree.txt">Text</a> ·
+            <a href="80x24/07-help-tree.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="08-compare-branches">
+      <h2>08-compare-branches — Comparison browser: branches</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/08-compare-branches.png"
+            ><img
+              loading="lazy"
+              src="120x40/08-compare-branches.png"
+              alt="Comparison browser: branches at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/08-compare-branches.png">PNG</a> ·
+            <a href="120x40/08-compare-branches.txt">Text</a> ·
+            <a href="120x40/08-compare-branches.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/08-compare-branches.png"
+            ><img
+              loading="lazy"
+              src="80x24/08-compare-branches.png"
+              alt="Comparison browser: branches at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/08-compare-branches.png">PNG</a> ·
+            <a href="80x24/08-compare-branches.txt">Text</a> ·
+            <a href="80x24/08-compare-branches.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="09-branch-filters">
+      <h2>09-branch-filters — Branch filters</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/09-branch-filters.png"
+            ><img loading="lazy" src="120x40/09-branch-filters.png" alt="Branch filters at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/09-branch-filters.png">PNG</a> ·
+            <a href="120x40/09-branch-filters.txt">Text</a> ·
+            <a href="120x40/09-branch-filters.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/09-branch-filters.png"
+            ><img loading="lazy" src="80x24/09-branch-filters.png" alt="Branch filters at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/09-branch-filters.png">PNG</a> ·
+            <a href="80x24/09-branch-filters.txt">Text</a> ·
+            <a href="80x24/09-branch-filters.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="10-compare-commits">
+      <h2>10-compare-commits — Comparison browser: commits</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/10-compare-commits.png"
+            ><img
+              loading="lazy"
+              src="120x40/10-compare-commits.png"
+              alt="Comparison browser: commits at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/10-compare-commits.png">PNG</a> ·
+            <a href="120x40/10-compare-commits.txt">Text</a> ·
+            <a href="120x40/10-compare-commits.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/10-compare-commits.png"
+            ><img
+              loading="lazy"
+              src="80x24/10-compare-commits.png"
+              alt="Comparison browser: commits at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/10-compare-commits.png">PNG</a> ·
+            <a href="80x24/10-compare-commits.txt">Text</a> ·
+            <a href="80x24/10-compare-commits.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="11-commit-search">
+      <h2>11-commit-search — Commit search input</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/11-commit-search.png"
+            ><img
+              loading="lazy"
+              src="120x40/11-commit-search.png"
+              alt="Commit search input at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/11-commit-search.png">PNG</a> ·
+            <a href="120x40/11-commit-search.txt">Text</a> ·
+            <a href="120x40/11-commit-search.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/11-commit-search.png"
+            ><img
+              loading="lazy"
+              src="80x24/11-commit-search.png"
+              alt="Commit search input at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/11-commit-search.png">PNG</a> ·
+            <a href="80x24/11-commit-search.txt">Text</a> ·
+            <a href="80x24/11-commit-search.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="12-pull-requests">
+      <h2>12-pull-requests — PR dashboard list</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/12-pull-requests.png"
+            ><img
+              loading="lazy"
+              src="120x40/12-pull-requests.png"
+              alt="PR dashboard list at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/12-pull-requests.png">PNG</a> ·
+            <a href="120x40/12-pull-requests.txt">Text</a> ·
+            <a href="120x40/12-pull-requests.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/12-pull-requests.png"
+            ><img loading="lazy" src="80x24/12-pull-requests.png" alt="PR dashboard list at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/12-pull-requests.png">PNG</a> ·
+            <a href="80x24/12-pull-requests.txt">Text</a> ·
+            <a href="80x24/12-pull-requests.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="13-pull-request-search">
+      <h2>13-pull-request-search — PR dashboard search</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/13-pull-request-search.png"
+            ><img
+              loading="lazy"
+              src="120x40/13-pull-request-search.png"
+              alt="PR dashboard search at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/13-pull-request-search.png">PNG</a> ·
+            <a href="120x40/13-pull-request-search.txt">Text</a> ·
+            <a href="120x40/13-pull-request-search.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/13-pull-request-search.png"
+            ><img
+              loading="lazy"
+              src="80x24/13-pull-request-search.png"
+              alt="PR dashboard search at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/13-pull-request-search.png">PNG</a> ·
+            <a href="80x24/13-pull-request-search.txt">Text</a> ·
+            <a href="80x24/13-pull-request-search.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="14-reviewer-picker">
+      <h2>14-reviewer-picker — Reviewer picker with requested and suggested users</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/14-reviewer-picker.png"
+            ><img
+              loading="lazy"
+              src="120x40/14-reviewer-picker.png"
+              alt="Reviewer picker with requested and suggested users at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/14-reviewer-picker.png">PNG</a> ·
+            <a href="120x40/14-reviewer-picker.txt">Text</a> ·
+            <a href="120x40/14-reviewer-picker.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/14-reviewer-picker.png"
+            ><img
+              loading="lazy"
+              src="80x24/14-reviewer-picker.png"
+              alt="Reviewer picker with requested and suggested users at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/14-reviewer-picker.png">PNG</a> ·
+            <a href="80x24/14-reviewer-picker.txt">Text</a> ·
+            <a href="80x24/14-reviewer-picker.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="15-reviewer-selected">
+      <h2>15-reviewer-selected — Reviewer picker with a pending selection</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/15-reviewer-selected.png"
+            ><img
+              loading="lazy"
+              src="120x40/15-reviewer-selected.png"
+              alt="Reviewer picker with a pending selection at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/15-reviewer-selected.png">PNG</a> ·
+            <a href="120x40/15-reviewer-selected.txt">Text</a> ·
+            <a href="120x40/15-reviewer-selected.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/15-reviewer-selected.png"
+            ><img
+              loading="lazy"
+              src="80x24/15-reviewer-selected.png"
+              alt="Reviewer picker with a pending selection at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/15-reviewer-selected.png">PNG</a> ·
+            <a href="80x24/15-reviewer-selected.txt">Text</a> ·
+            <a href="80x24/15-reviewer-selected.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="16-checks">
+      <h2>16-checks — Checks list and failure details</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/16-checks.png"
+            ><img
+              loading="lazy"
+              src="120x40/16-checks.png"
+              alt="Checks list and failure details at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/16-checks.png">PNG</a> ·
+            <a href="120x40/16-checks.txt">Text</a> ·
+            <a href="120x40/16-checks.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/16-checks.png"
+            ><img
+              loading="lazy"
+              src="80x24/16-checks.png"
+              alt="Checks list and failure details at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/16-checks.png">PNG</a> · <a href="80x24/16-checks.txt">Text</a> ·
+            <a href="80x24/16-checks.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="17-conversation">
+      <h2>17-conversation — PR conversation</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/17-conversation.png"
+            ><img loading="lazy" src="120x40/17-conversation.png" alt="PR conversation at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/17-conversation.png">PNG</a> ·
+            <a href="120x40/17-conversation.txt">Text</a> ·
+            <a href="120x40/17-conversation.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/17-conversation.png"
+            ><img loading="lazy" src="80x24/17-conversation.png" alt="PR conversation at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/17-conversation.png">PNG</a> ·
+            <a href="80x24/17-conversation.txt">Text</a> ·
+            <a href="80x24/17-conversation.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="18-pr-comment">
+      <h2>18-pr-comment — PR conversation reply composer</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/18-pr-comment.png"
+            ><img
+              loading="lazy"
+              src="120x40/18-pr-comment.png"
+              alt="PR conversation reply composer at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/18-pr-comment.png">PNG</a> ·
+            <a href="120x40/18-pr-comment.txt">Text</a> ·
+            <a href="120x40/18-pr-comment.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/18-pr-comment.png"
+            ><img
+              loading="lazy"
+              src="80x24/18-pr-comment.png"
+              alt="PR conversation reply composer at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/18-pr-comment.png">PNG</a> ·
+            <a href="80x24/18-pr-comment.txt">Text</a> ·
+            <a href="80x24/18-pr-comment.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="19-inline-comment">
+      <h2>19-inline-comment — Inline code comment composer</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/19-inline-comment.png"
+            ><img
+              loading="lazy"
+              src="120x40/19-inline-comment.png"
+              alt="Inline code comment composer at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/19-inline-comment.png">PNG</a> ·
+            <a href="120x40/19-inline-comment.txt">Text</a> ·
+            <a href="120x40/19-inline-comment.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/19-inline-comment.png"
+            ><img
+              loading="lazy"
+              src="80x24/19-inline-comment.png"
+              alt="Inline code comment composer at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/19-inline-comment.png">PNG</a> ·
+            <a href="80x24/19-inline-comment.txt">Text</a> ·
+            <a href="80x24/19-inline-comment.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="18b-file-autocomplete">
+      <h2>18b-file-autocomplete — Changed-file autocomplete menu inside composer</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/18b-file-autocomplete.png"
+            ><img
+              loading="lazy"
+              src="120x40/18b-file-autocomplete.png"
+              alt="Changed-file autocomplete menu inside composer at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/18b-file-autocomplete.png">PNG</a> ·
+            <a href="120x40/18b-file-autocomplete.txt">Text</a> ·
+            <a href="120x40/18b-file-autocomplete.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/18b-file-autocomplete.png"
+            ><img
+              loading="lazy"
+              src="80x24/18b-file-autocomplete.png"
+              alt="Changed-file autocomplete menu inside composer at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/18b-file-autocomplete.png">PNG</a> ·
+            <a href="80x24/18b-file-autocomplete.txt">Text</a> ·
+            <a href="80x24/18b-file-autocomplete.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="20-thread-reply">
+      <h2>20-thread-reply — Inline thread reply composer</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/20-thread-reply.png"
+            ><img
+              loading="lazy"
+              src="120x40/20-thread-reply.png"
+              alt="Inline thread reply composer at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/20-thread-reply.png">PNG</a> ·
+            <a href="120x40/20-thread-reply.txt">Text</a> ·
+            <a href="120x40/20-thread-reply.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/20-thread-reply.png"
+            ><img
+              loading="lazy"
+              src="80x24/20-thread-reply.png"
+              alt="Inline thread reply composer at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/20-thread-reply.png">PNG</a> ·
+            <a href="80x24/20-thread-reply.txt">Text</a> ·
+            <a href="80x24/20-thread-reply.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="21-submit-review">
+      <h2>21-submit-review — Review submission and event choices</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/21-submit-review.png"
+            ><img
+              loading="lazy"
+              src="120x40/21-submit-review.png"
+              alt="Review submission and event choices at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/21-submit-review.png">PNG</a> ·
+            <a href="120x40/21-submit-review.txt">Text</a> ·
+            <a href="120x40/21-submit-review.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/21-submit-review.png"
+            ><img
+              loading="lazy"
+              src="80x24/21-submit-review.png"
+              alt="Review submission and event choices at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/21-submit-review.png">PNG</a> ·
+            <a href="80x24/21-submit-review.txt">Text</a> ·
+            <a href="80x24/21-submit-review.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="22-diagnostics">
+      <h2>22-diagnostics — Session diagnostics list and event details</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/22-diagnostics.png"
+            ><img
+              loading="lazy"
+              src="120x40/22-diagnostics.png"
+              alt="Session diagnostics list and event details at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/22-diagnostics.png">PNG</a> ·
+            <a href="120x40/22-diagnostics.txt">Text</a> ·
+            <a href="120x40/22-diagnostics.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/22-diagnostics.png"
+            ><img
+              loading="lazy"
+              src="80x24/22-diagnostics.png"
+              alt="Session diagnostics list and event details at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/22-diagnostics.png">PNG</a> ·
+            <a href="80x24/22-diagnostics.txt">Text</a> ·
+            <a href="80x24/22-diagnostics.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="23-clear-reviewed">
+      <h2>23-clear-reviewed — Clear local reviewed-state confirmation (not available for PRs)</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/23-clear-reviewed.png"
+            ><img
+              loading="lazy"
+              src="120x40/23-clear-reviewed.png"
+              alt="Clear local reviewed-state confirmation (not available for PRs) at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/23-clear-reviewed.png">PNG</a> ·
+            <a href="120x40/23-clear-reviewed.txt">Text</a> ·
+            <a href="120x40/23-clear-reviewed.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/23-clear-reviewed.png"
+            ><img
+              loading="lazy"
+              src="80x24/23-clear-reviewed.png"
+              alt="Clear local reviewed-state confirmation (not available for PRs) at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/23-clear-reviewed.png">PNG</a> ·
+            <a href="80x24/23-clear-reviewed.txt">Text</a> ·
+            <a href="80x24/23-clear-reviewed.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="24-merge">
+      <h2>24-merge — Merge picker, title, body, and auto-merge option</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/24-merge.png"
+            ><img
+              loading="lazy"
+              src="120x40/24-merge.png"
+              alt="Merge picker, title, body, and auto-merge option at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/24-merge.png">PNG</a> ·
+            <a href="120x40/24-merge.txt">Text</a> · <a href="120x40/24-merge.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/24-merge.png"
+            ><img
+              loading="lazy"
+              src="80x24/24-merge.png"
+              alt="Merge picker, title, body, and auto-merge option at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/24-merge.png">PNG</a> · <a href="80x24/24-merge.txt">Text</a> ·
+            <a href="80x24/24-merge.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="25-confirm-merge">
+      <h2>25-confirm-merge — Immediate merge confirmation</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/25-confirm-merge.png"
+            ><img
+              loading="lazy"
+              src="120x40/25-confirm-merge.png"
+              alt="Immediate merge confirmation at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/25-confirm-merge.png">PNG</a> ·
+            <a href="120x40/25-confirm-merge.txt">Text</a> ·
+            <a href="120x40/25-confirm-merge.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/25-confirm-merge.png"
+            ><img
+              loading="lazy"
+              src="80x24/25-confirm-merge.png"
+              alt="Immediate merge confirmation at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/25-confirm-merge.png">PNG</a> ·
+            <a href="80x24/25-confirm-merge.txt">Text</a> ·
+            <a href="80x24/25-confirm-merge.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="26-auto-merge">
+      <h2>26-auto-merge — Merge picker with auto-merge enabled</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/26-auto-merge.png"
+            ><img
+              loading="lazy"
+              src="120x40/26-auto-merge.png"
+              alt="Merge picker with auto-merge enabled at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/26-auto-merge.png">PNG</a> ·
+            <a href="120x40/26-auto-merge.txt">Text</a> ·
+            <a href="120x40/26-auto-merge.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/26-auto-merge.png"
+            ><img
+              loading="lazy"
+              src="80x24/26-auto-merge.png"
+              alt="Merge picker with auto-merge enabled at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/26-auto-merge.png">PNG</a> ·
+            <a href="80x24/26-auto-merge.txt">Text</a> ·
+            <a href="80x24/26-auto-merge.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="27-confirm-auto-merge">
+      <h2>27-confirm-auto-merge — Auto-merge confirmation (title clips at compact size)</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/27-confirm-auto-merge.png"
+            ><img
+              loading="lazy"
+              src="120x40/27-confirm-auto-merge.png"
+              alt="Auto-merge confirmation (title clips at compact size) at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/27-confirm-auto-merge.png">PNG</a> ·
+            <a href="120x40/27-confirm-auto-merge.txt">Text</a> ·
+            <a href="120x40/27-confirm-auto-merge.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/27-confirm-auto-merge.png"
+            ><img
+              loading="lazy"
+              src="80x24/27-confirm-auto-merge.png"
+              alt="Auto-merge confirmation (title clips at compact size) at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/27-confirm-auto-merge.png">PNG</a> ·
+            <a href="80x24/27-confirm-auto-merge.txt">Text</a> ·
+            <a href="80x24/27-confirm-auto-merge.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="28-cleanup">
+      <h2>28-cleanup — Post-merge cleanup: local and remote-tracking refs</h2>
+      <div class="pair">
+        <figure>
+          <a href="120x40/28-cleanup.png"
+            ><img
+              loading="lazy"
+              src="120x40/28-cleanup.png"
+              alt="Post-merge cleanup: local and remote-tracking refs at 120x40"
+          /></a>
+          <figcaption>
+            120x40 · <a href="120x40/28-cleanup.png">PNG</a> ·
+            <a href="120x40/28-cleanup.txt">Text</a> ·
+            <a href="120x40/28-cleanup.json">Native spans</a>
+          </figcaption>
+        </figure>
+        <figure>
+          <a href="80x24/28-cleanup.png"
+            ><img
+              loading="lazy"
+              src="80x24/28-cleanup.png"
+              alt="Post-merge cleanup: local and remote-tracking refs at 80x24"
+          /></a>
+          <figcaption>
+            80x24 · <a href="80x24/28-cleanup.png">PNG</a> ·
+            <a href="80x24/28-cleanup.txt">Text</a> ·
+            <a href="80x24/28-cleanup.json">Native spans</a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+  </main>
+</html>

@@ -1,7 +1,11 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import type { DiffdiffPreferences, GitHubUserPreferences } from "./types/github.ts";
+import type {
+  DiffdiffPreferences,
+  GitHubUserPreferences,
+  GitHubCleanupPreferences,
+} from "./types/github.ts";
 import { logDiffdiffError, logDiffdiffInfo } from "./logging.ts";
 
 const PREFERENCES_VERSION = 1;
@@ -18,8 +22,7 @@ export function getDiffdiffPreferencesFilePath(homePath = homedir()): string {
 export function getDefaultGitHubPreferences(): GitHubUserPreferences {
   return {
     cleanup: {
-      removeLocal: true,
-      removeRemote: false,
+      afterMerge: true,
     },
   };
 }
@@ -94,7 +97,6 @@ function normalizePreferences(
 
   const github = record.github;
   const cleanup = github?.cleanup;
-  const defaultPreferences = getDefaultDiffdiffPreferences();
   const defaultMergeMethod =
     github?.defaultMergeMethod === "merge" || github?.defaultMergeMethod === "squash"
       ? github.defaultMergeMethod
@@ -108,17 +110,17 @@ function normalizePreferences(
   return {
     github: {
       cleanup: {
-        removeLocal:
-          typeof cleanup?.removeLocal === "boolean"
-            ? cleanup.removeLocal
-            : defaultPreferences.github.cleanup.removeLocal,
-        removeRemote:
-          typeof cleanup?.removeRemote === "boolean"
-            ? cleanup.removeRemote
-            : defaultPreferences.github.cleanup.removeRemote,
+        afterMerge: getCleanupAfterMerge(cleanup),
       },
       defaultMergeMethod,
     },
     keys,
   };
+}
+
+export function getCleanupAfterMerge(cleanup?: GitHubCleanupPreferences): boolean {
+  if (typeof cleanup?.afterMerge === "boolean") return cleanup.afterMerge;
+  if (typeof cleanup?.removeLocal === "boolean" || typeof cleanup?.removeRemote === "boolean")
+    return Boolean(cleanup.removeLocal || cleanup.removeRemote);
+  return true;
 }

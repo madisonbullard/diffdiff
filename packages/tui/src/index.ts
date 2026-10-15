@@ -2,8 +2,7 @@ export { DiffdiffApp } from "./app/DiffdiffApp.tsx";
 export { BranchModal } from "./components/branch-modal.tsx";
 export { AsciiLoadingPane } from "./components/ascii-loading-pane.tsx";
 export { FileCard } from "./components/file-card.tsx";
-export { HelpModal } from "./components/help-modal.tsx";
-export { ListFilterModal } from "./components/list-filter-modal.tsx";
+export { KeysTab } from "./components/keys-tab.tsx";
 export { loadPreparedReviewSession, prepareReviewSession } from "./diff/prepare-review-session.ts";
 export { getUiTheme } from "./theme.ts";
 export {

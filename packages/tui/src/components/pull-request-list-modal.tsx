@@ -1,15 +1,12 @@
-import type { ReactNode } from "react";
 import type { GitHubDashboardPullRequest } from "@madisonbullard/diffdiff-core";
 import type { UiTheme } from "../theme.ts";
 import type { TextInputSurface } from "../text-input-surface.ts";
-import { AsciiLoadingLabel } from "./ascii-loading-pane.tsx";
-import { KeyCap, ModalFrame, SPLIT_BORDER, selectItem, tintHex } from "./shared.tsx";
-import { SINGLE_LINE_TEXT_INPUT_HINT } from "./text-input-hints.ts";
 import { TextInputContent } from "./text-input-content.tsx";
-
-const PULL_REQUEST_LIST_MAX_VISIBLE = 10;
-const PULL_REQUEST_LIST_CONTENT_WIDTH = 96;
-
+import { DialogPanel } from "./dialog/panel.tsx";
+import { DialogList, DialogRow } from "./dialog/list-view.tsx";
+import { fitText } from "./dialog/text.ts";
+import { useDialogUi } from "./dialog/context.tsx";
+import * as A from "../app/keymap/actions.ts";
 export function PullRequestListModal({
   draftPrCount,
   isLoading,
@@ -29,262 +26,75 @@ export function PullRequestListModal({
   selectedIndex: number;
   theme: UiTheme;
 }) {
-  const selectedPullRequest = selectItem(pullRequests, selectedIndex);
-  const searchQuery = searchSurface.value;
-
+  const ui = useDialogUi();
+  const selected = pullRequests[selectedIndex];
   return (
-    <ModalFrame
+    <DialogPanel
       title="GitHub PRs"
-      subtitle="Browse your open and review-requested pull requests across repositories."
+      context={`${pullRequests.length} open · ${draftPrCount} draft · ${reviewRequestedCount} requested`}
       theme={theme}
-      maxWidth={108}
-      headerRight={
-        <box flexDirection="row" alignItems="center" gap={2}>
-          {isLoading ? (
-            <AsciiLoadingLabel color={theme.accent} message="Loading" theme={theme} />
-          ) : null}
-          <text fg={theme.textMuted} wrapMode="none">
-            <KeyCap label="esc" theme={theme} />
-            <span>{" close"}</span>
-          </text>
-        </box>
-      }
+      position={`${pullRequests.length ? selectedIndex + 1 : 0}/${pullRequests.length}`}
+      status={isLoading ? "Loading pull requests…" : undefined}
+      actions={[
+        { action: A.LIST_ACCEPT, label: "open", primary: true },
+        { action: A.PR_LIST_SEARCH, label: "search" },
+        { action: A.LIST_MOVE_DOWN, label: "move" },
+        { action: A.PR_LIST_REFRESH, label: "refresh" },
+      ]}
     >
-      <box
-        width="100%"
-        border={["left"]}
-        customBorderChars={SPLIT_BORDER}
-        borderColor={theme.border}
-        backgroundColor={theme.surface}
-        paddingLeft={2}
-        paddingRight={1}
-        paddingTop={1}
-        paddingBottom={1}
-        flexDirection="column"
-        gap={1}
-      >
-        <text fg={theme.textMuted} wrapMode="none">
-          <span>{`${pullRequests.length}`}</span>
-          <span>{" open PRs"}</span>
-          {draftPrCount > 0 ? (
-            <>
-              <span fg={theme.border}>{"  │  "}</span>
-              <span>{`${draftPrCount}`}</span>
-              <span>{" draft"}</span>
-            </>
-          ) : null}
-          <span fg={theme.border}>{"  │  "}</span>
-          <span>{`${reviewRequestedCount}`}</span>
-          <span>{" review requested"}</span>
-        </text>
-      </box>
-
-      <box width="100%" flexDirection="column" gap={0}>
-        <box
-          width="100%"
-          border={["left"]}
-          customBorderChars={SPLIT_BORDER}
-          borderColor={searchActive ? theme.borderActive : theme.border}
-          backgroundColor={searchActive ? theme.surfaceMuted : theme.surface}
-          paddingLeft={2}
-          paddingRight={1}
-          paddingTop={0}
-          paddingBottom={0}
-          flexDirection="row"
-          gap={1}
-        >
-          <text fg={theme.textMuted} wrapMode="none">
-            <span fg={searchActive ? theme.accent : theme.textMuted}>/</span>
-            <span fg={searchQuery !== "" ? theme.text : theme.textMuted}>
-              <TextInputContent
-                cursorColor={theme.accent}
-                cursorTextColor={theme.inverseText}
-                placeholder={searchActive ? undefined : "search pull requests..."}
-                placeholderColor={theme.textMuted}
-                showCursor={searchActive}
-                surface={searchSurface}
-              />
-            </span>
+      {(rect) => (
+        <>
+          <text height={1} flexShrink={0} fg={theme.text}>
+            <TextInputContent
+              surface={searchSurface}
+              showCursor={searchActive}
+              placeholder="/ Search pull requests…"
+              placeholderColor={theme.textMuted}
+              cursorColor={theme.accent}
+            />
           </text>
-        </box>
-
-        {pullRequests.length === 0 ? (
-          <EmptyListNotice
-            message={
+          <DialogList
+            items={pullRequests}
+            index={selectedIndex}
+            height={rect.bodyRows - 3}
+            theme={theme}
+            empty={
               isLoading
                 ? "Loading pull requests..."
-                : searchQuery !== ""
+                : searchSurface.value
                   ? "No pull requests match the current search."
                   : "No open authored or review-requested pull requests."
             }
-            theme={theme}
+            onMove={(delta) =>
+              ui.run(delta > 0 ? A.LIST_MOVE_DOWN : A.LIST_MOVE_UP, Math.abs(delta))
+            }
+            render={(pr, i) => (
+              <DialogRow
+                selected={i === selectedIndex}
+                label={`#${pr.number} ${pr.title}`}
+                right={`${pr.repository.owner}/${pr.repository.repo}${pr.isDraft ? " · draft" : ""}${pr.isReviewRequested ? " · requested" : ""}`}
+                width={rect.innerWidth}
+                theme={theme}
+                onSelect={() =>
+                  ui.run(
+                    i > selectedIndex ? A.LIST_MOVE_DOWN : A.LIST_MOVE_UP,
+                    Math.abs(i - selectedIndex),
+                  )
+                }
+                onActivate={() => ui.run(A.LIST_ACCEPT)}
+              />
+            )}
           />
-        ) : null}
-
-        <box width="100%" flexDirection="column" gap={0}>
-          {getPullRequestListWindow(pullRequests, selectedIndex).map(({ item, index }) => {
-            const isSelected = index === selectedIndex;
-            const pullRequest = item;
-            const repoLabel = `${pullRequest.repository.owner}/${pullRequest.repository.repo}`;
-            const authorLabel = pullRequest.author.login;
-            const draftTag = pullRequest.isDraft ? " draft" : "";
-            const titleLabel = truncateTitle(
-              pullRequest.title,
-              Math.max(
-                PULL_REQUEST_LIST_CONTENT_WIDTH -
-                  repoLabel.length -
-                  authorLabel.length -
-                  draftTag.length -
-                  6,
-                12,
-              ),
-            );
-
-            return (
-              <ListRow key={pullRequest.url} isSelected={isSelected} theme={theme}>
-                <text wrapMode="none">
-                  <span fg={isSelected ? theme.accent : theme.warning}>{repoLabel}</span>
-                  <span fg={theme.textMuted}>{"  │  "}</span>
-                  <span fg={isSelected ? theme.text : theme.textMuted}>{titleLabel}</span>
-                  {pullRequest.isDraft ? <span fg={theme.warning}>{" draft"}</span> : null}
-                  <span fg={theme.textMuted}>{"  │  "}</span>
-                  <span fg={theme.textMuted}>{authorLabel}</span>
-                </text>
-              </ListRow>
-            );
-          })}
-        </box>
-      </box>
-
-      <box
-        width="100%"
-        border={["left"]}
-        customBorderChars={SPLIT_BORDER}
-        borderColor={theme.borderActive}
-        backgroundColor={theme.surface}
-        paddingLeft={2}
-        paddingRight={1}
-        paddingTop={1}
-        paddingBottom={1}
-        flexDirection="column"
-        gap={1}
-      >
-        {selectedPullRequest != null ? (
-          <>
-            <text fg={theme.text}>{selectedPullRequest.title}</text>
-            <text fg={theme.textMuted} wrapMode="none">
-              <span>{`${selectedPullRequest.repository.owner}/${selectedPullRequest.repository.repo}`}</span>
-              <span fg={theme.border}>{"  │  "}</span>
-              <span>{selectedPullRequest.author.login}</span>
-              {selectedPullRequest.isDraft ? (
-                <>
-                  <span fg={theme.border}>{"  │  "}</span>
-                  <span fg={theme.warning}>draft</span>
-                </>
-              ) : null}
-              {selectedPullRequest.isReviewRequested ? (
-                <>
-                  <span fg={theme.border}>{"  │  "}</span>
-                  <span fg={theme.warning}>review requested</span>
-                </>
-              ) : null}
-            </text>
-            <text fg={theme.textMuted} wrapMode="none">
-              <KeyCap label="enter" theme={theme} />
-              <span>{" open  "}</span>
-              <KeyCap label="/" theme={theme} />
-              <span>{" search  "}</span>
-              <KeyCap label="j / k / home / end" theme={theme} />
-              <span>{" move"}</span>
-            </text>
-            {SINGLE_LINE_TEXT_INPUT_HINT.length > 0 ? (
-              <text fg={theme.textMuted} wrapMode="word">
-                {SINGLE_LINE_TEXT_INPUT_HINT}
-              </text>
-            ) : null}
-          </>
-        ) : (
-          <text fg={theme.textMuted}>
-            {isLoading ? "Loading pull requests..." : "Nothing to show."}
+          <text height={2} flexShrink={0} wrapMode="word" fg={theme.textMuted}>
+            {fitText(
+              selected
+                ? `${selected.title}\n${selected.author.login} · ${selected.repository.owner}/${selected.repository.repo}`
+                : "Nothing to show.",
+              rect.innerWidth * 2,
+            )}
           </text>
-        )}
-      </box>
-    </ModalFrame>
+        </>
+      )}
+    </DialogPanel>
   );
-}
-
-function getPullRequestListWindow(
-  items: readonly GitHubDashboardPullRequest[],
-  selectedIndex: number,
-): { item: GitHubDashboardPullRequest; index: number }[] {
-  if (items.length <= PULL_REQUEST_LIST_MAX_VISIBLE) {
-    return items.map((item, index) => ({ item, index }));
-  }
-
-  let start = selectedIndex - Math.floor(PULL_REQUEST_LIST_MAX_VISIBLE / 2);
-  start = Math.max(0, Math.min(start, items.length - PULL_REQUEST_LIST_MAX_VISIBLE));
-  const end = start + PULL_REQUEST_LIST_MAX_VISIBLE;
-
-  return items.slice(start, end).map((item, index) => ({ item, index: start + index }));
-}
-
-function ListRow({
-  children,
-  isSelected,
-  theme,
-}: {
-  children: ReactNode;
-  isSelected: boolean;
-  theme: UiTheme;
-}) {
-  const accentColor = theme.accent;
-
-  return (
-    <box
-      width="100%"
-      border={["left"]}
-      customBorderChars={SPLIT_BORDER}
-      borderColor={isSelected ? theme.borderActive : accentColor}
-      backgroundColor={tintHex(theme.surface, accentColor, isSelected ? 0.24 : 0.14)}
-      paddingLeft={2}
-      paddingRight={1}
-      paddingTop={0}
-      paddingBottom={0}
-      flexDirection="row"
-      gap={1}
-    >
-      {children}
-    </box>
-  );
-}
-
-function EmptyListNotice({ message, theme }: { message: string; theme: UiTheme }) {
-  return (
-    <box
-      width="100%"
-      border={["left"]}
-      customBorderChars={SPLIT_BORDER}
-      borderColor={theme.border}
-      backgroundColor={theme.surface}
-      paddingLeft={2}
-      paddingRight={1}
-      paddingTop={1}
-      paddingBottom={1}
-    >
-      <text fg={theme.textMuted}>{message}</text>
-    </box>
-  );
-}
-
-function truncateTitle(title: string, maxWidth: number): string {
-  const normalizedTitle = title.replace(/\s+/gu, " ").trim();
-  if (normalizedTitle.length <= maxWidth) {
-    return normalizedTitle;
-  }
-
-  if (maxWidth <= 3) {
-    return normalizedTitle.slice(0, maxWidth);
-  }
-
-  return `${normalizedTitle.slice(0, maxWidth - 3)}...`;
 }

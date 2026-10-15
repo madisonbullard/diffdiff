@@ -37,7 +37,7 @@ for (const [width, height] of [
       expect(app.frame()).toContain("Request reviewers");
       expect(app.frame()).toContain("Filter by name or username");
       expect(app.frame()).toContain("ctrl+s");
-      expect(app.frame()).toContain("cancel");
+      expect(app.frame()).toContain("escape");
       expect(app.frame()).toContain("Requested");
       expect(app.frame()).toContain("@user-10");
       if (height >= 30) {
@@ -87,7 +87,7 @@ test("compact reviewer picker keeps selection, failure notices, and submission c
     expect(app.frame()).toContain("Your selection is preserved");
     expect(app.frame()).toContain("GitHub suggestions unavailable");
     expect(app.frame()).toContain("ctrl+s");
-    expect(app.frame()).toContain("cancel");
+    expect(app.frame()).toContain("escape");
   } finally {
     app.destroy();
     repo.dispose();

@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                     ┃  - Clarify destructive actions                                                   
+  │                                  ┃  - Improve review feedback                                                       
+  │                                                                                                                     
+  │  Diagnostics                                                            j/k  move   home/end  jump   esc  close     
+                                                                                                                        
+  ┃  ┃                                            ┃                                                                     
+  ┃  ┃  1 event  │  ready  │  latest 09:00:00     ┃  /fixture/session.jsonlSession log                                 ▄
+  ┃  ┃                                            ┃                                                                 1  █
+  ┃                                                                                                                    █
+     ┃                                            ┃                                                                    █
+     ┃  Event Log  │  Newest first                ┃  ┃                                                                 █
+     ┃                                            ┃  ┃   INFO   startup  │  startup_first_diff_frame                   █
+                                                  ┃  ┃  2026-10-14T09:00:00Z  │  1 of 1  │  seq 1                      █
+     ┃                                            ┃  ┃                                                                 █
+     ┃  >  INFO   startup.startup_first...        ┃                                                                 nt █
+     ┃  09:00:00  │  First diff frame rendered i  ┃  ┃                                                                 █
+     ┃                                            ┃  ┃  Full Event                                                     █
+                                                  ┃  ┃                                                                 █
+                                                  ┃  ┃  {"durationMs":142,"networkWaitMs":0,"budgetMs":1000}           █
+                                                  ┃  ┃                                                                 █
+                                                  ┃  ┃                                                                 █
+                                                  ┃  ┃                                                                  
+                                                  ┃  ┃                                                              0   
+                                                  ┃  ┃                                                                  
+                                                  ┃  ┃                                                                  
+                                                  ┃  ┃                                                                  
+                                                  ┃  ┃                                                                  
+                                                  ┃  ┃                                                                  
+                                                  ┃  ┃                                                                  
+                                                  ┃  ┃                                                                  
+                                                  ┃  ┃                                                                  
+                                                  ┃                                                                     
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+   DIAGNOSTICS    ?  help                                                                          Opened diagnostics.  

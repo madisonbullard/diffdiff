@@ -69,6 +69,7 @@ export { buildReviewedFileFingerprint } from "./reviewed-file-fingerprint.ts";
 export {
   getDefaultDiffdiffPreferences,
   getDefaultGitHubPreferences,
+  getCleanupAfterMerge,
   getDiffdiffPreferencesFilePath,
   loadDiffdiffPreferences,
   saveDiffdiffPreferences,

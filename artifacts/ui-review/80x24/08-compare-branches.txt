@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-Vzunw /private/var/folders/42/w3sgx72173zby1  
+   PR  #1 Improve the keyboard-driven review wor1 check failed  │  merge ready  
+                                                                                
+                                                                               ▀
+  │ List   tab  switch view   left / right  panes   f  filters   esc  close     
+  │ Browse working tree changes, branches, and open pull requests.              
+                                                                                
+  ┃ ┃                                                                           
+  ┃ ┃  base ← main  │  head → feature                  Branches   Commits       
+  ┃ ┃  2 local  │  0 open PR  │  0 remote  │   working tree   local   PR        
+  ┃ ┃                                                                           
+                                                                                
+    ┃  Working tree  │  0 files  │  +0/-0                                       
+    ┃  feature  │  visual                               HEAD      CURRENT       
+    ┃  main  │  visual                                  BASE      DEFAULT       
+    ┃                                                                           
+    ┃  feature                                                                  
+    ┃  sha 52eb733  │  selected as head                                         
+    ┃                                                                           
+    ┃   h  set head   b  set base  │   w  working tree   o  remote toggle       
+    ┃                                                                           
+                                                                                
+   BRANCHES    ?  help                                      Opened list modal.  

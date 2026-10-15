@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-Vzunw /private/var/folders/42/w3sgx72173zby1  
+   PR  #1 Improve the keyboard-driven review wor1 check failed  │  merge ready  
+                                                                                
+                               ┃                                               ▀
+  │                                                                             
+  │ PR Checks                                                                   
+    #1 · fixture · 1 failed · 1 pending · 1 passed                              
+  ┃                                                                             
+  ┃ > completed        Type checking                                            
+  ┃   in progress      Build packages                                           
+  ┃   completed        Unit tests                                               
+                                                                                
+     Type checking                                                              
+     GitHub Actions · completed                                                 
+     Type checking failed                                                 █     
+                                                                          █     
+     src/review.ts:3 — Expected a documented default.                     ▀     
+     Run vp check before merging.                                               
+                                                                                
+     j/k  move  pgup/pgdn  details  y  copy link  r  refresh  esc  close        
+                                                                                
+                               ┃                                                
+   CHECKS    ?  help                                         Opened PR checks.  

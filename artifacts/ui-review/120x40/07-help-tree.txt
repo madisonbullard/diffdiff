@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                     ┃                                                                                 ▀
+  │                                  ┃  ▼ PR overview                                                 ○ Mark reviewed   
+  │ 0 / 2 reviewed         +5 / -1   ┃                                                                                  
+  │                                  ┃  Improve the keyboard-driven review workflow                                     
+                                                                                                                        
+  ┃ ◇ PR overv Help                                                                            esc  close               
+  ┃ ▼ src      All keyboard shortcuts by mode.                                                                          
+  ┃   M review                                                                                                          
+  ┃ A README.m ┃                                                                                        █               
+               ┃  Global                                                                                █ ───────────   
+               ┃                                                                                        █               
+               ┃  open command palette                                                          ctrl+p  █               
+               ┃                                                                                        █               
+               ┃  open help                              ?  /  ctrl+x   ?  /  ctrl+x   h  /  space   h  █               
+               ┃                                                                                        █               
+               ┃  open diagnostics                                      d  /  ctrl+x   d  /  space   d                  
+               ┃                                                                                                        
+               ┃  quit                                                                q  /  ctrl+x   q                  
+               ┃                                                                                                        
+               ┃  refresh comparison                                      shift+r  /  ctrl+x   shift+r                  
+               ┃                                                                                                        
+               ┃  open comparison list                                  l  /  ctrl+x   l  /  space   l                  
+               ┃                                                                                          ED  +2 / -1   
+               ┃  switch active pane                                                               tab                  
+               ┃                                                                                                        
+               ┃  toggle diff view                                                    v  /  ctrl+x   v                  
+               ┃                                                                                                        
+               ┃  copy diffdiff CLI command for       shift+y  /  ctrl+x   shift+y  /  space   shift+y                  
+               ┃  this session                                                                                          
+               ┃                                                                                             1 comment  
+               ┃  open focused file in editor                                         e  /  ctrl+x   e                  
+                                                                                                                        
+                                     ┃                                                                                  
+                                     ┃       4   }                                                                      
+                                     ┃                                                                                  
+   HELP    ?  help                                                                                        Opened help.  

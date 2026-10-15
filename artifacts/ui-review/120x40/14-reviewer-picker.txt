@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                     ┃                                                                                 ▀
+  │                                  ┃  ▼ PR overview                                                 ○ Mark reviewed   
+  │ 0 / 2 reviewed         +5 / -1   ┃                                                                                  
+  │                                  ┃  Improve the keyboard-driven review workflow                                     
+                                     ┃                                                                                  
+  ┃ ◇ PR overview                    ┃  example/repo  #1  ·  Open  ·  @author                                           
+  ┃ ▼ src                        1   ┃                                                                                  
+  ┃   M review.ts            +2 -1   ┃  feature → main  ·  1 commits  ·  1 files                                        
+  ┃ A README.md                                                                                                         
+                   Request reviewers                                                                  ───────────────   
+                   Choose people to review this pull request. Existing requests are kept.                               
+                                                                                                                        
+                   ┃  Filter by name or username                                                                        
+                   ┃                                                                                                    
+                   ┃  3 matching users · 0 selected                                                                     
+                   ┃                                                                                                    
+                                                                                                                        
+                   ┃  [x] Alex Rivera (@alex) · Requested                                                               
+                   ┃  [ ] Sam Chen (@sam)                                                                               
+                   ┃      Suggested · past commits                                                                      
+                   ┃  [ ] Jordan Lee (@jordan)                                                                          
+                                                                                                                        
+                                                                                                      HANGED  +2 / -1   
+                      ↑ / ↓  move   enter  select   ctrl+s  request   esc  cancel                                       
+                                                                                                                        
+                     Type to filter · ctrl+r reloads reviewers                                                          
+                                                                                                                        
+                                                                                                                        
+                                     ┃   ┃   3 +   return true;                                                         
+                                     ┃  ┃ ▼ reviewer  │  src/review.ts:2-3                                   1 comment  
+                                     ┃                                                                                  
+                                     ┃    40 weeks ago: Could we explain why this defaults to true?                     
+                                     ┃                                                                                  
+                                     ┃       4   }                                                                      
+                                     ┃                                                                                  
+   REVIEWERS    ?  help                                        Select reviewers, then press ctrl+s to request reviews.  

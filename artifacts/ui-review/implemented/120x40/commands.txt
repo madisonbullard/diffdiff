@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-i4b2jt  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Make terminal reviews clear, fast, and safe  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                                                                                                       ▀
+  │              Commands  Keys   Run an action                                             1/27  escape  rk reviewed   
+  │ 0 / 1 revi  ›  Search commands…                                                                                     
+  │               Suggested                                                                                             
+                › Open comparison list                                            l / ctrl+x l / space l                
+  ┃ ◇ PR overv    Open PR checks                                                      ctrl+x s / space s                
+  ┃ ▼ src         Open PR comments                                                t / ctrl+x t / space t                
+  ┃   A review    Jump to next unreviewed file                                              u / ctrl+x u                
+                  Toggle reviewed                                                       r / x / ctrl+x r                
+                  Open command palette                                                            ctrl+p  ───────────   
+                  Open Keys                                            ? / ctrl+x ? / ctrl+x h / space h                
+                  Switch active pane                                                                 tab                
+                  Toggle diff view                                                          v / ctrl+x v                
+                  Comparison                                                                                            
+                  Refresh comparison                                            shift+r / ctrl+x shift+r                
+                  GitHub                                                                                                
+                  Copy PR URL                                                               y / ctrl+x y                
+                  Review                                                                                                
+                  Toggle collapsed                                                      c / z / ctrl+x c                
+                  System                                                                                                
+                  Open diagnostics                                                d / ctrl+x d / space d  ED  +6 / -0   
+                  Quit                                                                      q / ctrl+x q                
+                  View                                                                                                  
+                  Copy diffdiff CLI command for this session    shift+y / ctrl+x shift+y / space shift+y                
+                  Unavailable · GitHub                                                                                  
+                  Convert PR to draft                                     ctrl+x shift+d / space shift+d                
+                  Copy focused comment URL                                                             y                
+                  Reply to focused thread                                                              r                
+                  Toggle focused thread                                                                c                
+                                                                                                                        
+                Browse the working tree, branches, PRs, and commits.                                                    
+                                                                                                                        
+                enter run  down move  tab keys                                                                          
+                                                                                                                        
+                                                                                                                        
+   CMDS    tab  keys                                                                                            Ready.  

@@ -8,6 +8,22 @@
 
 ## Implementation Update
 
+### Unified dialogs and write safety
+
+- Commands/Keys, Compare facets, pickers, inspectors, and write forms use the shared borderless
+  dialog system. Compact sheets preserve the global footer. See `menu-modal-unification.md` for
+  the complete interaction contract and actual application captures.
+- GitHub writes have synchronous duplicate guards. Escape closes a sending form without cancelling
+  the write; reopening cannot send again while it is pending. Late completions cannot dismiss or
+  reset another dialog, and mutation refreshes cannot supersede a newer session load.
+- Review starts on its event list; Tab moves to the summary. Review and merge edits survive dismissal
+  for the session. Comment drafts are consumed on successful submission.
+- Merge confirmation is inline. Cleanup is one remembered merge-form checkbox (default on), disabled
+  for auto-merge. Legacy cleanup flags migrate with OR. Only a PR head deleted by GitHub is eligible;
+  tip-SHA/ancestry checks and worktree checks keep changed, checked-out, and unmerged branches safe.
+  Partial cleanup failures report kept refs, never offer to merge again. A local ref-refresh failure
+  after GitHub confirms a merge remains a successful merge with a local-refresh warning.
+
 ### Resolved inline threads
 
 - Resolved review threads collapse automatically on load and refresh, like outdated
@@ -93,7 +109,10 @@
 - The picker starts in a live filter input matching profile names and usernames,
   case-insensitively. Arrow keys move focus; Enter toggles a person; Ctrl+S sends
   the selected requests. Selection survives filtering. Escape cancels without writes;
-  cancellation and duplicate submissions are blocked while a request is in flight.
+  duplicate submissions and editing are blocked while a request is in flight, but Escape closes
+  the dialog while the request continues. Reopening shows the same pending selection; completion
+  never closes another dialog. Errors remain visible in the footer while a dialog is open rather
+  than covering its controls with a toast.
 - Existing requested users appear at the top of the matching list, are marked,
   and cannot be selected again. Relative candidate order within the requested and
   available groups is preserved. Requests are

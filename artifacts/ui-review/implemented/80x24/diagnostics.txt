@@ -1,0 +1,24 @@
+ Diagnostics  1 events · newest first                                    escape 
+ › · startup.startup_first_diff_frame                                  09:00:00 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ ~/.diffdiff/logs/log-unknown.jsonl                                             
+ First diff frame rendered in 142 ms                                            
+ {"durationMs":142,"budgetMs":1000}                                             
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ tab focus details  pagedown scroll details  down move  home newest             
+   DIAGNOSTICS                    Modal Picker mode active. Awaiting next key.  

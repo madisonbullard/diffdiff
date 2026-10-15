@@ -1,0 +1,7 @@
+{
+  "extends": "../../../packages/tui/tsconfig.json",
+  "compilerOptions": {
+    "typeRoots": ["../../../packages/tui/node_modules/@types"]
+  },
+  "include": ["*.tsx", "*.ts"]
+}

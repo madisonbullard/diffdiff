@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-Vzunw /private/var/folders/42/w3sgx72173zby1  
+   PR  #1 Improve the keyboard-driven review wor1 check failed  │  merge ready  
+                                                                                
+                                                                                
+  │ Merge Pull Request             tab  next field   ctrl+e  line end   lead    
+  │ PR #1 • Improve the keyboard-d                                              
+                                                                                
+  ┃ [ ] Auto-merge when requirements pass • ctrl+g toggle                       
+  ┃ ┃    Merge com                                                              
+  ┃ ┃    Squash me Confirm Merge enter  confirm   esc / q  back                 
+  ┃                Press enter again to merge with squash.                      
+    ┃                                                                          █
+    ┃  Title: Impr ┃                                                           █
+    ┃              ┃  Review the merge method, title, and                      █
+                   ┃  body in the background form, then                        ▀
+    ┃              ┃  confirm to submit.                                     t  
+    ┃  Body:       ┃                                                            
+    ┃  ## Summary                                                               
+    ┃  Make review navigation faster and keep actions discoverable.             
+    ┃                                                                           
+    ┃  - Preserve keyboard-first interactions                                   
+    ┃  - Clarify destructive actions                                            
+   CONFIRM    ?  help           Press enter again to confirm the squash merge.  

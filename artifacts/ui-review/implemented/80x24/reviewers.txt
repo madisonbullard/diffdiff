@@ -1,0 +1,24 @@
+ Request reviewers  31 matching users · 0 selected                 1/31  escape 
+  Filter by name or username                                                    
+ › [ ] Reviewer 0 李 (@reviewer-0)      Suggested · past commits and past revi… 
+   [ ] Reviewer 1 李 (@reviewer-1)      Suggested · past commits and past revi… 
+   [ ] Reviewer 2 李 (@reviewer-2)      Suggested · past commits and past revi… 
+   [ ] Reviewer 3 李 (@reviewer-3)                                              
+   [ ] Reviewer 4 李 (@reviewer-4)                                              
+   [ ] Reviewer 5 李 (@reviewer-5)                                              
+   [ ] Reviewer 6 李 (@reviewer-6)                                              
+   [ ] Reviewer 7 李 (@reviewer-7)                                              
+   [ ] Reviewer 8 李 (@reviewer-8)                                              
+   [ ] Reviewer 9 李 (@reviewer-9)                                              
+   [ ] Reviewer 10 李 (@reviewer-10)                                            
+   [ ] Reviewer 11 李 (@reviewer-11)                                            
+   [ ] Reviewer 12 李 (@reviewer-12)                                            
+   [ ] Reviewer 13 李 (@reviewer-13)                                            
+   [ ] Reviewer 14 李 (@reviewer-14)                                            
+   [ ] Reviewer 15 李 (@reviewer-15)                                            
+   [ ] Reviewer 16 李 (@reviewer-16)                                            
+   [ ] Reviewer 17 李 (@reviewer-17)                                            
+ Existing review requests are kept. Select people, then request.                
+                                                                                
+ ctrl+s request  enter select  ctrl+r reload                                    
+   REVIEWERS               Select reviewers, then press ctrl+s to request r...  

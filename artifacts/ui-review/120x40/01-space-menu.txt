@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                     ┃                                                                                 ▀
+  │                                  ┃  ▼ PR overview                                                 ○ Mark reviewed   
+  │ 0 / 2 reviewed         +5 / -1   ┃                                                                                  
+  │                                  ┃  Improve the keyboard-driven review workflow                                     
+                                     ┃                                                                                  
+  ┃ ◇ PR overview                    ┃  example/repo  #1  ·  Open  ·  @author                                           
+  ┃ ▼ src                        1   ┃                                                                                  
+  ┃   M review.ts            +2 -1   ┃  feature → main  ·  1 commits  ·  1 files                                        
+  ┃ A README.md              +3 -0   ┃                                                                                  
+                                     ┃  ─────────────────────────────────────────────────────────────────────────────   
+                                     ┃                                                                                  
+                                     ┃  Summary                                                                         
+                                     ┃  Make review navigation faster and keep actions discoverable.                    
+                                     ┃                                                                                  
+                                     ┃  - Preserve keyboard-first interactions                                          
+                                     ┃  - Clarify destructive actions                                                   
+                                     ┃  - Improve review feedback                                                       
+                                     ┃                                                                                  
+                                     ┃  View pull request on GitHu  Modal Picker                                        
+                                     ┃                              Press a key to open a modal.                        
+                                                                    Open diagnostics                              d     
+                                     ┃                              Open help                                     h     
+                                     ┃  ▼ src/review.ts             Copy diffdiff CLI command for this      shift+y     
+                                     ┃                              session                                             
+                                     ┃  @@ -1,3 +1,4 @@             Open GitHub PR list                           p     
+                                     ┃       1   export function r  Open PR comments                              t     
+                                     ┃       2 -   return false;    Open PR checks                                s     
+                                     ┃   ┃   2 +   // Keep the rev  Request reviewers                             w     
+                                     ┃   ┃   3 +   return true;     Convert PR to draft                     shift+d     
+                                     ┃  ┃ ▼ reviewer  │  src/revie  Add review comment                            a     
+                                     ┃                              Submit review                           shift+a     
+                                     ┃    40 weeks ago: Could we e  Merge pull request                            m     
+                                     ┃                              Open comparison list                          l     
+                                     ┃       4   }                                                                      
+                                     ┃                                                                                  
+   SPACE    ?  help                                                       Modal Picker mode active. Awaiting next key.  

@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-i4b2jt  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Make terminal reviews clear, fast, and safe  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                     ┃  Unify terminal menus and dialogs.                                               
+  │                                  ┃                                                                                  
+  │ 0 / 1 reviewed         +6 / -0   ┃  Keep keyboard workflows fast.                                                   
+  │                                  ┃                                                                                  
+                                     ┃  View pull request on GitHub ↗                                                   
+  ┃ ◇ PR overview                    ┃                                                                                  
+  ┃ ▼ src                        1                                                                                     █
+  ┃   A review.ts            +6 -0   ┃                                                                                 █
+                                     ┃  ▼ src/review.ts                                                ADDED  +6 / -0  █
+                                     ┃                                                                                 █
+                                     ┃       1 + // review line 1                                                      █
+                                     ┃  ▶    2 + // review line 2                                                      █
+                                     ┃       3 + // review line 3                                                      █
+                                     ┃       4 + // review line 4                                                      █
+                                     ┃       5 + // review line 5                                                      █
+                                     ┃       6 + // review line 6                                                      █
+                                     ┃                                                                                 █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       █
+                                                                                                                       ▀
+                                                                              Goto  ·  esc cancel                       
+                                                                              g  Jump to first file                     
+                                                                              e  Jump to last file                      
+                                                                              t  Jump to top                            
+                                                                              c  Jump to center                         
+                                                                              b  Jump to bottom                         
+                                                                              n  Jump to next hunk                      
+                                                                              p  Jump to previous hunk                  
+                                                                              a  Jump to alternate file                 
+                                                                              Press a key to jump around the comparis…  
+                                                                                                                        
+   GOTO    ?  keys                                                                Goto mode active. Awaiting next key.  

@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                                                                                                       ▀
+  │              Commands  Keys                                                                 1/6  esc  rk reviewed   
+  │ 0 / 2 revi  › rev                                                                          6 matches                
+  │             › Mark file reviewed  src/review.ts                                            Review  x                
+                  Next unreviewed file                                                         Review  u                
+  ┃ ◇ PR overv    Add review comment  src/review.ts:2                                          Review  a                
+  ┃ ▼ src         Collapse or expand file                                                      Review  c                
+  ┃   M review    Mark all files reviewed  PR viewed state syncs one file at a time               Review                
+  ┃ A README.m    Clear review marks  PR viewed state syncs one file at a time                    Review                
+                                                                                                          ───────────   
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                          ED  +2 / -1   
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                             1 comment  
+                                                                                                                        
+                                                                                                                        
+                enter run  ↑↓ move  tab keys  ctrl+u clear                                                              
+                                                                                                                        
+                                     ┃                                                                                  
+   COMMANDS                                                                                                             

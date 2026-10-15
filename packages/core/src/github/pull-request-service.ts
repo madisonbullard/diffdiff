@@ -1,4 +1,3 @@
-import { runCommand } from "../command.ts";
 import { enablePullRequestAutoMerge } from "./pull-request-auto-merge.ts";
 import { DiffdiffError } from "../errors.ts";
 import { logDiffdiffError, logDiffdiffInfo, logDiffdiffWarn } from "../logging.ts";
@@ -43,9 +42,9 @@ import {
 } from "./pull-request-service-helpers.ts";
 import { sortDashboardPullRequests } from "./repository-identity.ts";
 import {
-  buildCleanupCandidates,
+  preparePostMergeCleanup,
+  removeSafeCleanupRef,
   dedupeCleanupCandidates,
-  refreshPostMergeRefs,
 } from "./pull-request-refs.ts";
 import type {
   GitHubCreateReviewResponse,
@@ -461,24 +460,21 @@ export class GitHubPullRequestService {
       );
     }
 
-    const deletedRemoteRefs = await refreshPostMergeRefs(reviewSession);
-    const cleanupCandidates = await buildCleanupCandidates(
-      reviewSession.repositoryRootPath,
-      input.comparison,
-      deletedRemoteRefs,
-    );
+    const { cleanupCandidates, deletedRemoteRefs, refsRefreshError } =
+      await preparePostMergeCleanup(reviewSession, input.comparison);
 
     logDiffdiffInfo("github", "pull_request_merged", {
       cleanupCandidateCount: cleanupCandidates.length,
-      deletedRemoteRefs: deletedRemoteRefs.map((ref) => ref.remoteRef),
+      deletedRemoteRefs,
       mergeMethod: input.method,
       pullRequestNumber: reviewSession.pullRequest.number,
       sha: response.sha,
     });
 
     return {
+      ...(refsRefreshError ? { refsRefreshError } : {}),
       cleanupCandidates,
-      deletedRemoteRefs: deletedRemoteRefs.map((ref) => ref.remoteRef),
+      deletedRemoteRefs,
       message: response.message,
       sha: response.sha,
     };
@@ -489,16 +485,12 @@ export class GitHubPullRequestService {
     refs: readonly GitHubRefCleanupCandidate[],
   ): Promise<void> {
     for (const ref of dedupeCleanupCandidates(refs)) {
-      if (ref.kind === "local-branch") {
-        await runCommand("git", ["branch", "-D", ref.ref], {
-          cwd: repositoryRootPath,
-        });
-        continue;
+      try {
+        await removeSafeCleanupRef(repositoryRootPath, ref);
+      } catch (error) {
+        logDiffdiffError("github", "cleanup_ref_kept", error, { ref: ref.ref, kind: ref.kind });
+        throw error;
       }
-
-      await runCommand("git", ["branch", "-dr", ref.ref], {
-        cwd: repositoryRootPath,
-      });
     }
   }
 

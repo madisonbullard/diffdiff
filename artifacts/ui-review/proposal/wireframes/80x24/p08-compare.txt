@@ -1,0 +1,23 @@
+  Branches  Commits   base main ← head feature                        2/43  esc
+ › Filter branches                                                  / to filter
+   Show  ● Working tree  ● Local 42  ● Open PRs 0  ○ Remote 0
+ ──────────────────────────────────────────────────────────────────────────────
+   ◇ Working tree                             0 files changed
+ › ● feature                            head  head commit for the review …   2d
+   ◆ main                               base  base                           2d
+     topic/0-a-very-long-branch-name-t…       head commit for the review …   3d
+     topic/1-a-very-long-branch-name-t…       head commit for the review …   4d
+     topic/2-a-very-long-branch-name-t…       head commit for the review …   5d
+     topic/3-a-very-long-branch-name-t…       head commit for the review …   6d
+     topic/4-a-very-long-branch-name-t…       head commit for the review …   7d
+     topic/5-a-very-long-branch-name-t…       head commit for the review …   8d
+     topic/6-a-very-long-branch-name-t…       head commit for the review …   9d
+     topic/7-a-very-long-branch-name-t…       head commit for the review …  10d
+     topic/8-a-very-long-branch-name-t…       head commit for the review …  11d
+     topic/9-a-very-long-branch-name-t…       head commit for the review …  12d
+     topic/10-a-very-long-branch-name-…       head commit for the review …  13d
+     topic/11-a-very-long-branch-name-…       head commit for the review …  14d
+     topic/12-a-very-long-branch-name-…       head commit for the review …  15d
+ ──────────────────────────────────────────────────────────────────────────────
+ feature  52eb733 · head of comparison · upstream none · 1 commit ahead of ma…
+ enter set head  b set base  w working tree  f show  tab commits

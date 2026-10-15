@@ -40,7 +40,6 @@ describe("default keymaps", () => {
       "merge-title",
       "merge-body",
       "confirm-merge",
-      "cleanup",
       "clear-reviewed",
       "diagnostics",
     ];

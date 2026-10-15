@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-Vzunw /private/var/folders/42/w3sgx72173zby1  
+   PR  #1 Improve the keyboard-driven review                                    
+                                              space  open                esc    
+                               ┃              Pull request                     ▀
+  │                            ┃  ▼ PR overv  s  Checks · 1 failing             
+  │ 0 / 2 reviewed   +5 / -1   ┃              t  Conversation                   
+                               ┃  Improve th  w  Request reviewers              
+  ┃ ◇ PR overview              ┃              m  Merge                          
+  ┃ ▼ src                  1   ┃  example/re  D  Convert to draft               
+  ┃   M review.ts      +2 -1   ┃              p  Pull request list              
+  ┃ A README.md        +3 -0   ┃  feature →                                     
+                               ┃              Review                            
+                               ┃  ──────────  a  Comment on line                
+                               ┃              A  Submit review                  
+                               ┃                                                
+                               ┃              App                               
+                               ┃              l  Compare                        
+                               ┃              d  Diagnostics                    
+                               ┃              h  Keys                           
+                               ┃              Y  Copy reopen command            
+                               ┃                                                
+                               ┃                                                
+   SPACE   waiting for key                                                      

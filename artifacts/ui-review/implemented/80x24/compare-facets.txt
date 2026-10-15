@@ -1,0 +1,24 @@
+ Compare  main ← feature                                           1/44  escape 
+ Branches Commits                                                               
+ [x] Working tree  [x] Local  [x] PR  [ ] Remote                                
+   Working tree                                                    working-tree 
+   feature/review-00                                               local-branch 
+   feature/review-01                                               local-branch 
+   feature/review-02                                               local-branch 
+   feature/review-03                                               local-branch 
+   feature/review-04                                               local-branch 
+   feature/review-05                                               local-branch 
+   feature/review-06                                               local-branch 
+   feature/review-07                                               local-branch 
+   feature/review-08                                               local-branch 
+   feature/review-09                                               local-branch 
+   feature/review-10                                               local-branch 
+   feature/review-11                                               local-branch 
+   feature/review-12                                               local-branch 
+   feature/review-13                                               local-branch 
+   feature/review-14                                               local-branch 
+   feature/review-15                                               local-branch 
+ Compares the working tree against HEAD.                                        
+                                                                                
+ enter toggle  a all  n none  escape done                                       
+   FILTERS                                                              Ready.  

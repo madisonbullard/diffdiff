@@ -137,7 +137,7 @@ function createReviewComposerController({
     });
   }
 
-  function open(target: ReviewComposerTarget, statusMessage: string): void {
+  function open(target: ReviewComposerTarget, _statusMessage: string): void {
     const historyScope = getReviewComposerHistoryScope(state.session, target);
     const restoredDraft = findLatestDismissedReviewComposerDraft(
       state.reviewComposer.history,
@@ -147,9 +147,7 @@ function createReviewComposerController({
     state.setReviewComposer((currentReviewComposer) =>
       openReviewComposer(currentReviewComposer, target, restoredDraft ?? ""),
     );
-    state.setStatusMessage(
-      restoredDraft == null ? statusMessage : `${statusMessage} Restored draft.`,
-    );
+    if (restoredDraft != null) state.setStatusMessage("Restored comment draft.");
   }
 
   function close(): boolean {
@@ -171,6 +169,8 @@ function createReviewComposerController({
   }
 
   function applyKey(key: KeyboardInput): boolean {
+    if ((key.name === "up" || key.name === "down") && getModels().autocomplete.isVisible)
+      return false;
     let handled = false;
 
     state.setReviewComposer((currentReviewComposer) => {
@@ -351,12 +351,14 @@ function createReviewSubmissionController({
   };
 
   function open(body: string): void {
-    state.setReviewSubmissionInput(createTextInputState(body));
-    state.setReviewSubmissionEventIndex(0);
+    const saved = state.formDraftsRef.current.get(formDraftKey(state.session))?.review;
+    state.setReviewSubmissionInput(createTextInputState(saved?.body ?? body));
+    state.setReviewSubmissionEventIndex(saved?.event ?? 0);
+    state.setReviewSubmissionField("event");
   }
 
   function close(): void {
-    reset();
+    saveFormDraft(state, "review");
   }
 
   function reset(): void {
@@ -445,16 +447,18 @@ function createMergeMessageController({
     defaultMethod?: import("@madisonbullard/diffdiff-core").GitHubMergeMethod;
     title: string;
   }): void {
-    state.setMergeCommitTitleInput(createTextInputState(title));
-    state.setMergeCommitMessageInput(createTextInputState(body));
-    state.setMergeMethod(defaultMethod);
-    state.setMergeAutoMerge(false);
+    const saved = state.formDraftsRef.current.get(formDraftKey(state.session))?.merge;
+    state.setMergeCommitTitleInput(createTextInputState(saved?.title ?? title));
+    state.setMergeCommitMessageInput(createTextInputState(saved?.body ?? body));
+    state.setMergeMethod(saved?.method ?? defaultMethod);
+    state.setMergeAutoMerge(saved?.auto ?? false);
     state.setMergeConfirmOpen(false);
     state.setMergeModalField(defaultMethod == null ? "method" : "title");
   }
 
   function close(): void {
     state.setMergeConfirmOpen(false);
+    saveFormDraft(state, "merge");
   }
 
   function reset(): void {
@@ -462,7 +466,7 @@ function createMergeMessageController({
     state.setMergeCommitMessageInput(createTextInputState());
     state.setMergeMethod(undefined);
     state.setMergeModalField("method");
-    close();
+    state.setMergeConfirmOpen(false);
   }
 
   function cycleField(): void {
@@ -543,3 +547,4 @@ function createMergeMessageController({
     return handled;
   }
 }
+import { formDraftKey, saveFormDraft } from "./form-drafts.ts";

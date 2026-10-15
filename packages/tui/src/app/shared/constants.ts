@@ -7,7 +7,6 @@ export const FOOTER_HEIGHT_ROWS = 1;
 export const SHELL_OVERLAY_MARGIN = 2;
 export const ERROR_TOAST_Z_INDEX = 60;
 export const GITHUB_DIALOGS = new Set<import("../dialogs/stack.ts").AppDialog>([
-  "cleanup",
   "comment-composer",
   "comments",
   "merge",

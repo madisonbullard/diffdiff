@@ -1,6 +1,6 @@
-import { KeyCap, ModalFrame, SPLIT_BORDER } from "../components/shared.tsx";
 import type { UiTheme } from "../theme.ts";
-
+import { DialogPanel } from "../components/dialog/panel.tsx";
+import * as A from "../app/keymap/actions.ts";
 export function ClearReviewedConfirmModal({
   reviewedCount,
   theme,
@@ -8,40 +8,23 @@ export function ClearReviewedConfirmModal({
   reviewedCount: number;
   theme: UiTheme;
 }) {
-  const fileLabel = reviewedCount === 1 ? "file" : "files";
-
   return (
-    <ModalFrame
+    <DialogPanel
       title="Clear Review Marks"
-      subtitle={`Remove the reviewed state from ${reviewedCount} ${fileLabel}?`}
+      family="confirm"
+      contentRows={9}
+      tone="warning"
+      status="Only review marks change; files and comments are kept."
       theme={theme}
-      maxWidth={68}
-      width="58%"
-      zIndex={56}
-      headerRight={
-        <text fg={theme.textMuted} wrapMode="none">
-          <KeyCap label="enter" theme={theme} />
-          <span>{" confirm  "}</span>
-          <KeyCap label="esc / q" theme={theme} />
-          <span>{" cancel"}</span>
-        </text>
-      }
+      actions={[
+        { action: A.CLEAR_REVIEWED_CONFIRM, label: "clear marks", primary: true, warning: true },
+        { action: A.MODAL_DISMISS, label: "cancel" },
+      ]}
     >
-      <box
-        width="100%"
-        border={["left"]}
-        customBorderChars={SPLIT_BORDER}
-        borderColor={theme.warning}
-        backgroundColor={theme.surface}
-        paddingLeft={2}
-        paddingRight={1}
-        paddingTop={1}
-        paddingBottom={1}
-      >
-        <text fg={theme.textMuted} wrapMode="word">
-          This keeps the current comparison open, but every file will be marked unreviewed.
-        </text>
-      </box>
-    </ModalFrame>
+      <text
+        fg={theme.text}
+        wrapMode="word"
+      >{`Remove the reviewed state from ${reviewedCount} ${reviewedCount === 1 ? "file" : "files"}?\nThe comparison stays open.`}</text>
+    </DialogPanel>
   );
 }

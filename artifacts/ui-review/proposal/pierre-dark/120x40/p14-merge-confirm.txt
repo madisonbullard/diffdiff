@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                                                                                                       ▀
+  │           ▲ Merge #1  feature → main · Improve the keyboard-driven review workflow                 esc   reviewed   
+  │ 0 / 2 re  Method   ● Squash   ○ Merge commit   (rebase is not supported by diffdiff)                                
+  │           Options  [ ] Auto-merge when requirements pass                                        ctrl+g              
+                       [x] Clean up local refs after merge                         feature, origin/feature              
+  ┃ ◇ PR ove  ────────────────────────────────────────────────────────────────────────────────────────────              
+  ┃ ▼ src     Title    Improve the keyboard-driven review workflow (#1)                                                 
+  ┃   M revi                                                                                                            
+  ┃ A README  Body     ## Summary                                                                                       
+                       Make review navigation faster and keep actions discoverable.                         ─────────   
+                       - Preserve keyboard-first interactions                                                           
+                       - Clarify destructive actions                                                                    
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+              ▲ Squash-merge #1 into main, then clean up local refs? 1 check is failing.                                
+              enter confirm squash-merge  esc back to edit                                                              
+                                                                                                                        
+                                     ┃                                                                                  
+                                     ┃  ▼ src/review.ts                                              CHANGED  +2 / -1   
+                                     ┃                                                                                  
+                                     ┃  @@ -1,3 +1,4 @@                                                                 
+                                     ┃       1   export function review() {                                             
+                                     ┃       2 -   return false;                                                        
+                                     ┃   ┃   2 +   // Keep the review workflow keyboard-first.                          
+                                     ┃   ┃   3 +   return true;                                                         
+                                     ┃  ┃ ▼ reviewer  │  src/review.ts:2-3                                   1 comment  
+                                     ┃                                                                                  
+                                     ┃    40 weeks ago: Could we explain why this defaults to true?                     
+                                     ┃                                                                                  
+                                     ┃       4   }                                                                      
+                                     ┃                                                                                  
+   MERGE                                                                                                                

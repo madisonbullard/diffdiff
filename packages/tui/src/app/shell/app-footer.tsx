@@ -35,10 +35,12 @@ export function AppFooter({
         <text wrapMode="none">
           <Tag label={footerModeBadge.label} fg={footerModeBadge.fg} bg={footerModeBadge.bg} />
         </text>
-        <text fg={theme.textMuted} wrapMode="none">
-          <span fg={theme.accent} bg={theme.surfaceMuted}>{` ${helpLabel} `}</span>
-          <span>{" help"}</span>
-        </text>
+        {helpLabel ? (
+          <text fg={theme.textMuted} wrapMode="none">
+            <span fg={theme.accent} bg={theme.surfaceMuted}>{` ${helpLabel} `}</span>
+            <span>{footerModeBadge.label === "KEYS" ? " commands" : " keys"}</span>
+          </text>
+        ) : null}
       </box>
       <box flexGrow={1} flexDirection="row" justifyContent="flex-end" alignItems="center" gap={1}>
         {showLoadingIndicator ? <AsciiLoadingPane theme={theme} /> : null}

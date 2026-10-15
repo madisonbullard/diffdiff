@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                                                                                                       ▀
+  │           Commands                                                                         esc  close  k reviewed   
+  │ 0 / 2 rev Fuzzy filter or browse available diffdiff actions.                                                        
+  │                                                                                                                     
+              ┃                                                                                                         
+  ┃ ◇ PR over ┃  fuzzy filter:  type to fuzzy filter commands                                                           
+  ┃ ▼ src                                                                                                               
+  ┃   M revie ┃                                                                                                         
+  ┃ A README. ┃ › Browseotherworkingstree, branches, PRs, and commits.    l  /  ctrl+x   l  /  space   l                
+              ┃   Createvaereviewecomment on the selected diff line.      a  /  ctrl+x   a  /  space   a   ──────────   
+              ┃   Browseiyour openiand review-requested pull requests     p  /  ctrl+x   p  /  space   p                
+              ┃   ReviewRpullcrequest checks, failures, and status details.     ctrl+x   s  /  space   s                
+              ┃   Show thecpullnrequest conversation timeline.            t  /  ctrl+x   t  /  space   t                
+              ┃   Submit theipending review to          shift+a  /  ctrl+x   shift+a  /  space   shift+a                
+              ┃   Jump to thetnextefileethatlis not marked reviewed.                    u  /  ctrl+x   u                
+              ┃   Markltheeselected file as reviewed or not reviewed.             r  /  x  /  ctrl+x   r                
+              ┃   Show keyboard shortcuts and usage        ?  /  ctrl+x   ?  /  ctrl+x   h  /  space   h                
+              ┃   Movecfocusibetween the file tree and diff panes.                                   tab                
+              ┃   Reloadhrefs,abranches, and pull request metadata.         shift+r  /  ctrl+x   shift+r                
+              ┃   Toggletthe openrpull request between draft and    ctrl+x   shift+d  /  space   shift+d                
+              ┃   Copy theUcurrent pull request URL to the clipboard.                   y  /  ctrl+x   y                
+              ┃   Collapseooraexpand the selected file diff.                      c  /  z  /  ctrl+x   c                
+              ┃   Inspectathesfull event log for the current session.     d  /  ctrl+x   d  /  space   d   D  +2 / -1   
+              ┃   Copy diffdiff CLI command for this    shift+y  /  ctrl+x   shift+y  /  space   shift+y                
+              ┃ seCopyna shell command that reopens                                                                     
+              ┃   Nopfocusedereviewecomment is available in the selected file.                         y                
+              ┃   Nopfocusedoreviewtcomment is available in the selected file.                         r                
+              ┃   GitHublPRrreviewed state can only be updated one file at a time.                unbound               
+              ┃   GitHub PRlrevieweddstate can only be updated one file at a    alt+r  /  ctrl+x   alt+r                
+              ┃   Noefilecisefocusedirighttnow.                                         e  /  ctrl+x   e     1 comment  
+              ┃                                                                                                         
+                                                                                                                        
+              ┃                                                                                                         
+              ┃   up / down  move   enter  run   leader+j/k  move while typing          comparison.list                 
+                                                                                                                        
+   CMDS    ?  help                                                                             Opened command palette.  

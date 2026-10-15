@@ -1,0 +1,302 @@
+[
+  {
+    "name": "00-overview",
+    "size": "120x40",
+    "description": "PR overview and application chrome"
+  },
+  {
+    "name": "01-space-menu",
+    "size": "120x40",
+    "description": "Space action menu"
+  },
+  {
+    "name": "02-leader-menu",
+    "size": "120x40",
+    "description": "Ctrl+X action menu"
+  },
+  {
+    "name": "03-goto-menu",
+    "size": "120x40",
+    "description": "Go-to navigation menu"
+  },
+  {
+    "name": "04-in-file-menu",
+    "size": "120x40",
+    "description": "In-file navigation prefix"
+  },
+  {
+    "name": "05-command-palette",
+    "size": "120x40",
+    "description": "Command palette"
+  },
+  {
+    "name": "06-help-diff",
+    "size": "120x40",
+    "description": "Help from diff pane"
+  },
+  {
+    "name": "07-help-tree",
+    "size": "120x40",
+    "description": "Help from tree pane"
+  },
+  {
+    "name": "08-compare-branches",
+    "size": "120x40",
+    "description": "Comparison browser: branches"
+  },
+  {
+    "name": "09-branch-filters",
+    "size": "120x40",
+    "description": "Branch filters"
+  },
+  {
+    "name": "10-compare-commits",
+    "size": "120x40",
+    "description": "Comparison browser: commits"
+  },
+  {
+    "name": "11-commit-search",
+    "size": "120x40",
+    "description": "Commit search input"
+  },
+  {
+    "name": "12-pull-requests",
+    "size": "120x40",
+    "description": "PR dashboard list"
+  },
+  {
+    "name": "13-pull-request-search",
+    "size": "120x40",
+    "description": "PR dashboard search"
+  },
+  {
+    "name": "14-reviewer-picker",
+    "size": "120x40",
+    "description": "Reviewer picker with requested and suggested users"
+  },
+  {
+    "name": "15-reviewer-selected",
+    "size": "120x40",
+    "description": "Reviewer picker with a pending selection"
+  },
+  {
+    "name": "16-checks",
+    "size": "120x40",
+    "description": "Checks list and failure details"
+  },
+  {
+    "name": "17-conversation",
+    "size": "120x40",
+    "description": "PR conversation"
+  },
+  {
+    "name": "18-pr-comment",
+    "size": "120x40",
+    "description": "PR conversation reply composer"
+  },
+  {
+    "name": "19-inline-comment",
+    "size": "120x40",
+    "description": "Inline code comment composer"
+  },
+  {
+    "name": "18b-file-autocomplete",
+    "size": "120x40",
+    "description": "Changed-file autocomplete menu inside composer"
+  },
+  {
+    "name": "20-thread-reply",
+    "size": "120x40",
+    "description": "Inline thread reply composer"
+  },
+  {
+    "name": "21-submit-review",
+    "size": "120x40",
+    "description": "Review submission and event choices"
+  },
+  {
+    "name": "22-diagnostics",
+    "size": "120x40",
+    "description": "Session diagnostics list and event details"
+  },
+  {
+    "name": "23-clear-reviewed",
+    "size": "120x40",
+    "description": "Clear local reviewed-state confirmation (not available for PRs)"
+  },
+  {
+    "name": "24-merge",
+    "size": "120x40",
+    "description": "Merge picker, title, body, and auto-merge option"
+  },
+  {
+    "name": "25-confirm-merge",
+    "size": "120x40",
+    "description": "Immediate merge confirmation"
+  },
+  {
+    "name": "26-auto-merge",
+    "size": "120x40",
+    "description": "Merge picker with auto-merge enabled"
+  },
+  {
+    "name": "27-confirm-auto-merge",
+    "size": "120x40",
+    "description": "Auto-merge confirmation (title clips at compact size)"
+  },
+  {
+    "name": "28-cleanup",
+    "size": "120x40",
+    "description": "Post-merge cleanup: local and remote-tracking refs"
+  },
+  {
+    "name": "00-overview",
+    "size": "80x24",
+    "description": "PR overview and application chrome"
+  },
+  {
+    "name": "01-space-menu",
+    "size": "80x24",
+    "description": "Space action menu"
+  },
+  {
+    "name": "02-leader-menu",
+    "size": "80x24",
+    "description": "Ctrl+X action menu"
+  },
+  {
+    "name": "03-goto-menu",
+    "size": "80x24",
+    "description": "Go-to navigation menu"
+  },
+  {
+    "name": "04-in-file-menu",
+    "size": "80x24",
+    "description": "In-file navigation prefix"
+  },
+  {
+    "name": "05-command-palette",
+    "size": "80x24",
+    "description": "Command palette"
+  },
+  {
+    "name": "06-help-diff",
+    "size": "80x24",
+    "description": "Help from diff pane"
+  },
+  {
+    "name": "07-help-tree",
+    "size": "80x24",
+    "description": "Help from tree pane"
+  },
+  {
+    "name": "08-compare-branches",
+    "size": "80x24",
+    "description": "Comparison browser: branches"
+  },
+  {
+    "name": "09-branch-filters",
+    "size": "80x24",
+    "description": "Branch filters"
+  },
+  {
+    "name": "10-compare-commits",
+    "size": "80x24",
+    "description": "Comparison browser: commits"
+  },
+  {
+    "name": "11-commit-search",
+    "size": "80x24",
+    "description": "Commit search input"
+  },
+  {
+    "name": "12-pull-requests",
+    "size": "80x24",
+    "description": "PR dashboard list"
+  },
+  {
+    "name": "13-pull-request-search",
+    "size": "80x24",
+    "description": "PR dashboard search"
+  },
+  {
+    "name": "14-reviewer-picker",
+    "size": "80x24",
+    "description": "Reviewer picker with requested and suggested users"
+  },
+  {
+    "name": "15-reviewer-selected",
+    "size": "80x24",
+    "description": "Reviewer picker with a pending selection"
+  },
+  {
+    "name": "16-checks",
+    "size": "80x24",
+    "description": "Checks list and failure details"
+  },
+  {
+    "name": "17-conversation",
+    "size": "80x24",
+    "description": "PR conversation"
+  },
+  {
+    "name": "18-pr-comment",
+    "size": "80x24",
+    "description": "PR conversation reply composer"
+  },
+  {
+    "name": "19-inline-comment",
+    "size": "80x24",
+    "description": "Inline code comment composer"
+  },
+  {
+    "name": "18b-file-autocomplete",
+    "size": "80x24",
+    "description": "Changed-file autocomplete menu inside composer"
+  },
+  {
+    "name": "20-thread-reply",
+    "size": "80x24",
+    "description": "Inline thread reply composer"
+  },
+  {
+    "name": "21-submit-review",
+    "size": "80x24",
+    "description": "Review submission and event choices"
+  },
+  {
+    "name": "22-diagnostics",
+    "size": "80x24",
+    "description": "Session diagnostics list and event details"
+  },
+  {
+    "name": "23-clear-reviewed",
+    "size": "80x24",
+    "description": "Clear local reviewed-state confirmation (not available for PRs)"
+  },
+  {
+    "name": "24-merge",
+    "size": "80x24",
+    "description": "Merge picker, title, body, and auto-merge option"
+  },
+  {
+    "name": "25-confirm-merge",
+    "size": "80x24",
+    "description": "Immediate merge confirmation"
+  },
+  {
+    "name": "26-auto-merge",
+    "size": "80x24",
+    "description": "Merge picker with auto-merge enabled"
+  },
+  {
+    "name": "27-confirm-auto-merge",
+    "size": "80x24",
+    "description": "Auto-merge confirmation (title clips at compact size)"
+  },
+  {
+    "name": "28-cleanup",
+    "size": "80x24",
+    "description": "Post-merge cleanup: local and remote-tracking refs"
+  }
+]

@@ -1,0 +1,7 @@
+
+  ▲ Clear review marks                                     esc
+  1 reviewed file becomes unreviewed. Local only; the
+  comparison stays open.
+
+  enter clear 1 file  esc cancel
+

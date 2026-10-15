@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-i4b2jt  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Make terminal reviews clear, fast, and safe  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                                                                                                       ▀
+    PR Checks  #1 · 1 failed · 1 pending · 0 passed                                                           escape    
+    › ✗ Type checking                        failure  Type checking                                                     
+      ◐ Build packages                        queued  GitHub Actions · failure                                          
+                                                      One type error in src/review.ts:3.                                
+                                                      Run vp check before merging.                                      
+                                                      https://github.com/example/repo/actions/runs/1                    
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+    r refresh  tab focus details  pagedown scroll details  down move  y copy link                                       
+                                                                                                                        
+                                                                                                                        
+   CHECKS                                                                 Modal Picker mode active. Awaiting next key.  

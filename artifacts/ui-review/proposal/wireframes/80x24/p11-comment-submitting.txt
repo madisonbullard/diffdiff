@@ -1,0 +1,23 @@
+ Comment  src/review.ts line 2 (removed) · pending review                   esc
+   2 -   return false;
+ ──────────────────────────────────────────────────────────────────────────────
+ Why does this default to true now? The old behaviour returned false
+ for empty sessions — see README.md before we merge.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ◐ Adding comment to your pending review…
+ esc close (keeps sending)  enter add comment

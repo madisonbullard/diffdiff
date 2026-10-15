@@ -44,6 +44,9 @@ export interface AppHarness {
   height: number;
   /** Press keys one at a time and wait for the app to settle after each. */
   press: (...keys: KeyInput[]) => Promise<ActionReport>;
+  /** Deliver a terminal input burst without a React commit between keys. */
+  burst: (...keys: KeyInput[]) => Promise<ActionReport>;
+  paste: (text: string) => Promise<ActionReport>;
   click: (x: number, y: number) => Promise<void>;
   /** Paint frames until the output stops changing. */
   settle: () => Promise<ActionReport>;
@@ -172,6 +175,11 @@ export async function launchApp(
       }
       return report!;
     },
+    burst: (...keys) =>
+      measure(() => {
+        for (const key of keys) setup.mockInput.pressKey(key);
+      }),
+    paste: (text) => measure(() => setup.mockInput.pasteBracketedText(text)),
     renderableCount: () => countRenderables(setup.renderer.root),
     async waitFor(condition) {
       const deadline = performance.now() + 10000;

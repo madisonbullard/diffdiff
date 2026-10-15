@@ -1,0 +1,206 @@
+[
+  {
+    "name": "commands",
+    "size": "120x40"
+  },
+  {
+    "name": "keys",
+    "size": "120x40"
+  },
+  {
+    "name": "compare",
+    "size": "120x40"
+  },
+  {
+    "name": "compare-facets",
+    "size": "120x40"
+  },
+  {
+    "name": "pull-requests",
+    "size": "120x40"
+  },
+  {
+    "name": "reviewers",
+    "size": "120x40"
+  },
+  {
+    "name": "reviewers-selected",
+    "size": "120x40"
+  },
+  {
+    "name": "conversation",
+    "size": "120x40"
+  },
+  {
+    "name": "checks",
+    "size": "120x40"
+  },
+  {
+    "name": "diagnostics",
+    "size": "120x40"
+  },
+  {
+    "name": "submit-review",
+    "size": "120x40"
+  },
+  {
+    "name": "merge",
+    "size": "120x40"
+  },
+  {
+    "name": "merge-confirm",
+    "size": "120x40"
+  },
+  {
+    "name": "auto-merge-confirm",
+    "size": "120x40"
+  },
+  {
+    "name": "comment",
+    "size": "120x40"
+  },
+  {
+    "name": "comment-files",
+    "size": "120x40"
+  },
+  {
+    "name": "space-menu",
+    "size": "120x40"
+  },
+  {
+    "name": "goto-menu",
+    "size": "120x40"
+  },
+  {
+    "name": "commands",
+    "size": "80x24"
+  },
+  {
+    "name": "keys",
+    "size": "80x24"
+  },
+  {
+    "name": "compare",
+    "size": "80x24"
+  },
+  {
+    "name": "compare-facets",
+    "size": "80x24"
+  },
+  {
+    "name": "pull-requests",
+    "size": "80x24"
+  },
+  {
+    "name": "reviewers",
+    "size": "80x24"
+  },
+  {
+    "name": "reviewers-selected",
+    "size": "80x24"
+  },
+  {
+    "name": "conversation",
+    "size": "80x24"
+  },
+  {
+    "name": "checks",
+    "size": "80x24"
+  },
+  {
+    "name": "diagnostics",
+    "size": "80x24"
+  },
+  {
+    "name": "submit-review",
+    "size": "80x24"
+  },
+  {
+    "name": "merge",
+    "size": "80x24"
+  },
+  {
+    "name": "merge-confirm",
+    "size": "80x24"
+  },
+  {
+    "name": "auto-merge-confirm",
+    "size": "80x24"
+  },
+  {
+    "name": "comment",
+    "size": "80x24"
+  },
+  {
+    "name": "comment-files",
+    "size": "80x24"
+  },
+  {
+    "name": "space-menu",
+    "size": "80x24"
+  },
+  {
+    "name": "goto-menu",
+    "size": "80x24"
+  },
+  {
+    "name": "commands",
+    "size": "58x16"
+  },
+  {
+    "name": "keys",
+    "size": "58x16"
+  },
+  {
+    "name": "compare",
+    "size": "58x16"
+  },
+  {
+    "name": "compare-facets",
+    "size": "58x16"
+  },
+  {
+    "name": "pull-requests",
+    "size": "58x16"
+  },
+  {
+    "name": "reviewers",
+    "size": "58x16"
+  },
+  {
+    "name": "reviewers-selected",
+    "size": "58x16"
+  },
+  {
+    "name": "conversation",
+    "size": "58x16"
+  },
+  {
+    "name": "checks",
+    "size": "58x16"
+  },
+  {
+    "name": "diagnostics",
+    "size": "58x16"
+  },
+  {
+    "name": "submit-review",
+    "size": "58x16"
+  },
+  {
+    "name": "merge",
+    "size": "58x16"
+  },
+  {
+    "name": "comment",
+    "size": "58x16"
+  },
+  {
+    "name": "space-menu",
+    "size": "58x16"
+  },
+  {
+    "name": "goto-menu",
+    "size": "58x16"
+  }
+]

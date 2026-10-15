@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-i4b2j /private/var/folders/42/w3sgx72173zby1  
+   PR  #1 Make terminal reviews clear, fast, and1 check failed  │  merge ready  
+                                                                                
+                               ┃                                                
+  │                                                                             
+  │ 0 / 1 reviewed   +6 / -0   ┃                                                
+                               ┃  ▼ src/review.ts              ADDED  +6 / -0   
+  ┃ ◇ PR overview              ┃                                                
+  ┃ ▼ src                  1   ┃       1 + // review line 1                     
+  ┃   A review.ts      +6 -0   ┃  ▶    2 + // review line 2                    █
+                               ┃       3 + // review line 3                    █
+                               ┃      Goto  ·  esc cancel                      █
+                               ┃      g  Jump to first file                    █
+                               ┃      e  Jump to last file                     █
+                               ┃      t  Jump to top                           █
+                                      c  Jump to center                        ▀
+                                      b  Jump to bottom                         
+                                      n  Jump to next hunk                      
+                                      p  Jump to previous hunk                  
+                                      a  Jump to alternate file                 
+                                      Press a key to jump around the comparis…  
+                                                                                
+   GOTO    ?  keys                        Goto mode active. Awaiting next key.  

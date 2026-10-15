@@ -6,7 +6,13 @@ import * as A from "./actions.ts";
 const root = new MutableTrieNode();
 for (const [key, action] of [
   ["escape", A.MODAL_DISMISS],
+  ["home", A.LIST_FIRST],
+  ["end", A.LIST_LAST],
+  ["pagedown", A.LIST_PAGE_DOWN],
+  ["pageup", A.LIST_PAGE_UP],
   ["down", A.LIST_MOVE_DOWN],
+  ["ctrl+n", A.LIST_MOVE_DOWN],
+  ["ctrl+p", A.LIST_MOVE_UP],
   ["up", A.LIST_MOVE_UP],
   ["return", A.LIST_ACCEPT],
   ["backspace", A.TEXT_BACKSPACE],

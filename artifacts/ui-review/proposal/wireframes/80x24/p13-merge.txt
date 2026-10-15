@@ -1,0 +1,23 @@
+ Merge #1  feature → main · Improve the keyboard-driven review workflow     esc
+ Method   ● Squash   ○ Merge commit   (rebase is not supported by diffdiff)
+ Options  [ ] Auto-merge when requirements pass                          ctrl+g
+          [x] Clean up local refs after merge           feature, origin/feature
+ ──────────────────────────────────────────────────────────────────────────────
+ Title    Improve the keyboard-driven review workflow (#1)
+
+ Body     ## Summary
+          Make review navigation faster and keep actions discoverable.
+          - Preserve keyboard-first interactions
+          - Clarify destructive actions
+
+
+
+
+
+
+
+
+
+
+ ▲ 1 check failing · 1 running · review required
+ enter squash-merge…  tab next field  ctrl+g auto-merge  ctrl+x e editor

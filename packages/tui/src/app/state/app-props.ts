@@ -2,7 +2,6 @@ import { updateDiffdiffSessionActivity } from "@madisonbullard/diffdiff-core";
 import type {
   ReviewComposerHistoryEntry,
   DiffdiffPreferences,
-  GitHubCleanupPreferences,
   GitHubDashboardPullRequest,
   GitHubPullRequestMergeRequest,
   GitHubPullRequestMergeResult,
@@ -124,7 +123,10 @@ export interface DiffdiffAppPersistenceApi {
     error: unknown,
     fallbackMessage: string,
     context: Record<string, unknown>,
-    options?: { displayMessage?: string },
+    options?: {
+      displayMessage?: string;
+      dialogOwner?: import("../dialogs/stack.ts").AppDialogStackEntry | null;
+    },
   ) => void;
   handleAppFailure: (message: string, context: Record<string, unknown>) => void;
   persistDiffdiffPreferences: (nextPreferences: DiffdiffPreferences) => Promise<void>;
@@ -132,7 +134,4 @@ export interface DiffdiffAppPersistenceApi {
   scheduleReviewCacheSave: (key: ReviewCacheKey, state: ReviewCacheState, delayMs?: number) => void;
   scheduleSessionActivity: (activity: SessionActivityUpdate, delayMs?: number) => void;
   showToast: (message: string) => void;
-  updateCleanupSelection: (
-    updater: (currentSelection: GitHubCleanupPreferences) => GitHubCleanupPreferences,
-  ) => void;
 }

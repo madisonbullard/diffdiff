@@ -47,6 +47,7 @@ function createHarness(): {
   state: import("../src/app/state/use-app-state.ts").DiffdiffAppState;
 } {
   const state = {
+    setBranchListIndex: () => undefined,
     commandIndex: 0,
     commandInput: createTextInputState(),
     commitListIndex: 0,

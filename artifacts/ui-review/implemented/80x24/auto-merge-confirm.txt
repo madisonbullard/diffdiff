@@ -1,0 +1,24 @@
+ ▲ Enable Auto-Merge  #1 · feature → main                                escape 
+ Method  ○ Merge commit   ● Squash merge                                        
+ Commit title                                                                   
+ Make terminal reviews clear, fast, and safe                                    
+ Commit message                                                                 
+ ## Summary                                                                     
+ Unify terminal menus and dialogs.                                              
+                                                                                
+ Keep keyboard workflows fast.                                                  
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ [x] Auto-merge                                                                 
+ [ ] Clean up local refs after merge · unavailable with auto-merge              
+ GitHub merges when checks and review requirements pass. No local cleanup runs  
+ later.                                                                         
+ ▲ Press Enter to enable auto-merge. GitHub will wait for requirements to pass. 
+ enter enable auto-merge  escape back to editing                                
+   CONFIRM               Press enter again to confirm enabling auto-merge w...  

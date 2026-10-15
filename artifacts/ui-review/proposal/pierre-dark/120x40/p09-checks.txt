@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                                                                                                       ▀
+  │   Checks  #1 · 52eb733 · ✗ 1 failed  ◐ 1 running  ✓ 1 passed                                          1/3  esc  d   
+  │   › ✗ Type checking                 failed │ ✗ Type checking  failed · GitHub Actions · 4m 12s                      
+  │     ◐ Build packages               running │                                                                        
+        ✓ Unit tests                    passed │ Type checking failed                                                   
+  ┃                                            │                                                                        
+  ┃                                            │ src/review.ts:3 — Expected a documented default.                       
+  ┃                                            │ Run vp check before merging.                                           
+  ┃                                            │                                                                        
+                                               │ https://github.com/example/repo/actions/runs/1                     ─   
+                                               │                                                                        
+                                               │                                                                        
+                                               │                                                                        
+                                               │                                                                        
+      y copy link  ↑↓ select  pgup/pgdn scroll details  r refresh                                                       
+                                                                                                                        
+                                     ┃                                                                                  
+                                     ┃                                                                                  
+                                     ┃  View pull request on GitHub ↗                                                   
+                                     ┃                                                                                  
+                                                                                                                        
+                                     ┃                                                                                  
+                                     ┃  ▼ src/review.ts                                              CHANGED  +2 / -1   
+                                     ┃                                                                                  
+                                     ┃  @@ -1,3 +1,4 @@                                                                 
+                                     ┃       1   export function review() {                                             
+                                     ┃       2 -   return false;                                                        
+                                     ┃   ┃   2 +   // Keep the review workflow keyboard-first.                          
+                                     ┃   ┃   3 +   return true;                                                         
+                                     ┃  ┃ ▼ reviewer  │  src/review.ts:2-3                                   1 comment  
+                                     ┃                                                                                  
+                                     ┃    40 weeks ago: Could we explain why this defaults to true?                     
+                                     ┃                                                                                  
+                                     ┃       4   }                                                                      
+                                     ┃                                                                                  
+   CHECKS                                                                                                               

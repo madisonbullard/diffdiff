@@ -73,7 +73,6 @@ export function useDiffdiffAppLifecycle({
 
   useEffect(() => {
     if (state.session.github == null) {
-      state.setCleanupCandidates([]);
       state.setMergeConfirmOpen(false);
       state.setReviewComposer((currentReviewComposer) =>
         clearReviewComposer(currentReviewComposer),
@@ -85,7 +84,6 @@ export function useDiffdiffAppLifecycle({
     }
   }, [
     state.session.github,
-    state.setCleanupCandidates,
     state.setDialogStack,
     state.setMergeConfirmOpen,
     state.setReviewComposer,

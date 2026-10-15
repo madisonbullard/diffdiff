@@ -1,0 +1,16 @@
+  Commands  Keys   Resolved bindings · in…  1/298  escape 
+  Search keys, modes, or actions…                         
+   diff                                                   
+ › scroll page down                              pagedown 
+   scroll page up                                  pageup 
+   scroll half page down                           ctrl+d 
+   scroll half page up                             ctrl+u 
+   system command palette                          ctrl+p 
+   system help               ? / ctrl+x ? / ctrl+x h / s… 
+   system diagnostics              d / ctrl+x d / space d 
+   view pane toggle                                   tab 
+   review next file                              j / down 
+   review previous file                            k / up 
+ Ctrl+X is a silent leader. Space, g, and s show next-ke… 
+ down move  tab commands                                  
+   KEYS    tab  commands                          Ready.  

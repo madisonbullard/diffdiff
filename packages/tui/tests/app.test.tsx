@@ -44,6 +44,7 @@ const prepareReviewSessionState = vi.hoisted(() => ({
 
 type MockRenderer = {
   root?: MockRenderer;
+  keyInput?: MockRenderer;
   clearSelection: () => void;
   getSelection: () => null;
   on: (event: string, handler: (...args: unknown[]) => void) => MockRenderer;
@@ -85,6 +86,7 @@ const rendererState = vi.hoisted(() => {
   };
 
   renderer.root = renderer;
+  renderer.keyInput = renderer;
   return { renderer };
 });
 
@@ -98,6 +100,9 @@ const renderedTrees = new Set<ReactTestRenderer>();
 
 vi.mock("@opentui/react", () => {
   return {
+    flushSync(callback: () => void) {
+      callback();
+    },
     useKeyboard(handler: (key: KeyboardInput) => void) {
       registeredKeyboardHandlers.add(handler);
     },
@@ -146,16 +151,23 @@ beforeEach(() => {
     .mockReset()
     .mockImplementation(async (files) => files);
   vi.spyOn(diffdiffCore, "loadReviewCache").mockResolvedValue(undefined);
+  vi.spyOn(diffdiffCore, "saveDiffdiffPreferences").mockResolvedValue(undefined);
+  vi.spyOn(diffdiffCore, "loadDiffdiffPreferences").mockResolvedValue(
+    diffdiffCore.getDefaultDiffdiffPreferences(),
+  );
   vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 
-afterEach(() => {
+afterEach(async () => {
   act(() => {
     for (const tree of renderedTrees) tree.unmount();
   });
   renderedTrees.clear();
   registeredKeyboardHandlers.clear();
   vi.useRealTimers();
+  await act(async () => {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  });
   vi.restoreAllMocks();
 });
 
@@ -389,7 +401,7 @@ test("reviewer picker retains selection on mutation failure and can retry", asyn
   expect(tree.root.findAllByType(ReviewerPickerModal)).toHaveLength(0);
 });
 
-test("reviewer picker blocks duplicate submissions and cancellation while requests are in flight", async () => {
+test("reviewer picker blocks duplicate submissions but Esc backgrounds requests", async () => {
   const pending = createDeferred<void>();
   const requestReviewers = vi.fn(() => pending.promise);
   const tree = render(<DiffdiffApp {...createReviewerAppProps({ requestReviewers })} />);
@@ -399,7 +411,8 @@ test("reviewer picker blocks duplicate submissions and cancellation while reques
   emitKey({ ctrl: true, name: "s" });
   emitKey({ name: "escape" });
   expect(requestReviewers).toHaveBeenCalledTimes(1);
-  expect(getAppText(tree)).toContain("Sending requests; please wait");
+  expect(getAppText(tree)).toContain("Requesting reviewers in the background");
+  expect(getAppText(tree)).not.toContain("Filter by name or username");
   await act(async () => pending.resolve());
 });
 
@@ -531,7 +544,7 @@ test("opens the command palette with ctrl+p and runs the selected command", () =
   emitText("list");
   emitKey({ name: "return" });
 
-  expect(getAppText(tree)).toContain("Opened list modal.");
+  expect(getAppText(tree)).toContain("Compare");
   expect(getAppText(tree)).toContain("Working tree");
 });
 
@@ -562,8 +575,8 @@ test("derives help labels from the resolved live keymap", () => {
 
   emitKey({ shift: true, name: "/", sequence: "?" });
 
-  expect(getAppText(tree)).toContain("Help");
-  expect(getAppText(tree)).toContain("l / z / ctrl+x l / space l");
+  expect(getAppText(tree)).toContain("Keys");
+  expect(getAppText(tree)).toContain("z / ctrl+x l / space l");
 });
 
 test("opens help when opentui reports a raw question-mark key", () => {
@@ -571,19 +584,18 @@ test("opens help when opentui reports a raw question-mark key", () => {
 
   emitKey({ name: "?", sequence: "?" });
 
-  expect(getAppText(tree)).toContain("Help");
-  expect(getAppText(tree)).toContain("All keyboard shortcuts by mode.");
-  expect(getAppText(tree)).toContain("Opened help.");
+  expect(getAppText(tree)).toContain("Keys");
+  expect(getAppText(tree)).toContain("Resolved bindings");
+  expect(getAppText(tree)).not.toContain("Opened help.");
 });
 
-test("updates the footer status when help closes", () => {
+test("closing Keys leaves the last outcome unchanged", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 
   emitKey({ name: "?", sequence: "?" });
-  emitKey({ name: "q", sequence: "q" });
-
-  expect(getAppText(tree)).toContain("Closed help.");
-  expect(getAppText(tree)).not.toContain("Help");
+  emitKey({ name: "escape" });
+  expect(getAppText(tree)).toContain("Ready.");
+  expect(getAppText(tree)).not.toContain("Search keys");
 });
 
 test("treats j as query text inside the command palette", () => {
@@ -629,7 +641,7 @@ test("supports cmd+backspace line deletion inside the command palette", () => {
   emitText("alpha beta");
   emitKey({ super: true, name: "backspace" });
 
-  expect(getAppText(tree)).toContain("type to fuzzy filter commands");
+  expect(getAppText(tree)).toContain("Search commands");
   expect(getAppText(tree)).not.toContain('Filtering commands for "alpha beta".');
 });
 
@@ -639,7 +651,7 @@ test("closes nested list filters back to the list modal", () => {
   emitKey({ name: "l" });
   emitKey({ name: "f", sequence: "f" });
 
-  expect(getAppText(tree)).toContain("Filters");
+  expect(getAppText(tree)).toContain("toggle");
   expect(getAppText(tree)).not.toContain(
     "Browse working tree changes, branches, and open pull requests.",
   );
@@ -647,10 +659,8 @@ test("closes nested list filters back to the list modal", () => {
   emitKey({ name: "escape" });
 
   expect(getAppText(tree)).not.toContain("Filters");
-  expect(getAppText(tree)).toContain("List");
-  expect(getAppText(tree)).toContain(
-    "Browse working tree changes, branches, and open pull requests.",
-  );
+  expect(getAppText(tree)).toContain("Compare");
+  expect(getAppText(tree)).toContain("Branches");
 });
 
 test("uses modifier shortcuts to enable and disable all list filters", () => {
@@ -676,7 +686,7 @@ test("runs leader key commands with ctrl+x", () => {
 
   emitKey({ name: "l", sequence: "l" });
 
-  expect(getAppText(tree)).toContain("Opened list modal.");
+  expect(getAppText(tree)).toContain("Compare");
   expect(getAppText(tree)).toContain("Working tree");
 });
 
@@ -778,7 +788,7 @@ test("jumps to a diff line with a count through the in-file prefix one-third dow
   emitKey({ name: "s", sequence: "s" });
 
   expect(getAppText(tree)).toContain("In File mode active. Awaiting next key.");
-  expect(getAppText(tree)).toContain("Press a key to jump within the selected file.");
+  expect(getAppText(tree)).toContain("Jump to selected file line");
 
   emitKey({ name: "s", sequence: "s" });
 
@@ -834,7 +844,7 @@ test("opens the modal picker with space and launches a modal with one key", () =
 
   emitKey({ name: "l", sequence: "l" });
 
-  expect(getAppText(tree)).toContain("Opened list modal.");
+  expect(getAppText(tree)).toContain("Compare");
   expect(getAppText(tree)).toContain("Working tree");
   expect(getAppText(tree)).not.toContain("Press a key to open a modal.");
 });
@@ -845,7 +855,7 @@ test("opens the goto picker with g and launches a jump with one key", () => {
   emitKey({ name: "g", sequence: "g" });
 
   expect(getAppText(tree)).toContain("Goto mode active. Awaiting next key.");
-  expect(getAppText(tree)).toContain("Press a key to jump around the comparison.");
+  expect(getAppText(tree)).toContain("Jump to first file");
 
   emitKey({ name: "e", sequence: "e" });
 
@@ -873,7 +883,7 @@ test("opens the GitHub PR list on launch when requested", async () => {
   expect(getAppText(tree)).toContain("GitHub PRs");
   expect(getAppText(tree)).toContain("diffdiff/diffdiff");
   expect(getAppText(tree)).toContain("Ship the PR dashboard");
-  expect(getAppText(tree)).toContain("madison");
+  expect(getAppText(tree)).toContain("octocat");
 });
 
 test("opens the GitHub PR list with p", async () => {
@@ -881,7 +891,7 @@ test("opens the GitHub PR list with p", async () => {
 
   await emitAsyncKey({ name: "p", sequence: "p" });
 
-  expect(getAppText(tree)).toContain("Opened pull request list.");
+  expect(getAppText(tree)).toContain("GitHub PRs");
   expect(getAppText(tree)).toContain("GitHub PRs");
   expect(getAppText(tree)).toContain("Ship the PR dashboard");
 });
@@ -934,11 +944,9 @@ test("opens the branch list on launch for an empty working tree", () => {
     />,
   );
 
-  expect(getAppText(tree)).toContain("Opened list modal.");
-  expect(getAppText(tree)).toContain("List");
-  expect(getAppText(tree)).toContain(
-    "Browse working tree changes, branches, and open pull requests.",
-  );
+  expect(getAppText(tree)).toContain("Ready.");
+  expect(getAppText(tree)).toContain("Compare");
+  expect(getAppText(tree)).toContain("Branches");
   expect(getAppText(tree)).toContain("Working tree");
 });
 
@@ -1027,8 +1035,8 @@ test("prefetches branch comparison data on startup", async () => {
 
   expect(syncRemotes).toHaveBeenCalledWith("/tmp/diffdiff");
   expect(loadComparisonBrowserData).toHaveBeenCalledWith({});
-  expect(getAppText(tree)).toContain("1 local");
-  expect(getAppText(tree)).toContain("1 open PR");
+  expect(getAppText(tree)).toContain("feature/dashboard");
+  expect(getAppText(tree)).toContain("(#73)");
 });
 
 test("fuzzy searches and opens a selected GitHub pull request", async () => {
@@ -1612,7 +1620,7 @@ test("does not reuse the previous file offset when a branch switch restores a di
 test("does not render the removed key legend", () => {
   const tree = render(<DiffdiffApp {...createAppProps()} />);
 
-  expect(getAppText(tree)).toContain("? help");
+  expect(getAppText(tree)).toContain("? keys");
   expect(getAppText(tree)).not.toContain("show keys");
   expect(getAppText(tree)).not.toContain("j/k move");
 });
@@ -1858,13 +1866,12 @@ test("keeps the footer on the latest status after an error toast is shown", asyn
   expect(getAppText(tree)).toContain("Request failed due to following response errors:");
 
   emitKey({ name: "?", sequence: "?" });
-  emitKey({ name: "q", sequence: "q" });
-
-  expect(getAppText(tree)).toContain("Closed help.");
+  emitKey({ name: "escape" });
+  expect(getAppText(tree)).not.toContain("Search keys");
   expect(getAppText(tree)).toContain("Request failed due to following response errors:");
 });
 
-test("keeps the error toast visible above an open modal", async () => {
+test("keeps errors in the footer until an open modal is dismissed", async () => {
   const probeFreshness = vi.fn(async () => {
     throw new Error("Unable to refresh git state.");
   });
@@ -1883,18 +1890,11 @@ test("keeps the error toast visible above an open modal", async () => {
     rendererState.renderer.emit("focus");
   });
 
-  expect(getAppText(tree)).toContain("List");
+  expect(getAppText(tree)).toContain("Compare");
+  expect(getAppText(tree)).toContain("✗ Unable to refresh git state.");
+  expect(getAppText(tree)).not.toContain("esc / x  dismiss");
+  emitKey({ name: "escape" });
   expect(getAppText(tree)).toContain("Unable to refresh git state.");
-
-  const errorToast = tree.root.find(
-    (node) =>
-      String(node.type) === "box" &&
-      node.props.zIndex === 60 &&
-      collectInstanceText(node).includes("Unable to refresh git state."),
-  );
-
-  expect(errorToast.props.bottom).toBe(2);
-  expect(errorToast.props.right).toBe(2);
 });
 
 test("derives the diagnostics footer hint from the current keymap", async () => {
@@ -2933,6 +2933,8 @@ test("shows PR bulk reviewed actions as disabled in the command palette", () => 
 
   expect(getAppText(tree)).toContain("Mark all reviewed");
   expect(getAppText(tree)).toContain("Unmark all reviewed");
+  emitKey({ ctrl: true, name: "u" });
+  emitText("Mark all reviewed");
   expect(getAppText(tree)).toContain(
     "GitHub PR reviewed state can only be updated one file at a time.",
   );
@@ -2960,7 +2962,7 @@ test("opens PR review mode from the list modal", () => {
   });
 });
 
-test("does not open a branch review from the list modal on enter", () => {
+test("sets the selected branch as head on Enter", () => {
   const loadSession = vi.fn(async () => createPreparedSession());
   render(
     <DiffdiffApp
@@ -2974,7 +2976,7 @@ test("does not open a branch review from the list modal on enter", () => {
   emitKey({ name: "j" });
   emitKey({ name: "return" });
 
-  expect(loadSession).not.toHaveBeenCalled();
+  expect(loadSession).toHaveBeenCalledWith(expect.objectContaining({ head: "main" }));
 });
 
 test("restores reviewed files from the cache when opening a branch review from the list modal", async () => {
@@ -3332,6 +3334,7 @@ test("opens the PR comments modal from review mode", () => {
   expect(getAppText(tree)).toContain("PR Conversation");
   expect(getAppText(tree)).toContain("Looks ready to merge.");
   expect(getAppText(tree)).toContain("Can we tighten the rollout copy?");
+  emitKey({ name: "end" });
   expect(getAppText(tree)).toContain(inlineReviewComment);
   expect(getAppText(tree)).not.toContain(pendingComment);
   expect(getAppText(tree)).not.toContain("pending");
@@ -3647,7 +3650,7 @@ test("restores the latest dismissed draft when reopening the same comment target
   emitKey({ name: "a" });
 
   expect(getAppText(tree)).toContain("Needs follow-up");
-  expect(getAppText(tree)).toContain("Restored draft.");
+  expect(getAppText(tree)).toContain("Restored comment draft.");
 });
 
 test("opens the external editor for comment composition", async () => {
@@ -3738,6 +3741,7 @@ test("opens the submit review modal and submits the pending review", async () =>
   expect(getAppText(tree)).toContain("Comment");
 
   emitKey({ name: "down" });
+  emitKey({ name: "tab" });
   emitText("Ship it");
   await emitAsyncKey({ name: "return" });
 
@@ -3785,6 +3789,7 @@ test("uses ctrl+e for line-end editing in submit review", () => {
   );
 
   emitKey({ name: "a", sequence: "A", shift: true });
+  emitKey({ name: "tab" });
   emitText("ship");
   emitKey({ ctrl: true, name: "a" });
   emitText("Please ");
@@ -3811,6 +3816,7 @@ test("shows an optimistic submitted review while the session reload is pending",
 
   emitKey({ name: "a", sequence: "A", shift: true });
   emitKey({ name: "down" });
+  emitKey({ name: "tab" });
   emitText("Ship it");
   emitKey({ name: "return" });
   await act(async () => {
@@ -3832,6 +3838,26 @@ test("shows an optimistic submitted review while the session reload is pending",
   });
 
   expect(getAppText(tree)).toContain("Ship it");
+});
+
+test("remembering cleanup preserves saved key remaps", async () => {
+  const keys = { diff: { z: "comparison.list" } };
+  vi.mocked(diffdiffCore.loadDiffdiffPreferences).mockResolvedValue({
+    ...diffdiffCore.getDefaultDiffdiffPreferences(),
+    keys,
+  });
+  render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+      })}
+    />,
+  );
+  emitKey({ name: "m" });
+  await emitAsyncKey({ ctrl: true, name: "r" });
+  expect(diffdiffCore.saveDiffdiffPreferences).toHaveBeenCalledWith(
+    expect.objectContaining({ keys }),
+  );
 });
 
 test("opens the merge modal and merges with the selected method", async () => {
@@ -3881,7 +3907,7 @@ test("opens the merge modal and merges with the selected method", async () => {
   emitKey({ name: "j" });
   await emitAsyncKey({ name: "return" });
 
-  expect(getAppText(tree)).toContain("Confirm Merge");
+  expect(getAppText(tree)).toContain("Press Enter to merge now");
 
   await emitAsyncKey({ name: "return" });
 
@@ -3958,7 +3984,7 @@ test("enables auto-merge from the merge modal while checks block immediate mergi
   emitKey({ ctrl: true, name: "g" });
   expect(getAppText(tree)).toContain("[x] Auto-merge");
   await emitAsyncKey({ name: "return" });
-  expect(getAppText(tree)).toContain("Confirm Auto-Merge");
+  expect(getAppText(tree)).toContain("Enable Auto-Merge");
   await emitAsyncKey({ name: "return" });
   expect(mergePullRequest).toHaveBeenCalledWith(
     expect.anything(),
@@ -3992,7 +4018,7 @@ test("auto-merge failures preserve the open PR and allow retry", async () => {
   emitKey({ ctrl: true, name: "g" });
   await emitAsyncKey({ name: "return" });
   await emitAsyncKey({ name: "return" });
-  expect(getAppText(tree)).toContain("Merge Pull Request");
+  expect(getAppText(tree)).toContain("Enable Auto-Merge");
   expect(getAppText(tree)).toContain("Permission denied");
   expect(getAppText(tree)).toContain("[x] Auto-merge");
   await emitAsyncKey({ name: "return" });
@@ -4108,14 +4134,13 @@ test("caps the merge body input height and scrolls to the cursor", () => {
   emitKey({ name: "tab", sequence: "\t" });
   emitKey({ name: "tab", sequence: "\t" });
 
-  const mergeBodyScrollbox = tree.root.findAll((node) => String(node.type) === "scrollbox")[2]!;
-
-  expect(mergeBodyScrollbox.props.height).toBe(8);
-  expect(mergeBodyScrollbox.props.focused).toBe(true);
-  expect(scrollboxes[2]?.scrollTo).toHaveBeenCalledWith({ x: 0, y: Number.MAX_SAFE_INTEGER });
+  const mergeBodyScrollbox = tree.root.findAll((node) => String(node.type) === "scrollbox")[3]!;
+  expect(mergeBodyScrollbox.props.height).toBe("100%");
+  expect(mergeBodyScrollbox.parent?.props.height).toBeGreaterThan(8);
+  expect(scrollboxes.some((scrollbox) => scrollbox.scrollTo.mock.calls.length > 0)).toBe(true);
 });
 
-test("opens cleanup automatically after merge and removes the selected refs", async () => {
+test("applies remembered cleanup after merge without opening another dialog", async () => {
   const mergePullRequestSpy = vi.fn();
   const mergePullRequest: NonNullable<DiffdiffAppProps["mergePullRequest"]> = async (
     reviewSession,
@@ -4176,21 +4201,17 @@ test("opens cleanup automatically after merge and removes the selected refs", as
   emitKey({ name: "m" });
   await emitAsyncKey({ name: "return" });
 
-  expect(getAppText(tree)).toContain("Confirm Merge");
+  expect(getAppText(tree)).toContain("Press Enter to merge now");
 
   await emitAsyncKey({ name: "return" });
 
-  expect(getAppText(tree)).toContain("Post-Merge Cleanup");
+  expect(getAppText(tree)).not.toContain("Post-Merge Cleanup");
   expect(getAppText(tree)).not.toContain("Merge Pull Request");
-  expect(getAppText(tree)).toContain("Local branch feature/tui");
-  expect(getAppText(tree)).toContain("Remote-tracking ref origin/feature/tui");
-
-  emitKey({ name: "j" });
-  emitKey({ name: "space" });
-  await emitAsyncKey({ name: "return" });
-
+  expect(getAppText(tree)).toContain("2 refs removed");
   expect(removeCleanupRefsSpy).toHaveBeenCalledWith("/tmp/diffdiff", [
     { branchName: "feature/tui", kind: "local-branch", ref: "feature/tui" },
+  ]);
+  expect(removeCleanupRefsSpy).toHaveBeenCalledWith("/tmp/diffdiff", [
     { branchName: "feature/tui", kind: "remote-tracking", ref: "origin/feature/tui" },
   ]);
 });

@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                     ┃                                                                                 ▀
+  │                                  ┃  ▼ PR overview                                                 ○ Mark reviewed   
+  │ 0 / 2 reviewed         +5 / -1   ┃                                                                                  
+  │                                  ┃  Improve the keyboard-driven review workflow                                     
+                                     ┃                                                                                  
+  ┃ ◇ PR overview                    ┃  example/repo  #1  ·  Open  ·  @author                                           
+  ┃ ▼ src                        1   ┃                                                                                  
+  ┃                                                                                                                     
+  ┃ A  List                                      tab  switch view   left / right  panes   f  filters   esc  close       
+       Browse working tree changes, branches, and open pull requests.                                             ───   
+                                                                                                                        
+       ┃                                                                                                                
+       ┃  base ← main  │  head → feature                                                    Branches   Commits          
+       ┃                                                                                                                
+       ┃  2 local  │  0 open PR  │  0 remote  │   working tree   local   PR   remote                                    
+       ┃                                                                                                                
+                                                                                                                        
+       ┃  Working tree  │  0 files  │  +0/-0                                                                            
+       ┃  feature  │  visual                                                                  HEAD      CURRENT         
+       ┃  main  │  visual                                                                     BASE      DEFAULT         
+                                                                                                                        
+       ┃                                                                                                                
+       ┃  feature                                                                                                  -1   
+       ┃                                                                                                                
+       ┃  sha 52eb733  │  selected as head                                                                              
+       ┃                                                                                                                
+       ┃   h  set head   b  set base  │   w  working tree   o  remote toggle   f  filters                               
+       ┃                                                                                                                
+                                                                                                                        
+                                     ┃  ┃ ▼ reviewer  │  src/review.ts:2-3                                   1 comment  
+                                     ┃                                                                                  
+                                     ┃    40 weeks ago: Could we explain why this defaults to true?                     
+                                     ┃                                                                                  
+                                     ┃       4   }                                                                      
+                                     ┃                                                                                  
+   BRANCHES    ?  help                                                                              Opened list modal.  

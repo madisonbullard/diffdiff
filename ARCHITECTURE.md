@@ -119,6 +119,26 @@ keymap runtime before dispatching to app actions. Pane navigation, dialogs,
 search states, composers, and confirmation flows should use that single runtime
 path instead of bespoke per-modal key handlers.
 
+Native keypress and bracketed-paste handlers use OpenTUI React's public `flushSync`
+boundary so each event's state and mode transition commits before the stdin parser
+delivers the next event in a burst. Async GitHub writes use synchronous claims in
+`app/review/write-guard.ts`; a late completion may close/reset only the stack entry
+that started it, and must not reload over a newer session load. Dialog stack entries
+are identity tokens, not just names. See the implementation checkpoint in
+`docs/plans/menu-modal-unification.md` for the implementation record and decisions.
+
+All live dialogs use `components/dialog/`: `DialogPanel`, `DialogList`/`DialogRow`,
+`DialogEditor`, and `DialogInspector`. Geometry reserves the global footer and uses
+compact sheets below 100 columns or 30 rows; confirmations stay floating. Tokens
+adapt to terminal palettes with unrounded contrast checks. Action labels come from
+the resolved reverse keymap, and pointer actions use the same dispatch map.
+
+Commands and Keys share the picker; Compare facets are inline; merge confirmation
+is an inline form state. Review/merge drafts are scoped to repository and PR for the
+session. Cleanup is a remembered merge option, never a follow-up dialog. Core cleanup
+revalidates tip SHAs and ancestry and preserves branches checked out in any worktree.
+Local refresh failures do not turn a confirmed GitHub merge into a retryable merge.
+
 This split is deliberate: data acquisition and shared review behavior live in
 `core`, while rendering and interaction live in `tui`.
 

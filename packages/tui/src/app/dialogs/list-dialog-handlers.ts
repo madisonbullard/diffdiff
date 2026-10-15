@@ -20,5 +20,4 @@ export function openBranchListModal(
   commitSearch.deactivate();
   state.setActiveListView("branch");
   state.setDialogStack((currentStack) => openAppDialog(currentStack, "branch", { clear: true }));
-  state.setStatusMessage("Opened list modal.");
 }

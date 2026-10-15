@@ -1,0 +1,24 @@
+ Submit Review                                                           escape 
+ Event                                                                          
+ › ● Comment                                                                    
+   ○ Approve                                                                    
+   ○ Request changes                                                            
+ Summary · optional for Comment and Approve                                     
+ Add a review summary…                                                          
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ Comment without approving or requesting changes.                               
+ enter submit  tab field  down choose event                                     
+   SUBMIT                         Modal Picker mode active. Awaiting next key.  

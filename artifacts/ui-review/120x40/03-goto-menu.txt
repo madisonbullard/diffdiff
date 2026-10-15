@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                     ┃                                                                                 ▀
+  │                                  ┃  ▼ PR overview                                                 ○ Mark reviewed   
+  │ 0 / 2 reviewed         +5 / -1   ┃                                                                                  
+  │                                  ┃  Improve the keyboard-driven review workflow                                     
+                                     ┃                                                                                  
+  ┃ ◇ PR overview                    ┃  example/repo  #1  ·  Open  ·  @author                                           
+  ┃ ▼ src                        1   ┃                                                                                  
+  ┃   M review.ts            +2 -1   ┃  feature → main  ·  1 commits  ·  1 files                                        
+  ┃ A README.md              +3 -0   ┃                                                                                  
+                                     ┃  ─────────────────────────────────────────────────────────────────────────────   
+                                     ┃                                                                                  
+                                     ┃  Summary                                                                         
+                                     ┃  Make review navigation faster and keep actions discoverable.                    
+                                     ┃                                                                                  
+                                     ┃  - Preserve keyboard-first interactions                                          
+                                     ┃  - Clarify destructive actions                                                   
+                                     ┃  - Improve review feedback                                                       
+                                     ┃                                                                                  
+                                     ┃  View pull request on GitHub ↗                                                   
+                                     ┃                                                                                  
+                                                                                                                        
+                                     ┃                                                                                  
+                                     ┃  ▼ src/review.ts                                                                 
+                                     ┃                              Goto                                                
+                                     ┃  @@ -1,3 +1,4 @@             Press a key to jump around the comparison.          
+                                     ┃       1   export function r  Jump to first file                            g     
+                                     ┃       2 -   return false;    Jump to last file                             e     
+                                     ┃   ┃   2 +   // Keep the rev  Jump to top                                   t     
+                                     ┃   ┃   3 +   return true;     Jump to center                                c     
+                                     ┃  ┃ ▼ reviewer  │  src/revie  Jump to bottom                                b     
+                                     ┃                              Jump to next hunk                             n     
+                                     ┃    40 weeks ago: Could we e  Jump to previous hunk                         p     
+                                     ┃                              Jump to alternate file                        a     
+                                     ┃       4   }                                                                      
+                                     ┃                                                                                  
+   GOTO    ?  help                                                                Goto mode active. Awaiting next key.  

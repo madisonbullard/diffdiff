@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-Vzunw /private/var/folders/42/w3sgx72173zby1  
+   PR  #1 Improve the keyboard-driven review wor1 check failed  │  merge ready  
+                                                                                
+                                                                               ▀
+  │ List                tab  switch view   left / right  panes   esc  close     
+  │ Browse the comparison commit log and choose base/head commits.              
+                                                                                
+  ┃ ┃                                                                           
+  ┃ ┃  base ← main  │  head → feature                  Branches   Commits       
+  ┃ ┃  1 commits in the current comparison                                      
+  ┃ ┃                                                                           
+                                                                                
+    ┃  /search commits...                                                       
+    ┃  52eb733 (HEAD -> feature) head                                           
+                                                                                
+    ┃                                                                           
+    ┃  52eb733 (HEAD -> feature) head                                           
+    ┃  visual                                                                   
+    ┃                                                                           
+    ┃   h  set head   b  set base  │   /  search   left / right / tab  swit     
+    ┃                                                                           
+                                                                                
+   COMMITS    ?  help                                     Closed list filters.  

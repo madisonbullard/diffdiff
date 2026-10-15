@@ -1,0 +1,24 @@
+ Add Comment  Comment on src/review.ts:2 (right).                        escape 
+ // review line 2                                                               
+                                                                                
+  Write a comment…                                                              
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ @ reference files · 0 saved drafts · ctrl+j newline                            
+                                                                                
+ enter send  ctrl+j newline  ctrl+x e editor                                    
+   COMMENT                                            Focused src/review.ts:2.  

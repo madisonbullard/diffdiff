@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                     ┃                                                                                 ▀
+  │                                  ┃  ▼ PR overview                                                 ○ Mark reviewed   
+  │ 0 / 2 reviewed         +5 / -1   ┃                                                                                  
+  │                                  ┃  Improve the keyboard-driven review workflow                                     
+                                     ┃                                                                                  
+  ┃ ◇ PR overview                    ┃  example/repo  #1  ·  Open  ·  @author                                           
+  ┃ ▼ src                        1   ┃                                                                                  
+  ┃   M review.ts            +2 -1   ┃  feature → main  ·  1 commits  ·  1 files                                        
+  ┃ A                                                                                                                   
+       Reply to PR Comment                          ctrl+e  line end   leader+e  editor   up/down  drafts   @  fi ───   
+       Reply to alex's PR comment. A quoted top-lev                                                                     
+                                                                                                                        
+       ┃                                                                                                                
+       ┃  The keyboard shortcuts feel good. Please make destructive actions more explicit before merging.               
+       ┃                                                                                                                
+                                                                                                                        
+       ┃                                                                                                                
+       ┃                                                                                                                
+       ┃                                                                                                                
+       ┃                                                                                                                
+       ┃                                                                                                                
+       ┃                                                                                                                
+       ┃                                                                                                           -1   
+       ┃                                                                                                                
+                                                                                                                        
+       Type your comment body. Use up/down for recent drafts and @ to reference changed files. Use shift+enter,         
+       ctrl+j, alt+enter, or cmd+enter for newlines. Use leader+e for the external editor.                              
+                                                                                                                        
+                                     ┃   ┃   3 +   return true;                                                         
+                                     ┃  ┃ ▼ reviewer  │  src/review.ts:2-3                                   1 comment  
+                                     ┃                                                                                  
+                                     ┃    40 weeks ago: Could we explain why this defaults to true?                     
+                                     ┃                                                                                  
+                                     ┃       4   }                                                                      
+                                     ┃                                                                                  
+   COMMENT    ?  help                                                                                Replying to alex.  

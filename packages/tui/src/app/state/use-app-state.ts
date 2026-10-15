@@ -1,8 +1,9 @@
 import { getDefaultGitHubPreferences } from "@madisonbullard/diffdiff-core";
+import { createWriteGuard } from "../review/write-guard.ts";
+import { useSynchronousState } from "./use-synchronous-state.ts";
 import type {
   GitHubDashboardPullRequest,
   GitHubMergeMethod,
-  GitHubRefCleanupCandidate,
   GitHubUserPreferences,
 } from "@madisonbullard/diffdiff-core";
 import type { ScrollBoxRenderable } from "@opentui/core";
@@ -114,27 +115,19 @@ export function useDiffdiffAppState({
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() =>
     restoreCollapsedPaths(initialSession.files, initialReviewCache),
   );
-  const [statusMessage, setStatusMessage] = useState<string>(
-    launchInPullRequestList
-      ? "Opened pull request list."
-      : launchInBranchList
-        ? "Opened list modal."
-        : "Ready.",
-  );
+  const [statusMessage, setStatusMessage] = useState("Ready.");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [errorToastMessage, setErrorToastMessage] = useState<string | null>(null);
+  const [errorDialogOwner, setErrorDialogOwner] = useState<AppDialogStackEntry | null>(null);
   const [baseBranchLoadingMessage, setBaseBranchLoadingMessage] = useState<string | null>(null);
-  const [cleanupCandidateIndex, setCleanupCandidateIndex] = useState(0);
-  const [cleanupCandidates, setCleanupCandidates] = useState<GitHubRefCleanupCandidate[]>([]);
-  const [cleanupSelection, setCleanupSelection] = useState(
-    () => initialGitHubPreferences?.cleanup ?? getDefaultGitHubPreferences().cleanup,
-  );
   const [gitHubPreferences, setGitHubPreferences] = useState<GitHubUserPreferences>(
     () => initialGitHubPreferences ?? getDefaultGitHubPreferences(),
   );
   const gitHubPreferencesRef = useRef(initialGitHubPreferences ?? getDefaultGitHubPreferences());
   const latestSessionLoadIdRef = useRef(0);
-  const [dialogStack, setDialogStack] = useState<readonly AppDialogStackEntry[]>(() =>
+  const [dialogStack, setDialogStack, dialogStackRef] = useSynchronousState<
+    readonly AppDialogStackEntry[]
+  >(() =>
     launchInPullRequestList
       ? openAppDialog([], "pull-request-list", { clear: true })
       : launchInBranchList
@@ -161,6 +154,9 @@ export function useDiffdiffAppState({
   );
   const [commandInput, setCommandInput] = useState(() => createTextInputState());
   const [commandIndex, setCommandIndex] = useState(0);
+  const [inspectorDetailFocused, setInspectorDetailFocused] = useState(false);
+  useEffect(() => setInspectorDetailFocused(false), [activeOverlay]);
+  const [helpLeaderOnly, setHelpLeaderOnly] = useState(false);
   const [commitListIndex, setCommitListIndex] = useState(0);
   const [commitSearchInput, setCommitSearchInput] = useState(() => createTextInputState());
   const [commitSearchActive, setCommitSearchActive] = useState(false);
@@ -169,7 +165,7 @@ export function useDiffdiffAppState({
   const [isReloading, setIsReloading] = useState(false);
   const [isCheckingForUpdates, setIsCheckingForUpdates] = useState(false);
   const [isSubmittingReviewAction, setIsSubmittingReviewAction] = useState(false);
-  const draftToggleInFlightRef = useRef(false);
+  const [writeGuard] = useState(createWriteGuard);
   const [lastAccessedFileIndex, setLastAccessedFileIndex] = useState<number | null>(null);
   const [activePrefix, setActivePrefix] = useState<KeymapPrefixId | null>(null);
   const [refreshIndicatorLabel, setRefreshIndicatorLabel] = useState<string | null>(null);
@@ -195,7 +191,7 @@ export function useDiffdiffAppState({
   const [reviewComposer, setReviewComposer] = useState(createReviewComposerState);
   const [pullRequestList, setPullRequestList] = useState<GitHubDashboardPullRequest[]>([]);
   const [pullRequestListIndex, setPullRequestListIndex] = useState(0);
-  const [pullRequestSearchActive, setPullRequestSearchActive] = useState(false);
+  const [pullRequestSearchActive, setPullRequestSearchActive] = useState(true);
   const [pullRequestSearchInput, setPullRequestSearchInput] = useState(() =>
     createTextInputState(),
   );
@@ -208,6 +204,8 @@ export function useDiffdiffAppState({
   >({});
   const [reviewSubmissionInput, setReviewSubmissionInput] = useState(() => createTextInputState());
   const [reviewSubmissionEventIndex, setReviewSubmissionEventIndex] = useState(0);
+  const formDraftsRef = useRef(new Map<string, import("../review/form-drafts.ts").FormDrafts>());
+  const [reviewSubmissionField, setReviewSubmissionField] = useState<"event" | "body">("event");
   const [showSelectedReviewAnchor, setShowSelectedReviewAnchor] = useState(false);
   const [selectedReviewAnchorIndex, setSelectedReviewAnchorIndex] = useState(0);
   const [selectedReviewRange, setSelectedReviewRange] = useState<
@@ -327,22 +325,26 @@ export function useDiffdiffAppState({
     baseBranchLoadingMessage,
     branchListFilters,
     branchListIndex,
-    cleanupCandidateIndex,
-    cleanupCandidates,
-    cleanupSelection,
     collapsedDirectories,
     collapsedPaths,
     commentCollapseStates,
     comparisonBrowserData,
     commandIndex,
+    inspectorDetailFocused,
+    setInspectorDetailFocused,
+    helpLeaderOnly,
+    setHelpLeaderOnly,
     commandInput,
     commitListIndex,
     commitSearchActive,
     commitSearchInput,
     dialogStack,
+    dialogStackRef,
     diffScroll,
     diffViewPreference,
     errorToastMessage,
+    errorDialogOwner,
+    setErrorDialogOwner,
     filterIndex,
     gitHubPreferences,
     gitHubPreferencesRef,
@@ -352,7 +354,7 @@ export function useDiffdiffAppState({
     isPullRequestListLoading,
     isReloading,
     isSubmittingReviewAction,
-    draftToggleInFlightRef,
+    writeGuard,
     keybindController,
     lastAccessedFileIndex,
     latestSessionLoadIdRef,
@@ -386,6 +388,9 @@ export function useDiffdiffAppState({
     reviewComposer,
     reviewSubmissionInput,
     reviewSubmissionEventIndex,
+    formDraftsRef,
+    reviewSubmissionField,
+    setReviewSubmissionField,
     scrollRef,
     selectedFileIndex,
     selectedDiffRowRef,
@@ -403,9 +408,6 @@ export function useDiffdiffAppState({
     setBaseBranchLoadingMessage,
     setBranchListFilters,
     setBranchListIndex,
-    setCleanupCandidateIndex,
-    setCleanupCandidates,
-    setCleanupSelection,
     setCollapsedDirectories,
     setCollapsedPaths,
     setCommentCollapseStates,

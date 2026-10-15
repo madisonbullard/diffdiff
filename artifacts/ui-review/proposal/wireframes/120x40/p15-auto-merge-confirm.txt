@@ -1,0 +1,21 @@
+
+  ▲ Merge #1  feature → main · Improve the keyboard-driven review workflow                 esc
+  Method   ● Squash   ○ Merge commit   (rebase is not supported by diffdiff)
+  Options  [x] Auto-merge when requirements pass                                        ctrl+g
+           [–] Clean up local refs after merge                             not with auto-merge
+  ────────────────────────────────────────────────────────────────────────────────────────────
+  Title    Improve the keyboard-driven review workflow (#1)
+
+  Body     ## Summary
+           Make review navigation faster and keep actions discoverable.
+           - Preserve keyboard-first interactions
+           - Clarify destructive actions
+
+
+
+
+
+
+  ▲ Enable auto-merge (squash)? GitHub merges #1 once its requirements pass.
+  enter enable auto-merge  esc back to edit
+

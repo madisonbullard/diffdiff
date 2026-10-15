@@ -1,0 +1,16 @@
+                                                          
+  diffdiff / diffdiff-visual-/private/var/folders/42/w3s  
+   PR  #1 Make terminal re1 check failed  │  merge ready  
+                                                          
+                Goto  ·  esc cancel                       
+  │             g  Jump to first file                     
+  │ 0 / 1 revie e  Jump to last file                      
+                t  Jump to top                            
+  ┃ ◇ PR overvi c  Jump to center                         
+  ┃ ▼ src       b  Jump to bottom                         
+  ┃   A review. n  Jump to next hunk                      
+                p  Jump to previous hunk                 █
+                a  Jump to alternate file                 
+                Press a key to jump around the comparis…  
+                                                          
+   GOTO    ?  keys     Goto mode active. Awaiting nex...  

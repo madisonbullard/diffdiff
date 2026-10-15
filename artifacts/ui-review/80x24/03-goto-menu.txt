@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-Vzunw /private/var/folders/42/w3sgx72173zby1  
+   PR  #1 Improve the keyboard-driven review wor1 check failed  │  merge ready  
+                                                                                
+                               ┃                                               ▀
+  │                            ┃  ▼ PR overview               ○ Mark reviewed   
+  │ 0 / 2 reviewed   +5 / -1   ┃                                                
+                               ┃  Improve the keyboard-driven review workflow   
+  ┃ ◇ PR overview              ┃                                                
+  ┃ ▼ src                  1   ┃  example/repo  #1  ·  Open  ·  @author         
+  ┃   M review.ts      +2                                                       
+  ┃ A README.md        +3   Goto                                                
+                            Press a key to jump around the comparison.          
+                            Jump to first file                            g     
+                            Jump to last file                             e     
+                            Jump to top                                   t     
+                            Jump to center                                c     
+                            Jump to bottom                                b     
+                            Jump to next hunk                             n     
+                            Jump to previous hunk                         p     
+                            Jump to alternate file                        a     
+                                                                                
+                               ┃                                                
+   GOTO    ?  help                        Goto mode active. Awaiting next key.  

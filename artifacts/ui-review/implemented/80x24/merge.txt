@@ -1,0 +1,24 @@
+ Merge Pull Request  #1 · feature → main                                 escape 
+ Method  ○ Merge commit   ● Squash merge                                        
+ Commit title                                                                   
+ Make terminal reviews clear, fast, and safe                                    
+ Commit message                                                                 
+ ## Summary                                                                     
+ Unify terminal menus and dialogs.                                              
+                                                                                
+ Keep keyboard workflows fast.                                                  
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ [ ] Auto-merge                                                                 
+ [x] Clean up local refs after merge                                            
+ feature + tracking ref · only if GitHub deletes the branch. Checked-out        
+ branches and extra commits are kept.                                           
+ enter continue  tab field  ctrl+g auto-merge  ctrl+r cleanup                   
+   MERGE TITLE                    Modal Picker mode active. Awaiting next key.  

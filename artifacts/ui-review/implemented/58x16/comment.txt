@@ -1,0 +1,16 @@
+ Add Comment  Comment on src/review.ts:2 (right).  escape 
+ Add Comment needs more space. Enlarge this 58×16         
+ terminal or close the dialog.                            
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+   COMMENT                      Focused src/review.ts:2.  

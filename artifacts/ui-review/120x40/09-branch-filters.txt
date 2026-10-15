@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                     ┃                                                                                 ▀
+  │                                  ┃  ▼ PR overview                                                 ○ Mark reviewed   
+  │ 0 / 2 reviewed         +5 / -1   ┃                                                                                  
+  │                                  ┃  Improve the keyboard-driven review workflow                                     
+                                     ┃                                                                                  
+  ┃ ◇ PR overview                    ┃  example/repo  #1  ·  Open  ·  @author                                           
+  ┃ ▼ src                        1   ┃                                                                                  
+  ┃   M review.ts            +2                                                                                         
+  ┃ A README.md              +3  Filters                                     esc  close                                 
+                                 Choose which list item types are visible in the branch ─────────────────────────────   
+                                                                                                                        
+                                 ┃                                                                                      
+                                 ┃  Working tree                                   ON   iscoverable.                    
+                                 ┃                                                                                      
+                                 ┃                                                                                      
+                                 ┃  Local branches                                 ON                                   
+                                 ┃                                                                                      
+                                 ┃                                                                                      
+                                 ┃  Open PRs                                       ON                                   
+                                 ┃                                                                                      
+                                 ┃                                                                                      
+                                 ┃  Remote branches                               OFF                                   
+                                 ┃                                                                   CHANGED  +2 / -1   
+                                                                                                                        
+                                 ┃                                                                                      
+                                 ┃   space / enter  toggle   shift+space / shift+enter                                  
+                                 ┃                                                                                      
+                                                                                        first.                          
+                                     ┃   ┃   3 +   return true;                                                         
+                                     ┃  ┃ ▼ reviewer  │  src/review.ts:2-3                                   1 comment  
+                                     ┃                                                                                  
+                                     ┃    40 weeks ago: Could we explain why this defaults to true?                     
+                                     ┃                                                                                  
+                                     ┃       4   }                                                                      
+                                     ┃                                                                                  
+   FILTERS    ?  help                                                                             Opened list filters.  

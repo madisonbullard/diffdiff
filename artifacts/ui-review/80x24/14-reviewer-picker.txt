@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-Vzunw /private/var/folders/42/w3sgx72173zby1  
+   PR  #1 Improve the keyboard-driven review wor1 check failed  │  merge ready  
+                                                                                
+                               ┃                                               ▀
+  │                                                                             
+  │ Request reviewers                                                           
+    Choose people to review this pull request. Existing requests are kept.      
+  ┃                                                                             
+  ┃ ┃  Filter by name or username                                               
+  ┃ ┃                                                                           
+  ┃ ┃  3 matching users · 0 selected                                            
+    ┃                                                                           
+                                                                                
+    ┃  [x] Alex Rivera (@alex) · Requested                                      
+    ┃  [ ] Sam Chen (@sam)                                                      
+    ┃      Suggested · past commits                                             
+                                                                                
+       ↑ / ↓  move   enter  select   ctrl+s  request   esc  cancel              
+      Type to filter · ctrl+r reloads reviewers                                 
+                                                                                
+                                                                                
+                               ┃                                                
+   REVIEWERS    ?  help     Select reviewers, then press ctrl+s to request ...  

@@ -1,6 +1,5 @@
 import type { BranchInfo } from "@madisonbullard/diffdiff-core";
 import type { ColorInput } from "@opentui/core";
-import type { ReactNode } from "react";
 import type { UiTheme } from "../theme.ts";
 
 export const SPLIT_BORDER = {
@@ -16,69 +15,6 @@ export const SPLIT_BORDER = {
   leftT: "",
   rightT: "",
 } as const;
-
-export const MODAL_OVERLAY = "#00000096";
-
-export function ModalFrame({
-  children,
-  headerRight,
-  maxHeight,
-  maxWidth = 140,
-  theme,
-  title,
-  subtitle,
-  width = "92%",
-  zIndex = 20,
-}: {
-  children: ReactNode;
-  headerRight?: ReactNode;
-  maxHeight?: `${number}%` | number;
-  maxWidth?: number;
-  theme: UiTheme;
-  title: string;
-  subtitle?: string;
-  width?: `${number}%` | "auto" | number;
-  zIndex?: number;
-}) {
-  return (
-    <box
-      position="absolute"
-      top={0}
-      right={0}
-      bottom={0}
-      left={0}
-      alignItems="center"
-      justifyContent="center"
-      zIndex={zIndex}
-      backgroundColor={MODAL_OVERLAY}
-    >
-      <box
-        width={width}
-        maxWidth={maxWidth}
-        maxHeight={maxHeight}
-        backgroundColor={theme.modalBg}
-        padding={1}
-        flexDirection="column"
-        gap={1}
-      >
-        <box width="100%" flexDirection="column" flexShrink={0}>
-          <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
-            <text fg={theme.accent} wrapMode="none">
-              {title}
-            </text>
-            {headerRight}
-          </box>
-          {subtitle != null ? (
-            <text fg={theme.textMuted} wrapMode="none">
-              {subtitle}
-            </text>
-          ) : null}
-        </box>
-        {children}
-      </box>
-    </box>
-  );
-}
 
 export function BranchName({
   branch,

@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                     ┃                                                                                 ▀
+  │                                  ┃  ▼ PR overview                                                 ○ Mark reviewed   
+  │ 0 / 2 reviewed         +5 / -1   ┃                                                                                  
+  │                                  ┃  Improve the keyboard-driven review workflow                                     
+                                     ┃                                                                                  
+  ┃ ◇ PR overview                    ┃  example/repo  #1  ·  Open  ·  @author                                           
+  ┃ ▼ src                                                                                                               
+  ┃   M re PR Checks                                                                                                    
+  ┃ A READ #1 · fixture · 1 failed · 1 pending · 1 passed                                                               
+                                                                                                              ───────   
+           > completed        Type checking                                                                             
+             in progress      Build packages                                                                            
+             completed        Unit tests                                                                                
+                                                                                                                        
+            Type checking                                                                                               
+            GitHub Actions · completed                                                                                  
+            Type checking failed                                                                                        
+                                                                                                                        
+            src/review.ts:3 — Expected a documented default.                                                            
+            Run vp check before merging.                                                                                
+            https://github.com/example/repo/actions/runs/1                                                              
+                                                                                                                        
+                                                                                                              +2 / -1   
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+            j/k  move  pgup/pgdn  details  y  copy link  r  refresh  esc  close                                         
+                                                                                                                        
+                                     ┃  ┃ ▼ reviewer  │  src/review.ts:2-3                                   1 comment  
+                                     ┃                                                                                  
+                                     ┃    40 weeks ago: Could we explain why this defaults to true?                     
+                                     ┃                                                                                  
+                                     ┃       4   }                                                                      
+                                     ┃                                                                                  
+   CHECKS    ?  help                                                                                 Opened PR checks.  

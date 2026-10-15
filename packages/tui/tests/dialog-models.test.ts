@@ -16,10 +16,6 @@ describe("dialog models", () => {
         workingTree: true,
       },
       branchListIndex: 1,
-      canApplyCleanup: true,
-      cleanupCandidateIndex: 2,
-      cleanupCandidates: [],
-      cleanupSelection: { removeLocal: true, removeRemote: false },
       commandPalette: {
         commandBindingLabels,
         filteredCommands: [],

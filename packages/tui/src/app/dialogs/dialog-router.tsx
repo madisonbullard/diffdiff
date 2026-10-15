@@ -1,22 +1,22 @@
 import { BranchModal } from "../../components/branch-modal.tsx";
 import { CommandPaletteModal } from "../../components/command-palette-modal.tsx";
 import { DiagnosticsModal } from "../../components/diagnostics-modal.tsx";
-import { HelpModal } from "../../components/help-modal.tsx";
-import { ListFilterModal } from "../../components/list-filter-modal.tsx";
+import { KeysTab } from "../../components/keys-tab.tsx";
 import { PullRequestListModal } from "../../components/pull-request-list-modal.tsx";
 import type { UiTheme } from "../../theme.ts";
 import type { PreparedReviewSession } from "../../types.ts";
 import { ClearReviewedConfirmModal } from "../../review/clear-reviewed-confirm-modal.tsx";
 import { PullRequestCommentsModal } from "../../review/comments-modal.tsx";
 import { PullRequestChecksModal } from "../../review/checks-modal.tsx";
-import { MergeConfirmModal } from "../../review/merge-confirm-modal.tsx";
 import { MergePullRequestModal } from "../../review/merge-pull-request-modal.tsx";
-import { PostMergeCleanupModal } from "../../review/post-merge-cleanup-modal.tsx";
 import { ReviewComposerModal } from "../../review/review-composer-modal.tsx";
 import { SubmitReviewModal } from "../../review/submit-review-modal.tsx";
 import { ReviewerPickerModal } from "../../review/reviewer-picker-modal.tsx";
 import type { DiffdiffDialogModels } from "./dialog-models.ts";
 import type { AppDialog } from "./stack.ts";
+import { accessibleDialogTheme } from "../../components/dialog/tokens.ts";
+import { useMemo } from "react";
+import { canSubmitMerge } from "../../review/merge-eligibility.ts";
 
 interface DiffdiffAppDialogsProps {
   activeDialog: AppDialog | null;
@@ -31,11 +31,14 @@ export function DiffdiffAppDialogs({
   models,
   session,
   terminalWidth,
-  theme,
+  theme: inputTheme,
 }: DiffdiffAppDialogsProps) {
-  if (activeDialog === "branch") {
+  const theme = useMemo(() => accessibleDialogTheme(inputTheme), [inputTheme]);
+  if (activeDialog === "branch" || activeDialog === "list-filter") {
     return (
       <BranchModal
+        facetsActive={activeDialog === "list-filter"}
+        facetIndex={models.listFilter.selectedIndex}
         activeView={models.branch.activeView}
         base={models.branch.base}
         branchItems={models.branch.branchItems}
@@ -98,16 +101,6 @@ export function DiffdiffAppDialogs({
     );
   }
 
-  if (activeDialog === "list-filter") {
-    return (
-      <ListFilterModal
-        filters={models.listFilter.filters}
-        selectedIndex={models.listFilter.selectedIndex}
-        theme={theme}
-      />
-    );
-  }
-
   if (activeDialog === "comment-composer" && models.reviewComposer.models.context != null) {
     return (
       <ReviewComposerModal
@@ -145,6 +138,7 @@ export function DiffdiffAppDialogs({
   if (activeDialog === "submit-review") {
     return (
       <SubmitReviewModal
+        field={models.reviewSubmission.field}
         bodySurface={models.reviewSubmission.bodySurface}
         eventIndex={models.reviewSubmission.eventIndex}
         isSubmitting={models.reviewSubmission.isSubmitting}
@@ -157,21 +151,16 @@ export function DiffdiffAppDialogs({
     return (
       <>
         <MergePullRequestModal
+          confirming={models.merge.showConfirm}
+          cleanupAfterMerge={models.merge.cleanupAfterMerge}
           autoMerge={models.merge.autoMerge}
           bodySurface={models.merge.bodySurface}
           bodyScrollRef={models.merge.bodyScrollRef}
-          canSubmit={
-            (models.merge.autoMerge
-              ? session.github.pullRequest.merge.autoMergeAllowed === true &&
-                !session.github.pullRequest.merge.autoMergeEnabled &&
-                !session.github.pullRequest.isDraft &&
-                !session.github.pullRequest.isMerged &&
-                session.github.pullRequest.state === "open"
-              : session.github.pullRequest.merge.canMerge) &&
-            models.merge.method != null &&
-            (session.github.pullRequest.merge.allowedMethods?.includes(models.merge.method) ??
-              false)
-          }
+          canSubmit={canSubmitMerge(
+            session.github.pullRequest,
+            models.merge.method,
+            models.merge.autoMerge,
+          )}
           field={models.merge.field}
           isSubmitting={models.merge.isSubmitting}
           method={models.merge.method}
@@ -179,36 +168,16 @@ export function DiffdiffAppDialogs({
           theme={theme}
           titleSurface={models.merge.titleSurface}
         />
-        {models.merge.showConfirm ? (
-          <MergeConfirmModal
-            autoMerge={models.merge.autoMerge}
-            method={models.merge.method}
-            theme={theme}
-          />
-        ) : null}
       </>
-    );
-  }
-
-  if (activeDialog === "cleanup") {
-    return (
-      <PostMergeCleanupModal
-        canApply={models.cleanup.canApply}
-        candidates={models.cleanup.candidates}
-        isSubmitting={models.cleanup.isSubmitting}
-        selectedIndex={models.cleanup.selectedIndex}
-        selection={models.cleanup.selection}
-        theme={theme}
-      />
     );
   }
 
   if (activeDialog === "help") {
     return (
-      <HelpModal
-        activePane={models.help.activePane}
-        commands={models.help.commands}
-        commandBindingLabels={models.help.commandBindingLabels}
+      <KeysTab
+        query={models.commandPalette.inputSurface}
+        index={models.commandPalette.selectedIndex}
+        leaderOnly={models.help.leaderOnly}
         theme={theme}
       />
     );

@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                     ┃                                                                                 ▀
+  │                                  ┃  ▼ PR overview                                                 ○ Mark reviewed   
+  │ 0 / 2 reviewed         +5 / -1   ┃                                                                                  
+  │                                  ┃  Improve the keyboard-driven review workflow                                     
+                                     ┃                                                                                  
+  ┃ ◇ PR overview                    ┃  example/repo  #1  ·  Open  ·  @author                                           
+  ┃ ▼ src                        1   ┃                                                                                  
+  ┃   M review.ts            +2 -1   ┃  feature → main  ·  1 commits  ·  1 files                                        
+  ┃ A                                                                                                                   
+       GitHub PRs                                                                                      esc  close ───   
+       Browse your open and review-requested pull requests across repositories.                                         
+                                                                                                                        
+       ┃                                                                                                                
+       ┃  2 open PRs  │  1 draft  │  1 review requested                                                                 
+       ┃                                                                                                                
+                                                                                                                        
+       ┃  /search pull requests...                                                                                      
+       ┃  example/repo  │  Improve the keyboard-driven review workflow  │  alex                                         
+       ┃  example/repo  │  Add clearer review status indicators draft  │  sam                                           
+                                                                                                                        
+       ┃                                                                                                                
+       ┃  Improve the keyboard-driven review workflow                                                                   
+       ┃                                                                                                           -1   
+       ┃  example/repo  │  alex  │  review requested                                                                    
+       ┃                                                                                                                
+       ┃   enter  open   /  search   j / k / home / end  move                                                           
+       ┃                                                                                                                
+                                                                                                                        
+                                     ┃   ┃   3 +   return true;                                                         
+                                     ┃  ┃ ▼ reviewer  │  src/review.ts:2-3                                   1 comment  
+                                     ┃                                                                                  
+                                     ┃    40 weeks ago: Could we explain why this defaults to true?                     
+                                     ┃                                                                                  
+                                     ┃       4   }                                                                      
+                                     ┃                                                                                  
+   PR LIST    ?  help                                                                   Loaded 2 GitHub pull requests.  

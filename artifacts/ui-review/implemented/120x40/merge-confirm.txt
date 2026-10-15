@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-i4b2jt  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Make terminal reviews clear, fast, and safe  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                                                                                                       ▀
+  │           ▲ Merge Pull Request  #1 · feature → main                                             escape   reviewed   
+  │ 0 / 1 re  Method  ○ Merge commit   ● Squash merge                                                                   
+  │           Commit title                                                                                              
+              Make terminal reviews clear, fast, and safe                                                               
+  ┃ ◇ PR ove  Commit message                                                                                            
+  ┃ ▼ src     ## Summary                                                                                                
+  ┃   A revi  Unify terminal menus and dialogs.                                                                         
+                                                                                                                        
+              Keep keyboard workflows fast.                                                                 ─────────   
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                              +6 / -0   
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+              [ ] Auto-merge                                                                                            
+              [x] Clean up local refs after merge                                                                       
+              feature + tracking ref · only if GitHub deletes the branch. Checked-out branches and extra                
+              commits are kept.                                                                                         
+              ▲ Press Enter to merge now. This cannot be undone.                                                        
+              enter merge now  escape back to editing                                                                   
+                                                                                                                        
+                                                                                                                        
+   CONFIRM                                                              Press enter again to confirm the squash merge.  

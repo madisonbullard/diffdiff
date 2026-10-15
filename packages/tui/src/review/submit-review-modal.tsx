@@ -1,139 +1,90 @@
 import type { UiTheme } from "../theme.ts";
 import type { TextInputSurface } from "../text-input-surface.ts";
-import { AsciiLoadingLabel } from "../components/ascii-loading-pane.tsx";
-import { MULTILINE_TEXT_INPUT_WITH_EDITOR_HINT } from "../components/text-input-hints.ts";
-import { TextInputContent } from "../components/text-input-content.tsx";
+import { DialogPanel } from "../components/dialog/panel.tsx";
+import { DialogEditor } from "../components/dialog/editor.tsx";
+import { DialogRow } from "../components/dialog/list-view.tsx";
+import { useDialogUi, primaryBinding } from "../components/dialog/context.tsx";
 import { formatReviewEvent, getReviewSubmissionEvent } from "./formatting.ts";
-import { MODAL_OVERLAY, REVIEW_BORDER } from "./shared.tsx";
-
+import * as A from "../app/keymap/actions.ts";
 export function SubmitReviewModal({
   bodySurface,
   eventIndex,
   isSubmitting,
   theme,
+  field = "event",
 }: {
   bodySurface: TextInputSurface;
   eventIndex: number;
   isSubmitting: boolean;
   theme: UiTheme;
+  field?: "event" | "body";
 }) {
-  const events = [0, 1, 2].map((index) => getReviewSubmissionEvent(index));
-
+  const ui = useDialogUi();
   return (
-    <box
-      position="absolute"
-      top={0}
-      right={0}
-      bottom={0}
-      left={0}
-      alignItems="center"
-      justifyContent="center"
-      zIndex={55}
-      backgroundColor={MODAL_OVERLAY}
+    <DialogPanel
+      title="Submit Review"
+      family="form"
+      theme={theme}
+      status={isSubmitting ? "Submitting… input paused · Esc continues in background" : undefined}
+      actions={[
+        {
+          action: A.SUBMIT_REVIEW_SUBMIT,
+          label: "submit",
+          primary: true,
+          disabled: isSubmitting || (eventIndex === 2 && !bodySurface.value.trim()),
+        },
+        { action: A.REVIEW_SWITCH_FIELD, label: "field" },
+        ...(field === "body"
+          ? [
+              { action: A.TEXT_NEWLINE, label: "newline" },
+              { action: A.TEXT_OPEN_EXTERNAL_EDITOR, label: "editor" },
+            ]
+          : [{ action: A.LIST_MOVE_DOWN, label: "choose event" }]),
+      ]}
     >
-      <box
-        width="88%"
-        maxWidth={96}
-        backgroundColor={theme.modalBg}
-        padding={1}
-        flexDirection="column"
-        gap={1}
-      >
-        <box width="100%" flexDirection="row" justifyContent="space-between" gap={1}>
-          <box flexDirection="column">
-            <text fg={theme.accent} wrapMode="none">
-              Submit Review
-            </text>
-            <text fg={theme.textMuted} wrapMode="none">
-              Submit the current review to GitHub.
-            </text>
-          </box>
-          <text fg={theme.textMuted} wrapMode="none">
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" up/down "}
-            </span>
-            <span>{" choose event  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" leader+j/k "}
-            </span>
-            <span>{" move while typing  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" ctrl+e "}
-            </span>
-            <span>{" line end  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" leader+e "}
-            </span>
-            <span>{" editor  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" enter "}
-            </span>
-            <span>{" submit  "}</span>
-            <span fg={theme.accent} bg={theme.surfaceMuted}>
-              {" esc "}
-            </span>
-            <span>{" close"}</span>
+      {(rect) => (
+        <>
+          <text height={1} flexShrink={0} fg={theme.textMuted}>
+            Event
           </text>
-        </box>
-        <box width="100%" flexDirection="column" gap={0}>
-          {events.map((event, index) => {
-            const isSelected = index === eventIndex;
-            const accent =
-              event === "APPROVE"
-                ? theme.success
-                : event === "REQUEST_CHANGES"
-                  ? theme.danger
-                  : theme.accent;
-
-            return (
-              <box
-                key={event}
-                width="100%"
-                border={["left"]}
-                customBorderChars={REVIEW_BORDER}
-                borderColor={isSelected ? accent : theme.border}
-                backgroundColor={isSelected ? theme.surfaceMuted : theme.surface}
-                paddingLeft={2}
-                paddingRight={1}
-                paddingTop={0}
-                paddingBottom={0}
-              >
-                <text fg={isSelected ? theme.text : theme.textMuted} wrapMode="none">
-                  <span fg={accent}>{isSelected ? "> " : "  "}</span>
-                  <span>{formatReviewEvent(event)}</span>
-                </text>
-              </box>
-            );
-          })}
-        </box>
-        <box
-          width="100%"
-          border={["left"]}
-          customBorderChars={REVIEW_BORDER}
-          borderColor={theme.borderActive}
-          backgroundColor={theme.surfaceMuted}
-          paddingLeft={2}
-          paddingRight={1}
-          paddingTop={1}
-          paddingBottom={1}
-          minHeight={6}
-        >
-          <text fg={theme.text} wrapMode="word">
-            <TextInputContent
-              cursorColor={theme.accent}
-              cursorTextColor={theme.inverseText}
-              surface={bodySurface}
+          {[0, 1, 2].map((i) => (
+            <DialogRow
+              key={i}
+              selected={i === eventIndex}
+              label={`${field === "event" && i === eventIndex ? "● " : "○ "}${formatReviewEvent(getReviewSubmissionEvent(i))}`}
+              width={rect.innerWidth}
+              theme={theme}
+              onSelect={() =>
+                ui.run(i > eventIndex ? A.LIST_MOVE_DOWN : A.LIST_MOVE_UP, Math.abs(i - eventIndex))
+              }
             />
+          ))}
+          <text height={1} flexShrink={0} fg={field === "body" ? theme.accent : theme.textMuted}>
+            Summary · optional for Comment and Approve
           </text>
-        </box>
-        {isSubmitting ? (
-          <AsciiLoadingLabel color={theme.accent} message="Submitting review..." theme={theme} />
-        ) : (
-          <text fg={theme.textMuted} wrapMode="word">
-            {`Optional review summary. ${MULTILINE_TEXT_INPUT_WITH_EDITOR_HINT}`}
+          <DialogEditor
+            surface={bodySurface}
+            height={rect.bodyRows - 6}
+            width={rect.innerWidth}
+            focused={field === "body"}
+            paused={isSubmitting}
+            theme={theme}
+            placeholder="Add a review summary…"
+            onFocus={() => {
+              if (field !== "body") ui.run(A.REVIEW_SWITCH_FIELD);
+            }}
+          />
+          <text height={1} flexShrink={0} fg={theme.textMuted}>
+            {eventIndex === 2
+              ? "Request changes blocks merging; a summary is required."
+              : field === "body"
+                ? `${primaryBinding(ui, A.TEXT_NEWLINE) ?? ""} newline · typing edits only the summary`
+                : eventIndex === 1
+                  ? "Approve this PR; your approval is recorded on GitHub."
+                  : "Comment without approving or requesting changes."}
           </text>
-        )}
-      </box>
-    </box>
+        </>
+      )}
+    </DialogPanel>
   );
 }

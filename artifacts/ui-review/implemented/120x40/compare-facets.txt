@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-i4b2jt  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Make terminal reviews clear, fast, and safe  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                                                                                                       ▀
+  │             Compare  main ← feature                                                     1/44  escape  rk reviewed   
+  │ 0 / 1 revi  Branches Commits                                                                                        
+  │             [x] Working tree  [x] Local  [x] PR  [ ] Remote                                                         
+                  Working tree                                                              working-tree                
+  ┃ ◇ PR overv    feature/review-00                                                         local-branch                
+  ┃ ▼ src         feature/review-01                                                         local-branch                
+  ┃   A review    feature/review-02                                                         local-branch                
+                  feature/review-03                                                         local-branch                
+                  feature/review-04                                                         local-branch  ───────────   
+                  feature/review-05                                                         local-branch                
+                  feature/review-06                                                         local-branch                
+                  feature/review-07                                                         local-branch                
+                  feature/review-08                                                         local-branch                
+                  feature/review-09                                                         local-branch                
+                  feature/review-10                                                         local-branch                
+                  feature/review-11                                                         local-branch                
+                  feature/review-12                                                         local-branch                
+                  feature/review-13                                                         local-branch                
+                  feature/review-14                                                         local-branch                
+                  feature/review-15                                                         local-branch  ED  +6 / -0   
+                  feature/review-16                                                         local-branch                
+                  feature/review-17                                                         local-branch                
+                  feature/review-18                                                         local-branch                
+                  feature/review-19                                                         local-branch                
+                  feature/review-20                                                         local-branch                
+                  feature/review-21                                                         local-branch                
+                  feature/review-22                                                         local-branch                
+                  feature/review-23                                                         local-branch                
+                  feature/review-24                                                         local-branch                
+                Compares the working tree against HEAD.                                                                 
+                                                                                                                        
+                enter toggle  a all  n none  escape done                                                                
+                                                                                                                        
+                                                                                                                        
+   FILTERS                                                                                                      Ready.  

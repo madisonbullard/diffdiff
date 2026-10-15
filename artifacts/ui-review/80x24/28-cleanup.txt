@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-Vzunw /private/var/folders/42/w3sgx72173zby1  
+   PR  #1 Improve the keyboard-driven review wor1 check failed  │  merge ready  
+                                                                                
+                               ┃                                                
+  │                                                                             
+  │ Post-Merge Cleanup                       j/k  move   space  toggle   en     
+    The remote branch layout changed after                                      
+  ┃ the merge. Choose which stale refs to                                       
+  ┃ remove from this clone.                                                     
+  ┃                                                                             
+  ┃ ┃                                                                           
+    ┃  > [ ] Local branch feature                                              █
+    ┃  Delete local branch feature with a force delete if needed.              █
+    ┃                                                                          █
+    ┃                                                                          ▀
+    ┃    [ ] Remote-tracking ref origin/feature                              t  
+    ┃  Delete remote-tracking ref origin/feature from this clone only.          
+    ┃                                                                           
+                                                                                
+    Choose at least one available ref to remove, or press esc to keep the       
+    current refs.                                                               
+                                                                                
+   CLEANUP    ?  help     Merged the pull request. Choose any stale refs to...  

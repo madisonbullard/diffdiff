@@ -26,8 +26,7 @@ export type KeymapMode =
   | "merge-method"
   | "merge-title"
   | "merge-body"
-  | "confirm-merge"
-  | "cleanup";
+  | "confirm-merge";
 
 interface KeymapModeBadge {
   bg: string;
@@ -70,7 +69,7 @@ export function resolveActiveKeymapMode({
     case "reviewer-picker":
       return "reviewer-picker";
     case "branch":
-      if (activeListView === "commit" && commitSearchActive) {
+      if (commitSearchActive) {
         return "commit-search";
       }
 
@@ -95,8 +94,6 @@ export function resolveActiveKeymapMode({
       }
 
       return mergeModalField === "title" ? "merge-title" : "merge-body";
-    case "cleanup":
-      return "cleanup";
     default:
       if (activePane === "tree") {
         return "tree";
@@ -163,7 +160,7 @@ export function getKeymapModeBadge(mode: KeymapMode, theme: UiTheme): KeymapMode
     case "tree":
       return navigationMode("TREE");
     case "help":
-      return navigationMode("HELP");
+      return searchMode("KEYS");
     case "commands":
       return searchMode("CMDS");
     case "pull-request-list":
@@ -196,7 +193,5 @@ export function getKeymapModeBadge(mode: KeymapMode, theme: UiTheme): KeymapMode
       return actionMode("MERGE BODY");
     case "confirm-merge":
       return actionMode("CONFIRM");
-    case "cleanup":
-      return actionMode("CLEANUP");
   }
 }

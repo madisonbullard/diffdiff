@@ -1,0 +1,24 @@
+ Pull requests  open · authored by you or awaiting your review        1/40  esc 
+ › Filter by title, repo, author, or #number                                    
+ ────────────────────────────────────────────────────────────────────────────── 
+ › #42   Improve the keyboard-driven revi…  example/repo · alex · review r…  2h 
+   #41   Add clearer review status indica…  example/repo · sam · draft       1d 
+   #318  Speed up startup by deferring br…  example/tools · you · yours      3d 
+   #7    Docs: explain reviewed state sync  example/docs · jordan · review…  5d 
+   #300  Fixture pull request 5 with a ti…  example/tools · user-5 · revie…  6d 
+   #299  Fixture pull request 6 with a ti…  example/repo · user-6 · yours    7d 
+   #298  Fixture pull request 7 with a ti…  example/repo · user-7 · yours    8d 
+   #297  Fixture pull request 8 with a ti…  example/tools · user-8 · yours   9d 
+   #296  Fixture pull request 9 with a ti…  example/repo · user-9 · review… 10d 
+   #295  Fixture pull request 10 with a t…  example/repo · user-10 · yours  11d 
+   #294  Fixture pull request 11 with a t…  example/tools · user-11 · yours 12d 
+   #293  Fixture pull request 12 with a t…  example/repo · user-12 · yours  13d 
+   #292  Fixture pull request 13 with a t…  example/repo · user-13 · revie… 14d 
+   #291  Fixture pull request 14 with a t…  example/tools · user-14 · yours 15d 
+   #290  Fixture pull request 15 with a t…  example/repo · user-15 · yours  16d 
+   #289  Fixture pull request 16 with a t…  example/repo · user-16 · yours  17d 
+   #288  Fixture pull request 17 with a t…  example/tools · user-17 · revi… 18d 
+   #287  Fixture pull request 18 with a t…  example/repo · user-18 · yours  19d 
+   #286  Fixture pull request 19 with a t…  example/repo · user-19 · yours  20d 
+ enter review  ↑↓ move  y copy URL  F refresh                                   
+   PULL REQUESTS                                                                

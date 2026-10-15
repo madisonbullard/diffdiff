@@ -5,14 +5,21 @@ export function findLatestDismissedReviewComposerDraft(
   entries: readonly ReviewComposerHistoryEntry[],
   scope: ReviewComposerHistoryScope,
 ): ReviewComposerHistoryEntry | undefined {
-  return [...entries]
-    .reverse()
-    .find(
-      (entry) =>
-        entry.outcome === "dismissed" &&
-        entry.repositoryRootPath === scope.repositoryRootPath &&
-        entry.target.key === scope.targetKey,
-    );
+  const submitted = new Set<string>();
+  for (const entry of [...entries].reverse()) {
+    if (
+      entry.repositoryRootPath !== scope.repositoryRootPath ||
+      entry.target.key !== scope.targetKey
+    )
+      continue;
+    if (entry.outcome === "submitted") {
+      submitted.add(entry.body.trim());
+    } else {
+      // Only consume the submitted snapshot; never resurrect older drafts or erase newer work.
+      return submitted.has(entry.body.trim()) ? undefined : entry;
+    }
+  }
+  return undefined;
 }
 
 export function getReviewComposerHistoryEntriesForBrowsing(

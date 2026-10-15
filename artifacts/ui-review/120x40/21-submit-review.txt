@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                     ┃  - Clarify destructive actions                                                   
+  │                                  ┃  - Improve review feedback                                                       
+  │ 0 / 2 reviewed         +5 / -1   ┃                                                                                  
+  │                                  ┃  View pull request on GitHub ↗                                                   
+                                     ┃                                                                                  
+  ┃ ◇ PR overview                                                                                                       
+  ┃ ▼ src                        1   ┃                                                                                 ▄
+  ┃   M review.ts            +2 -1   ┃  ▼ src/review.ts                                              CHANGED  +2 / -1  █
+  ┃ A README.md              +3 -0   ┃                                                                                 █
+                                                                                                                       █
+             Submit Review              up/down  choose event   leader+j/k  move while typing   ctrl+e  lin            █
+             Submit the current review                                                                                 █
+                                                                                                                       █
+             ┃  > Comment                                                                                              █
+             ┃    Approve                                                                                    1 comment █
+             ┃    Request changes                                                                                      █
+                                                                                                                       █
+             ┃                                                                                                         █
+             ┃                                                                                                         █
+             ┃                                                                                                         █
+             ┃                                                                                                         █
+             ┃                                                                                                          
+             ┃                                                                                                +3 / -0   
+                                                                                                                        
+             Optional review summary. Use shift+enter, ctrl+j, alt+enter, or cmd+enter for newlines. Use                
+             leader+e for the external editor.                                                                          
+                                                                                                                        
+                                     ┃                                                                                  
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+   SUBMIT    ?  help                                                                      Preparing review submission.  

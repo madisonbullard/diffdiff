@@ -1,0 +1,40 @@
+                                                                                                                        
+  diffdiff / diffdiff-visual-repo-Vzunwi  │   base ← /private/var/folders/42/w3sgx72173zby1510vwrknyc0000gp/T/diffdiff  
+   PR  #1 Improve the keyboard-driven review workflow  │  author  │  1 check failed  │  merge ready                     
+                                                                                                                        
+                                     ┃  - Clarify destructive actions                                                   
+  │                                  ┃  - Improve review feedback                                                       
+  │ 0 / 2 reviewed         +5 / -1   ┃                                                                                  
+  │                                  ┃  View pull request on GitHub ↗                                                   
+                                                                                                                        
+  ┃ ◇  Merge Pull Request                  tab  next field   ctrl+e  line end   leader+e  editor   enter  confirm       
+  ┃ ▼  PR #1 • Improve the keyboard-driven                                                                             ▄
+  ┃                                                                                                                -1  █
+  ┃ A  [ ] Auto-merge when requirements pass • ctrl+g toggle                                                           █
+       ┃    Merge commit  │  available                                                                                 █
+       ┃    Squash merge  │  default selection                                                                         █
+                                                                                                                       █
+       ┃                                                                                                               █
+       ┃  Title: Improve the keyboard-driven review workflow                                                           █
+       ┃                                                                                                          ment █
+                                                                                                                       █
+       ┃                                                                                                               █
+       ┃  Body:                                                                                                        █
+       ┃  ## Summary                                                                                                   █
+       ┃  Make review navigation faster and keep actions discoverable.                                                 █
+       ┃                                                                                                               █
+       ┃  - Preserve keyboard-first interactions                                                                        
+       ┃  - Clarify destructive actions                                                                            -0   
+       ┃  - Improve review feedback                                                                                     
+       ┃                                                                                                                
+       ┃                                                                                                                
+       ┃                                                                                                                
+                                                                                                                        
+       Edit the merge title/body. Use shift+enter, ctrl+j, alt+enter, or cmd+enter for newlines. Use leader+e           
+       for the external editor. Press enter to open the confirmation step.                                              
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+   MERGE TITLE    ?  help                                                                       Preparing merge modal.  

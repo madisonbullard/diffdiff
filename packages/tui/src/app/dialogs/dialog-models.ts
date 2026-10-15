@@ -1,9 +1,4 @@
-import type {
-  GitHubCleanupPreferences,
-  GitHubDashboardPullRequest,
-  GitHubMergeMethod,
-  GitHubRefCleanupCandidate,
-} from "@madisonbullard/diffdiff-core";
+import type { GitHubDashboardPullRequest, GitHubMergeMethod } from "@madisonbullard/diffdiff-core";
 import type { ScrollBoxRenderable } from "@opentui/core";
 import type { MutableRefObject } from "react";
 import type { TextInputSurface } from "../../text-input-surface.ts";
@@ -58,12 +53,14 @@ export interface ReviewComposerDialogModels {
 }
 
 export interface ReviewSubmissionDialogModels {
+  field: "event" | "body";
   bodySurface: TextInputSurface;
   eventIndex: number;
   isSubmitting: boolean;
 }
 
 export interface MergeDialogModels {
+  cleanupAfterMerge: boolean;
   autoMerge: boolean;
   bodyScrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   bodySurface: TextInputSurface;
@@ -74,15 +71,8 @@ export interface MergeDialogModels {
   titleSurface: TextInputSurface;
 }
 
-export interface CleanupDialogModels {
-  canApply: boolean;
-  candidates: readonly GitHubRefCleanupCandidate[];
-  isSubmitting: boolean;
-  selectedIndex: number;
-  selection: GitHubCleanupPreferences;
-}
-
 export interface HelpDialogModels {
+  leaderOnly: boolean;
   activePane: AppPane;
   commandBindingLabels: ReadonlyMap<string, string | undefined>;
   commands: readonly AppCommand[];
@@ -104,7 +94,6 @@ export interface DiffdiffDialogModels {
   };
   reviewerPicker: ReviewerPickerState;
   branch: BranchDialogModels;
-  cleanup: CleanupDialogModels;
   clearReviewed: { reviewedCount: number };
   commandPalette: CommandPaletteModels;
   diagnostics: DiagnosticsDialogModels;
@@ -118,16 +107,16 @@ export interface DiffdiffDialogModels {
 }
 
 export function createDiffdiffDialogModels({
+  pendingWrites,
+  helpLeaderOnly = false,
+  reviewSubmissionField = "event",
+  cleanupAfterMerge = true,
   activeListView,
   activePane,
   branchItems,
   branchListFilters,
   branchListIndex,
-  canApplyCleanup,
   checks,
-  cleanupCandidateIndex,
-  cleanupCandidates,
-  cleanupSelection,
   commandPalette,
   commitListIndex,
   commitSearchActive,
@@ -167,16 +156,16 @@ export function createDiffdiffDialogModels({
   reviewerPicker,
   session,
 }: {
+  pendingWrites?: { merge: boolean; comment: boolean; review: boolean };
+  helpLeaderOnly?: boolean;
+  reviewSubmissionField?: "event" | "body";
+  cleanupAfterMerge?: boolean;
   activeListView: ListModalView;
   activePane: AppPane;
   branchItems: readonly BranchListItem[];
   branchListFilters: BranchListFilters;
   branchListIndex: number;
-  canApplyCleanup: boolean;
   checks?: DiffdiffDialogModels["checks"];
-  cleanupCandidateIndex: number;
-  cleanupCandidates: readonly GitHubRefCleanupCandidate[];
-  cleanupSelection: GitHubCleanupPreferences;
   commandPalette: CommandPaletteModels;
   commitListIndex: number;
   commitSearchActive: boolean;
@@ -235,13 +224,6 @@ export function createDiffdiffDialogModels({
       openPrCount,
       remoteBranchCount,
     },
-    cleanup: {
-      canApply: canApplyCleanup,
-      candidates: cleanupCandidates,
-      isSubmitting: isSubmittingReviewAction,
-      selectedIndex: cleanupCandidateIndex,
-      selection: cleanupSelection,
-    },
     clearReviewed: {
       reviewedCount,
     },
@@ -254,6 +236,7 @@ export function createDiffdiffDialogModels({
       selectedIndex: diagnosticEventIndex,
     },
     help: {
+      leaderOnly: helpLeaderOnly,
       activePane,
       commandBindingLabels: commandPalette.commandBindingLabels,
       commands: helpCommands,
@@ -263,11 +246,12 @@ export function createDiffdiffDialogModels({
       selectedIndex: filterIndex,
     },
     merge: {
+      cleanupAfterMerge,
       autoMerge: mergeAutoMerge,
       bodyScrollRef: mergeBodyScrollRef,
       bodySurface: mergeBodySurface,
       field: mergeModalField,
-      isSubmitting: isSubmittingReviewAction,
+      isSubmitting: pendingWrites?.merge ?? isSubmittingReviewAction,
       method: mergeMethod,
       showConfirm: mergeConfirmOpen,
       titleSurface: mergeTitleSurface,
@@ -286,13 +270,14 @@ export function createDiffdiffDialogModels({
     },
     reviewComposer: {
       autocompleteIndex: reviewComposerAutocompleteIndex,
-      isSubmitting: isSubmittingReviewAction,
+      isSubmitting: pendingWrites?.comment ?? isSubmittingReviewAction,
       models: reviewComposerModels,
     },
     reviewSubmission: {
+      field: reviewSubmissionField,
       bodySurface: reviewSubmissionSurface,
       eventIndex: reviewSubmissionEventIndex,
-      isSubmitting: isSubmittingReviewAction,
+      isSubmitting: pendingWrites?.review ?? isSubmittingReviewAction,
     },
   };
 }

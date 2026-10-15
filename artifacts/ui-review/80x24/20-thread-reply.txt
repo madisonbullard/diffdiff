@@ -1,0 +1,24 @@
+                                                                                
+  diffdiff / diffdiff-visual-repo-Vzunw /private/var/folders/42/w3sgx72173zby1  
+   PR  #1 Improve the keyboard-driven review wor1 check failed  │  merge ready  
+                                                                                
+                                                                                
+  │ Reply in src/review.ts:2- ctrl+e  line end   leader+e  editor   up/down     
+  │                                                                             
+                                                                                
+  ┃ ┃                                                                           
+  ┃ ┃  Could we explain why this defaults to true?                              
+  ┃                                                                             
+  ┃ ┃                                                                           
+    ┃                                                                          █
+    ┃                                                                          █
+    ┃                                                                          █
+    ┃                                                                          ▀
+    ┃                                                                        t  
+    ┃                                                                           
+    ┃                                                                           
+    Type your comment body. 1 saved draft available for browsing. Use           
+    shift+enter, ctrl+j, alt+enter, or cmd+enter for newlines. Use leader+e     
+    for the external editor.                                                    
+                                                                                
+   COMMENT    ?  help                           Replying in src/review.ts:2-3.  

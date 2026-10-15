@@ -145,11 +145,10 @@ export function createGitHubReviewActions({
   function openGitHubPullRequestList(): void {
     state.setPullRequestListIndex(0);
     textInputControllers.pullRequestSearch.reset();
-    textInputControllers.pullRequestSearch.deactivate();
+    textInputControllers.pullRequestSearch.activate();
     state.setDialogStack((currentStack) =>
       openAppDialog(currentStack, "pull-request-list", { clear: true }),
     );
-    state.setStatusMessage("Opened pull request list.");
     void refreshGitHubPullRequestList();
   }
 
@@ -223,14 +222,12 @@ export function createGitHubReviewActions({
   function openPullRequestCommentsModal(): void {
     state.setPullRequestConversationIndex(0);
     state.setDialogStack((currentStack) => openAppDialog(currentStack, "comments"));
-    state.setStatusMessage("Opened PR comments.");
   }
 
   function openPullRequestChecksModal(): void {
     if (state.session.github == null) return;
     state.setChecksIndex(0);
     state.setDialogStack((stack) => openAppDialog(stack, "checks"));
-    state.setStatusMessage("Opened PR checks.");
   }
 
   function openSubmitReviewModal(): void {
@@ -243,7 +240,6 @@ export function createGitHubReviewActions({
       derived.displaySession.github?.pullRequest.pendingReview?.body ?? "",
     );
     state.setDialogStack((currentStack) => openAppDialog(currentStack, "submit-review"));
-    state.setStatusMessage("Preparing review submission.");
   }
 
   function openMergeModal(): void {
@@ -266,7 +262,6 @@ export function createGitHubReviewActions({
       title: derived.displaySession.github!.pullRequest.title,
     });
     state.setDialogStack((currentStack) => openAppDialog(currentStack, "merge"));
-    state.setStatusMessage("Preparing merge modal.");
   }
 
   return {
@@ -293,11 +288,14 @@ export function createGitHubReviewActions({
     state.setDialogStack((currentStack) =>
       closeAppDialog(currentStack, "comment-composer", "dismiss"),
     );
-    if (controllers.reviewComposer.close()) {
-      state.setStatusMessage("Closed comment composer. Draft saved.");
+    const draftSaved = controllers.reviewComposer.close();
+    if (state.writeGuard.isPending("comment")) {
+      state.setStatusMessage("Sending comment in the background. Draft kept until confirmed.");
       return;
     }
-
-    state.setStatusMessage("Closed comment composer.");
+    if (draftSaved) {
+      state.setStatusMessage("Comment draft saved.");
+      return;
+    }
   }
 }

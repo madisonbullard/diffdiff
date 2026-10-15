@@ -1,0 +1,16 @@
+ Compare  main ← feature                     1/44  escape 
+ Branches Commits                                         
+ [x] Working tree  [x] Local  [x] PR  [ ] Remote          
+ › Working tree                              working-tree 
+   feature/review-00                         local-branch 
+   feature/review-01                         local-branch 
+   feature/review-02                         local-branch 
+   feature/review-03                         local-branch 
+   feature/review-04                         local-branch 
+   feature/review-05                         local-branch 
+   feature/review-06                         local-branch 
+   feature/review-07                         local-branch 
+ Compares the working tree against HEAD.                  
+                                                          
+ enter set head  b set base  tab view  f filters          
+   BRANCHES                                       Ready.  
