@@ -1,9 +1,9 @@
 import { getDefaultGitHubPreferences } from "@madisonbullard/diffdiff-core";
 import { createWriteGuard } from "../review/write-guard.ts";
 import { useSynchronousState } from "./use-synchronous-state.ts";
+import type { PullRequestMenuAction } from "../../review/merge-eligibility.ts";
 import type {
   GitHubDashboardPullRequest,
-  GitHubMergeMethod,
   GitHubUserPreferences,
 } from "@madisonbullard/diffdiff-core";
 import type { ScrollBoxRenderable } from "@opentui/core";
@@ -177,7 +177,7 @@ export function useDiffdiffAppState({
     createTextInputState(),
   );
   const [mergeCommitTitleInput, setMergeCommitTitleInput] = useState(() => createTextInputState());
-  const [mergeMethod, setMergeMethod] = useState<GitHubMergeMethod | undefined>(
+  const [mergeMethod, setMergeMethod] = useState<PullRequestMenuAction | undefined>(
     initialGitHubPreferences?.defaultMergeMethod,
   );
   const [mergeAutoMerge, setMergeAutoMerge] = useState(false);

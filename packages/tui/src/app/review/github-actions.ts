@@ -38,6 +38,7 @@ interface CreateGitHubReviewActionsOptions {
     | "loadSession"
     | "openExternalEditor"
     | "mergePullRequest"
+    | "closePullRequest"
     | "replyToReviewComment"
     | "removeCleanupRefs"
     | "submitPendingReview"

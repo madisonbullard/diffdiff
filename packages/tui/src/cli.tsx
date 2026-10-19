@@ -347,6 +347,9 @@ async function launchTui(options: LaunchOptions, target?: string): Promise<void>
         markFileAsViewed={(reviewSession, path) =>
           gitHubPullRequestService.markFileAsViewed(reviewSession, path)
         }
+        closePullRequest={(reviewSession) =>
+          gitHubPullRequestService.closePullRequest(reviewSession)
+        }
         mergePullRequest={(reviewSession, input) =>
           gitHubPullRequestService.mergePullRequest(reviewSession, input)
         }

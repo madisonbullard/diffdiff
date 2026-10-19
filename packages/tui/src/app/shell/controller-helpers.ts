@@ -36,8 +36,10 @@ export function openMergeConfirmDialog(
 
   state.setMergeConfirmOpen(true);
   state.setStatusMessage(
-    state.mergeAutoMerge
-      ? `Press enter again to confirm enabling auto-merge with ${state.mergeMethod}.`
-      : `Press enter again to confirm the ${state.mergeMethod} merge.`,
+    state.mergeMethod === "close"
+      ? "Press enter again to close the pull request without merging. Branches will be kept."
+      : state.mergeAutoMerge
+        ? `Press enter again to confirm enabling auto-merge with ${state.mergeMethod}.`
+        : `Press enter again to confirm the ${state.mergeMethod} merge.`,
   );
 }

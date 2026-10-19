@@ -1,4 +1,5 @@
 import { enablePullRequestAutoMerge } from "./pull-request-auto-merge.ts";
+import { closePullRequest } from "./close-pull-request.ts";
 import { DiffdiffError } from "../errors.ts";
 import { logDiffdiffError, logDiffdiffInfo, logDiffdiffWarn } from "../logging.ts";
 import {
@@ -435,6 +436,10 @@ export class GitHubPullRequestService {
         review_id: pendingReview.id,
       },
     );
+  }
+
+  async closePullRequest(reviewSession: GitHubReviewSession): Promise<void> {
+    await closePullRequest(await this.requireClient(reviewSession), reviewSession);
   }
 
   async mergePullRequest(

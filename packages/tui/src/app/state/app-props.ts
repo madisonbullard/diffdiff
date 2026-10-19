@@ -38,6 +38,7 @@ export interface DiffdiffAppProps {
   listReviewerCandidates?: (session: GitHubReviewSession) => Promise<GitHubReviewerCandidates>;
   requestReviewers?: (session: GitHubReviewSession, logins: readonly string[]) => Promise<void>;
   setPullRequestDraft?: (session: GitHubReviewSession, isDraft: boolean) => Promise<void>;
+  closePullRequest?: (session: GitHubReviewSession) => Promise<void>;
   loadComparisonBrowserData?: (options: LaunchOptions) => Promise<{
     branches: PreparedReviewSession["branches"];
     commits: PreparedReviewSession["commits"];

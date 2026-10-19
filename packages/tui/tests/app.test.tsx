@@ -3956,6 +3956,44 @@ test("opens the external editor for merge composition", async () => {
   expect(getAppText(tree)).toContain("Edited body");
 });
 
+test("closes a draft PR from the merge menu after explicit confirmation, keeping refs", async () => {
+  const github = createGitHubReviewSession()!;
+  github.pullRequest.isDraft = true;
+  github.pullRequest.merge.allowedMethods = [];
+  github.pullRequest.merge.canMerge = false;
+  const closePullRequest = vi.fn(async () => {});
+  const mergePullRequest = vi.fn();
+  const removeCleanupRefs = vi.fn();
+  const loadSession = vi.fn().mockRejectedValue(new Error("offline"));
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github }),
+        closePullRequest,
+        mergePullRequest,
+        removeCleanupRefs,
+        loadSession,
+      })}
+    />,
+  );
+  emitKey({ name: "m" });
+  emitKey({ name: "j" });
+  expect(getAppText(tree)).toContain("Close PR");
+  expect(getAppText(tree)).not.toContain("Commit title");
+  await emitAsyncKey({ name: "return" });
+  expect(closePullRequest).not.toHaveBeenCalled();
+  expect(getAppText(tree)).toContain("without merging");
+  emitKey({ name: "escape" });
+  expect(closePullRequest).not.toHaveBeenCalled();
+  await emitAsyncKey({ name: "return" });
+  await emitAsyncKey({ name: "return" });
+  expect(closePullRequest).toHaveBeenCalledExactlyOnceWith(github);
+  expect(mergePullRequest).not.toHaveBeenCalled();
+  expect(removeCleanupRefs).not.toHaveBeenCalled();
+  expect(getAppText(tree)).toContain("CLOSED PR");
+  expect(getAppText(tree)).toContain("Closed the pull request, but unable to refresh");
+});
+
 test("enables auto-merge from the merge modal while checks block immediate merging", async () => {
   const github = createGitHubReviewSession()!;
   github.pullRequest.merge = {

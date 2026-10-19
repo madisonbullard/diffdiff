@@ -470,6 +470,7 @@ function createMergeMessageController({
   }
 
   function cycleField(): void {
+    if (state.mergeMethod === "close") return;
     state.setMergeModalField((currentField) => {
       switch (currentField) {
         case "method":

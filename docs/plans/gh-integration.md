@@ -40,6 +40,18 @@
 
 ### Repository merge methods
 
+- The merge menu also offers **Close PR** after the repository's enabled merge methods.
+  Select it with `j`/`k` or arrows, then press Enter twice for an inline confirmation
+  that explicitly says **without merging**. Escape backs out without writing.
+- Closing requires authentication and an open, unmerged PR, but works for drafts,
+  blocked checks, and repositories with no supported merge methods. Commit editors,
+  auto-merge, and cleanup options are hidden for this action. Branches and local refs
+  are always kept. Close is never saved as the default merge method.
+- Core exposes `closePullRequest(session)` through GitHub's update-PR endpoint.
+  Closing shares the merge write guard, supports background completion on Escape,
+  and updates the banner only after GitHub confirms. Refresh failure retains the
+  confirmed closed state; mutation failure keeps the open PR retryable.
+
 - In the merge modal, `Ctrl+G` toggles **Auto-merge when requirements pass**.
   The confirmation names auto-merge explicitly. It uses the selected method and
   edited title/body, and remains available while checks or reviews block immediate

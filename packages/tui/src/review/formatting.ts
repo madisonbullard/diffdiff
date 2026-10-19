@@ -1,9 +1,9 @@
 import type {
-  GitHubMergeMethod,
   GitHubPullRequestDetail,
   GitHubReviewSubmissionEvent,
 } from "@madisonbullard/diffdiff-core";
 import type { UiTheme } from "../theme.ts";
+import type { PullRequestMenuAction } from "./merge-eligibility.ts";
 
 const REVIEW_SUBMISSION_EVENTS: readonly GitHubReviewSubmissionEvent[] = [
   "COMMENT",
@@ -183,14 +183,14 @@ export function getReviewSubmissionEvent(index: number): GitHubReviewSubmissionE
 
 export function getMergeMethod(
   index: number,
-  methods: readonly GitHubMergeMethod[],
-): GitHubMergeMethod | undefined {
+  methods: readonly PullRequestMenuAction[],
+): PullRequestMenuAction | undefined {
   return methods[Math.max(0, Math.min(index, methods.length - 1))];
 }
 
 export function getMergeMethodIndex(
-  method: GitHubMergeMethod | undefined,
-  methods: readonly GitHubMergeMethod[],
+  method: PullRequestMenuAction | undefined,
+  methods: readonly PullRequestMenuAction[],
 ): number {
   return method == null ? 0 : Math.max(methods.indexOf(method), 0);
 }
@@ -206,7 +206,8 @@ export function formatReviewEvent(event: GitHubReviewSubmissionEvent): string {
   }
 }
 
-export function formatMergeMethod(method: GitHubMergeMethod): string {
+export function formatMergeMethod(method: PullRequestMenuAction): string {
+  if (method === "close") return "Close PR";
   return method === "merge" ? "Merge commit" : "Squash merge";
 }
 

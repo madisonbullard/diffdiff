@@ -1,10 +1,12 @@
 import type { GitHubMergeMethod, GitHubPullRequestDetail } from "@madisonbullard/diffdiff-core";
+export type PullRequestMenuAction = GitHubMergeMethod | "close";
 /** Shared by rendering, confirmation, and final submission; never trust UI state alone. */
 export function canSubmitMerge(
   pr: GitHubPullRequestDetail,
-  method: GitHubMergeMethod | null | undefined,
+  method: PullRequestMenuAction | null | undefined,
   auto: boolean,
 ): boolean {
+  if (method === "close") return pr.state === "open" && !pr.isMerged;
   if (
     method == null ||
     !pr.merge.allowedMethods?.includes(method) ||

@@ -966,6 +966,43 @@ describe("GitHubPullRequestService", () => {
     );
   });
 
+  test("closes an open pull request without merging or cleaning up refs", async () => {
+    mockRemoteTrackingRefs("refs/remotes/origin/main", "refs/remotes/origin/feature/ui");
+    const client = createGitHubApiClient();
+    const service = new GitHubPullRequestService({ create: vi.fn(async () => client) });
+    const session = await service.attachReviewSession(createReviewSession());
+    client.requestMock.mockClear();
+    const commands = vi.spyOn(commandModule, "runCommand").mockClear();
+    await service.closePullRequest(session.github!);
+    expect(client.requestMock).toHaveBeenCalledExactlyOnceWith(
+      "PATCH /repos/{owner}/{repo}/pulls/{pull_number}",
+      { owner: "diffdiff", repo: "diffdiff", pull_number: 42, state: "closed" },
+    );
+    for (const pullRequest of [
+      { ...session.github!.pullRequest, state: "closed" as const },
+      { ...session.github!.pullRequest, isMerged: true },
+    ]) {
+      await expect(service.closePullRequest({ ...session.github!, pullRequest })).rejects.toThrow(
+        "open",
+      );
+    }
+    expect(client.requestMock).toHaveBeenCalledTimes(1);
+    expect(commands).not.toHaveBeenCalled();
+  });
+
+  test("closing requires authentication and propagates GitHub failures", async () => {
+    mockRemoteTrackingRefs("refs/remotes/origin/main", "refs/remotes/origin/feature/ui");
+    const client = createGitHubApiClient();
+    const service = new GitHubPullRequestService({ create: vi.fn(async () => client) });
+    const session = await service.attachReviewSession(createReviewSession());
+    client.requestMock.mockRejectedValueOnce(new Error("Permission denied"));
+    await expect(service.closePullRequest(session.github!)).rejects.toThrow("Permission denied");
+    const unauthenticated = new GitHubPullRequestService({ create: vi.fn(async () => null) });
+    await expect(unauthenticated.closePullRequest(session.github!)).rejects.toThrow(
+      "authentication",
+    );
+  });
+
   test("merges a pull request, refreshes refs, and suggests cleanup for deleted branch refs", async () => {
     const client = createGitHubApiClient();
     const clientFactory: GitHubClientFactory = {

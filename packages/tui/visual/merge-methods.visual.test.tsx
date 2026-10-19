@@ -29,6 +29,11 @@ for (const allowedMethods of [
       expect(app.frame()).toContain("Merge Pull Request");
       expect(app.frame().includes("Merge commit")).toBe(allowedMethods.includes("merge"));
       expect(app.frame().includes("Squash merge")).toBe(allowedMethods.includes("squash"));
+      expect(app.frame()).toContain("○ Close PR");
+      if (allowedMethods.length === 0) {
+        await app.press("\r");
+        expect(app.frame()).toContain("Choose an allowed merge method.");
+      }
       if (allowedMethods.length === 1) {
         const selectedLabel = allowedMethods[0] === "merge" ? "Merge commit" : "Squash merge";
         expect(app.frame()).toContain(`● ${selectedLabel}`);
@@ -38,10 +43,10 @@ for (const allowedMethods of [
       await app.press("j", "k", "j");
       expect(app.frame().includes("Merge commit")).toBe(allowedMethods.includes("merge"));
       expect(app.frame().includes("Squash merge")).toBe(allowedMethods.includes("squash"));
-      if (allowedMethods.length === 0) {
-        expect(app.frame()).toContain("No allowed merge methods");
+      if (allowedMethods.length <= 1) {
+        expect(app.frame()).toContain("● Close PR");
         await app.press("\r");
-        expect(app.frame()).toContain("Merge Pull Request");
+        expect(app.frame()).toContain("close without merging");
       } else {
         const selectedLabel = allowedMethods.at(-1) === "merge" ? "Merge commit" : "Squash merge";
         expect(app.frame()).toContain(`● ${selectedLabel}`);

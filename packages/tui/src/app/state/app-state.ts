@@ -1,6 +1,6 @@
+import type { PullRequestMenuAction } from "../../review/merge-eligibility.ts";
 import type {
   GitHubDashboardPullRequest,
-  GitHubMergeMethod,
   GitHubUserPreferences,
 } from "@madisonbullard/diffdiff-core";
 import type { ScrollBoxRenderable } from "@opentui/core";
@@ -90,7 +90,7 @@ export interface DiffdiffAppState {
   mergeCommitMessageInput: TextInputState;
   mergeCommitTitleInput: TextInputState;
   mergeConfirmOpen: boolean;
-  mergeMethod: GitHubMergeMethod | undefined;
+  mergeMethod: PullRequestMenuAction | undefined;
   mergeAutoMerge: boolean;
   mergeModalField: MergeModalField;
   optimisticGitHubOperations: GitHubOptimisticOperation[];
@@ -169,7 +169,7 @@ export interface DiffdiffAppState {
   setMergeCommitMessageInput: Dispatch<SetStateAction<TextInputState>>;
   setMergeCommitTitleInput: Dispatch<SetStateAction<TextInputState>>;
   setMergeConfirmOpen: Dispatch<SetStateAction<boolean>>;
-  setMergeMethod: Dispatch<SetStateAction<GitHubMergeMethod | undefined>>;
+  setMergeMethod: Dispatch<SetStateAction<PullRequestMenuAction | undefined>>;
   setMergeAutoMerge: Dispatch<SetStateAction<boolean>>;
   setMergeModalField: Dispatch<SetStateAction<MergeModalField>>;
   setOptimisticGitHubOperations: Dispatch<SetStateAction<GitHubOptimisticOperation[]>>;

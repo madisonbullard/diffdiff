@@ -1,4 +1,5 @@
-import type { GitHubDashboardPullRequest, GitHubMergeMethod } from "@madisonbullard/diffdiff-core";
+import type { GitHubDashboardPullRequest } from "@madisonbullard/diffdiff-core";
+import type { PullRequestMenuAction } from "../../review/merge-eligibility.ts";
 import type { ScrollBoxRenderable } from "@opentui/core";
 import type { MutableRefObject } from "react";
 import type { TextInputSurface } from "../../text-input-surface.ts";
@@ -66,7 +67,7 @@ export interface MergeDialogModels {
   bodySurface: TextInputSurface;
   field: "method" | "title" | "body";
   isSubmitting: boolean;
-  method: GitHubMergeMethod | undefined;
+  method: PullRequestMenuAction | undefined;
   showConfirm: boolean;
   titleSurface: TextInputSurface;
 }
@@ -186,7 +187,7 @@ export function createDiffdiffDialogModels({
   mergeBodyScrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   mergeBodySurface: TextInputSurface;
   mergeConfirmOpen: boolean;
-  mergeMethod: GitHubMergeMethod | undefined;
+  mergeMethod: PullRequestMenuAction | undefined;
   mergeAutoMerge: boolean;
   mergeModalField: "method" | "title" | "body";
   mergeTitleSurface: TextInputSurface;

@@ -241,6 +241,7 @@ root.render(
     unmarkFileAsViewed: async () => {},
     removeCleanupRefs: fail("removeCleanupRefs"),
     mergePullRequest: fail("mergePullRequest"),
+    closePullRequest: fail("closePullRequest"),
     probeFreshness: async () => ({ hasComparisonUpdates: false, hasGitHubUpdates: false }),
     syncRemotes: async () => undefined,
   }),

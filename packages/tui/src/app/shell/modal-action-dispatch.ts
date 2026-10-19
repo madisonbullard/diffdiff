@@ -165,13 +165,20 @@ export function buildModalActionDispatchMap({
   }
 
   function updateMergeMethod(delta: number): void {
-    const methods = derived.displaySession.github?.pullRequest.merge.allowedMethods ?? [];
+    const methods = [
+      ...(derived.displaySession.github?.pullRequest.merge.allowedMethods ?? []),
+      "close" as const,
+    ];
     const nextMethod = getMergeMethod(
       getMergeMethodIndex(state.mergeMethod, methods) + delta,
       methods,
     );
     if (nextMethod == null) return;
     state.setMergeMethod(nextMethod);
+    if (nextMethod === "close") {
+      state.setMergeAutoMerge(false);
+      return;
+    }
     void persistenceApi.persistGitHubPreferences({
       ...state.gitHubPreferencesRef.current,
       defaultMergeMethod: nextMethod,
@@ -595,7 +602,7 @@ export function buildModalActionDispatchMap({
     );
   });
   map.set(A.MERGE_TOGGLE_CLEANUP, () => {
-    if (state.mergeAutoMerge) return;
+    if (state.mergeAutoMerge || state.mergeMethod === "close") return;
     const current = state.gitHubPreferencesRef.current;
     const afterMerge = !getCleanupAfterMerge(current.cleanup);
     void persistenceApi.persistGitHubPreferences({
@@ -603,11 +610,12 @@ export function buildModalActionDispatchMap({
       cleanup: { afterMerge },
     });
   });
-  map.set(A.MERGE_PREVIOUS_FIELD, () =>
+  map.set(A.MERGE_PREVIOUS_FIELD, () => {
+    if (state.mergeMethod === "close") return;
     state.setMergeModalField((field) =>
       field === "body" ? "title" : field === "title" ? "method" : "body",
-    ),
-  );
+    );
+  });
 
   map.set(A.BRANCH_GO_TO_BRANCHES, () => {
     state.setActiveListView("branch");
@@ -713,6 +721,7 @@ export function buildModalActionDispatchMap({
     reviewInputControllers.mergeMessage.cycleField();
   });
   map.set(A.MERGE_TOGGLE_AUTO, () => {
+    if (state.mergeMethod === "close") return;
     const pr = derived.displaySession.github?.pullRequest;
     if (
       state.isSubmittingReviewAction ||

@@ -1,6 +1,7 @@
 import { closeDialog as closeAppDialog } from "../dialogs/stack.ts";
 import { formDraftKey } from "./form-drafts.ts";
 import { cleanMergedRefs } from "./merge-cleanup.ts";
+import { submitClosePullRequest } from "./close-pull-request.ts";
 import { mutationErrorOptions } from "./mutation-errors.ts";
 import { getCleanupAfterMerge } from "@madisonbullard/diffdiff-core";
 import { canSubmitMerge } from "../../review/merge-eligibility.ts";
@@ -23,7 +24,7 @@ import {
   toOptimisticPendingReviewRef,
 } from "./optimistic-github-operations.ts";
 
-interface CreateGitHubMutationActionsOptions {
+export interface CreateGitHubMutationActionsOptions {
   actions: {
     applyLoadedSession: (
       nextSession: import("../../types.ts").PreparedReviewSession,
@@ -44,6 +45,7 @@ interface CreateGitHubMutationActionsOptions {
     | "addReviewThread"
     | "loadSession"
     | "mergePullRequest"
+    | "closePullRequest"
     | "setPullRequestDraft"
     | "replyToReviewComment"
     | "removeCleanupRefs"
@@ -370,6 +372,8 @@ export function createGitHubMutationActions({
   }
 
   async function submitMergeFromModal(): Promise<void> {
+    if (state.mergeMethod === "close")
+      return submitClosePullRequest({ actions, props, state, persistence });
     if (
       state.session.github == null ||
       props.mergePullRequest == null ||
@@ -453,9 +457,7 @@ export function createGitHubMutationActions({
       }
       state.setStatusMessage("Merged the pull request. Refreshing local refs...");
       const nextSession = await props.loadSession(state.startupOptions);
-      if (!actions.isLatestSessionLoad(sessionLoadId)) {
-        return;
-      }
+      if (!actions.isLatestSessionLoad(sessionLoadId)) return;
       actions.applyLoadedSession(nextSession);
       if (mergeResult.refsRefreshError) {
         state.setErrorToastMessage(

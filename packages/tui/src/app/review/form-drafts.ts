@@ -16,7 +16,7 @@ export function saveFormDraft(state: DiffdiffAppState, kind: "merge" | "review")
     drafts.merge = {
       body: state.mergeCommitMessageInput.value,
       title: state.mergeCommitTitleInput.value,
-      method: state.mergeMethod,
+      method: state.mergeMethod === "close" ? undefined : state.mergeMethod,
       auto: state.mergeAutoMerge,
     };
   state.formDraftsRef.current.set(key, drafts);
