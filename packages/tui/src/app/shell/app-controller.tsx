@@ -463,6 +463,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       diffPaneWidth={derived.diffPaneWidth}
       diffView={derived.diffView}
       errorToastMessage={state.errorToastMessage}
+      onDismissErrorToast={persistence.persistenceApi.dismissErrorToast}
       diffScroll={state.diffScroll}
       footerEvent={footerEvent}
       footerEventMessage={footerEventMessage}

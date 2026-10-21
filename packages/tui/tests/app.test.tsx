@@ -1828,7 +1828,7 @@ test("shows a copy toast for five seconds after a successful copy", () => {
   expect(getAppText(tree)).not.toContain("Copied to clipboard");
 });
 
-test("shows a persistent error toast until dismissed", async () => {
+test("allows closing an error toast with its X button", async () => {
   const probeFreshness = vi.fn(async () => {
     throw new Error("Unable to refresh git state.");
   });
@@ -1852,9 +1852,45 @@ test("shows a persistent error toast until dismissed", async () => {
 
   expect(getAppText(tree)).toContain("Unable to refresh git state.");
 
-  emitKey({ name: "x", sequence: "x" });
+  const stopPropagation = vi.fn();
+  act(() => {
+    tree.root.findByProps({ id: "error-toast-dismiss" }).props.onMouseUp({ stopPropagation });
+  });
 
   expect(getAppText(tree)).not.toContain("Unable to refresh git state.");
+  expect(stopPropagation).toHaveBeenCalledOnce();
+});
+
+test("hides error toasts after five seconds and restarts the timeout for repeated errors", async () => {
+  vi.useFakeTimers();
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        probeFreshness: async () => {
+          throw new Error("Unable to refresh git state.");
+        },
+      })}
+    />,
+  );
+  const failRefresh = async () => {
+    await act(async () => {
+      rendererState.renderer.emit("blur");
+      rendererState.renderer.emit("focus");
+    });
+  };
+  await failRefresh();
+  act(() => {
+    vi.advanceTimersByTime(4000);
+  });
+  await failRefresh();
+  act(() => {
+    vi.advanceTimersByTime(4999);
+  });
+  expect(getAppText(tree)).toContain("Unable to refresh git state.");
+  act(() => {
+    vi.advanceTimersByTime(1);
+  });
+  expect(tree.root.findAllByProps({ id: "error-toast-dismiss" })).toHaveLength(0);
 });
 
 test("keeps the footer on the latest status after an error toast is shown", async () => {

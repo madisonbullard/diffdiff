@@ -34,6 +34,7 @@ interface DiffdiffAppViewProps {
   diffPaneWidth: number;
   diffView: "unified" | "split";
   errorToastMessage: string | null;
+  onDismissErrorToast: () => void;
   diffScroll: DiffScrollController;
   footerEvent: { color: string; message: string };
   footerEventMessage: string;
@@ -95,6 +96,7 @@ export function DiffdiffAppView({
   diffPaneWidth,
   diffView,
   errorToastMessage,
+  onDismissErrorToast,
   diffScroll,
   footerEvent,
   footerEventMessage,
@@ -245,7 +247,12 @@ export function DiffdiffAppView({
       />
 
       {errorToastMessage != null && !hasOverlaySurface ? (
-        <ErrorToast message={errorToastMessage} terminalWidth={terminalWidth} theme={theme} />
+        <ErrorToast
+          message={errorToastMessage}
+          terminalWidth={terminalWidth}
+          theme={theme}
+          onDismiss={onDismissErrorToast}
+        />
       ) : null}
     </box>
   );

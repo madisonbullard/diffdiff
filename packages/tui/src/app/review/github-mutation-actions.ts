@@ -460,7 +460,7 @@ export function createGitHubMutationActions({
       if (!actions.isLatestSessionLoad(sessionLoadId)) return;
       actions.applyLoadedSession(nextSession);
       if (mergeResult.refsRefreshError) {
-        state.setErrorToastMessage(
+        persistence.persistenceApi.showErrorToast(
           `Merged PR #${reviewSession.pullRequest.number}. Ref refresh failed: ${mergeResult.refsRefreshError}. Local refs were kept.`,
         );
         state.setStatusMessage(

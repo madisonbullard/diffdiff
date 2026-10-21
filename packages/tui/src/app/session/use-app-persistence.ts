@@ -8,7 +8,7 @@ import {
   saveReviewCache,
   updateDiffdiffSessionActivity,
 } from "@madisonbullard/diffdiff-core";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { DiffdiffAppProps, DiffdiffAppPersistenceApi } from "../state/app-props.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
 
@@ -22,6 +22,13 @@ export function useDiffdiffAppPersistence(
   props: Pick<DiffdiffAppProps, "logFilePath" | "onExit">,
 ): DiffdiffAppPersistence {
   const preferenceWrites = useRef(Promise.resolve());
+  const errorToastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (errorToastTimeoutRef.current != null) clearTimeout(errorToastTimeoutRef.current);
+    },
+    [],
+  );
   const flushPendingSessionActivity = useCallback(() => {
     const pendingActivity = state.pendingSessionActivityRef.current;
     state.pendingSessionActivityRef.current = null;
@@ -58,6 +65,10 @@ export function useDiffdiffAppPersistence(
   );
 
   const dismissErrorToast = useCallback(() => {
+    if (errorToastTimeoutRef.current != null) {
+      clearTimeout(errorToastTimeoutRef.current);
+      errorToastTimeoutRef.current = null;
+    }
     state.setErrorToastMessage((currentMessage) => {
       if (currentMessage != null) {
         logDiffdiffInfo("app", "error_toast_dismissed", {
@@ -73,14 +84,22 @@ export function useDiffdiffAppPersistence(
   const showErrorToast = useCallback(
     (contextMessage?: string, owner = state.dialogStackRef.current.at(-1) ?? null) => {
       const message = contextMessage == null ? "An error occurred." : contextMessage;
+      if (errorToastTimeoutRef.current != null) clearTimeout(errorToastTimeoutRef.current);
       state.setErrorToastMessage(message);
       state.setErrorDialogOwner(owner);
+      errorToastTimeoutRef.current = setTimeout(dismissErrorToast, 5000);
       logDiffdiffWarn("app", "error_toast_shown", {
         logFilePath: resolvedLogFilePath,
         message,
       });
     },
-    [resolvedLogFilePath, state.setErrorToastMessage],
+    [
+      dismissErrorToast,
+      resolvedLogFilePath,
+      state.dialogStackRef,
+      state.setErrorDialogOwner,
+      state.setErrorToastMessage,
+    ],
   );
 
   const handleAppError = useCallback(
@@ -205,6 +224,7 @@ export function useDiffdiffAppPersistence(
         }, delayMs);
       },
       showToast,
+      showErrorToast,
     }),
     [
       dismissErrorToast,
@@ -216,6 +236,7 @@ export function useDiffdiffAppPersistence(
       persistGitHubPreferences,
       props.onExit,
       showToast,
+      showErrorToast,
       state.pendingReviewCacheRef,
       state.pendingSessionActivityRef,
       state.reviewCacheTimeoutRef,

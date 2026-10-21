@@ -13,10 +13,12 @@ export function ErrorToast({
   message,
   terminalWidth,
   theme,
+  onDismiss,
 }: {
   message: string;
   terminalWidth: number;
   theme: UiTheme;
+  onDismiss: () => void;
 }) {
   const width = Math.max(
     Math.min(terminalWidth - 6, ERROR_TOAST_MAX_WIDTH),
@@ -41,9 +43,21 @@ export function ErrorToast({
       flexDirection="column"
       gap={0}
     >
-      <text fg={theme.danger} wrapMode="none">
-        Error
-      </text>
+      <box flexDirection="row" justifyContent="space-between">
+        <text fg={theme.danger} wrapMode="none">
+          Error
+        </text>
+        <text
+          id="error-toast-dismiss"
+          fg={theme.textMuted}
+          onMouseUp={(event) => {
+            event.stopPropagation();
+            onDismiss();
+          }}
+        >
+          {" X "}
+        </text>
+      </box>
       <text fg={theme.text} wrapMode="word">
         {message}
       </text>

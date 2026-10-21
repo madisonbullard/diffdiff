@@ -135,4 +135,8 @@ export interface DiffdiffAppPersistenceApi {
   scheduleReviewCacheSave: (key: ReviewCacheKey, state: ReviewCacheState, delayMs?: number) => void;
   scheduleSessionActivity: (activity: SessionActivityUpdate, delayMs?: number) => void;
   showToast: (message: string) => void;
+  showErrorToast: (
+    message?: string,
+    owner?: import("../dialogs/stack.ts").AppDialogStackEntry | null,
+  ) => void;
 }
