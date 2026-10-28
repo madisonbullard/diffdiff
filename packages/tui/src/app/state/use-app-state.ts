@@ -7,7 +7,11 @@ import type {
   GitHubUserPreferences,
 } from "@madisonbullard/diffdiff-core";
 import type { ScrollBoxRenderable } from "@opentui/core";
-import { DiffScrollController, type DiffLineTarget } from "../layout/diff-scroll.ts";
+import {
+  DiffScrollController,
+  type DiffLineTarget,
+  type LineRevealPlacement,
+} from "../layout/diff-scroll.ts";
 import { useRenderer, useTerminalDimensions } from "@opentui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -247,6 +251,7 @@ export function useDiffdiffAppState({
   const terminalFocusedRef = useRef(true);
   const pullRequestListLoadIdRef = useRef(0);
   const selectedDiffRowRef = useRef<DiffLineTarget | null>(null);
+  const selectedLineRevealRef = useRef<LineRevealPlacement>("nearest");
   const renderer = useRenderer();
   optimisticGitHubOperationsRef.current = optimisticGitHubOperations;
   const resolvedKeymaps = useMemo(
@@ -394,6 +399,7 @@ export function useDiffdiffAppState({
     scrollRef,
     selectedFileIndex,
     selectedDiffRowRef,
+    selectedLineRevealRef,
     showSelectedReviewAnchor,
     selectedReviewAnchorIndex,
     selectedReviewRange,

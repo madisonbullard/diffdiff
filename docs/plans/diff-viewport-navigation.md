@@ -136,10 +136,19 @@ These are the only invariants:
    entry equals the line.
 3. **One canonical reveal.** `revealFile(path)` scrolls to the measured body
    position (or the card top when collapsed). The card header sits behind the sticky band
-   naming file `i`, and the first diff row is at the top. `revealLine` aligns a
-   line a third of the way down the viewport, clamped at the content start.
-   Hunk navigation maps structural boundaries to review anchors, not indexes in
-   the flattened diff. Counted and reverse jumps work across files.
+   naming file `i`, and the first diff row is at the top. `revealLine` takes a
+   placement (`getLineRevealScrollTop`), applied instantly with no scroll
+   animation:
+   - `nearest`, for the `[`/`]` line cursor and `Shift+[`/`Shift+]` range edges:
+     a fully visible line (every wrapped row) never scrolls. An off-screen line
+     scrolls the least distance that shows it with up to 3 rows of context
+     (`LINE_REVEAL_CONTEXT_ROWS`) past it. A move that would leave nothing of
+     the previous viewport on screen, such as a counted jump, uses `jump`
+     instead. A relayout re-runs the request from the viewport it started from.
+   - `jump`, for hunk jumps (`gn`/`gp`) and line-number jumps: the line goes a
+     third of the way down the viewport, clamped at the content start.
+     Hunk navigation maps structural boundaries to review anchors, not indexes
+     in the flattened diff. Counted and reverse jumps work across files.
 4. **Scroll anchoring** is the single mechanism for layout changes such as
    collapse, view toggle, resize, refresh, threads loading, and comment
    collapse.

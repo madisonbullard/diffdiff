@@ -4,7 +4,11 @@ import type {
   GitHubUserPreferences,
 } from "@madisonbullard/diffdiff-core";
 import type { ScrollBoxRenderable } from "@opentui/core";
-import type { DiffLineTarget, DiffScrollController } from "../layout/diff-scroll.ts";
+import type {
+  DiffLineTarget,
+  DiffScrollController,
+  LineRevealPlacement,
+} from "../layout/diff-scroll.ts";
 import type { useRenderer, useTerminalDimensions } from "@opentui/react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { AppDialogStackEntry } from "../dialogs/stack.ts";
@@ -139,6 +143,8 @@ export interface DiffdiffAppState {
   scrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   mergeBodyScrollRef: MutableRefObject<ScrollBoxRenderable | null>;
   selectedDiffRowRef: MutableRefObject<DiffLineTarget | null>;
+  /** How the next selected-line reveal places the line; see diff-scroll.ts. */
+  selectedLineRevealRef: MutableRefObject<LineRevealPlacement>;
   setActiveFileIndex: Dispatch<SetStateAction<number>>;
   setActivePane: Dispatch<SetStateAction<AppPane>>;
   setActiveListView: Dispatch<SetStateAction<ListModalView>>;

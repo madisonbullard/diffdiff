@@ -406,6 +406,7 @@ function moveToHunk(
     next.delete(target.anchor.path);
     return next;
   });
+  state.selectedLineRevealRef.current = "jump";
   state.setSelectedReviewAnchorIndex(target.anchorIndex);
   state.setSelectedReviewRange(null);
   state.setShowSelectedReviewAnchor(true);
@@ -444,6 +445,7 @@ function jumpToSelectedFileLine(
     });
   }
 
+  state.selectedLineRevealRef.current = "jump";
   state.setShowSelectedReviewAnchor(true);
   state.setSelectedReviewAnchorIndex(targetIndex);
   state.setSelectedReviewRange(null);
@@ -453,7 +455,7 @@ function jumpToSelectedFileLine(
     derived.selectedReviewAnchor?.key === targetAnchor.key &&
     state.selectedDiffRowRef.current != null
   ) {
-    state.diffScroll.revealLine(state.selectedDiffRowRef.current);
+    state.diffScroll.revealLine(state.selectedDiffRowRef.current, "jump");
   }
   state.setStatusMessage(
     count == null

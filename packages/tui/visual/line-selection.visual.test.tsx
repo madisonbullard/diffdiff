@@ -1,6 +1,12 @@
 import { expect, test } from "bun:test";
-import { LineNumberRenderable, TextRenderable, type Renderable } from "@opentui/core";
-import { launchApp } from "./harness/app-harness.tsx";
+import {
+  LineNumberRenderable,
+  ScrollBoxRenderable,
+  TextRenderable,
+  type Renderable,
+} from "@opentui/core";
+import { describePane, launchApp, type AppHarness } from "./harness/app-harness.tsx";
+import { LINE_REVEAL_CONTEXT_ROWS } from "../src/app/layout/diff-scroll.ts";
 import { createFixtureRepo, numberedLines } from "./harness/fixture-repo.ts";
 import { githubReview, thread } from "./harness/review-fixture.ts";
 
@@ -68,6 +74,56 @@ for (const width of [120, 220]) {
       repo.dispose();
     }
   });
+}
+
+test("line cursor keeps visible lines in place and reveals off-screen lines at the nearest edge", async () => {
+  const repo = createFixtureRepo([{ path: "src/a.ts", after: numberedLines("step", 300) }]);
+  const app = await launchApp(repo);
+  try {
+    const scroll = descendantScrollboxes(app)[1]!;
+    const height = scroll.viewport.height;
+    const cursorRow = () => app.diffPane().rows.findIndex((row) => /▶\s*\d/u.test(row));
+    const press = async (...keys: string[]) => {
+      const report = await app.press(...keys);
+      expect(report.extraFrames).toBe(0);
+    };
+
+    await press("]");
+    const top = scroll.scrollTop;
+    while (cursorRow() < height - 1) {
+      await press("]");
+      expect(scroll.scrollTop, describePane(app.diffPane(), height)).toBe(top);
+    }
+    await press("]");
+    expect(cursorRow(), describePane(app.diffPane(), height)).toBe(
+      height - 1 - LINE_REVEAL_CONTEXT_ROWS,
+    );
+    expect(scroll.scrollTop).toBe(top + LINE_REVEAL_CONTEXT_ROWS + 1);
+
+    const scrolled = scroll.scrollTop;
+    while (cursorRow() > 0) {
+      await press("[");
+      expect(scroll.scrollTop).toBe(scrolled);
+    }
+    await press("[");
+    expect(cursorRow(), describePane(app.diffPane(), height)).toBe(LINE_REVEAL_CONTEXT_ROWS);
+    expect(scroll.scrollTop).toBe(scrolled - LINE_REVEAL_CONTEXT_ROWS - 1);
+
+    // Leaving the viewport entirely keeps the canonical jump placement.
+    await press("1", "5", "0", "]");
+    expect(cursorRow(), describePane(app.diffPane(), height)).toBe(Math.floor(height / 3));
+  } finally {
+    app.destroy();
+    repo.dispose();
+  }
+});
+
+function descendantScrollboxes(app: AppHarness): ScrollBoxRenderable[] {
+  const walk = (node: Renderable): Renderable[] => [
+    node,
+    ...node.getChildren().flatMap((child) => walk(child as Renderable)),
+  ];
+  return walk(app.renderer.root).filter((node) => node instanceof ScrollBoxRenderable);
 }
 
 test("selected deletion and addition retain diff signs, and comment markers survive selection", async () => {

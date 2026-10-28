@@ -230,6 +230,7 @@ export function createReviewActions({
       return;
     }
 
+    state.selectedLineRevealRef.current = "nearest";
     state.setShowSelectedReviewAnchor(true);
     state.setSelectedReviewAnchorIndex((currentIndex) => {
       const nextIndex = clampIndex(currentIndex + delta, derived.selectedReviewAnchors.length);
@@ -263,6 +264,7 @@ export function createReviewActions({
       return;
     }
     const next = extendReviewRange(file.patch, anchor, delta);
+    state.selectedLineRevealRef.current = "nearest";
     state.setShowSelectedReviewAnchor(true);
     state.setSelectedReviewRange({
       file,

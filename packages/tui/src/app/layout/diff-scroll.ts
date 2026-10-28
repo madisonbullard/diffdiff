@@ -2,6 +2,8 @@ import type { BoxRenderable, Renderable, ScrollBoxRenderable, TextRenderable } f
 import { getTopIntersectingFileIndex } from "../../view-model.ts";
 import { PR_OVERVIEW_PATH } from "../review/pull-request-overview.ts";
 
+export const LINE_REVEAL_CONTEXT_ROWS = 3;
+
 export interface DiffLineTarget {
   node: TextRenderable;
   line: number;
@@ -22,11 +24,53 @@ export function lineTargetOffset(target: DiffLineTarget, content: Renderable): n
   return contentOffset(target.node, content) + Math.max(row, 0);
 }
 
+/**
+ * `jump` puts the line a third of the way down the viewport. `nearest` leaves
+ * a visible line alone and otherwise scrolls the least distance that shows it
+ * with a few rows of context, falling back to `jump` when that distance leaves
+ * nothing of the previous viewport on screen.
+ */
+export type LineRevealPlacement = "jump" | "nearest";
+
+export function getLineRevealScrollTop({
+  height,
+  lineRows,
+  lineTop,
+  placement,
+  scrollTop,
+}: {
+  height: number;
+  lineRows: number;
+  lineTop: number;
+  placement: LineRevealPlacement;
+  scrollTop: number;
+}): number {
+  const jumpTop = Math.max(0, lineTop - Math.floor(height / 3));
+  if (placement === "jump") return jumpTop;
+  const lineBottom = lineTop + Math.max(lineRows, 1) - 1;
+  if (lineTop >= scrollTop && lineBottom < scrollTop + height) return scrollTop;
+  const context = Math.max(
+    0,
+    Math.min(LINE_REVEAL_CONTEXT_ROWS, Math.floor((height - lineRows) / 4)),
+  );
+  const nearestTop =
+    lineTop < scrollTop || lineRows > height
+      ? lineTop - context
+      : lineBottom - height + 1 + context;
+  return Math.abs(nearestTop - scrollTop) >= height ? jumpTop : Math.max(0, nearestTop);
+}
+
 interface FileNodes {
   card: BoxRenderable | null;
   body: BoxRenderable | null;
 }
 type ScrollAnchor = { path: string; offset: number | "body" };
+/** `from` is the viewport the request saw, so a relayout can re-run it. */
+type PendingLine = {
+  target: DiffLineTarget;
+  placement: LineRevealPlacement;
+  from: ScrollAnchor | null;
+};
 
 /** One native scrollbox, one anchor, no height estimates or viewport state. */
 export class DiffScrollController {
@@ -43,7 +87,7 @@ export class DiffScrollController {
   >();
   private tops: number[] = [];
   private anchor: ScrollAnchor | null = null;
-  private pendingLine: DiffLineTarget | null = null;
+  private pendingLine: PendingLine | null = null;
   private applying = false;
   private laidOut = false;
   private activeIndex = 0;
@@ -141,21 +185,26 @@ export class DiffScrollController {
     this.notifyViewport();
   }
 
-  revealLine(target: DiffLineTarget): void {
-    if (this.laidOut) this.applyLine(target);
-    this.pendingLine = target;
+  revealLine(target: DiffLineTarget, placement: LineRevealPlacement): void {
+    const request = { target, placement, from: this.anchor };
+    if (this.laidOut) this.applyLine(request);
+    this.pendingLine = request;
   }
 
-  private applyLine(target: DiffLineTarget): void {
+  private applyLine({ target, placement }: PendingLine): void {
     if (this.scroll == null || target.node.isDestroyed) return;
+    const sources = target.node.lineInfo.lineSources;
+    const firstRow = sources.indexOf(target.line);
+    const scrollTop = getLineRevealScrollTop({
+      height: this.getViewportHeight(),
+      lineRows: firstRow < 0 ? 1 : sources.lastIndexOf(target.line) - firstRow + 1,
+      lineTop: lineTargetOffset(target, this.scroll.content),
+      placement,
+      scrollTop: this.scroll.scrollTop,
+    });
     this.applying = true;
     try {
-      this.scroll.scrollTo(
-        Math.max(
-          0,
-          lineTargetOffset(target, this.scroll.content) - Math.floor(this.getViewportHeight() / 3),
-        ),
-      );
+      this.scroll.scrollTo(scrollTop);
     } finally {
       this.applying = false;
     }
@@ -228,13 +277,17 @@ export class DiffScrollController {
       return card == null ? Infinity : contentOffset(card, scroll.content);
     });
     this.laidOut = true;
-    const target = this.pendingLine;
+    const pending = this.pendingLine;
     this.pendingLine = null;
-    if (target != null && !target.node.isDestroyed) {
+    if (pending != null && !pending.target.node.isDestroyed) {
       // A newly expanded buffer has Yoga's width but not its native wrap map
       // yet. Synchronize that buffer before asking for its visual row.
-      target.node.updateFromLayout();
-      this.applyLine(target);
+      pending.target.node.updateFromLayout();
+      if (pending.placement === "nearest" && pending.from != null) {
+        this.anchor = pending.from;
+        this.applyAnchor();
+      }
+      this.applyLine(pending);
     } else this.applyAnchor();
     this.notifyViewport();
   };

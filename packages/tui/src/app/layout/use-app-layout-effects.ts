@@ -20,7 +20,10 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
 
   useLayoutEffect(() => {
     if (state.showSelectedReviewAnchor && state.selectedDiffRowRef.current != null) {
-      state.diffScroll.revealLine(state.selectedDiffRowRef.current);
+      state.diffScroll.revealLine(
+        state.selectedDiffRowRef.current,
+        state.selectedLineRevealRef.current,
+      );
     }
   }, [
     derived.selectedReviewAnchor?.key,
@@ -28,6 +31,7 @@ export function useDiffdiffAppLayoutEffects(state: DiffdiffAppState, derived: Di
     state.showSelectedReviewAnchor,
     state.diffScroll,
     state.selectedDiffRowRef,
+    state.selectedLineRevealRef,
   ]);
 
   useLayoutEffect(() => {
