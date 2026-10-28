@@ -1625,6 +1625,20 @@ test("does not render the removed key legend", () => {
   expect(getAppText(tree)).not.toContain("j/k move");
 });
 
+test("footer advertises the command palette beside the keys hint only where it opens", () => {
+  const tree = render(<DiffdiffApp {...createAppProps()} />);
+  const footerHints = () => getAppText(tree).match(/\?\s+keys\s+ctrl\+p\s+commands/u);
+
+  expect(footerHints()).not.toBeNull();
+
+  emitKey({ name: "tab" });
+  expect(footerHints()).not.toBeNull();
+
+  emitKey({ ctrl: true, name: "p" });
+  expect(getAppText(tree)).toContain("Search commands");
+  expect(getAppText(tree)).not.toContain("ctrl+p commands");
+});
+
 test("opens diagnostics with bare d", async () => {
   const loadSessionDiagnostics = vi.fn(async () => []);
   const tree = render(<DiffdiffApp {...createAppProps({ loadSessionDiagnostics })} />);

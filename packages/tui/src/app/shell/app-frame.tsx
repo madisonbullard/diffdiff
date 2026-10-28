@@ -11,7 +11,7 @@ import type { DiffdiffDialogModels } from "../dialogs/dialog-models.ts";
 import { DiffdiffAppDialogs } from "../dialogs/dialog-router.tsx";
 import { VisibleCommentRelativeTimeProvider } from "../review/visible-comment-relative-time.tsx";
 import { AppDiffPane } from "./app-diff-pane.tsx";
-import { AppFooter } from "./app-footer.tsx";
+import { AppFooter, getFooterHintsWidth, type FooterHint } from "./app-footer.tsx";
 import { AppHeader } from "./app-header.tsx";
 import { AppSidebar } from "./app-sidebar.tsx";
 import { DialogUiProvider, type DialogUi } from "../../components/dialog/context.tsx";
@@ -39,7 +39,7 @@ interface DiffdiffAppViewProps {
   footerEventMessage: string;
   footerModeBadge: { bg: string; fg: string; label: string };
   handleFileTreeMouseUp: (node: FileTreeNode) => void;
-  helpLabel: string;
+  footerHints: readonly FooterHint[];
   activePrefixMenu?: PrefixMenuConfig;
   activePrefixMenuCommands: readonly PrefixMenuCommand[];
   onMouseUp: () => void;
@@ -100,7 +100,7 @@ export function DiffdiffAppView({
   footerEventMessage,
   footerModeBadge,
   handleFileTreeMouseUp,
-  helpLabel,
+  footerHints,
   activePrefixMenu,
   activePrefixMenuCommands,
   onMouseUp,
@@ -231,12 +231,15 @@ export function DiffdiffAppView({
           errorToastMessage != null && hasOverlaySurface
             ? truncateInlineMessage(
                 `✗ ${errorToastMessage}`,
-                Math.max(0, terminalWidth - footerModeBadge.label.length - helpLabel.length - 20),
+                Math.max(
+                  0,
+                  terminalWidth - footerModeBadge.label.length - getFooterHintsWidth(footerHints),
+                ),
               )
             : footerEventMessage
         }
         footerModeBadge={footerModeBadge}
-        helpLabel={helpLabel}
+        hints={footerHints}
         showLoadingIndicator={showFooterLoadingIndicator}
         theme={{ ...theme, chromeBackground: dialogTokens(theme).footer }}
       />

@@ -4,7 +4,7 @@ import { logDiffdiffError, syncGitRemotes } from "@madisonbullard/diffdiff-core"
 import { buildAppCommands, type AppCommand } from "../commands/registry.ts";
 import { useCommandPaletteModels } from "../commands/command-palette-models.ts";
 import { getPrefixMenuCommands, getPrefixMenuConfig } from "../commands/prefix-menus.ts";
-import { formatActionBindings } from "../keymap/display.ts";
+import { getFooterHints, getFooterHintsWidth } from "./app-footer.tsx";
 import { useDiffdiffDialogModels } from "../dialogs/use-dialog-models.ts";
 import { useSessionDiagnostics } from "../diagnostics/use-session-diagnostics.ts";
 import { getFooterEventPresentation } from "./footer-event.ts";
@@ -313,14 +313,10 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
         : getPrefixModeBadge(activePrefixMenu, props.theme),
     [activeKeymapMode, activePrefixMenu, props.theme],
   );
-  const helpLabel =
-    formatActionBindings(
-      state.reverseKeymaps,
-      activeKeymapMode === "commands" || activeKeymapMode === "help"
-        ? "commands.switch-tab"
-        : "system.help",
-      [activeKeymapMode],
-    )?.split(" / ")[0] ?? "";
+  const footerHints = useMemo(
+    () => getFooterHints(state.reverseKeymaps, activeKeymapMode),
+    [activeKeymapMode, state.reverseKeymaps],
+  );
   const footerEvent = useMemo(
     () =>
       getFooterEventPresentation({
@@ -347,11 +343,17 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       truncateInlineMessage(
         footerEvent.message,
         Math.max(
-          state.terminalDimensions.width - (footerModeBadge.label.length + helpLabel.length + 20),
+          state.terminalDimensions.width -
+            (footerModeBadge.label.length + getFooterHintsWidth(footerHints)),
           0,
         ),
       ),
-    [footerEvent.message, footerModeBadge.label.length, helpLabel, state.terminalDimensions.width],
+    [
+      footerEvent.message,
+      footerHints,
+      footerModeBadge.label.length,
+      state.terminalDimensions.width,
+    ],
   );
   const showFooterLoadingIndicator = state.isSubmittingReviewAction && state.activeOverlay == null;
 
@@ -466,7 +468,7 @@ export function DiffdiffAppController(props: DiffdiffAppProps) {
       footerEventMessage={footerEventMessage}
       footerModeBadge={footerModeBadge}
       handleFileTreeMouseUp={handleFileTreeMouseUp}
-      helpLabel={helpLabel}
+      footerHints={footerHints}
       activePrefixMenu={activePrefixMenu}
       activePrefixMenuCommands={activePrefixMenuCommands}
       onOpenChecks={githubActions.openPullRequestChecksModal}

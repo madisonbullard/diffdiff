@@ -314,6 +314,9 @@ truncation uses display width by grapheme.
   `alt+enter` (and `ctrl+j` once `linefeed` maps to newline).
 - `?` opens Keys only in modes where `?` is not text; the global footer stops advertising `? help`
   in text modes.
+- Outside dialogs the global footer shows `? keys` and `ctrl+p commands` beside the mode badge,
+  each with the action's primary binding in that mode. The Keys and Commands tabs show `tab`
+  to the other tab instead (`app-footer.tsx` `getFooterHints`).
 
 ### 3.7 Navigation and focus
 
