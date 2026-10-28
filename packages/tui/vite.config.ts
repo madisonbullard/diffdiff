@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
@@ -42,6 +43,14 @@ export default defineConfig({
     ],
   },
   fmt: {},
+  // Test the core sources, as tsconfig paths do, not a possibly missing or stale dist.
+  resolve: {
+    alias: {
+      "@madisonbullard/diffdiff-core": fileURLToPath(
+        new URL("../core/src/index.ts", import.meta.url),
+      ),
+    },
+  },
   test: {
     setupFiles: ["tests/native-buffer-mock.ts"],
     // Visual suites need Bun's native OpenTUI renderer; run them with
