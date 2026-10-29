@@ -129,6 +129,7 @@ function buildGitEnv(): NodeJS.ProcessEnv {
       key === "GIT_REPLACE_REF_BASE" ||
       key === "GIT_SHALLOW_FILE" ||
       key === "GIT_WORK_TREE" ||
+      /^GIT_(AUTHOR|COMMITTER)_(NAME|EMAIL|DATE)$/u.test(key) ||
       /^GIT_CONFIG_KEY_\d+$/u.test(key) ||
       /^GIT_CONFIG_VALUE_\d+$/u.test(key)
     ) {
