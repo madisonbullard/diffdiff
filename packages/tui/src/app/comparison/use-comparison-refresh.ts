@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import { probeReviewSessionFreshness } from "@madisonbullard/diffdiff-core";
+import { logDiffdiffError, probeReviewSessionFreshness } from "@madisonbullard/diffdiff-core";
 import type { DiffdiffAppProps } from "../state/app-props.ts";
 import type { DiffdiffAppPersistence } from "../session/use-app-persistence.ts";
 import type { DiffdiffAppState } from "../state/use-app-state.ts";
@@ -109,6 +109,9 @@ export function useDiffdiffAppRefresh({ actions, persistence, props, state }: Us
       }
 
       const nextRefreshIndicator = getRefreshIndicatorPresentation(freshness, state.reverseKeymaps);
+      if (freshness.remoteUnreachable && nextRefreshIndicator.label == null) {
+        return; // Nothing new is known, so keep any update an earlier probe found.
+      }
       state.setRefreshIndicatorLabel(nextRefreshIndicator.label);
       state.setRefreshIndicatorStatusMessage(nextRefreshIndicator.statusMessage);
       if (
@@ -138,17 +141,17 @@ export function useDiffdiffAppRefresh({ actions, persistence, props, state }: Us
     try {
       await actions.syncRemoteState();
     } catch (error) {
-      persistence.persistenceApi.handleAppError(error, "Unable to refresh git state.", {
+      // Focus often lands before the network is back (unlock after sleep), so this sync is
+      // best-effort: the probe and later polls still run, and Shift+R reports fetch failures.
+      logDiffdiffError("app", "focus_remote_sync_failed", error, {
         action: "sync-remotes-on-focus",
         startupOptions: state.startupOptions,
       });
-      return;
     }
     await checkForUpdates();
   }, [
     actions,
     checkForUpdates,
-    persistence.persistenceApi,
     state.isCheckingForUpdates,
     state.isReloading,
     state.startupOptions,

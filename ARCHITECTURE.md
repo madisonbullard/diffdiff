@@ -114,6 +114,13 @@ Startup telemetry separates overlapping network waits from non-network wall
 time through the first committed review frame. See
 `docs/plans/startup-performance.md` for the budget and real-PTY regression gate.
 
+While the terminal is focused, the TUI probes comparison refs and PR state every
+five seconds, and regaining focus first fetches all remotes. Remote failures in
+this background work are expected (focus often returns before the network does):
+a failed focus fetch is only logged, and an unreachable remote neither invents
+nor retracts an update indicator. Shift+R is the explicit refresh and reports
+fetch failures.
+
 Within the TUI, all keyboard modes now route through the shared trie-based
 keymap runtime before dispatching to app actions. Pane navigation, dialogs,
 search states, composers, and confirmation flows should use that single runtime

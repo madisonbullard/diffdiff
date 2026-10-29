@@ -39,6 +39,7 @@ interface ProbedGitRef {
   sha?: string;
   remoteName?: string;
   branchName?: string;
+  unreachable?: true;
 }
 
 interface PullRequestUpdateContext {
@@ -101,6 +102,7 @@ export async function probeReviewSessionFreshness(
     nextBaseSha: comparisonResult.nextBaseSha,
     nextHeadSha: comparisonResult.nextHeadSha,
     nextPullRequestFingerprint: pullRequestFingerprint,
+    remoteUnreachable: comparisonResult.remoteUnreachable,
   };
 }
 
@@ -381,6 +383,7 @@ async function probeComparisonFreshness(session: ReviewSession): Promise<{
   summary?: ChangeSummary;
   nextBaseSha?: string;
   nextHeadSha?: string;
+  remoteUnreachable?: true;
 }> {
   if (session.comparison.mode === "working-tree") {
     const [files, nextHeadSha] = await Promise.all([
@@ -411,31 +414,23 @@ async function probeComparisonFreshness(session: ReviewSession): Promise<{
     };
   }
 
+  const { rootPath } = session.repository;
+  const { baseSha, headSha } = session.renderFingerprint;
   const remoteNames = session.repository.remotes.map((remote) => remote.name);
   const [baseRef, headRef] = await Promise.all([
-    probeGitRef(session.repository.rootPath, session.comparison.base, remoteNames),
-    probeGitRef(session.repository.rootPath, session.comparison.head, remoteNames),
+    probeGitRef(rootPath, session.comparison.base, remoteNames, baseSha),
+    probeGitRef(rootPath, session.comparison.head, remoteNames, headSha),
   ]);
-  const hasUpdates =
-    baseRef.sha !== session.renderFingerprint.baseSha ||
-    headRef.sha !== session.renderFingerprint.headSha;
-
-  if (!hasUpdates) {
-    return {
-      hasUpdates: false,
-      nextBaseSha: baseRef.sha,
-      nextHeadSha: headRef.sha,
-    };
-  }
+  const hasUpdates = baseRef.sha !== baseSha || headRef.sha !== headSha;
 
   return {
-    hasUpdates: true,
-    summary: await summarizeUpdatedComparison(session.repository.rootPath, {
-      base: baseRef,
-      head: headRef,
-    }),
+    hasUpdates,
+    summary: hasUpdates
+      ? await summarizeUpdatedComparison(rootPath, { base: baseRef, head: headRef })
+      : undefined,
     nextBaseSha: baseRef.sha,
     nextHeadSha: headRef.sha,
+    remoteUnreachable: baseRef.unreachable ?? headRef.unreachable,
   };
 }
 
@@ -443,25 +438,26 @@ async function probeGitRef(
   rootPath: string,
   ref: string,
   remoteNames: readonly string[],
+  renderedSha: string | undefined,
 ): Promise<ProbedGitRef> {
   const remoteTrackingRef = parseRemoteTrackingRef(ref, remoteNames);
-  if (remoteTrackingRef != null) {
-    return {
-      ref,
-      sha: await resolveRemoteBranchSha(
-        rootPath,
-        remoteTrackingRef.remoteName,
-        remoteTrackingRef.branchName,
-      ),
-      remoteName: remoteTrackingRef.remoteName,
-      branchName: remoteTrackingRef.branchName,
-    };
+  if (remoteTrackingRef == null) {
+    return { ref, sha: await resolveLocalRefSha(rootPath, ref) };
   }
 
-  return {
-    ref,
-    sha: await resolveLocalRefSha(rootPath, ref),
-  };
+  const { branchName, remoteName } = remoteTrackingRef;
+  try {
+    return {
+      ref,
+      sha: await resolveRemoteBranchSha(rootPath, remoteName, branchName),
+      remoteName,
+      branchName,
+    };
+  } catch {
+    // A deleted branch (ls-remote exit code 2) does not throw. Other failures (offline, auth)
+    // say nothing about the branch, so keep the rendered SHA instead of reporting a change.
+    return { ref, sha: renderedSha, remoteName, branchName, unreachable: true };
+  }
 }
 
 function parseRemoteTrackingRef(
@@ -487,17 +483,13 @@ async function resolveRemoteBranchSha(
   remoteName: string,
   branchName: string,
 ): Promise<string | undefined> {
-  try {
-    const stdout = await runCommand(
-      "git",
-      ["ls-remote", "--exit-code", "--refs", remoteName, `refs/heads/${branchName}`],
-      { cwd: rootPath },
-    );
-    const [sha] = stdout.trim().split(/\s+/u, 2);
-    return sha === "" ? undefined : sha;
-  } catch {
-    return undefined;
-  }
+  const stdout = await runCommand(
+    "git",
+    ["ls-remote", "--exit-code", "--refs", remoteName, `refs/heads/${branchName}`],
+    { allowedExitCodes: [2], cwd: rootPath },
+  );
+  const [sha] = stdout.trim().split(/\s+/u, 2);
+  return sha === "" ? undefined : sha;
 }
 
 async function resolveLocalRefSha(rootPath: string, ref: string): Promise<string | undefined> {

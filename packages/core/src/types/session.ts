@@ -170,6 +170,7 @@ export interface ReviewSessionFreshnessResult {
   nextBaseSha?: string;
   nextHeadSha?: string;
   nextPullRequestFingerprint?: PullRequestFingerprint;
+  remoteUnreachable?: boolean;
 }
 
 export interface ReviewWarning {

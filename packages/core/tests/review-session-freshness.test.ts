@@ -74,7 +74,81 @@ describe("probeReviewSessionFreshness", () => {
       nextPullRequestFingerprint: undefined,
     });
   });
+
+  test("summarizes commits pushed to a remote head branch", { timeout: 20_000 }, async () => {
+    const { clientPath, seedPath } = await createRemoteComparison();
+    const session = await loadRemoteComparisonSession(clientPath);
+
+    await writeFile(join(seedPath, "src", "app.ts"), "export const app = 'later';\n");
+    await runGit(seedPath, ["add", "."]);
+    await commitAll(seedPath, "Push a later commit");
+    await runGit(seedPath, ["push", "origin", "feature"]);
+
+    expect(await probeReviewSessionFreshness(session)).toMatchObject({
+      comparisonSummary: { filesChanged: 1 },
+      hasComparisonUpdates: true,
+      remoteUnreachable: undefined,
+    });
+  });
+
+  test("reports updates when the remote head branch is deleted", { timeout: 20_000 }, async () => {
+    const { clientPath, seedPath } = await createRemoteComparison();
+    const session = await loadRemoteComparisonSession(clientPath);
+
+    await runGit(seedPath, ["push", "origin", "--delete", "feature"]);
+
+    expect(await probeReviewSessionFreshness(session)).toMatchObject({
+      hasComparisonUpdates: true,
+      nextHeadSha: undefined,
+      remoteUnreachable: undefined,
+    });
+  });
+
+  test("reports no updates while the remote cannot be reached", { timeout: 20_000 }, async () => {
+    const { clientPath } = await createRemoteComparison();
+    const session = await loadRemoteComparisonSession(clientPath);
+
+    await runGit(clientPath, ["remote", "set-url", "origin", join(clientPath, "unreachable.git")]);
+
+    expect(await probeReviewSessionFreshness(session)).toMatchObject({
+      comparisonSummary: undefined,
+      hasComparisonUpdates: false,
+      nextBaseSha: session.renderFingerprint.baseSha,
+      nextHeadSha: session.renderFingerprint.headSha,
+      remoteUnreachable: true,
+    });
+  });
 });
+
+async function createRemoteComparison(): Promise<{ clientPath: string; seedPath: string }> {
+  const remotePath = await mkdtemp(join(tmpdir(), "diffdiff-freshness-remote-"));
+  temporaryDirectories.push(remotePath);
+  await execGit(["init", "--bare", "--initial-branch=main", remotePath]);
+
+  const seedPath = await createTemporaryRepository();
+  await runGit(seedPath, ["checkout", "-b", "main"]);
+  await runGit(seedPath, ["remote", "add", "origin", remotePath]);
+  await mkdir(join(seedPath, "src"), { recursive: true });
+  await writeFile(join(seedPath, "src", "app.ts"), "export const app = true;\n");
+  await runGit(seedPath, ["add", "."]);
+  await commitAll(seedPath, "Initial commit");
+  await runGit(seedPath, ["push", "-u", "origin", "main"]);
+  await runGit(seedPath, ["checkout", "-b", "feature"]);
+  await writeFile(join(seedPath, "src", "app.ts"), "export const app = false;\n");
+  await runGit(seedPath, ["add", "."]);
+  await commitAll(seedPath, "Change the feature");
+  await runGit(seedPath, ["push", "-u", "origin", "feature"]);
+
+  const clientPath = await mkdtemp(join(tmpdir(), "diffdiff-freshness-client-"));
+  temporaryDirectories.push(clientPath);
+  await execGit(["clone", remotePath, clientPath]);
+
+  return { clientPath, seedPath };
+}
+
+function loadRemoteComparisonSession(clientPath: string) {
+  return loadReviewSession({ base: "origin/main", head: "origin/feature", repoPath: clientPath });
+}
 
 async function createTemporaryRepository(): Promise<string> {
   const repositoryPath = await mkdtemp(join(tmpdir(), "diffdiff-freshness-"));

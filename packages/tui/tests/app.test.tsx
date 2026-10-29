@@ -1872,10 +1872,7 @@ test("keeps the footer on the latest status after an error toast is shown", asyn
     />,
   );
 
-  await act(async () => {
-    rendererState.renderer.emit("blur");
-    rendererState.renderer.emit("focus");
-  });
+  await emitAsyncKey({ name: "r", sequence: "R", shift: true });
 
   expect(getAppText(tree)).toContain("Request failed due to following response errors:");
 
@@ -1966,6 +1963,36 @@ test("syncs remotes before checking for updates on terminal focus", async () => 
   expect(syncRemotes.mock.invocationCallOrder[0]).toBeLessThan(
     probeFreshness.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
   );
+});
+
+test("logs a failed focus sync without an error toast and still checks for updates", async () => {
+  const offlineError = new Error(
+    "ssh: connect to host github.com port 22: Undefined error: 0\r\nfatal: Could not read from remote repository.",
+  );
+  const syncRemotes = vi.fn(async () => {
+    throw offlineError;
+  });
+  const probeFreshness = vi.fn(async () => ({
+    comparisonSummary: undefined,
+    hasComparisonUpdates: false,
+    hasGitHubUpdates: false,
+  }));
+  const logError = vi.spyOn(diffdiffCore, "logDiffdiffError");
+  const tree = render(<DiffdiffApp {...createAppProps({ probeFreshness, syncRemotes })} />);
+
+  await act(async () => {
+    rendererState.renderer.emit("blur");
+    rendererState.renderer.emit("focus");
+  });
+
+  expect(logError).toHaveBeenCalledWith(
+    "app",
+    "focus_remote_sync_failed",
+    offlineError,
+    expect.objectContaining({ action: "sync-remotes-on-focus" }),
+  );
+  expect(getAppText(tree)).not.toContain("Could not read from remote repository.");
+  expect(probeFreshness).toHaveBeenCalledTimes(1);
 });
 
 test("starts commit browsing at the top of the commit list", () => {
@@ -2235,6 +2262,71 @@ test("shows a files changed header indicator until refresh reloads the session",
   });
   expect(getAppText(tree)).toContain("feature/fresh");
   expect(getAppText(tree)).not.toContain("1 file changed");
+});
+
+test("keeps a detected update visible while the remote cannot be reached", async () => {
+  vi.useFakeTimers();
+  const probeFreshness = vi.fn(
+    async (): Promise<ReviewSessionFreshnessResult> => ({
+      hasComparisonUpdates: false,
+      hasGitHubUpdates: false,
+    }),
+  );
+  probeFreshness
+    .mockResolvedValueOnce({
+      comparisonSummary: { additions: 3, deletions: 1, filesChanged: 1 },
+      hasComparisonUpdates: true,
+      hasGitHubUpdates: false,
+    })
+    .mockResolvedValueOnce({
+      hasComparisonUpdates: false,
+      hasGitHubUpdates: false,
+      remoteUnreachable: true,
+    });
+  const tree = render(<DiffdiffApp {...createAppProps({ probeFreshness })} />);
+  const poll = () =>
+    act(async () => {
+      vi.advanceTimersByTime(5_000);
+    });
+
+  await poll();
+  expect(getAppText(tree)).toContain("1 file changed");
+
+  await poll();
+  expect(getAppText(tree)).toContain("1 file changed");
+  expect(getAppText(tree)).not.toContain("up to date");
+
+  await poll();
+  expect(probeFreshness).toHaveBeenCalledTimes(3);
+  expect(getAppText(tree)).toContain("Current comparison is up to date.");
+  expect(getAppText(tree)).not.toContain("1 file changed");
+});
+
+test("still shows new PR activity while the remote cannot be reached", async () => {
+  vi.useFakeTimers();
+  const probeFreshness = vi.fn(
+    async (): Promise<ReviewSessionFreshnessResult> => ({
+      githubUpdateReasons: [{ actors: ["octocat"], code: "review-approved" }],
+      hasComparisonUpdates: false,
+      hasGitHubUpdates: true,
+      remoteUnreachable: true,
+    }),
+  );
+  const tree = render(
+    <DiffdiffApp
+      {...createAppProps({
+        initialSession: createPreparedSession({ github: createGitHubReviewSession() }),
+        probeFreshness,
+      })}
+    />,
+  );
+
+  await act(async () => {
+    vi.advanceTimersByTime(5_000);
+  });
+
+  expect(tree.root.findAll((node) => node.props.label === "approved")).toHaveLength(1);
+  expect(getAppText(tree)).toContain("Approved by octocat. Press Shift+R to refresh.");
 });
 
 test("keeps the PR refresh badge visible after an auto-refresh probe until the session changes", async () => {
